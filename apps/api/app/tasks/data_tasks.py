@@ -17,10 +17,62 @@ from app.tasks.celery_app import celery_app
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
-settings = get_settings()
 
-sync_engine = create_engine(settings.DATABASE_URL_SYNC)
-SyncSession = sessionmaker(bind=sync_engine)
+# #region agent log
+try:
+    import json
+    log_path = "/app/debug-f7faef.log"
+    with open(log_path, "a") as f:
+        f.write(json.dumps({"sessionId": "f7faef", "runId": "init", "hypothesisId": "A", "location": "data_tasks.py:20", "message": "data_tasks module importing, loading settings", "data": {}, "timestamp": __import__("time").time() * 1000}) + "\n")
+except: pass
+# #endregion
+
+try:
+    settings = get_settings()
+    # #region agent log
+    try:
+        log_path = "/app/debug-f7faef.log"
+        with open(log_path, "a") as f:
+            f.write(json.dumps({"sessionId": "f7faef", "runId": "init", "hypothesisId": "A", "location": "data_tasks.py:28", "message": "Settings loaded, creating sync_engine", "data": {"db_url": settings.DATABASE_URL_SYNC[:30] + "..." if len(settings.DATABASE_URL_SYNC) > 30 else settings.DATABASE_URL_SYNC}, "timestamp": __import__("time").time() * 1000}) + "\n")
+    except: pass
+    # #endregion
+except Exception as e:
+    # #region agent log
+    try:
+        log_path = "/app/debug-f7faef.log"
+        with open(log_path, "a") as f:
+            f.write(json.dumps({"sessionId": "f7faef", "runId": "init", "hypothesisId": "C", "location": "data_tasks.py:31", "message": "Settings loading failed in data_tasks", "data": {"error": str(e), "error_type": type(e).__name__}, "timestamp": __import__("time").time() * 1000}) + "\n")
+    except: pass
+    # #endregion
+    raise
+
+# #region agent log
+try:
+    log_path = "/app/debug-f7faef.log"
+    with open(log_path, "a") as f:
+        f.write(json.dumps({"sessionId": "f7faef", "runId": "init", "hypothesisId": "A", "location": "data_tasks.py:35", "message": "About to create sync_engine", "data": {}, "timestamp": __import__("time").time() * 1000}) + "\n")
+except: pass
+# #endregion
+
+try:
+    sync_engine = create_engine(settings.DATABASE_URL_SYNC)
+    SyncSession = sessionmaker(bind=sync_engine)
+    # #region agent log
+    try:
+        log_path = "/app/debug-f7faef.log"
+        with open(log_path, "a") as f:
+            f.write(json.dumps({"sessionId": "f7faef", "runId": "init", "hypothesisId": "A", "location": "data_tasks.py:42", "message": "sync_engine created successfully", "data": {}, "timestamp": __import__("time").time() * 1000}) + "\n")
+    except: pass
+    # #endregion
+except Exception as e:
+    # #region agent log
+    try:
+        log_path = "/app/debug-f7faef.log"
+        with open(log_path, "a") as f:
+            f.write(json.dumps({"sessionId": "f7faef", "runId": "init", "hypothesisId": "A", "location": "data_tasks.py:45", "message": "sync_engine creation failed", "data": {"error": str(e), "error_type": type(e).__name__}, "timestamp": __import__("time").time() * 1000}) + "\n")
+    except: pass
+    # #endregion
+    raise
 
 
 def _run_async(coro):
