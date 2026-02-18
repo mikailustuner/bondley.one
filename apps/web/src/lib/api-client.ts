@@ -91,5 +91,8 @@ export const api = {
       apiFetch<any>("/tlref/fetch-daily", { method: "POST", token }),
     fetchHistorical: (token: string) =>
       apiFetch<any>("/tlref/fetch-historical", { method: "POST", token }),
+    /** Admin-only: BIST tarihsel + günlük TLREF indirip DB'ye yazar */
+    syncNow: (token: string) =>
+      apiFetch<{ historical: any; daily: any }>("/tlref/sync-now", { method: "POST", token }),
   },
 };

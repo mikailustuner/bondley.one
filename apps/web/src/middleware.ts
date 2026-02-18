@@ -37,6 +37,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Auth routes must stay as /login, /signup so (auth) layout is used; do not rewrite to /landing/login
+  if (pathname === "/login" || pathname === "/signup") {
+    return NextResponse.next();
+  }
+
   const subdomain = extractSubdomain(host);
   const targetPrefix = subdomain ? SUBDOMAIN_MAP[subdomain] : "/landing";
 

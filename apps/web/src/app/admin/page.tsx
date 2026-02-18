@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { api } from "@/lib/api-client";
+import { getToken } from "@/lib/auth";
 
 const STATS = [
   { label: "AKTIF TAHVIL", value: "24", sub: "Veritabaninda kayitli" },
@@ -17,6 +20,35 @@ const LOGS = [
 ];
 
 export default function AdminPage() {
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  async function handleTahvilleriGuncelle() {
+    const token = getToken();
+    if (!token) {
+      setSyncMessage({ type: "error", text: "Oturum acik degil." });
+      return;
+    }
+    setSyncing(true);
+    setSyncMessage(null);
+    try {
+      const result = await api.tlref.syncNow(token);
+      const hist = result.historical?.records_upserted ?? result.historical?.status;
+      const daily = result.daily?.records_upserted ?? result.daily?.status;
+      setSyncMessage({
+        type: "success",
+        text: `Tamamlandi. Tarihsel: ${String(hist ?? "-")} kayit, Gunluk: ${String(daily ?? "-")} kayit.`,
+      });
+    } catch (e) {
+      setSyncMessage({
+        type: "error",
+        text: e instanceof Error ? e.message : "Tahvilleri guncelleme basarisiz.",
+      });
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="animate-fade-up">
@@ -41,12 +73,26 @@ export default function AdminPage() {
             <CardTitle className="mt-1">Hizli Islemler</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
+            <Button
+              variant="default"
+              className="w-full justify-between group"
+              onClick={handleTahvilleriGuncelle}
+              disabled={syncing}
+            >
+              <span>{syncing ? "Guncelleniyor…" : "Tahvilleri guncelle"}</span>
+              <span className="text-muted-foreground/40 group-hover:text-primary transition-colors">&rarr;</span>
+            </Button>
+            {syncMessage && (
+              <p className={`text-data-sm ${syncMessage.type === "success" ? "text-positive" : "text-destructive"}`}>
+                {syncMessage.text}
+              </p>
+            )}
             {[
               "TLREF Gunluk Veri Cek",
               "TLREF Tarihsel Veri Cek",
               "Tum Hesaplamalari Calistir",
             ].map((label) => (
-              <Button key={label} variant="outline" className="w-full justify-between group">
+              <Button key={label} variant="outline" className="w-full justify-between group" disabled>
                 <span>{label}</span>
                 <span className="text-muted-foreground/40 group-hover:text-primary transition-colors">&rarr;</span>
               </Button>

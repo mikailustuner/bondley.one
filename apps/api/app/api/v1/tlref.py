@@ -71,3 +71,15 @@ async def trigger_historical_fetch(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="TLREF verisi sadece zamanlanmis (Celery/cron) gorevlerle guncellenir.",
     )
+
+
+@router.post("/sync-now")
+async def sync_tlref_now(
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_admin_user),
+):
+    """Admin-only: BIST'ten tarihsel + günlük TLREF indirip DB'ye yazar (ilk kurulum / manuel güncelleme)."""
+    fetcher = TLREFFetcher(db)
+    historical = await fetcher.fetch_historical()
+    daily = await fetcher.fetch_daily()
+    return {"historical": historical, "daily": daily}
