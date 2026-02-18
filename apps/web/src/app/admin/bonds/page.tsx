@@ -1,60 +1,56 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { api } from "@/lib/api-client";
+import { getToken } from "@/lib/auth";
 
-const BONDS_DATA = [
-  { isin: "TRT060127T10", type: "TRT" as const, issue: "2024-01-06", maturity: "2027-01-06", coupon: "0.15", active: true },
-  { isin: "TRT150228T18", type: "TRT" as const, issue: "2023-02-15", maturity: "2028-02-15", coupon: "0.12", active: true },
-  { isin: "TRB100326T12", type: "TRB" as const, issue: "2024-03-10", maturity: "2026-03-10", coupon: "0.08", active: true },
-];
+type BondItem = {
+  id: number;
+  isin_code: string;
+  bond_type: string;
+  issue_date: string;
+  maturity_date: string;
+  coupon_rate: number | string;
+  is_active: boolean;
+};
 
 export default function AdminBondsPage() {
-  const [showForm, setShowForm] = useState(false);
+  const [bonds, setBonds] = useState<BondItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) {
+      setLoading(false);
+      setError("Oturum gerekli");
+      return;
+    }
+    api.bonds
+      .list(token, { active_only: false, limit: 2500 })
+      .then((res) => {
+        setBonds(res.items || []);
+        setTotal(res.total ?? 0);
+      })
+      .catch((err) => setError(err?.message || "Veri yuklenemedi"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const formatDate = (d: string) => (d ? new Date(d).toISOString().slice(0, 10) : "-");
+  const couponPercent = (c: number | string) =>
+    typeof c === "number" ? (c * 100).toFixed(2) : (parseFloat(String(c)) * 100).toFixed(2);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between animate-fade-up">
-        <div>
-          <h1 className="font-display text-display-md text-foreground">Tahvil Yonetimi</h1>
-          <p className="text-data-sm text-muted-foreground mt-1">Tahvil ekle, duzenle, sil</p>
-        </div>
-        <Button onClick={() => setShowForm(!showForm)}>
-          {showForm ? "Iptal" : "Yeni Tahvil Ekle"}
-        </Button>
+      <div className="animate-fade-up">
+        <h1 className="font-display text-display-md text-foreground">Tahvil Yonetimi</h1>
+        <p className="text-data-sm text-muted-foreground mt-1">
+          BIST otomatik surecinden gelen tahviller; sadece listeleme
+        </p>
       </div>
-
-      {showForm && (
-        <Card className="amber-glow-border animate-fade-up">
-          <CardHeader>
-            <CardDescription>YENI KAYIT</CardDescription>
-            <CardTitle className="mt-1">Tahvil Ekle</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form className="grid gap-4 md:grid-cols-2">
-              {[
-                { label: "ISIN KODU", placeholder: "TRT060127T10", type: "text" },
-                { label: "TAHVIL TIPI", placeholder: "TRT veya TRB", type: "text" },
-                { label: "IHRAC TARIHI", placeholder: "", type: "date" },
-                { label: "VADE TARIHI", placeholder: "", type: "date" },
-                { label: "KUPON ORANI", placeholder: "0.150000", type: "number" },
-                { label: "NOMINAL DEGER", placeholder: "100.00", type: "number" },
-              ].map((field) => (
-                <div key={field.label} className="space-y-2">
-                  <label className="text-label text-muted-foreground">{field.label}</label>
-                  <Input type={field.type} placeholder={field.placeholder} className="font-mono-data" />
-                </div>
-              ))}
-              <div className="md:col-span-2">
-                <Button type="submit" className="w-full">Kaydet</Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
 
       <Card className="animate-fade-up-delay-1">
         <CardHeader>
@@ -63,50 +59,65 @@ export default function AdminBondsPage() {
               <CardDescription>VERITABANI</CardDescription>
               <CardTitle className="mt-1">Kayitli Tahviller</CardTitle>
             </div>
-            <span className="text-label text-muted-foreground">{BONDS_DATA.length} KAYIT</span>
+            {!loading && <span className="text-label text-muted-foreground">{total} KAYIT</span>}
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  {["ISIN", "TIP", "IHRAC", "VADE", "KUPON", "DURUM", "ISLEMLER"].map((h, i) => (
-                    <th
-                      key={h}
-                      className={`pb-3 text-label text-muted-foreground font-normal ${i === 6 ? "text-right" : "text-left"}`}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {BONDS_DATA.map((bond) => (
-                  <tr key={bond.isin} className="border-b border-border/30 last:border-0 hover:bg-secondary/30 transition-colors">
-                    <td className="py-3 font-mono-data text-data-sm text-foreground">{bond.isin}</td>
-                    <td className="py-3">
-                      <Badge variant={bond.type === "TRT" ? "default" : "secondary"}>{bond.type}</Badge>
-                    </td>
-                    <td className="py-3 font-mono-data text-data-sm text-muted-foreground">{bond.issue}</td>
-                    <td className="py-3 font-mono-data text-data-sm text-muted-foreground">{bond.maturity}</td>
-                    <td className="py-3 font-mono-data text-data-sm text-foreground">
-                      %{(parseFloat(bond.coupon) * 100).toFixed(2)}
-                    </td>
-                    <td className="py-3">
-                      <Badge variant={bond.active ? "positive" : "destructive"}>
-                        {bond.active ? "AKTIF" : "PASIF"}
-                      </Badge>
-                    </td>
-                    <td className="py-3 text-right space-x-1">
-                      <Button variant="ghost" size="sm">Duzenle</Button>
-                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">Sil</Button>
-                    </td>
+          {loading && (
+            <p className="text-data-sm text-muted-foreground py-4">Yukleniyor...</p>
+          )}
+          {error && (
+            <p className="text-data-sm text-destructive py-4">{error}</p>
+          )}
+          {!loading && !error && (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    {["ISIN", "TIP", "IHRAC", "VADE", "KUPON", "DURUM"].map((h) => (
+                      <th
+                        key={h}
+                        className="pb-3 text-label text-muted-foreground font-normal text-left"
+                      >
+                        {h}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {bonds.map((bond) => (
+                    <tr
+                      key={bond.id}
+                      className="border-b border-border/30 last:border-0 hover:bg-secondary/30 transition-colors"
+                    >
+                      <td className="py-3 font-mono-data text-data-sm text-foreground">
+                        {bond.isin_code}
+                      </td>
+                      <td className="py-3">
+                        <Badge variant={bond.bond_type === "TRT" ? "default" : "secondary"}>
+                          {bond.bond_type}
+                        </Badge>
+                      </td>
+                      <td className="py-3 font-mono-data text-data-sm text-muted-foreground">
+                        {formatDate(bond.issue_date)}
+                      </td>
+                      <td className="py-3 font-mono-data text-data-sm text-muted-foreground">
+                        {formatDate(bond.maturity_date)}
+                      </td>
+                      <td className="py-3 font-mono-data text-data-sm text-foreground">
+                        %{couponPercent(bond.coupon_rate)}
+                      </td>
+                      <td className="py-3">
+                        <Badge variant={bond.is_active ? "positive" : "destructive"}>
+                          {bond.is_active ? "AKTIF" : "PASIF"}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

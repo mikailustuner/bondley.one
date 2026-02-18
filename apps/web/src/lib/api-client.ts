@@ -55,8 +55,6 @@ export const api = {
       return apiFetch<{ items: any[]; total: number }>(`/bonds/?${query}`, { token });
     },
     get: (token: string, isin: string) => apiFetch<any>(`/bonds/${isin}`, { token }),
-    create: (token: string, data: any) =>
-      apiFetch<any>("/bonds/", { method: "POST", body: JSON.stringify(data), token }),
   },
 
   marketData: {
@@ -93,17 +91,5 @@ export const api = {
       apiFetch<any>("/tlref/fetch-daily", { method: "POST", token }),
     fetchHistorical: (token: string) =>
       apiFetch<any>("/tlref/fetch-historical", { method: "POST", token }),
-  },
-
-  import: {
-    csv: (token: string, file: File) => {
-      const formData = new FormData();
-      formData.append("file", file);
-      return fetch(`${API_BASE}/import/csv`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      }).then((r) => r.json());
-    },
   },
 };

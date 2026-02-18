@@ -1,6 +1,6 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -53,19 +53,21 @@ async def get_tlref_history(
     return TLREFRateListResponse(items=items, total=total)
 
 
-@router.post("/fetch-daily", response_model=dict)
+@router.post("/fetch-daily", status_code=status.HTTP_403_FORBIDDEN)
 async def trigger_daily_fetch(
-    db: AsyncSession = Depends(get_db),
     _admin: User = Depends(get_admin_user),
 ):
-    fetcher = TLREFFetcher(db)
-    return await fetcher.fetch_daily()
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="TLREF verisi sadece zamanlanmis (Celery/cron) gorevlerle guncellenir.",
+    )
 
 
-@router.post("/fetch-historical", response_model=dict)
+@router.post("/fetch-historical", status_code=status.HTTP_403_FORBIDDEN)
 async def trigger_historical_fetch(
-    db: AsyncSession = Depends(get_db),
     _admin: User = Depends(get_admin_user),
 ):
-    fetcher = TLREFFetcher(db)
-    return await fetcher.fetch_historical()
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="TLREF verisi sadece zamanlanmis (Celery/cron) gorevlerle guncellenir.",
+    )

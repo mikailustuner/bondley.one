@@ -10,9 +10,9 @@ const STATS = [
 ];
 
 const LOGS = [
+  { action: "BIST otomatik guncelleme", status: "ZAMANLANMIS", type: "positive" as const },
   { action: "TLREF gunluk cekme", status: "BASARILI", type: "positive" as const },
-  { action: "Hesaplama: 24 tahvil", status: "TAMAMLANDI", type: "positive" as const },
-  { action: "CSV import: Book3.csv", status: "12 KAYIT", type: "positive" as const },
+  { action: "Hesaplama: tahviller", status: "TAMAMLANDI", type: "positive" as const },
   { action: "Yeni kullanici eklendi", status: "ADMIN", type: "neutral" as const },
 ];
 
@@ -45,7 +45,6 @@ export default function AdminPage() {
               "TLREF Gunluk Veri Cek",
               "TLREF Tarihsel Veri Cek",
               "Tum Hesaplamalari Calistir",
-              "CSV Dosyasi Yukle",
             ].map((label) => (
               <Button key={label} variant="outline" className="w-full justify-between group">
                 <span>{label}</span>
