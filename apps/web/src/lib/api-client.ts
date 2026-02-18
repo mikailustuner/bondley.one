@@ -44,6 +44,18 @@ export const api = {
         body: JSON.stringify(data),
       }),
     me: (token: string) => apiFetch<any>("/auth/me", { token }),
+    /** Admin-only: tum kullanicilari listeler */
+    usersList: (token: string) =>
+      apiFetch<{ id: number; email: string; full_name: string | null; company: string | null; location: string | null; role: string; is_active: boolean; created_at: string }[]>(
+        "/auth/users",
+        { token },
+      ),
+  },
+
+  admin: {
+    /** Admin-only: tahvil, TLREF, kullanici sayilari */
+    stats: (token: string) =>
+      apiFetch<{ bonds_count: number; tlref_count: number; users_count: number }>("/admin/stats", { token }),
   },
 
   bonds: {

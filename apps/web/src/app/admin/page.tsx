@@ -1,16 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
-
-const STATS = [
-  { label: "AKTIF TAHVIL", value: "24", sub: "Veritabaninda kayitli" },
-  { label: "TLREF KAYIT", value: "1,247", sub: "Tarihsel veri" },
-  { label: "KULLANICI", value: "5", sub: "1 admin, 4 user" },
-];
 
 const LOGS = [
   { action: "BIST otomatik guncelleme", status: "ZAMANLANMIS", type: "positive" as const },
@@ -22,6 +16,17 @@ const LOGS = [
 export default function AdminPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [stats, setStats] = useState<{ bonds_count: number; tlref_count: number; users_count: number } | null>(null);
+  const [statsError, setStatsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+    api.admin
+      .stats(token)
+      .then(setStats)
+      .catch((e) => setStatsError(e instanceof Error ? e.message : "Istatistik yuklenemedi"));
+  }, []);
 
   async function handleTahvilleriGuncelle() {
     const token = getToken();
@@ -57,13 +62,35 @@ export default function AdminPage() {
       </div>
 
       <div className="grid gap-px md:grid-cols-3 bg-border/30 rounded-lg overflow-hidden animate-fade-up-delay-1">
-        {STATS.map((stat) => (
-          <div key={stat.label} className="bg-card p-5 grain">
-            <div className="text-label text-muted-foreground mb-2">{stat.label}</div>
-            <div className="font-mono-data text-stat text-foreground">{stat.value}</div>
-            <div className="text-label text-muted-foreground/60 mt-1">{stat.sub}</div>
-          </div>
-        ))}
+        {statsError && (
+          <div className="col-span-3 bg-card p-5 text-data-sm text-destructive">{statsError}</div>
+        )}
+        {stats && (
+          <>
+            <div className="bg-card p-5 grain">
+              <div className="text-label text-muted-foreground mb-2">AKTIF TAHVIL</div>
+              <div className="font-mono-data text-stat text-foreground">{stats.bonds_count.toLocaleString("tr-TR")}</div>
+              <div className="text-label text-muted-foreground/60 mt-1">Veritabaninda kayitli</div>
+            </div>
+            <div className="bg-card p-5 grain">
+              <div className="text-label text-muted-foreground mb-2">TLREF KAYIT</div>
+              <div className="font-mono-data text-stat text-foreground">{stats.tlref_count.toLocaleString("tr-TR")}</div>
+              <div className="text-label text-muted-foreground/60 mt-1">Tarihsel veri</div>
+            </div>
+            <div className="bg-card p-5 grain">
+              <div className="text-label text-muted-foreground mb-2">KULLANICI</div>
+              <div className="font-mono-data text-stat text-foreground">{stats.users_count.toLocaleString("tr-TR")}</div>
+              <div className="text-label text-muted-foreground/60 mt-1">Kayitli hesap</div>
+            </div>
+          </>
+        )}
+        {!stats && !statsError && (
+          <>
+            <div className="bg-card p-5 grain"><div className="text-label text-muted-foreground animate-pulse">—</div></div>
+            <div className="bg-card p-5 grain"><div className="text-label text-muted-foreground animate-pulse">—</div></div>
+            <div className="bg-card p-5 grain"><div className="text-label text-muted-foreground animate-pulse">—</div></div>
+          </>
+        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 animate-fade-up-delay-2">

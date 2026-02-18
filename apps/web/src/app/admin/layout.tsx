@@ -1,8 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AdminGuard } from "@/components/admin-guard";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
+    <AdminGuard>
     <div className="min-h-screen bg-background">
       <div className="h-[2px] bg-destructive/60" />
       <nav className="border-b border-border/50 bg-background/90 backdrop-blur-md sticky top-0 z-50">
@@ -50,6 +54,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       <main className="container mx-auto py-6">{children}</main>
     </div>
+    </AdminGuard>
   );
 }
 

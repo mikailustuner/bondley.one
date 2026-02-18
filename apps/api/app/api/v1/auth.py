@@ -84,3 +84,14 @@ async def admin_register(
 @router.get("/me", response_model=UserResponse)
 async def get_me(user: User = Depends(get_current_user)):
     return UserResponse.model_validate(user)
+
+
+@router.get("/users", response_model=list[UserResponse])
+async def list_users(
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_admin_user),
+):
+    """Sadece admin: tum kullanicilari listeler."""
+    result = await db.execute(select(User).order_by(User.id))
+    users = result.scalars().all()
+    return [UserResponse.model_validate(u) for u in users]
