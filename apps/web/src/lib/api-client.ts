@@ -56,6 +56,12 @@ export const api = {
     /** Admin-only: tahvil, TLREF, kullanici sayilari */
     stats: (token: string) =>
       apiFetch<{ bonds_count: number; tlref_count: number; users_count: number }>("/admin/stats", { token }),
+    /** Public: landing sayfasi icin ozet veri */
+    publicSummary: () =>
+      apiFetch<{
+        tlref_rate: number | null;
+        bonds: { isin: string; bond_type: string; price: number | null; ytm: number | null; spread: number | null }[];
+      }>("/admin/public-summary"),
   },
 
   bonds: {

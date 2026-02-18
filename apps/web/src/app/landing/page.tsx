@@ -1,8 +1,35 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { api } from "@/lib/api-client";
+
+type SummaryBond = {
+  isin: string;
+  bond_type: string;
+  price: number | null;
+  ytm: number | null;
+  spread: number | null;
+};
 
 export default function LandingPage() {
+  const [tlref, setTlref] = useState<number | null>(null);
+  const [bonds, setBonds] = useState<SummaryBond[]>([]);
+
+  useEffect(() => {
+    api.admin
+      .publicSummary()
+      .then((res) => {
+        setTlref(res.tlref_rate);
+        setBonds(res.bonds || []);
+      })
+      .catch(() => {
+        /* landing page graceful fallback */
+      });
+  }, []);
+
   return (
     <div className="min-h-screen bg-background grain">
       <div className="data-strip" />
@@ -73,26 +100,37 @@ export default function LandingPage() {
               <div className="space-y-4">
                 <div className="flex justify-between items-baseline border-b border-border/50 pb-3">
                   <span className="text-label text-muted-foreground">TLREF ORANI</span>
-                  <span className="font-mono-data text-stat text-primary">%36.72</span>
+                  <span className="font-mono-data text-stat text-primary">
+                    {tlref != null ? `%${tlref.toFixed(2)}` : "—"}
+                  </span>
                 </div>
 
-                {[
-                  { isin: "TRT060127T10", price: "98.450", ytm: "+30.12", spread: "+145" },
-                  { isin: "TRT150228T18", price: "95.230", ytm: "+32.45", spread: "+178" },
-                  { isin: "TRB100326T12", price: "101.20", ytm: "+27.56", spread: "-12" },
-                  { isin: "TRT220630T14", price: "89.870", ytm: "+35.67", spread: "+234" },
-                ].map((b) => (
-                  <div key={b.isin} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
-                    <span className="font-mono-data text-data-sm text-foreground">{b.isin}</span>
-                    <div className="flex items-center gap-4">
-                      <span className="font-mono-data text-data-sm text-muted-foreground">{b.price}</span>
-                      <span className="font-mono-data text-data-sm text-positive w-14 text-right">%{b.ytm}</span>
-                      <span className={`font-mono-data text-data-sm w-12 text-right ${parseInt(b.spread) >= 0 ? "text-positive" : "text-negative"}`}>
-                        {b.spread}bp
-                      </span>
+                {bonds.length > 0 ? (
+                  bonds.map((b) => (
+                    <div key={b.isin} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
+                      <span className="font-mono-data text-data-sm text-foreground">{b.isin}</span>
+                      <div className="flex items-center gap-4">
+                        <span className="font-mono-data text-data-sm text-muted-foreground">
+                          {b.price != null ? b.price.toFixed(2) : "—"}
+                        </span>
+                        <span className="font-mono-data text-data-sm text-positive w-14 text-right">
+                          {b.ytm != null ? `%${(b.ytm * 100).toFixed(2)}` : "—"}
+                        </span>
+                        <span
+                          className={`font-mono-data text-data-sm w-12 text-right ${
+                            b.spread != null && b.spread >= 0 ? "text-positive" : "text-negative"
+                          }`}
+                        >
+                          {b.spread != null ? `${Math.round(b.spread * 10000)}bp` : "—"}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-data-sm text-muted-foreground py-4 text-center">
+                    Veri yukleniyor...
+                  </p>
+                )}
               </div>
             </div>
           </div>

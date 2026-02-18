@@ -2,29 +2,22 @@
 
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-const DATA = [
-  { date: "01/02", spread: 145 },
-  { date: "03/02", spread: 152 },
-  { date: "05/02", spread: 148 },
-  { date: "06/02", spread: 138 },
-  { date: "07/02", spread: 155 },
-  { date: "10/02", spread: 160 },
-  { date: "11/02", spread: 158 },
-  { date: "12/02", spread: 162 },
-  { date: "13/02", spread: 156 },
-  { date: "14/02", spread: 150 },
-  { date: "17/02", spread: 148 },
-  { date: "18/02", spread: 153 },
-];
-
 const EMERALD = "hsl(160, 84%, 39%)";
 const GRID = "hsl(225, 15%, 16%)";
 const MUTED = "hsl(220, 10%, 35%)";
 
-export function SpreadChart() {
+interface Props {
+  data: { date: string; spread: number }[];
+}
+
+export function SpreadChart({ data }: Props) {
+  if (!data.length) {
+    return <p className="text-data-sm text-muted-foreground py-8 text-center">Spread verisi bulunmuyor</p>;
+  }
+
   return (
     <ResponsiveContainer width="100%" height={280}>
-      <AreaChart data={DATA} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+      <AreaChart data={data} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
         <CartesianGrid stroke={GRID} strokeDasharray="none" vertical={false} />
         <XAxis
           dataKey="date"

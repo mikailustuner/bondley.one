@@ -6,18 +6,14 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 
-const LOGS = [
-  { action: "BIST otomatik guncelleme", status: "ZAMANLANMIS", type: "positive" as const },
-  { action: "TLREF gunluk cekme", status: "BASARILI", type: "positive" as const },
-  { action: "Hesaplama: tahviller", status: "TAMAMLANDI", type: "positive" as const },
-  { action: "Yeni kullanici eklendi", status: "ADMIN", type: "neutral" as const },
-];
-
 export default function AdminPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [stats, setStats] = useState<{ bonds_count: number; tlref_count: number; users_count: number } | null>(null);
   const [statsError, setStatsError] = useState<string | null>(null);
+  const [tlrefLatest, setTlrefLatest] = useState<{ rate_date: string; rate_value: number } | null>(null);
+  const [runAllMsg, setRunAllMsg] = useState<string | null>(null);
+  const [runAllLoading, setRunAllLoading] = useState(false);
 
   useEffect(() => {
     const token = getToken();
@@ -26,6 +22,13 @@ export default function AdminPage() {
       .stats(token)
       .then(setStats)
       .catch((e) => setStatsError(e instanceof Error ? e.message : "Istatistik yuklenemedi"));
+
+    api.tlref
+      .latest(token)
+      .then((res) => {
+        if (res) setTlrefLatest({ rate_date: res.rate_date, rate_value: parseFloat(res.rate_value) });
+      })
+      .catch(() => {});
   }, []);
 
   async function handleTahvilleriGuncelle() {
@@ -44,6 +47,8 @@ export default function AdminPage() {
         type: "success",
         text: `Tamamlandi. Tarihsel: ${String(hist ?? "-")} kayit, Gunluk: ${String(daily ?? "-")} kayit.`,
       });
+      const t = getToken();
+      if (t) api.admin.stats(t).then(setStats).catch(() => {});
     } catch (e) {
       setSyncMessage({
         type: "error",
@@ -51,6 +56,21 @@ export default function AdminPage() {
       });
     } finally {
       setSyncing(false);
+    }
+  }
+
+  async function handleRunAll() {
+    const token = getToken();
+    if (!token) return;
+    setRunAllLoading(true);
+    setRunAllMsg(null);
+    try {
+      const res = await api.calculations.runAll(token);
+      setRunAllMsg(`${res.calculated ?? 0} tahvil icin hesaplama tamamlandi (${res.date})`);
+    } catch (e) {
+      setRunAllMsg(e instanceof Error ? e.message : "Hesaplama basarisiz");
+    } finally {
+      setRunAllLoading(false);
     }
   }
 
@@ -106,7 +126,7 @@ export default function AdminPage() {
               onClick={handleTahvilleriGuncelle}
               disabled={syncing}
             >
-              <span>{syncing ? "Guncelleniyor…" : "Tahvilleri guncelle"}</span>
+              <span>{syncing ? "Guncelleniyor…" : "Tahvilleri guncelle (BIST Sync)"}</span>
               <span className="text-muted-foreground/40 group-hover:text-primary transition-colors">&rarr;</span>
             </Button>
             {syncMessage && (
@@ -114,34 +134,56 @@ export default function AdminPage() {
                 {syncMessage.text}
               </p>
             )}
-            {[
-              "TLREF Gunluk Veri Cek",
-              "TLREF Tarihsel Veri Cek",
-              "Tum Hesaplamalari Calistir",
-            ].map((label) => (
-              <Button key={label} variant="outline" className="w-full justify-between group" disabled>
-                <span>{label}</span>
-                <span className="text-muted-foreground/40 group-hover:text-primary transition-colors">&rarr;</span>
-              </Button>
-            ))}
+            <Button
+              variant="outline"
+              className="w-full justify-between group"
+              onClick={handleRunAll}
+              disabled={runAllLoading}
+            >
+              <span>{runAllLoading ? "Hesaplaniyor…" : "Tum Hesaplamalari Calistir"}</span>
+              <span className="text-muted-foreground/40 group-hover:text-primary transition-colors">&rarr;</span>
+            </Button>
+            {runAllMsg && (
+              <p className="text-data-sm text-muted-foreground">{runAllMsg}</p>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardDescription>SISTEM LOGLARI</CardDescription>
-            <CardTitle className="mt-1">Son Islemler</CardTitle>
+            <CardDescription>SISTEM DURUMU</CardDescription>
+            <CardTitle className="mt-1">Genel Bakis</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-0">
-              {LOGS.map((log, i) => (
-                <div key={i} className="flex justify-between items-center py-2.5 border-b border-border/30 last:border-0">
-                  <span className="text-data-sm text-muted-foreground">{log.action}</span>
-                  <span className={`font-mono-data text-label ${log.type === "positive" ? "text-positive" : "text-primary"}`}>
-                    {log.status}
-                  </span>
-                </div>
-              ))}
+              <div className="flex justify-between items-center py-2.5 border-b border-border/30">
+                <span className="text-data-sm text-muted-foreground">Son TLREF Tarihi</span>
+                <span className="font-mono-data text-label text-foreground">
+                  {tlrefLatest ? new Date(tlrefLatest.rate_date).toLocaleDateString("tr-TR") : "—"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2.5 border-b border-border/30">
+                <span className="text-data-sm text-muted-foreground">Son TLREF Orani</span>
+                <span className="font-mono-data text-label text-primary">
+                  {tlrefLatest ? `%${tlrefLatest.rate_value.toFixed(2)}` : "—"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2.5 border-b border-border/30">
+                <span className="text-data-sm text-muted-foreground">Tahvil Sayisi</span>
+                <span className="font-mono-data text-label text-foreground">
+                  {stats ? stats.bonds_count.toLocaleString("tr-TR") : "—"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2.5 border-b border-border/30">
+                <span className="text-data-sm text-muted-foreground">Kullanici Sayisi</span>
+                <span className="font-mono-data text-label text-foreground">
+                  {stats ? stats.users_count.toLocaleString("tr-TR") : "—"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2.5">
+                <span className="text-data-sm text-muted-foreground">Otomatik Guncelleme</span>
+                <span className="font-mono-data text-label text-positive">HER IS GUNU 18:30</span>
+              </div>
             </div>
           </CardContent>
         </Card>

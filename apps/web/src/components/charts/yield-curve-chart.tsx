@@ -2,24 +2,22 @@
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-const DATA = [
-  { maturity: "6A", ytm: 27.5 },
-  { maturity: "1Y", ytm: 28.2 },
-  { maturity: "2Y", ytm: 29.8 },
-  { maturity: "3Y", ytm: 31.2 },
-  { maturity: "5Y", ytm: 33.5 },
-  { maturity: "7Y", ytm: 34.8 },
-  { maturity: "10Y", ytm: 35.6 },
-];
-
 const AMBER = "hsl(40, 55%, 58%)";
 const GRID = "hsl(225, 15%, 16%)";
 const MUTED = "hsl(220, 10%, 35%)";
 
-export function YieldCurveChart() {
+interface Props {
+  data: { maturity: string; ytm: number }[];
+}
+
+export function YieldCurveChart({ data }: Props) {
+  if (!data.length) {
+    return <p className="text-data-sm text-muted-foreground py-8 text-center">Getiri egrisi verisi bulunmuyor</p>;
+  }
+
   return (
     <ResponsiveContainer width="100%" height={280}>
-      <LineChart data={DATA} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+      <LineChart data={data} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
         <CartesianGrid stroke={GRID} strokeDasharray="none" vertical={false} />
         <XAxis
           dataKey="maturity"

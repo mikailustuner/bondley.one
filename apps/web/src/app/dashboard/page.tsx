@@ -9,6 +9,18 @@ import { SpreadChart } from "@/components/charts/spread-chart";
 import { api } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 
+function maturityLabel(matDate: string): string {
+  const diff = (new Date(matDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 365.25);
+  if (diff <= 0.5) return "<6A";
+  if (diff <= 1) return "6A-1Y";
+  if (diff <= 2) return "1-2Y";
+  if (diff <= 3) return "2-3Y";
+  if (diff <= 5) return "3-5Y";
+  if (diff <= 7) return "5-7Y";
+  if (diff <= 10) return "7-10Y";
+  return "10Y+";
+}
+
 function BondRow({ bond }: { bond: any }) {
   const [latestCalc, setLatestCalc] = useState<any>(null);
   const [price, setPrice] = useState<string>("-");
@@ -85,6 +97,8 @@ export default function DashboardPage() {
   const [bonds, setBonds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [yieldData, setYieldData] = useState<{ maturity: string; ytm: number }[]>([]);
+  const [spreadData, setSpreadData] = useState<{ date: string; spread: number }[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -96,54 +110,71 @@ export default function DashboardPage() {
       }
 
       try {
-        // Fetch bonds
         const bondsResponse = await api.bonds.list(token, { active_only: true, limit: 100 });
         setBonds(bondsResponse.items || []);
 
-        // Fetch TLREF latest rate
         const tlrefResponse = await api.tlref.latest(token);
-        const tlrefRate = tlrefResponse?.rate_value || 0;
+        const tlrefRate = tlrefResponse?.rate_value ? parseFloat(tlrefResponse.rate_value) : 0;
 
-        // Calculate stats
         const activeBonds = bondsResponse.items?.length || 0;
-        
-        // Calculate average YTM from calculations
+
         let totalYtm = 0;
         let ytmCount = 0;
-        for (const bond of bondsResponse.items || []) {
+        let totalSpread = 0;
+        let spreadCount = 0;
+
+        const yieldBuckets: Record<string, number[]> = {};
+        const spreadPoints: { date: string; spread: number }[] = [];
+
+        for (const bond of (bondsResponse.items || []).slice(0, 50)) {
           try {
             const calcResponse = await api.calculations.get(token, bond.isin_code);
             if (calcResponse && calcResponse.length > 0) {
               const latestCalc = calcResponse[calcResponse.length - 1];
               if (latestCalc.yield_to_maturity) {
-                totalYtm += parseFloat(latestCalc.yield_to_maturity);
+                const ytm = parseFloat(latestCalc.yield_to_maturity);
+                totalYtm += ytm;
                 ytmCount++;
+                const label = maturityLabel(bond.maturity_date);
+                if (!yieldBuckets[label]) yieldBuckets[label] = [];
+                yieldBuckets[label].push(ytm * 100);
               }
-            }
-          } catch (e) {
-            // Skip if calculation not available
-          }
-        }
-        const avgYield = ytmCount > 0 ? totalYtm / ytmCount : 0;
-
-        // Calculate average spread
-        let totalSpread = 0;
-        let spreadCount = 0;
-        for (const bond of bondsResponse.items || []) {
-          try {
-            const calcResponse = await api.calculations.get(token, bond.isin_code);
-            if (calcResponse && calcResponse.length > 0) {
-              const latestCalc = calcResponse[calcResponse.length - 1];
               if (latestCalc.spread !== null && latestCalc.spread !== undefined) {
                 totalSpread += parseFloat(latestCalc.spread);
                 spreadCount++;
               }
+              for (const c of calcResponse.slice(-30)) {
+                if (c.spread != null) {
+                  spreadPoints.push({
+                    date: new Date(c.calc_date).toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit" }),
+                    spread: Math.round(parseFloat(c.spread) * 10000),
+                  });
+                }
+              }
             }
-          } catch (e) {
-            // Skip if calculation not available
+          } catch {
+            /* skip */
           }
         }
+
+        const avgYield = ytmCount > 0 ? totalYtm / ytmCount : 0;
         const avgSpread = spreadCount > 0 ? totalSpread / spreadCount : 0;
+
+        const order = ["<6A", "6A-1Y", "1-2Y", "2-3Y", "3-5Y", "5-7Y", "7-10Y", "10Y+"];
+        setYieldData(
+          order
+            .filter((k) => yieldBuckets[k]?.length)
+            .map((k) => ({
+              maturity: k,
+              ytm: parseFloat((yieldBuckets[k].reduce((a, b) => a + b, 0) / yieldBuckets[k].length).toFixed(2)),
+            }))
+        );
+
+        const uniqSpread = new Map<string, number>();
+        for (const sp of spreadPoints) {
+          if (!uniqSpread.has(sp.date)) uniqSpread.set(sp.date, sp.spread);
+        }
+        setSpreadData(Array.from(uniqSpread, ([date, spread]) => ({ date, spread })));
 
         setStats({
           activeBonds,
@@ -154,7 +185,6 @@ export default function DashboardPage() {
         });
       } catch (err: any) {
         setError(err.message || "Veri yuklenemedi");
-        console.error("Dashboard data fetch error:", err);
       } finally {
         setLoading(false);
       }
@@ -246,7 +276,7 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <YieldCurveChart />
+            <YieldCurveChart data={yieldData} />
           </CardContent>
         </Card>
 
@@ -261,7 +291,7 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <SpreadChart />
+            <SpreadChart data={spreadData} />
           </CardContent>
         </Card>
       </div>
