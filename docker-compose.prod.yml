@@ -163,8 +163,11 @@ services:
 
 volumes:
   postgres_data:
+  # Sabit isim: obtain-ssl.sh ile ayni volume kullanilsin (proje oneki olmasin)
   certbot_webroot:
+    name: certbot_webroot
   certbot_certs:
+    name: certbot_certs
 
 networks:
   frontend:

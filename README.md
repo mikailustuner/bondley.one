@@ -121,6 +121,8 @@ docker-compose -f docker-compose.prod.yml up -d --force-recreate nginx
 
 Kontrol: `chmod +x scripts/check-https.sh && ./scripts/check-https.sh` — sertifika, 443 ve firewall kontrolu yapar. Sunucuda 80/443 portlari acik olmali (ufw veya cloud guvenlik kurallari).
 
+**"cert not readable" / HTTP only:** Sertifikalar `obtain-ssl.sh` ile `certbot_certs` volume'una yazilir. Compose proje adiyla farkli bir volume (ornegin `FinCalc_certbot_certs`) kullanirsa nginx bos volume'a bakar. `docker-compose.prod.yml` icinde volume isimleri sabitlendi (`name: certbot_certs`). Nginx'i yeniden olustur: `docker-compose -f docker-compose.prod.yml up -d --force-recreate nginx`.
+
 **Nginx hâlâ 443 acmiyorsa (config/sertifika):**
 
 ```bash
