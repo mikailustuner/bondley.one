@@ -20,7 +20,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="hidden md:flex items-center gap-1">
               {[
                 { href: "/dashboard", label: "Genel Bakis", active: true },
-                { href: "/dashboard/bonds", label: "Tahviller" },
                 { href: "/dashboard/analytics", label: "Analiz" },
               ].map((item) => (
                 <Link

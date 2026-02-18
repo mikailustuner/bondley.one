@@ -84,8 +84,8 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-30}
       CORS_ORIGINS: ${CORS_ORIGINS}
-      BIST_TLREF_DAILY_URL: https://borsaistanbul.com/datum/tlreforani.csv
-      BIST_TLREF_HISTORICAL_URL: https://borsaistanbul.com/datum/TLREFORANI_D.zip
+      BIST_TLREF_DAILY_URL: https://borsaistanbul.com/datum/bisttlrefendeksi.csv
+      BIST_TLREF_HISTORICAL_URL: https://borsaistanbul.com/datum/BISTTLREFENDEKSI_D.zip
     depends_on:
       postgres:
         condition: service_healthy

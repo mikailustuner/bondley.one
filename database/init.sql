@@ -47,12 +47,12 @@ CREATE TABLE IF NOT EXISTS calculations (
     UNIQUE(bond_id, calc_date)
 );
 
--- tlref_rates: Borsa Istanbul'dan cekilen TLREF gunluk oranlari
+-- tlref_rates: Borsa Istanbul BIST TLREF Endeks degerleri
 CREATE TABLE IF NOT EXISTS tlref_rates (
     id              SERIAL PRIMARY KEY,
     rate_date       DATE UNIQUE NOT NULL,
-    rate_value      DECIMAL(10,6) NOT NULL,
-    isin            VARCHAR(20) NOT NULL DEFAULT 'TRIXIST00015',
+    index_value     DECIMAL(18,8) NOT NULL,
+    daily_rate      DECIMAL(18,10),
     source          VARCHAR(50) NOT NULL DEFAULT 'BIST',
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

@@ -8,12 +8,21 @@ import { getToken } from "@/lib/auth";
 
 export default function AdminPage() {
   const [syncing, setSyncing] = useState(false);
-  const [syncMessage, setSyncMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [stats, setStats] = useState<{ bonds_count: number; tlref_count: number; users_count: number } | null>(null);
+  const [syncMessage, setSyncMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [stats, setStats] = useState<{
+    bonds_count: number;
+    tlref_count: number;
+    users_count: number;
+  } | null>(null);
   const [statsError, setStatsError] = useState<string | null>(null);
-  const [tlrefLatest, setTlrefLatest] = useState<{ rate_date: string; rate_value: number } | null>(null);
-  const [runAllMsg, setRunAllMsg] = useState<string | null>(null);
-  const [runAllLoading, setRunAllLoading] = useState(false);
+  const [tlrefLatest, setTlrefLatest] = useState<{
+    rate_date: string;
+    index_value: number;
+    daily_rate: number | null;
+  } | null>(null);
 
   useEffect(() => {
     const token = getToken();
@@ -26,12 +35,17 @@ export default function AdminPage() {
     api.tlref
       .latest(token)
       .then((res) => {
-        if (res) setTlrefLatest({ rate_date: res.rate_date, rate_value: parseFloat(res.rate_value) });
+        if (res)
+          setTlrefLatest({
+            rate_date: res.rate_date,
+            index_value: res.index_value,
+            daily_rate: res.daily_rate,
+          });
       })
       .catch(() => {});
   }, []);
 
-  async function handleTahvilleriGuncelle() {
+  async function handleSync() {
     const token = getToken();
     if (!token) {
       setSyncMessage({ type: "error", text: "Oturum acik degil." });
@@ -43,46 +57,40 @@ export default function AdminPage() {
       const result = await api.tlref.syncNow(token);
       const h = result.historical ?? {};
       const d = result.daily ?? {};
-      const c = result.calculations ?? {};
       const parts: string[] = [];
-      if (h.bonds_created) parts.push(`${h.bonds_created} yeni tahvil`);
-      if (h.market_records) parts.push(`${h.market_records} piyasa verisi`);
-      if (h.tlref_records) parts.push(`${h.tlref_records} TLREF`);
-      if (d.bonds_created) parts.push(`+${d.bonds_created} gunluk tahvil`);
-      if (d.market_records) parts.push(`+${d.market_records} gunluk piyasa`);
-      if (c.calculated) parts.push(`${c.calculated} tahvil hesaplandi`);
-      if (h.format) parts.push(`Format: ${h.format}`);
+
+      if (h.index_records) parts.push(`${h.index_records} tarihsel endeks kaydi`);
+      if (h.rates_computed) parts.push(`${h.rates_computed} gunluk oran hesaplandi`);
+      if (d.records) parts.push(`${d.records} gunluk kayit`);
       if (h.status === "error") parts.push(`Tarihsel hata: ${h.error}`);
       if (d.status === "error") parts.push(`Gunluk hata: ${d.error}`);
-      if (c.error) parts.push(`Hesaplama hata: ${c.error}`);
+
       setSyncMessage({
         type: h.status === "error" && d.status === "error" ? "error" : "success",
         text: parts.length ? parts.join(" | ") : "Sync tamamlandi.",
       });
+
       const t = getToken();
       if (t) api.admin.stats(t).then(setStats).catch(() => {});
+      if (t)
+        api.tlref
+          .latest(t)
+          .then((res) => {
+            if (res)
+              setTlrefLatest({
+                rate_date: res.rate_date,
+                index_value: res.index_value,
+                daily_rate: res.daily_rate,
+              });
+          })
+          .catch(() => {});
     } catch (e) {
       setSyncMessage({
         type: "error",
-        text: e instanceof Error ? e.message : "Tahvilleri guncelleme basarisiz.",
+        text: e instanceof Error ? e.message : "Sync basarisiz.",
       });
     } finally {
       setSyncing(false);
-    }
-  }
-
-  async function handleRunAll() {
-    const token = getToken();
-    if (!token) return;
-    setRunAllLoading(true);
-    setRunAllMsg(null);
-    try {
-      const res = await api.calculations.runAll(token);
-      setRunAllMsg(`${res.calculated ?? 0} tahvil icin hesaplama tamamlandi (${res.date})`);
-    } catch (e) {
-      setRunAllMsg(e instanceof Error ? e.message : "Hesaplama basarisiz");
-    } finally {
-      setRunAllLoading(false);
     }
   }
 
@@ -90,7 +98,9 @@ export default function AdminPage() {
     <div className="space-y-6">
       <div className="animate-fade-up">
         <h1 className="font-display text-display-md text-foreground">Yonetim Paneli</h1>
-        <p className="text-data-sm text-muted-foreground mt-1">Sistem yonetimi ve veri operasyonlari</p>
+        <p className="text-data-sm text-muted-foreground mt-1">
+          Sistem yonetimi ve veri operasyonlari
+        </p>
       </div>
 
       <div className="grid gap-px md:grid-cols-3 bg-border/30 rounded-lg overflow-hidden animate-fade-up-delay-1">
@@ -100,27 +110,39 @@ export default function AdminPage() {
         {stats && (
           <>
             <div className="bg-card p-5 grain">
-              <div className="text-label text-muted-foreground mb-2">AKTIF TAHVIL</div>
-              <div className="font-mono-data text-stat text-foreground">{stats.bonds_count.toLocaleString("tr-TR")}</div>
+              <div className="text-label text-muted-foreground mb-2">TLREF KAYIT</div>
+              <div className="font-mono-data text-stat text-foreground">
+                {stats.tlref_count.toLocaleString("tr-TR")}
+              </div>
+              <div className="text-label text-muted-foreground/60 mt-1">Endeks kaydi</div>
+            </div>
+            <div className="bg-card p-5 grain">
+              <div className="text-label text-muted-foreground mb-2">TAHVIL</div>
+              <div className="font-mono-data text-stat text-foreground">
+                {stats.bonds_count.toLocaleString("tr-TR")}
+              </div>
               <div className="text-label text-muted-foreground/60 mt-1">Veritabaninda kayitli</div>
             </div>
             <div className="bg-card p-5 grain">
-              <div className="text-label text-muted-foreground mb-2">TLREF KAYIT</div>
-              <div className="font-mono-data text-stat text-foreground">{stats.tlref_count.toLocaleString("tr-TR")}</div>
-              <div className="text-label text-muted-foreground/60 mt-1">Tarihsel veri</div>
-            </div>
-            <div className="bg-card p-5 grain">
               <div className="text-label text-muted-foreground mb-2">KULLANICI</div>
-              <div className="font-mono-data text-stat text-foreground">{stats.users_count.toLocaleString("tr-TR")}</div>
+              <div className="font-mono-data text-stat text-foreground">
+                {stats.users_count.toLocaleString("tr-TR")}
+              </div>
               <div className="text-label text-muted-foreground/60 mt-1">Kayitli hesap</div>
             </div>
           </>
         )}
         {!stats && !statsError && (
           <>
-            <div className="bg-card p-5 grain"><div className="text-label text-muted-foreground animate-pulse">—</div></div>
-            <div className="bg-card p-5 grain"><div className="text-label text-muted-foreground animate-pulse">—</div></div>
-            <div className="bg-card p-5 grain"><div className="text-label text-muted-foreground animate-pulse">—</div></div>
+            <div className="bg-card p-5 grain">
+              <div className="text-label text-muted-foreground animate-pulse">—</div>
+            </div>
+            <div className="bg-card p-5 grain">
+              <div className="text-label text-muted-foreground animate-pulse">—</div>
+            </div>
+            <div className="bg-card p-5 grain">
+              <div className="text-label text-muted-foreground animate-pulse">—</div>
+            </div>
           </>
         )}
       </div>
@@ -135,28 +157,20 @@ export default function AdminPage() {
             <Button
               variant="default"
               className="w-full justify-between group"
-              onClick={handleTahvilleriGuncelle}
+              onClick={handleSync}
               disabled={syncing}
             >
-              <span>{syncing ? "Guncelleniyor…" : "Tahvilleri guncelle (BIST Sync)"}</span>
-              <span className="text-muted-foreground/40 group-hover:text-primary transition-colors">&rarr;</span>
+              <span>{syncing ? "Guncelleniyor…" : "TLREF Endeks Verilerini Guncelle"}</span>
+              <span className="text-muted-foreground/40 group-hover:text-primary transition-colors">
+                &rarr;
+              </span>
             </Button>
             {syncMessage && (
-              <p className={`text-data-sm ${syncMessage.type === "success" ? "text-positive" : "text-destructive"}`}>
+              <p
+                className={`text-data-sm ${syncMessage.type === "success" ? "text-positive" : "text-destructive"}`}
+              >
                 {syncMessage.text}
               </p>
-            )}
-            <Button
-              variant="outline"
-              className="w-full justify-between group"
-              onClick={handleRunAll}
-              disabled={runAllLoading}
-            >
-              <span>{runAllLoading ? "Hesaplaniyor…" : "Tum Hesaplamalari Calistir"}</span>
-              <span className="text-muted-foreground/40 group-hover:text-primary transition-colors">&rarr;</span>
-            </Button>
-            {runAllMsg && (
-              <p className="text-data-sm text-muted-foreground">{runAllMsg}</p>
             )}
           </CardContent>
         </Card>
@@ -171,19 +185,33 @@ export default function AdminPage() {
               <div className="flex justify-between items-center py-2.5 border-b border-border/30">
                 <span className="text-data-sm text-muted-foreground">Son TLREF Tarihi</span>
                 <span className="font-mono-data text-label text-foreground">
-                  {tlrefLatest ? new Date(tlrefLatest.rate_date).toLocaleDateString("tr-TR") : "—"}
+                  {tlrefLatest
+                    ? new Date(tlrefLatest.rate_date).toLocaleDateString("tr-TR")
+                    : "—"}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2.5 border-b border-border/30">
-                <span className="text-data-sm text-muted-foreground">Son TLREF Orani</span>
+                <span className="text-data-sm text-muted-foreground">Son Endeks Degeri</span>
                 <span className="font-mono-data text-label text-primary">
-                  {tlrefLatest ? `%${tlrefLatest.rate_value.toFixed(2)}` : "—"}
+                  {tlrefLatest
+                    ? tlrefLatest.index_value.toLocaleString("tr-TR", {
+                        maximumFractionDigits: 5,
+                      })
+                    : "—"}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2.5 border-b border-border/30">
-                <span className="text-data-sm text-muted-foreground">Tahvil Sayisi</span>
+                <span className="text-data-sm text-muted-foreground">Son Gunluk Oran</span>
+                <span className="font-mono-data text-label text-positive">
+                  {tlrefLatest?.daily_rate != null
+                    ? `%${(tlrefLatest.daily_rate * 100).toFixed(5)}`
+                    : "—"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2.5 border-b border-border/30">
+                <span className="text-data-sm text-muted-foreground">Toplam TLREF Kaydi</span>
                 <span className="font-mono-data text-label text-foreground">
-                  {stats ? stats.bonds_count.toLocaleString("tr-TR") : "—"}
+                  {stats ? stats.tlref_count.toLocaleString("tr-TR") : "—"}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2.5 border-b border-border/30">

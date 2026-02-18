@@ -4,8 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models.bond import Bond
-from app.models.calculation import Calculation
-from app.models.market_data import MarketData
 from app.models.tlref_rate import TLREFRate
 from app.models.user import User
 from app.api.deps import get_admin_user
@@ -31,45 +29,30 @@ async def get_admin_stats(
 
 @router.get("/public-summary")
 async def get_public_summary(db: AsyncSession = Depends(get_db)):
-    """Auth gerektirmez: landing sayfasi icin ozet veri (TLREF + son tahviller)."""
-    tlref_result = await db.execute(
+    """Auth gerektirmez: landing sayfasi icin ozet veri."""
+    latest_result = await db.execute(
         select(TLREFRate).order_by(TLREFRate.rate_date.desc()).limit(1)
     )
-    tlref = tlref_result.scalar_one_or_none()
-    tlref_value = float(tlref.rate_value) if tlref else None
+    latest = latest_result.scalar_one_or_none()
 
-    bonds_result = await db.execute(
-        select(Bond).where(Bond.is_active == True).order_by(Bond.maturity_date).limit(6)
+    first_result = await db.execute(
+        select(TLREFRate).order_by(TLREFRate.rate_date.asc()).limit(1)
     )
-    bonds = bonds_result.scalars().all()
+    first = first_result.scalar_one_or_none()
 
-    items = []
-    for b in bonds:
-        md_result = await db.execute(
-            select(MarketData)
-            .where(MarketData.bond_id == b.id)
-            .order_by(MarketData.trade_date.desc())
-            .limit(1)
-        )
-        md = md_result.scalar_one_or_none()
+    total = (await db.execute(select(func.count(TLREFRate.id)))).scalar() or 0
 
-        calc_result = await db.execute(
-            select(Calculation)
-            .where(Calculation.bond_id == b.id)
-            .order_by(Calculation.calc_date.desc())
-            .limit(1)
-        )
-        calc = calc_result.scalar_one_or_none()
-
-        items.append({
-            "isin": b.isin_code,
-            "bond_type": b.bond_type,
-            "price": float(md.clean_price) if md else None,
-            "ytm": float(calc.yield_to_maturity) if calc else None,
-            "spread": float(calc.spread) if calc and calc.spread else None,
-        })
+    annualized_rate = None
+    if latest and first and first.index_value > 0:
+        days = (latest.rate_date - first.rate_date).days
+        if days > 0:
+            ratio = float(latest.index_value / first.index_value)
+            annualized_rate = round((ratio ** (365.0 / days) - 1) * 100, 2)
 
     return {
-        "tlref_rate": tlref_value,
-        "bonds": items,
+        "tlref_index": float(latest.index_value) if latest else None,
+        "tlref_date": latest.rate_date.isoformat() if latest else None,
+        "tlref_daily_rate": float(latest.daily_rate * 100) if latest and latest.daily_rate else None,
+        "tlref_annualized_rate": annualized_rate,
+        "total_records": total,
     }

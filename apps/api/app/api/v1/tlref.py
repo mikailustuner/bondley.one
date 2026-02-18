@@ -10,7 +10,6 @@ from app.models.tlref_rate import TLREFRate
 from app.models.user import User
 from app.schemas.tlref import TLREFRateResponse, TLREFRateListResponse
 from app.services.tlref_fetcher import TLREFFetcher
-from app.services.market_data_service import MarketDataService
 from app.api.deps import get_current_user, get_admin_user
 
 logger = logging.getLogger(__name__)
@@ -57,24 +56,50 @@ async def get_tlref_history(
     return TLREFRateListResponse(items=items, total=total)
 
 
-@router.post("/fetch-daily", status_code=status.HTTP_403_FORBIDDEN)
-async def trigger_daily_fetch(
-    _admin: User = Depends(get_admin_user),
+@router.get("/stats")
+async def get_tlref_stats(
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="TLREF verisi sadece zamanlanmis (Celery/cron) gorevlerle guncellenir.",
+    """TLREF endeks istatistikleri: son deger, gunluk oran, yillik oran, min/max."""
+    latest = await db.execute(
+        select(TLREFRate).order_by(TLREFRate.rate_date.desc()).limit(1)
     )
+    latest_rate = latest.scalar_one_or_none()
 
+    total = (await db.execute(select(func.count(TLREFRate.id)))).scalar() or 0
 
-@router.post("/fetch-historical", status_code=status.HTTP_403_FORBIDDEN)
-async def trigger_historical_fetch(
-    _admin: User = Depends(get_admin_user),
-):
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="TLREF verisi sadece zamanlanmis (Celery/cron) gorevlerle guncellenir.",
+    first = await db.execute(
+        select(TLREFRate).order_by(TLREFRate.rate_date.asc()).limit(1)
     )
+    first_rate = first.scalar_one_or_none()
+
+    if not latest_rate:
+        return {"total_records": 0}
+
+    cumulative_return = None
+    if first_rate and first_rate.index_value > 0:
+        cumulative_return = float(
+            (latest_rate.index_value - first_rate.index_value) / first_rate.index_value * 100
+        )
+
+    annualized_rate = None
+    if first_rate and first_rate.index_value > 0:
+        days = (latest_rate.rate_date - first_rate.rate_date).days
+        if days > 0:
+            ratio = float(latest_rate.index_value / first_rate.index_value)
+            annualized_rate = round((ratio ** (365.0 / days) - 1) * 100, 4)
+
+    return {
+        "total_records": total,
+        "latest_date": latest_rate.rate_date.isoformat(),
+        "latest_index": float(latest_rate.index_value),
+        "latest_daily_rate": float(latest_rate.daily_rate * 100) if latest_rate.daily_rate else None,
+        "first_date": first_rate.rate_date.isoformat() if first_rate else None,
+        "first_index": float(first_rate.index_value) if first_rate else None,
+        "cumulative_return_pct": cumulative_return,
+        "annualized_rate_pct": annualized_rate,
+    }
 
 
 @router.post("/sync-now")
@@ -83,32 +108,16 @@ async def sync_tlref_now(
     _admin: User = Depends(get_admin_user),
 ):
     """
-    Admin-only: Tek butonla tam pipeline:
-    1. BIST'ten tarihsel + gunluk CSV/ZIP indir
-    2. TLREF oranlarini DB'ye yaz
-    3. Tahvil ISIN'lerini kesfet, Bond kayitlari olustur
-    4. Piyasa verilerini MarketData'ya yaz
-    5. Tum aktif tahviller icin hesaplamalari calistir (dirty price, YTM, spread, duration)
+    Admin-only: BIST'ten TLREF endeks verilerini indir ve DB'ye yaz.
+    1. Tarihsel ZIP indir + parse
+    2. Gunluk CSV indir + parse
+    3. Gunluk oranlari hesapla (ardisik endeks degerlerinden)
     """
     fetcher = TLREFFetcher(db)
-
-    # Adim 1-4: Indir + parse + DB'ye yaz
     historical = await fetcher.fetch_historical()
     daily = await fetcher.fetch_daily()
-
-    # Adim 5: Hesaplamalari calistir
-    calc_result = {"calculated": 0, "errors": 0}
-    try:
-        service = MarketDataService(db)
-        results = await service.run_daily_calculations()
-        calc_result["calculated"] = len(results)
-        logger.info(f"Calculations completed for {len(results)} bonds")
-    except Exception as e:
-        logger.error(f"Calculation step failed: {e}")
-        calc_result["error"] = str(e)
 
     return {
         "historical": historical,
         "daily": daily,
-        "calculations": calc_result,
     }

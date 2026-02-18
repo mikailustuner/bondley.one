@@ -117,4 +117,8 @@ class MarketDataService:
             .limit(1)
         )
         rate = result.scalar_one_or_none()
-        return rate.rate_value if rate else None
+        if rate is None:
+            return None
+        if rate.daily_rate is not None:
+            return rate.daily_rate * 365
+        return rate.index_value

@@ -32,8 +32,8 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
-    BIST_TLREF_DAILY_URL: str = "https://borsaistanbul.com/datum/tlreforani.csv"
-    BIST_TLREF_HISTORICAL_URL: str = "https://borsaistanbul.com/datum/TLREFORANI_D.zip"
+    BIST_TLREF_DAILY_URL: str = "https://borsaistanbul.com/datum/bisttlrefendeksi.csv"
+    BIST_TLREF_HISTORICAL_URL: str = "https://borsaistanbul.com/datum/BISTTLREFENDEKSI_D.zip"
 
     CORS_ORIGINS: str = "http://localhost:3000,http://landing.localhost:3000,http://dashboard.localhost:3000,http://admin.localhost:3000"
 

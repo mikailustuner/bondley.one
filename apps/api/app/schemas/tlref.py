@@ -9,8 +9,8 @@ class TLREFRateResponse(BaseModel):
 
     id: int
     rate_date: date
-    rate_value: Decimal
-    isin: str
+    index_value: Decimal
+    daily_rate: Decimal | None = None
     source: str
     created_at: datetime
 

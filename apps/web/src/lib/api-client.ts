@@ -25,6 +25,34 @@ async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promis
   return res.json();
 }
 
+export interface TLREFRecord {
+  id: number;
+  rate_date: string;
+  index_value: number;
+  daily_rate: number | null;
+  source: string;
+  created_at: string;
+}
+
+export interface TLREFStats {
+  total_records: number;
+  latest_date: string;
+  latest_index: number;
+  latest_daily_rate: number | null;
+  first_date: string;
+  first_index: number;
+  cumulative_return_pct: number | null;
+  annualized_rate_pct: number | null;
+}
+
+export interface PublicSummary {
+  tlref_index: number | null;
+  tlref_date: string | null;
+  tlref_daily_rate: number | null;
+  tlref_annualized_rate: number | null;
+  total_records: number;
+}
+
 export const api = {
   auth: {
     login: (email: string, password: string) =>
@@ -44,24 +72,28 @@ export const api = {
         body: JSON.stringify(data),
       }),
     me: (token: string) => apiFetch<any>("/auth/me", { token }),
-    /** Admin-only: tum kullanicilari listeler */
     usersList: (token: string) =>
-      apiFetch<{ id: number; email: string; full_name: string | null; company: string | null; location: string | null; role: string; is_active: boolean; created_at: string }[]>(
-        "/auth/users",
-        { token },
-      ),
+      apiFetch<
+        {
+          id: number;
+          email: string;
+          full_name: string | null;
+          company: string | null;
+          location: string | null;
+          role: string;
+          is_active: boolean;
+          created_at: string;
+        }[]
+      >("/auth/users", { token }),
   },
 
   admin: {
-    /** Admin-only: tahvil, TLREF, kullanici sayilari */
     stats: (token: string) =>
-      apiFetch<{ bonds_count: number; tlref_count: number; users_count: number }>("/admin/stats", { token }),
-    /** Public: landing sayfasi icin ozet veri */
-    publicSummary: () =>
-      apiFetch<{
-        tlref_rate: number | null;
-        bonds: { isin: string; bond_type: string; price: number | null; ytm: number | null; spread: number | null }[];
-      }>("/admin/public-summary"),
+      apiFetch<{ bonds_count: number; tlref_count: number; users_count: number }>(
+        "/admin/stats",
+        { token },
+      ),
+    publicSummary: () => apiFetch<PublicSummary>("/admin/public-summary"),
   },
 
   bonds: {
@@ -85,31 +117,27 @@ export const api = {
   },
 
   calculations: {
-    get: (token: string, isin: string) =>
-      apiFetch<any[]>(`/calculations/${isin}`, { token }),
+    get: (token: string, isin: string) => apiFetch<any[]>(`/calculations/${isin}`, { token }),
     run: (token: string, bondId: number) =>
       apiFetch<any>("/calculations/run", {
         method: "POST",
         body: JSON.stringify({ bond_id: bondId }),
         token,
       }),
-    runAll: (token: string) =>
-      apiFetch<any>("/calculations/run-all", { method: "POST", token }),
+    runAll: (token: string) => apiFetch<any>("/calculations/run-all", { method: "POST", token }),
   },
 
   tlref: {
-    latest: (token: string) => apiFetch<any>("/tlref/latest", { token }),
+    latest: (token: string) => apiFetch<TLREFRecord | null>("/tlref/latest", { token }),
     history: (token: string, params?: { start_date?: string; limit?: number }) => {
       const query = new URLSearchParams();
       if (params?.start_date) query.set("start_date", params.start_date);
       if (params?.limit) query.set("limit", String(params.limit));
-      return apiFetch<{ items: any[]; total: number }>(`/tlref/history?${query}`, { token });
+      return apiFetch<{ items: TLREFRecord[]; total: number }>(`/tlref/history?${query}`, {
+        token,
+      });
     },
-    fetchDaily: (token: string) =>
-      apiFetch<any>("/tlref/fetch-daily", { method: "POST", token }),
-    fetchHistorical: (token: string) =>
-      apiFetch<any>("/tlref/fetch-historical", { method: "POST", token }),
-    /** Admin-only: BIST tarihsel + günlük TLREF indirip DB'ye yazar */
+    stats: (token: string) => apiFetch<TLREFStats>("/tlref/stats", { token }),
     syncNow: (token: string) =>
       apiFetch<{ historical: any; daily: any }>("/tlref/sync-now", { method: "POST", token }),
   },
