@@ -32,11 +32,10 @@ RUN addgroup --system --gid 1001 nodejs && \
 
 WORKDIR /app
 
-# Copy standalone output - Next.js creates the full monorepo structure
+# Standalone output: server.js is at ROOT of standalone, not in apps/web
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
-# Copy static files to correct location
+# Static assets: must be under apps/web/.next/static for Next to serve them
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
-# Copy public folder
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 
 USER nextjs
@@ -44,7 +43,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Next.js standalone output preserves the monorepo structure
-# server.js is at apps/web/server.js
-WORKDIR /app/apps/web
+# server.js is at /app/server.js (root of standalone)
 CMD ["node", "server.js"]
