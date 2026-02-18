@@ -46,15 +46,21 @@ npm install
 npm run dev
 ```
 
-## Subdomain Yonlendirmesi
+## Erisim ve Yonlendirme (Path tabanli, tek origin)
 
-| Subdomain | Aciklama |
+Web uygulamasi **tek origin** (ana domain) uzerinden path ile calisir; oturum (localStorage) tum sayfalarda gecerli olur.
+
+| URL | Aciklama |
 |---|---|
-| landing.domain.com | Urun tanitim sayfasi |
-| dashboard.domain.com | Tahvil verileri, grafikler |
-| admin.domain.com | Veri girisi, kullanici yonetimi |
+| `https://domain.com/` | Urun tanitim (landing) |
+| `https://domain.com/dashboard` | Tahvil verileri, grafikler |
+| `https://domain.com/admin` | Veri / kullanici yonetimi |
+| `https://domain.com/login`, `/signup` | Kimlik dogrulama |
+| `https://api.domain.com` veya `https://domain.com/api/v1` | Backend API |
 
-Lokal gelistirme icin `/etc/hosts` dosyasina ekleyin:
+**Subdomain yonlendirme:** `dashboard.domain.com` ve `admin.domain.com` adresleri 301 ile ana domain path'ine yonlendirilir (ornegin `dashboard.domain.com` -> `domain.com/dashboard`). Boylece eski linkler ve yer imleri calisir, oturum tek origin'de korunur.
+
+Lokal gelistirme icin `/etc/hosts` (istege bagli):
 ```
 127.0.0.1 landing.localhost dashboard.localhost admin.localhost
 ```
