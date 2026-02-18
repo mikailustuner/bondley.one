@@ -42,9 +42,9 @@ if [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
     log "SSL sertifikasi aliniyor (Let's Encrypt)..."
 
     # Temporarily start nginx for ACME challenge
-    docker compose -f docker-compose.prod.yml up -d nginx
+    docker-compose -f docker-compose.prod.yml up -d nginx
 
-    docker compose -f docker-compose.prod.yml run --rm certbot certonly \
+    docker-compose -f docker-compose.prod.yml run --rm certbot certonly \
         --webroot \
         --webroot-path=/var/www/certbot \
         --email "${CERTBOT_EMAIL}" \
@@ -56,7 +56,7 @@ if [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
         -d "admin.$DOMAIN" \
         -d "api.$DOMAIN"
 
-    docker compose -f docker-compose.prod.yml down
+    docker-compose -f docker-compose.prod.yml down
     log "SSL sertifikasi alindi."
 else
     log "SSL sertifikasi zaten mevcut, atlaniyor."
@@ -64,10 +64,10 @@ fi
 
 # --- Step 2: Build & Deploy ---
 log "Container'lar build ediliyor..."
-docker compose -f docker-compose.prod.yml build --no-cache
+docker-compose -f docker-compose.prod.yml build --no-cache
 
 log "Container'lar baslatiliyor..."
-docker compose -f docker-compose.prod.yml up -d
+docker-compose -f docker-compose.prod.yml up -d
 
 # --- Step 3: Health check ---
 log "Servisler kontrol ediliyor..."
