@@ -104,6 +104,16 @@ async def _migrate_bonds(conn):
     else:
         await _add_new_bond_columns(conn)
         print("[startup] bonds: sutunlar kontrol edildi.")
+    await _widen_bonds_varchar_columns(conn)
+
+
+async def _widen_bonds_varchar_columns(conn):
+    """VARCHAR(30) asan Degerler icin last_issue_date_text ve day_count_convention genisletilir."""
+    for col in ("last_issue_date_text", "day_count_convention"):
+        await conn.execute(text(
+            f"ALTER TABLE bonds ALTER COLUMN {col} TYPE VARCHAR(100)"
+        ))
+    print("[startup] bonds: varchar(100) genisletmesi uygulandi.")
 
 
 async def _add_new_bond_columns(conn):
@@ -111,7 +121,7 @@ async def _add_new_bond_columns(conn):
         ("issuer", "VARCHAR(255)"), ("issuance_type", "VARCHAR(100)"),
         ("yield_type", "VARCHAR(255)"), ("security_type", "VARCHAR(255)"),
         ("group_code", "INT"), ("days_to_maturity", "INT"),
-        ("total_issue_amount", "DECIMAL(22,3)"), ("last_issue_date_text", "VARCHAR(30)"),
+        ("total_issue_amount", "DECIMAL(22,3)"), ("last_issue_date_text", "VARCHAR(100)"),
         ("last_issue_price", "DECIMAL(18,6)"), ("last_issue_yield", "DECIMAL(12,4)"),
         ("first_issue_yield", "DECIMAL(12,4)"), ("next_coupon_date", "DATE"),
         ("next_coupon_rate", "DECIMAL(12,6)"), ("spread", "DECIMAL(12,6)"),
@@ -119,7 +129,7 @@ async def _add_new_bond_columns(conn):
         ("accrued_interest_text", "VARCHAR(100)"), ("clean_price_text", "VARCHAR(100)"),
         ("dirty_price_formula", "VARCHAR(100)"), ("settlement_price_formula", "VARCHAR(100)"),
         ("yield_formula", "VARCHAR(100)"), ("compound_yield_formula", "VARCHAR(100)"),
-        ("day_count_convention", "VARCHAR(30)"), ("remarks", "TEXT"),
+        ("day_count_convention", "VARCHAR(100)"), ("remarks", "TEXT"),
         ("brokerage", "VARCHAR(255)"), ("security_type_detail", "VARCHAR(50)"),
     ]
     for col_name, col_type in cols:

@@ -59,6 +59,42 @@ COL_REMARKS = 30
 COL_BROKERAGE = 31
 COL_SECURITY_TYPE_DETAIL = 32
 
+# Bond model string column max lengths (truncate to avoid StringDataRightTruncationError)
+BOND_STRING_MAX_LENGTHS = {
+    "isin_code": 30,
+    "issuer": 255,
+    "issuance_type": 100,
+    "yield_type": 255,
+    "security_type": 255,
+    "coupon_frequency": 50,
+    "currency": 20,
+    "last_issue_date_text": 100,
+    "quotation_method": 100,
+    "accrued_interest_text": 100,
+    "clean_price_text": 100,
+    "dirty_price_formula": 100,
+    "settlement_price_formula": 100,
+    "yield_formula": 100,
+    "compound_yield_formula": 100,
+    "day_count_convention": 100,
+    "brokerage": 255,
+    "security_type_detail": 50,
+}
+
+
+def _truncate_record(rec: dict) -> dict:
+    """Truncate string fields to DB column max length."""
+    out = {}
+    for k, v in rec.items():
+        if k not in BOND_STRING_MAX_LENGTHS:
+            out[k] = v
+            continue
+        if isinstance(v, str) and len(v) > BOND_STRING_MAX_LENGTHS[k]:
+            out[k] = v[: BOND_STRING_MAX_LENGTHS[k]]
+        else:
+            out[k] = v
+    return out
+
 
 class BondFetcher:
     URL = settings.BIST_BOND_LIST_URL
@@ -161,7 +197,7 @@ class BondFetcher:
         update_cols = {k for k in records[0].keys() if k != "isin_code"}
 
         for i in range(0, len(records), 200):
-            batch = records[i: i + 200]
+            batch = [_truncate_record(r) for r in records[i: i + 200]]
             stmt = pg_insert(Bond).values(batch)
             stmt = stmt.on_conflict_do_update(
                 index_elements=["isin_code"],
