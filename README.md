@@ -112,6 +112,15 @@ rm -rf nginx/temp
 docker-compose -f docker-compose.prod.yml up -d nginx
 ```
 
+**HTTPS "connection refused" (ERR_CONNECTION_REFUSED) ise:** Sertifika yokken Nginx sadece 80 acar, 443 acilmaz. Cozum: sertifika al, sonra Nginx'i zorla yeniden baslat:
+
+```bash
+./scripts/obtain-ssl.sh
+docker-compose -f docker-compose.prod.yml up -d --force-recreate nginx
+```
+
+Kontrol: `chmod +x scripts/check-https.sh && ./scripts/check-https.sh` — sertifika, 443 ve firewall kontrolu yapar. Sunucuda 80/443 portlari acik olmali (ufw veya cloud guvenlik kurallari).
+
 ## Varsayilan Giris
 
 - Email: `admin@fincalc.com`

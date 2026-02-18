@@ -106,9 +106,9 @@ if [ "$USE_TEMP_NGINX" = "1" ]; then
   rm -rf nginx/temp
 fi
 
-log "Nginx container'ı yeniden başlatılıyor (sertifikayı yüklemek için)..."
-docker-compose -f docker-compose.prod.yml up -d nginx 2>/dev/null || true
-docker compose -f docker-compose.prod.yml up -d nginx 2>/dev/null || true
+log "Nginx yeniden oluşturuluyor (443'ü açmak için entrypoint tekrar çalışacak)..."
+docker-compose -f docker-compose.prod.yml up -d --force-recreate nginx 2>/dev/null || \
+docker compose -f docker-compose.prod.yml up -d --force-recreate nginx 2>/dev/null || true
 
 echo ""
 log "============================================="
