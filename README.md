@@ -70,6 +70,48 @@ Lokal gelistirme icin `/etc/hosts` dosyasina ekleyin:
 - `GET /api/v1/tlref/latest` - Son TLREF orani
 - `POST /api/v1/tlref/fetch-daily` - BIST'ten TLREF cek
 
+## Production: SSL Sertifikasi (Debian)
+
+Tum domain'ler icin tek sertifika alip Nginx container'inin kullandigi volume'a yazmak icin:
+
+```bash
+# Proje dizininde
+cd /path/to/FinCalc
+
+# .env icinde DOMAIN ve (istege bagli) CERTBOT_EMAIL olmali
+export DEBIAN_FRONTEND=noninteractive
+chmod +x scripts/obtain-ssl.sh
+./scripts/obtain-ssl.sh
+```
+
+Sertifikalar `certbot_certs` volume'una yazilir; `docker-compose.prod.yml` ile Nginx zaten bu volume'u `/etc/letsencrypt` olarak mount eder, ekstra kopyalama gerekmez.
+
+**Tek seferde (script olmadan) calistirmak istersen:**
+
+```bash
+cd /path/to/FinCalc
+export DEBIAN_FRONTEND=noninteractive
+source .env
+docker volume create certbot_webroot
+docker volume create certbot_certs
+mkdir -p nginx/temp
+cat > nginx/temp/default.conf << EOF
+server {
+    listen 80;
+    server_name ${DOMAIN} www.${DOMAIN} dashboard.${DOMAIN} admin.${DOMAIN} api.${DOMAIN};
+    location /.well-known/acme-challenge/ { root /var/www/certbot; }
+    location / { return 200 "OK"; add_header Content-Type text/plain; }
+}
+EOF
+docker rm -f nginx-ssl-temp 2>/dev/null
+docker run -d --name nginx-ssl-temp -p 80:80 -v "$(pwd)/nginx/temp:/etc/nginx/conf.d:ro" -v certbot_webroot:/var/www/certbot:rw nginx:alpine
+sleep 3
+docker run --rm -v certbot_webroot:/var/www/certbot:rw -v certbot_certs:/etc/letsencrypt:rw certbot/certbot certonly --webroot --webroot-path=/var/www/certbot --email "${CERTBOT_EMAIL:-admin@$DOMAIN}" --agree-tos --no-eff-email --non-interactive -d "$DOMAIN" -d "www.$DOMAIN" -d "dashboard.$DOMAIN" -d "admin.$DOMAIN" -d "api.$DOMAIN"
+docker rm -f nginx-ssl-temp
+rm -rf nginx/temp
+docker-compose -f docker-compose.prod.yml up -d nginx
+```
+
 ## Varsayilan Giris
 
 - Email: `admin@fincalc.com`

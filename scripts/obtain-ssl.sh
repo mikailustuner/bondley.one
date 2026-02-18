@@ -39,10 +39,24 @@ log "Volume'lar kontrol ediliyor..."
 docker volume create certbot_webroot 2>/dev/null || true
 docker volume create certbot_certs   2>/dev/null || true
 
-# Port 80'i ACME için kullanacak geçici nginx
-log "Port 80 için geçici nginx başlatılıyor (ACME challenge)..."
-mkdir -p nginx/temp
-cat > nginx/temp/default.conf <<EOF
+# Port 80 dolu mu? (fincalc-nginx vb. zaten çalışıyorsa geçici nginx başlatma)
+PORT80_IN_USE=0
+if command -v ss >/dev/null 2>&1; then
+  ss -tlnp 2>/dev/null | grep -q ':80 ' && PORT80_IN_USE=1
+elif command -v netstat >/dev/null 2>&1; then
+  netstat -tlnp 2>/dev/null | grep -q ':80 ' && PORT80_IN_USE=1
+else
+  docker ps --format '{{.Ports}}' 2>/dev/null | grep -q '0.0.0.0:80->' && PORT80_IN_USE=1
+fi
+
+USE_TEMP_NGINX=0
+if [ "$PORT80_IN_USE" = "1" ]; then
+  log "Port 80 zaten kullanımda (muhtemelen fincalc-nginx). Geçici nginx atlanıyor; ACME için mevcut servis kullanılacak."
+else
+  USE_TEMP_NGINX=1
+  log "Port 80 için geçici nginx başlatılıyor (ACME challenge)..."
+  mkdir -p nginx/temp
+  cat > nginx/temp/default.conf <<EOF
 server {
     listen 80;
     server_name ${DOMAIN} www.${DOMAIN} dashboard.${DOMAIN} admin.${DOMAIN} api.${DOMAIN};
@@ -55,15 +69,14 @@ server {
     }
 }
 EOF
-
-docker rm -f nginx-ssl-temp 2>/dev/null || true
-docker run -d --name nginx-ssl-temp \
-  -p 80:80 \
-  -v "$(pwd)/nginx/temp:/etc/nginx/conf.d:ro" \
-  -v certbot_webroot:/var/www/certbot:rw \
-  nginx:alpine
-
-sleep 3
+  docker rm -f nginx-ssl-temp 2>/dev/null || true
+  docker run -d --name nginx-ssl-temp \
+    -p 80:80 \
+    -v "$(pwd)/nginx/temp:/etc/nginx/conf.d:ro" \
+    -v certbot_webroot:/var/www/certbot:rw \
+    nginx:alpine
+  sleep 3
+fi
 
 log "Certbot çalıştırılıyor (tüm domain'ler tek sertifikada)..."
 if docker run --rm \
@@ -83,14 +96,15 @@ if docker run --rm \
   -d "api.$DOMAIN"; then
   log "Sertifika alındı. Volume certbot_certs içinde; Nginx bu volume'u kullanıyor."
 else
-  docker stop nginx-ssl-temp 2>/dev/null || true
-  docker rm nginx-ssl-temp 2>/dev/null || true
+  [ "$USE_TEMP_NGINX" = "1" ] && { docker stop nginx-ssl-temp 2>/dev/null || true; docker rm nginx-ssl-temp 2>/dev/null || true; rm -rf nginx/temp; }
   err "Certbot başarısız. DNS'in tüm hostları sunucuya yönlendirdiğinden ve 80 portunun açık olduğundan emin olun."
 fi
 
-docker stop nginx-ssl-temp 2>/dev/null || true
-docker rm nginx-ssl-temp 2>/dev/null || true
-rm -rf nginx/temp
+if [ "$USE_TEMP_NGINX" = "1" ]; then
+  docker stop nginx-ssl-temp 2>/dev/null || true
+  docker rm nginx-ssl-temp 2>/dev/null || true
+  rm -rf nginx/temp
+fi
 
 log "Nginx container'ı yeniden başlatılıyor (sertifikayı yüklemek için)..."
 docker-compose -f docker-compose.prod.yml up -d nginx 2>/dev/null || true

@@ -149,7 +149,7 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-    args:
+      args:
         NEXT_PUBLIC_API_URL: https://${DOMAIN}/api/v1
     container_name: fincalc-web
     restart: unless-stopped
