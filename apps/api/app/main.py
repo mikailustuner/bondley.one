@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select, text
 
 from app.core.config import get_settings
-from app.core.database import async_session_factory
+from app.core.database import async_session_factory, engine
 from app.core.security import hash_password
 from app.models.user import User
 from app.api.v1.router import api_router
@@ -18,45 +18,47 @@ ADMIN_PASSWORD = "admin123"
 
 async def migrate_tlref_table():
     """tlref_rates tablosunu eski sema'dan (rate_value/isin) yeni semaya (index_value/daily_rate) gunceller."""
-    async with async_session_factory() as session:
-        col_check = await session.execute(text(
+    async with engine.begin() as conn:
+        col_check = await conn.execute(text(
             "SELECT column_name FROM information_schema.columns "
             "WHERE table_name = 'tlref_rates' AND column_name = 'rate_value'"
         ))
-        if col_check.scalar_one_or_none() is not None:
+        has_old = col_check.scalar_one_or_none() is not None
+
+        if has_old:
             print("[startup] tlref_rates migration: rate_value -> index_value ...")
-            await session.execute(text(
+            await conn.execute(text(
                 "ALTER TABLE tlref_rates ADD COLUMN IF NOT EXISTS index_value DECIMAL(18,8)"
             ))
-            await session.execute(text(
+            await conn.execute(text(
                 "UPDATE tlref_rates SET index_value = rate_value WHERE index_value IS NULL"
             ))
-            await session.execute(text(
-                "ALTER TABLE tlref_rates ALTER COLUMN index_value SET NOT NULL"
-            ))
-            await session.execute(text(
+            await conn.execute(text(
                 "ALTER TABLE tlref_rates ADD COLUMN IF NOT EXISTS daily_rate DECIMAL(18,10)"
             ))
-            await session.execute(text(
+            await conn.execute(text(
                 "ALTER TABLE tlref_rates DROP COLUMN IF EXISTS rate_value"
             ))
-            await session.execute(text(
+            await conn.execute(text(
                 "ALTER TABLE tlref_rates DROP COLUMN IF EXISTS isin"
             ))
-            await session.commit()
-            print("[startup] tlref_rates migration tamamlandi.")
-        else:
-            col_check2 = await session.execute(text(
-                "SELECT column_name FROM information_schema.columns "
-                "WHERE table_name = 'tlref_rates' AND column_name = 'index_value'"
+            has_data = await conn.execute(text(
+                "SELECT COUNT(*) FROM tlref_rates WHERE index_value IS NOT NULL"
             ))
-            if col_check2.scalar_one_or_none() is None:
-                print("[startup] tlref_rates tablosu bulunamadi veya beklenmeyen yapi, atlaniyor.")
-            else:
-                await session.execute(text(
-                    "ALTER TABLE tlref_rates ADD COLUMN IF NOT EXISTS daily_rate DECIMAL(18,10)"
+            cnt = has_data.scalar()
+            if cnt and cnt > 0:
+                await conn.execute(text(
+                    "ALTER TABLE tlref_rates ALTER COLUMN index_value SET NOT NULL"
                 ))
-                await session.commit()
+            print(f"[startup] tlref_rates migration tamamlandi. {cnt or 0} kayit tasinidi.")
+        else:
+            await conn.execute(text(
+                "ALTER TABLE tlref_rates ADD COLUMN IF NOT EXISTS index_value DECIMAL(18,8)"
+            ))
+            await conn.execute(text(
+                "ALTER TABLE tlref_rates ADD COLUMN IF NOT EXISTS daily_rate DECIMAL(18,10)"
+            ))
+            print("[startup] tlref_rates: index_value/daily_rate sutunlari mevcut veya eklendi.")
 
 
 async def ensure_admin_user():
