@@ -46,7 +46,6 @@ ENV HOSTNAME="0.0.0.0"
 # Node.js module resolution: look in /app/node_modules (standalone root)
 ENV NODE_PATH=/app/node_modules
 
-# In monorepo standalone, server.js is at apps/web/server.js
-# node_modules is at /app/node_modules (standalone root)
-WORKDIR /app/apps/web
-CMD ["node", "server.js"]
+# Standalone output: try both possible locations for server.js
+WORKDIR /app
+CMD ["sh", "-c", "if [ -f apps/web/server.js ]; then cd apps/web && exec node server.js; elif [ -f server.js ]; then exec node server.js; else echo 'ERROR: server.js not found. Contents:' && ls -la && find . -name server.js 2>/dev/null && exit 1; fi"]
