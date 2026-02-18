@@ -1,0 +1,337 @@
+"""
+Tahvil hesaplama metrikleri: TLREF formulleri, kupon donemi, kirli fiyat, birikmis faiz,
+YTM, durasyon, konveksite, oran degisimi. Bond modeli (tbliste) ile uyumlu.
+"""
+
+from datetime import date, timedelta
+from decimal import Decimal, ROUND_HALF_UP
+import logging
+import re
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.bond import Bond
+from app.models.market_data import MarketData
+from app.models.tlref_rate import TLREFRate
+from app.services.bond_calculator import BondCalculator
+
+logger = logging.getLogger(__name__)
+
+FACE_VALUE = Decimal("100")
+
+# coupon_frequency string -> (period_days, frequency_per_year)
+COUPON_FREQUENCY_MAP = [
+    (r"6\s*ayda|yar[iı]?\s*y[iı]l|6\s*ay", (182, 2)),
+    (r"y[iı]ll[iı]k|yillik|1\s*yil|yilda\s*1", (365, 1)),
+    (r"3\s*ayda|3\s*ay|quarter", (91, 4)),
+    (r"12\s*ayda|12\s*ay", (365, 1)),
+    (r"ayda\s*bir|ayl[iı]k", (30, 12)),
+]
+
+
+def parse_coupon_frequency(coupon_frequency: str | None) -> tuple[int, int]:
+    """
+    coupon_frequency string -> (period_days, frequency_per_year).
+    Varsayilan: 6 ayda bir -> (182, 2).
+    """
+    if not coupon_frequency or not str(coupon_frequency).strip():
+        return 182, 2
+    s = str(coupon_frequency).strip().lower()
+    for pattern, (period_days, freq) in COUPON_FREQUENCY_MAP:
+        if re.search(pattern, s, re.IGNORECASE):
+            return period_days, freq
+    return 182, 2
+
+
+def get_current_coupon_period(
+    first_issue_date: date | None,
+    next_coupon_date: date | None,
+    maturity_date: date | None,
+    period_days: int,
+    settlement_date: date,
+) -> tuple[date | None, date | None]:
+    """
+    Yerlesim tarihi icin cari kupon donemi baslangic ve bitis tarihlerini dondurur.
+    next_coupon_date bir sonraki kupon odeme gunu; donem bitisi = next_coupon_date,
+    donem basi = next_coupon_date - period_days.
+    """
+    if not next_coupon_date:
+        if not first_issue_date or not maturity_date or period_days <= 0:
+            return None, None
+        # Donemleri first_issue_date'den itibaren uret, settlement'i iceren donemi bul
+        start = first_issue_date
+        while start + timedelta(days=period_days) <= settlement_date:
+            start = start + timedelta(days=period_days)
+        end = start + timedelta(days=period_days)
+        if end > maturity_date:
+            end = maturity_date
+        return start, end
+    period_end = next_coupon_date
+    period_start = period_end - timedelta(days=period_days)
+    if first_issue_date and period_start < first_issue_date:
+        period_start = first_issue_date
+    return period_start, period_end
+
+
+def annual_reference_rate(
+    tlref_start: Decimal, tlref_end: Decimal, period_days: int
+) -> Decimal | None:
+    """
+    Yillik Gosterge Faiz Orani =
+    (TLREF_donem_sonu / TLREF_donem_basi - 1) * (365 / Kupon_Donem_Gun_Sayisi)
+    """
+    if not tlref_start or tlref_start <= 0 or period_days <= 0:
+        return None
+    growth = tlref_end / tlref_start
+    periodic_return = growth - Decimal("1")
+    annual_factor = Decimal("365") / Decimal(str(period_days))
+    rate = periodic_return * annual_factor
+    return rate.quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
+
+
+def annual_coupon_rate(annual_reference: Decimal | None, spread: Decimal | None) -> Decimal | None:
+    """Yillik Kupon Faiz Orani = Yillik Gosterge + Yillik Basit Ek Getiri (spread)."""
+    if annual_reference is None:
+        return None
+    spread_val = spread if spread is not None else Decimal("0")
+    return (annual_reference + spread_val).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
+
+
+def periodic_coupon_rate(annual_coupon: Decimal | None, period_days: int) -> Decimal | None:
+    """Donemsel Kupon Faiz Orani = Yillik Kupon * (Kupon Donem Gun Sayisi / 365)."""
+    if annual_coupon is None or period_days <= 0:
+        return None
+    return (annual_coupon * Decimal(str(period_days)) / Decimal("365")).quantize(
+        Decimal("0.00000001"), rounding=ROUND_HALF_UP
+    )
+
+
+class BondMetricsService:
+    """Tahvil metriklerini TLREF ve Bond verisiyle hesaplar."""
+
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def get_tlref_for_business_day(self, target_date: date) -> Decimal | None:
+        """
+        target_date icin 'onceki is gunu' TLREF index_value.
+        rate_date <= target_date olan en son kayit.
+        """
+        result = await self.db.execute(
+            select(TLREFRate)
+            .where(TLREFRate.rate_date <= target_date)
+            .order_by(TLREFRate.rate_date.desc())
+            .limit(1)
+        )
+        row = result.scalar_one_or_none()
+        return row.index_value if row else None
+
+    async def get_latest_daily_rate(self) -> Decimal | None:
+        """Son bilinen TLREF gunluk oran (daily_rate), yuzde icin kullanilir."""
+        result = await self.db.execute(
+            select(TLREFRate)
+            .where(TLREFRate.daily_rate.isnot(None))
+            .order_by(TLREFRate.rate_date.desc())
+            .limit(1)
+        )
+        row = result.scalar_one_or_none()
+        return row.daily_rate if row else None
+
+    async def get_clean_price(self, bond_id: int, settlement_date: date) -> Decimal | None:
+        """Settlement tarihi icin market_data.clean_price; yoksa None."""
+        result = await self.db.execute(
+            select(MarketData.clean_price).where(
+                MarketData.bond_id == bond_id,
+                MarketData.trade_date == settlement_date,
+            )
+        )
+        row = result.scalar_one_or_none()
+        return row[0] if row else None
+
+    def _bond_to_calculator_inputs(self, bond: Bond) -> tuple[date | None, date | None, Decimal, int] | None:
+        """
+        Bond -> (issue_date, maturity_date, coupon_rate, coupon_frequency_int).
+        Eksik zorunlu alan varsa None.
+        """
+        issue_date = bond.first_issue_date
+        maturity_date = bond.maturity_date
+        if not issue_date or not maturity_date:
+            return None
+        period_days, freq = parse_coupon_frequency(bond.coupon_frequency)
+        coupon_rate = bond.next_coupon_rate if bond.next_coupon_rate is not None else Decimal("0")
+        return (issue_date, maturity_date, coupon_rate, freq)
+
+    async def compute_metrics(
+        self,
+        bond: Bond,
+        settlement_date: date,
+        clean_price_override: Decimal | None = None,
+    ) -> dict:
+        """
+        Tek tahvil icin tum hesaplanan metrikleri uretir.
+        clean_price: market_data'dan veya bond.last_issue_price; override verilirse o kullanilir.
+        """
+        period_days, freq_per_year = parse_coupon_frequency(bond.coupon_frequency)
+        period_start, period_end = get_current_coupon_period(
+            bond.first_issue_date,
+            bond.next_coupon_date,
+            bond.maturity_date,
+            period_days,
+            settlement_date,
+        )
+
+        clean_price = clean_price_override
+        if clean_price is None:
+            clean_price = await self.get_clean_price(bond.id, settlement_date)
+        if clean_price is None and bond.last_issue_price is not None:
+            clean_price = bond.last_issue_price
+        if clean_price is None:
+            clean_price = FACE_VALUE
+
+        clean_price = Decimal(str(clean_price))
+
+        # TLREF oranlari (donem basi/sonu onceki is gunu)
+        tlref_start = await self.get_tlref_for_business_day(period_start) if period_start else None
+        tlref_end = await self.get_tlref_for_business_day(period_end) if period_end else None
+
+        annual_ref = None
+        annual_coupon = None
+        periodic_coupon = None
+        if tlref_start and tlref_end and period_days > 0:
+            annual_ref = annual_reference_rate(tlref_start, tlref_end, period_days)
+            annual_coupon = annual_coupon_rate(annual_ref, bond.spread)
+            periodic_coupon = periodic_coupon_rate(annual_coupon, period_days)
+
+        # Birikmis faiz: TLREF'li ise Donemsel Kupon * (gun gecen / period_days) * nominal; degilse sabit kupon
+        accrued_interest = None
+        last_coupon = period_start  # donem basi = son kupon tarihi
+        if period_start and period_end and settlement_date >= period_start:
+            days_in_period = (period_end - period_start).days
+            days_passed = (settlement_date - period_start).days
+            if days_in_period > 0 and 0 <= days_passed <= days_in_period:
+                if periodic_coupon is not None:
+                    accrued_interest = (
+                        FACE_VALUE
+                        * periodic_coupon
+                        * Decimal(str(days_passed))
+                        / Decimal(str(days_in_period))
+                    )
+                elif bond.next_coupon_rate is not None:
+                    coupon_payment = FACE_VALUE * bond.next_coupon_rate / Decimal(str(freq_per_year))
+                    accrued_interest = (
+                        coupon_payment
+                        * Decimal(str(days_passed))
+                        / Decimal(str(days_in_period))
+                    )
+                if accrued_interest is not None:
+                    accrued_interest = accrued_interest.quantize(
+                        Decimal("0.00000001"), rounding=ROUND_HALF_UP
+                    )
+
+        if accrued_interest is None:
+            accrued_interest = Decimal("0")
+
+        dirty_price = (clean_price + accrued_interest).quantize(
+            Decimal("0.00000001"), rounding=ROUND_HALF_UP
+        )
+
+        # Oran degisimi (gunluk TLREF)
+        daily_rate_pct = None
+        latest_daily = await self.get_latest_daily_rate()
+        if latest_daily is not None:
+            daily_rate_pct = (latest_daily * Decimal("100")).quantize(
+                Decimal("0.0001"), rounding=ROUND_HALF_UP
+            )
+
+        # YTM, spread, duration, convexity: BondCalculator ile (Bond alanlarini esle)
+        ytm = None
+        spread_bp = None
+        modified_duration = None
+        macaulay_duration = None
+        convexity = None
+        coupon_payment_amount = None
+
+        inputs = self._bond_to_calculator_inputs(bond)
+        if inputs:
+            issue_date, maturity_date, coupon_rate, coupon_frequency_int = inputs
+            try:
+                calc = BondCalculator(
+                    isin=bond.isin_code,
+                    issue_date=issue_date,
+                    maturity_date=maturity_date,
+                    coupon_rate=coupon_rate,
+                    face_value=FACE_VALUE,
+                    coupon_frequency=coupon_frequency_int,
+                )
+                ytm = calc.yield_to_maturity(clean_price, settlement_date)
+                if bond.next_coupon_rate is not None:
+                    coupon_payment_amount = (
+                        FACE_VALUE * bond.next_coupon_rate / Decimal(str(coupon_frequency_int))
+                    ).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
+                tlref_yield = await self._get_tlref_annual_yield(settlement_date)
+                if tlref_yield is not None:
+                    spread_bp = calc.spread(ytm, tlref_yield)
+                modified_duration = calc.modified_duration(clean_price, settlement_date)
+                macaulay_duration = calc.macaulay_duration(clean_price, settlement_date)
+                convexity = self._convexity(calc, clean_price, settlement_date)
+            except Exception as e:
+                logger.warning("BondCalculator metrics failed for %s: %s", bond.isin_code, e)
+
+        return {
+            "annual_reference_rate": float(annual_ref) if annual_ref is not None else None,
+            "annual_coupon_rate": float(annual_coupon) if annual_coupon is not None else None,
+            "periodic_coupon_rate": float(periodic_coupon) if periodic_coupon is not None else None,
+            "accrued_interest": float(accrued_interest),
+            "dirty_price": float(dirty_price),
+            "clean_price_used": float(clean_price),
+            "rate_change_today_pct": float(daily_rate_pct) if daily_rate_pct is not None else None,
+            "yield_to_maturity": float(ytm) if ytm is not None else None,
+            "spread": float(spread_bp) if spread_bp is not None else None,
+            "modified_duration": float(modified_duration) if modified_duration is not None else None,
+            "macaulay_duration": float(macaulay_duration) if macaulay_duration is not None else None,
+            "convexity": float(convexity) if convexity is not None else None,
+            "coupon_payment_amount": float(coupon_payment_amount) if coupon_payment_amount is not None else None,
+            "period_days": period_days,
+            "next_coupon_date": bond.next_coupon_date.isoformat() if bond.next_coupon_date else None,
+        }
+
+    async def _get_tlref_annual_yield(self, target_date: date) -> Decimal | None:
+        """Hedef tarih icin TLREF yillik getiri (daily_rate * 365 veya index kullanimi)."""
+        result = await self.db.execute(
+            select(TLREFRate)
+            .where(TLREFRate.rate_date <= target_date)
+            .order_by(TLREFRate.rate_date.desc())
+            .limit(1)
+        )
+        row = result.scalar_one_or_none()
+        if row is None:
+            return None
+        if row.daily_rate is not None:
+            return row.daily_rate * Decimal("365")
+        return row.index_value
+
+    def _convexity(
+        self, calc: BondCalculator, clean_price: Decimal, settlement_date: date
+    ) -> Decimal | None:
+        """
+        Konveksite: fiyatin getiriye gore ikinci turevi.
+        Sum( t*(t+1)*PV(CF_t) / (1+y)^2 ) / Price; t = period index (1,2,...), y = periyodik getiri.
+        """
+        try:
+            d_price = calc.dirty_price(clean_price, settlement_date)
+            cash_flows = calc.generate_cash_flows(settlement_date)
+            ytm = calc.yield_to_maturity(clean_price, settlement_date)
+            if not cash_flows or ytm == 0 or d_price == 0:
+                return None
+            periodic_yield = ytm / Decimal(str(calc.coupon_frequency))
+            conv_sum = Decimal("0")
+            for t, cf in enumerate(cash_flows, start=1):
+                discount = (Decimal("1") + periodic_yield) ** t
+                if discount != 0:
+                    pv = cf.amount / discount
+                    conv_sum += Decimal(str(t * (t + 1))) * pv / ((Decimal("1") + periodic_yield) ** 2)
+            convexity = conv_sum / d_price
+            return convexity.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
+        except Exception:
+            return None

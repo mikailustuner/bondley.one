@@ -74,6 +74,24 @@ export interface BondListItem {
   is_active: boolean;
 }
 
+export interface BondCalculatedMetrics {
+  annual_reference_rate: number | null;
+  annual_coupon_rate: number | null;
+  periodic_coupon_rate: number | null;
+  accrued_interest: number;
+  dirty_price: number;
+  clean_price_used: number;
+  rate_change_today_pct: number | null;
+  yield_to_maturity: number | null;
+  spread: number | null;
+  modified_duration: number | null;
+  macaulay_duration: number | null;
+  convexity: number | null;
+  coupon_payment_amount: number | null;
+  period_days: number | null;
+  next_coupon_date: string | null;
+}
+
 export interface BondDetail {
   id: number;
   isin_code: string;
@@ -110,6 +128,7 @@ export interface BondDetail {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  calculated_metrics?: BondCalculatedMetrics | null;
 }
 
 export interface BondListResponse {

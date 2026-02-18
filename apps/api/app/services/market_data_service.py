@@ -15,27 +15,42 @@ from app.models.market_data import MarketData
 from app.models.calculation import Calculation
 from app.models.tlref_rate import TLREFRate
 from app.services.bond_calculator import BondCalculator
+from app.services.bond_metrics_service import parse_coupon_frequency
 
 logger = logging.getLogger(__name__)
+
+FACE_VALUE = Decimal("100")
 
 
 class MarketDataService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    def _bond_to_calculator_inputs(self, bond: Bond) -> tuple[date, date, Decimal, int] | None:
+        """Bond (tbliste) -> (issue_date, maturity_date, coupon_rate, coupon_frequency_int)."""
+        if not bond.first_issue_date or not bond.maturity_date:
+            return None
+        _, freq = parse_coupon_frequency(bond.coupon_frequency)
+        coupon_rate = bond.next_coupon_rate if bond.next_coupon_rate is not None else Decimal("0")
+        return (bond.first_issue_date, bond.maturity_date, coupon_rate, freq)
+
     async def run_calculations_for_bond(
         self, bond: Bond, calc_date: date, clean_price: Decimal
     ) -> dict:
         """Tek bir tahvil icin tum hesaplamalari calistir ve DB'ye kaydet."""
         tlref_rate = await self._get_tlref_rate(calc_date)
+        inputs = self._bond_to_calculator_inputs(bond)
+        if not inputs:
+            raise ValueError(f"Bond {bond.isin_code}: first_issue_date veya maturity_date eksik")
 
+        issue_date, maturity_date, coupon_rate, coupon_frequency_int = inputs
         calculator = BondCalculator(
             isin=bond.isin_code,
-            issue_date=bond.issue_date,
-            maturity_date=bond.maturity_date,
-            coupon_rate=bond.coupon_rate,
-            face_value=bond.face_value,
-            coupon_frequency=bond.coupon_frequency,
+            issue_date=issue_date,
+            maturity_date=maturity_date,
+            coupon_rate=coupon_rate,
+            face_value=FACE_VALUE,
+            coupon_frequency=coupon_frequency_int,
         )
 
         result = calculator.full_analysis(clean_price, calc_date, tlref_rate)

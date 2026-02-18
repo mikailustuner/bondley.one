@@ -2,12 +2,22 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from datetime import date
+
 from app.core.database import get_db
 from app.models.bond import Bond
 from app.models.user import User
-from app.schemas.bond import BondResponse, BondListResponse, BondListItem, BondStatsResponse
+from app.schemas.bond import (
+    BondResponse,
+    BondListResponse,
+    BondListItem,
+    BondStatsResponse,
+    BondDetailWithMetrics,
+    BondCalculatedMetrics,
+)
 from app.api.deps import get_current_user, get_admin_user
 from app.services.bond_fetcher import BondFetcher
+from app.services.bond_metrics_service import BondMetricsService
 
 router = APIRouter()
 
@@ -110,9 +120,10 @@ async def get_bond_stats(
     )
 
 
-@router.get("/{isin_code}", response_model=BondResponse)
+@router.get("/{isin_code}", response_model=BondDetailWithMetrics)
 async def get_bond(
     isin_code: str,
+    settlement_date: date | None = Query(None, description="Hesaplama tarihi (varsayilan: bugun)"),
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
@@ -120,7 +131,16 @@ async def get_bond(
     bond = result.scalar_one_or_none()
     if not bond:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tahvil bulunamadi")
-    return BondResponse.model_validate(bond)
+
+    base = BondDetailWithMetrics.model_validate(bond)
+    calc_date = settlement_date or date.today()
+    try:
+        metrics_svc = BondMetricsService(db)
+        metrics = await metrics_svc.compute_metrics(bond, calc_date)
+        base.calculated_metrics = BondCalculatedMetrics(**metrics)
+    except Exception:
+        base.calculated_metrics = None
+    return base
 
 
 @router.post("/sync", tags=["Admin"])

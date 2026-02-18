@@ -68,6 +68,32 @@ class BondListResponse(BaseModel):
     total: int
 
 
+class BondCalculatedMetrics(BaseModel):
+    """Tahvil detayinda gosterilen hesaplanan metrikler (TLREF, kirli fiyat, YTM, vb.)."""
+
+    annual_reference_rate: float | None = None
+    annual_coupon_rate: float | None = None
+    periodic_coupon_rate: float | None = None
+    accrued_interest: float
+    dirty_price: float
+    clean_price_used: float
+    rate_change_today_pct: float | None = None
+    yield_to_maturity: float | None = None
+    spread: float | None = None
+    modified_duration: float | None = None
+    macaulay_duration: float | None = None
+    convexity: float | None = None
+    coupon_payment_amount: float | None = None
+    period_days: int | None = None
+    next_coupon_date: str | None = None
+
+
+class BondDetailWithMetrics(BondResponse):
+    """Tahvil detay + hesaplanan metrikler (GET /bonds/{isin})."""
+
+    calculated_metrics: BondCalculatedMetrics | None = None
+
+
 class BondStatsResponse(BaseModel):
     total_bonds: int
     by_security_type: dict[str, int]

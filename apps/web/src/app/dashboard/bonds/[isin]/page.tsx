@@ -145,6 +145,121 @@ export default function BondDetailPage({ params }: { params: { isin: string } })
         </p>
       </div>
 
+      {bond.calculated_metrics && (
+        <Card className="animate-fade-up border-primary/30 bg-primary/5">
+          <CardHeader>
+            <CardDescription>HESAPLANAN METRIKLER</CardDescription>
+            <CardTitle className="mt-1">Kirli Fiyat, Oran Degisimi, Getiri ve Risk</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-lg border border-border/50 bg-card p-4">
+                <div className="text-label text-muted-foreground mb-1">Kirli Fiyat</div>
+                <div className="font-mono-data text-stat text-primary">
+                  {fmt(bond.calculated_metrics.dirty_price, 4)}
+                </div>
+              </div>
+              <div className="rounded-lg border border-border/50 bg-card p-4">
+                <div className="text-label text-muted-foreground mb-1">Birikmis Faiz</div>
+                <div className="font-mono-data text-stat">
+                  {fmt(bond.calculated_metrics.accrued_interest, 4)}
+                </div>
+              </div>
+              <div className="rounded-lg border border-border/50 bg-card p-4">
+                <div className="text-label text-muted-foreground mb-1">Oran Degisimi (Gunluk TLREF %)</div>
+                <div className="font-mono-data text-stat">
+                  {bond.calculated_metrics.rate_change_today_pct != null
+                    ? `%${fmt(bond.calculated_metrics.rate_change_today_pct, 4)}`
+                    : "—"}
+                </div>
+              </div>
+              <div className="rounded-lg border border-border/50 bg-card p-4">
+                <div className="text-label text-muted-foreground mb-1">Temiz Fiyat (Kullanilan)</div>
+                <div className="font-mono-data text-stat">{fmt(bond.calculated_metrics.clean_price_used, 4)}</div>
+              </div>
+              {bond.calculated_metrics.annual_reference_rate != null && (
+                <div className="rounded-lg border border-border/50 bg-card p-4">
+                  <div className="text-label text-muted-foreground mb-1">Yillik Gosterge Faiz Orani</div>
+                  <div className="font-mono-data text-stat">
+                    %{fmt(bond.calculated_metrics.annual_reference_rate, 4)}
+                  </div>
+                </div>
+              )}
+              {bond.calculated_metrics.annual_coupon_rate != null && (
+                <div className="rounded-lg border border-border/50 bg-card p-4">
+                  <div className="text-label text-muted-foreground mb-1">Yillik Kupon Faiz Orani</div>
+                  <div className="font-mono-data text-stat">
+                    %{fmt(bond.calculated_metrics.annual_coupon_rate, 4)}
+                  </div>
+                </div>
+              )}
+              {bond.calculated_metrics.periodic_coupon_rate != null && (
+                <div className="rounded-lg border border-border/50 bg-card p-4">
+                  <div className="text-label text-muted-foreground mb-1">Donemsel Kupon Faiz Orani</div>
+                  <div className="font-mono-data text-stat">
+                    %{fmt(bond.calculated_metrics.periodic_coupon_rate, 4)}
+                  </div>
+                </div>
+              )}
+              {bond.calculated_metrics.yield_to_maturity != null && (
+                <div className="rounded-lg border border-border/50 bg-card p-4">
+                  <div className="text-label text-muted-foreground mb-1">Vadeye Kadar Getiri (YTM)</div>
+                  <div className="font-mono-data text-stat">
+                    %{fmt(bond.calculated_metrics.yield_to_maturity, 4)}
+                  </div>
+                </div>
+              )}
+              {bond.calculated_metrics.spread != null && (
+                <div className="rounded-lg border border-border/50 bg-card p-4">
+                  <div className="text-label text-muted-foreground mb-1">Spread</div>
+                  <div className="font-mono-data text-stat">
+                    %{fmt(bond.calculated_metrics.spread, 4)}
+                  </div>
+                </div>
+              )}
+              {bond.calculated_metrics.modified_duration != null && (
+                <div className="rounded-lg border border-border/50 bg-card p-4">
+                  <div className="text-label text-muted-foreground mb-1">Modifiye Durasyon</div>
+                  <div className="font-mono-data text-stat">
+                    {fmt(bond.calculated_metrics.modified_duration, 4)}
+                  </div>
+                </div>
+              )}
+              {bond.calculated_metrics.macaulay_duration != null && (
+                <div className="rounded-lg border border-border/50 bg-card p-4">
+                  <div className="text-label text-muted-foreground mb-1">Macaulay Durasyon</div>
+                  <div className="font-mono-data text-stat">
+                    {fmt(bond.calculated_metrics.macaulay_duration, 4)}
+                  </div>
+                </div>
+              )}
+              {bond.calculated_metrics.convexity != null && (
+                <div className="rounded-lg border border-border/50 bg-card p-4">
+                  <div className="text-label text-muted-foreground mb-1">Konveksite</div>
+                  <div className="font-mono-data text-stat">
+                    {fmt(bond.calculated_metrics.convexity, 4)}
+                  </div>
+                </div>
+              )}
+              {bond.calculated_metrics.coupon_payment_amount != null && (
+                <div className="rounded-lg border border-border/50 bg-card p-4">
+                  <div className="text-label text-muted-foreground mb-1">Kupon Odeme Tutari</div>
+                  <div className="font-mono-data text-stat">
+                    {fmt(bond.calculated_metrics.coupon_payment_amount, 4)}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!bond.calculated_metrics && (
+        <p className="text-data-sm text-muted-foreground animate-fade-up">
+          Hesaplanan metrikler su an kullanilamiyor (TLREF veya tahvil tarihleri eksik olabilir).
+        </p>
+      )}
+
       <div className="grid gap-px md:grid-cols-4 bg-border/30 rounded-lg overflow-hidden animate-fade-up">
         {topMetrics.map((m) => (
           <div
