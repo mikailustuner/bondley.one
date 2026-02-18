@@ -13,7 +13,8 @@ COPY . .
 
 RUN addgroup --system --gid 1001 appgroup && \
     adduser --system --uid 1001 --ingroup appgroup appuser && \
-    mkdir -p /tmp/fincalc && chown appuser:appgroup /tmp/fincalc
+    mkdir -p /tmp/fincalc && chown appuser:appgroup /tmp/fincalc && \
+    chown -R appuser:appgroup /app
 
 EXPOSE 8000
 

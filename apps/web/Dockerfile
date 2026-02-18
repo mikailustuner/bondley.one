@@ -38,7 +38,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 # Copy node_modules from builder (standalone might not include all deps in monorepo)
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
-# Copy static assets
+# Copy static assets - Next.js standalone preserves monorepo structure
+# Static files must be at apps/web/.next/static relative to server.js location
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 

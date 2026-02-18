@@ -125,7 +125,7 @@ services:
       dockerfile: Dockerfile
     container_name: fincalc-celery-beat
     restart: unless-stopped
-    command: celery -A app.tasks.celery_app beat --loglevel=info
+    command: celery -A app.tasks.celery_app beat --loglevel=info --pidfile=/tmp/celerybeat.pid --schedule=/tmp/celerybeat-schedule
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
