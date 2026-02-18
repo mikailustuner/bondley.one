@@ -1,0 +1,35 @@
+# FastAPI
+fastapi[standard]
+uvicorn[standard]
+python-multipart
+
+# Database
+sqlalchemy[asyncio]
+asyncpg
+alembic
+
+# Auth
+python-jose[cryptography]
+passlib[bcrypt]
+bcrypt
+
+# Data & Finance
+numpy
+numpy-financial
+pandas
+openpyxl
+
+# Task Queue
+celery[redis]
+redis
+
+# HTTP Client (for BIST data fetching)
+httpx
+aiofiles
+
+# Config
+pydantic-settings
+python-dotenv
+
+# Utilities
+python-dateutil

@@ -1,0 +1,106 @@
+"""
+Celery tasks for automated data fetching and calculations.
+
+Daily schedule (weekdays):
+- 18:30 Istanbul time: Fetch TLREF from BIST
+- 18:45 Istanbul time: Run calculations for all active bonds
+"""
+
+import asyncio
+import logging
+from datetime import date
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
+
+from app.tasks.celery_app import celery_app
+from app.core.config import get_settings
+
+logger = logging.getLogger(__name__)
+settings = get_settings()
+
+sync_engine = create_engine(settings.DATABASE_URL_SYNC)
+SyncSession = sessionmaker(bind=sync_engine)
+
+
+def _run_async(coro):
+    """Helper to run async code from sync Celery tasks."""
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
+
+
+@celery_app.task(name="app.tasks.data_tasks.fetch_daily_tlref", bind=True, max_retries=3)
+def fetch_daily_tlref(self):
+    """Gunluk TLREF oranini BIST'ten cek ve DB'ye yaz."""
+    logger.info("Task: Fetching daily TLREF rate...")
+
+    async def _fetch():
+        from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+        from app.services.tlref_fetcher import TLREFFetcher
+
+        engine = create_async_engine(settings.DATABASE_URL)
+        session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+        async with session_factory() as db:
+            fetcher = TLREFFetcher(db)
+            result = await fetcher.fetch_daily()
+            return result
+
+    try:
+        result = _run_async(_fetch())
+        logger.info(f"Daily TLREF fetch result: {result}")
+        return result
+    except Exception as exc:
+        logger.error(f"Daily TLREF fetch failed: {exc}")
+        raise self.retry(exc=exc, countdown=60 * 5)
+
+
+@celery_app.task(name="app.tasks.data_tasks.run_daily_calculations", bind=True, max_retries=2)
+def run_daily_calculations(self):
+    """Tum aktif tahviller icin gunluk hesaplamalari calistir."""
+    logger.info("Task: Running daily calculations...")
+
+    async def _calculate():
+        from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+        from app.services.market_data_service import MarketDataService
+
+        engine = create_async_engine(settings.DATABASE_URL)
+        session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+        async with session_factory() as db:
+            service = MarketDataService(db)
+            results = await service.run_daily_calculations(date.today())
+            return {"calculated": len(results), "date": str(date.today())}
+
+    try:
+        result = _run_async(_calculate())
+        logger.info(f"Daily calculations result: {result}")
+        return result
+    except Exception as exc:
+        logger.error(f"Daily calculations failed: {exc}")
+        raise self.retry(exc=exc, countdown=60 * 5)
+
+
+@celery_app.task(name="app.tasks.data_tasks.fetch_historical_tlref")
+def fetch_historical_tlref():
+    """Tarihsel TLREF verilerini BIST'ten cek (ilk kurulumda bir kez calistirilir)."""
+    logger.info("Task: Fetching historical TLREF data...")
+
+    async def _fetch():
+        from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+        from app.services.tlref_fetcher import TLREFFetcher
+
+        engine = create_async_engine(settings.DATABASE_URL)
+        session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+        async with session_factory() as db:
+            fetcher = TLREFFetcher(db)
+            result = await fetcher.fetch_historical()
+            return result
+
+    result = _run_async(_fetch())
+    logger.info(f"Historical TLREF fetch result: {result}")
+    return result
