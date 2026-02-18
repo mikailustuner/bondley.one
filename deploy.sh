@@ -37,27 +37,92 @@ fi
 log "Domain: $DOMAIN"
 log "Pre-flight checks passed."
 
+# --- DNS Check ---
+log "DNS kayitlari kontrol ediliyor..."
+DNS_CHECK_FAILED=0
+for subdomain in "" "www" "dashboard" "admin" "api"; do
+    if [ -z "$subdomain" ]; then
+        check_domain="$DOMAIN"
+    else
+        check_domain="${subdomain}.${DOMAIN}"
+    fi
+    
+    if ! dig +short "$check_domain" | grep -q "^[0-9]"; then
+        warn "  $check_domain -> DNS kaydi bulunamadi!"
+        DNS_CHECK_FAILED=1
+    else
+        log "  $check_domain -> OK"
+    fi
+done
+
+if [ $DNS_CHECK_FAILED -eq 1 ]; then
+    warn "DNS kayitlari henuz propagate olmamis olabilir."
+    warn "Devam etmek istiyor musunuz? (y/n)"
+    read -r response
+    if [ "$response" != "y" ] && [ "$response" != "Y" ]; then
+        error "DNS kayitlarini kontrol edip tekrar deneyin."
+    fi
+fi
+
 # --- Step 1: SSL Certificate (first time only) ---
 if [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
     log "SSL sertifikasi aliniyor (Let's Encrypt)..."
+    
+    # Create temporary nginx config for ACME challenge only
+    mkdir -p nginx/temp
+    cat > nginx/temp/default.conf <<EOF
+server {
+    listen 80;
+    server_name ${DOMAIN} www.${DOMAIN} dashboard.${DOMAIN} admin.${DOMAIN} api.${DOMAIN};
+    
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+    
+    location / {
+        return 200 "ACME Challenge Ready";
+        add_header Content-Type text/plain;
+    }
+}
+EOF
 
-    # Temporarily start nginx for ACME challenge
-    docker-compose -f docker-compose.prod.yml up -d nginx
-
-    docker-compose -f docker-compose.prod.yml run --rm certbot certonly \
+    # Start nginx with temp config for ACME challenge
+    docker run -d --name nginx-temp \
+        -p 80:80 \
+        -v "$(pwd)/nginx/temp:/etc/nginx/conf.d:ro" \
+        -v certbot_webroot:/var/www/certbot:rw \
+        nginx:alpine || docker start nginx-temp
+    
+    sleep 3
+    
+    log "Certbot calistiriliyor..."
+    if docker run --rm \
+        -v certbot_webroot:/var/www/certbot:rw \
+        -v certbot_certs:/etc/letsencrypt:rw \
+        certbot/certbot certonly \
         --webroot \
         --webroot-path=/var/www/certbot \
         --email "${CERTBOT_EMAIL}" \
         --agree-tos \
         --no-eff-email \
+        --non-interactive \
         -d "$DOMAIN" \
         -d "www.$DOMAIN" \
         -d "dashboard.$DOMAIN" \
         -d "admin.$DOMAIN" \
-        -d "api.$DOMAIN"
-
-    docker-compose -f docker-compose.prod.yml down
-    log "SSL sertifikasi alindi."
+        -d "api.$DOMAIN"; then
+        log "SSL sertifikasi basariyla alindi!"
+    else
+        warn "SSL sertifikasi alinamadi. Devam ediliyor (HTTP ile calisacak)..."
+        warn "Manuel olarak tekrar denemek icin:"
+        warn "  docker-compose -f docker-compose.prod.yml run --rm certbot certonly --webroot --webroot-path=/var/www/certbot -d $DOMAIN"
+    fi
+    
+    # Cleanup temp nginx
+    docker stop nginx-temp 2>/dev/null || true
+    docker rm nginx-temp 2>/dev/null || true
+    rm -rf nginx/temp
+    
 else
     log "SSL sertifikasi zaten mevcut, atlaniyor."
 fi
