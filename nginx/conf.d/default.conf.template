@@ -1,25 +1,12 @@
-# --- HTTP -> HTTPS redirect ---
+# --- HTTP Server (always available, for ACME challenge and fallback) ---
+# API subdomain
 server {
     listen 80;
-    server_name ${DOMAIN} *.${DOMAIN};
+    server_name api.${DOMAIN};
 
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
     }
-
-    location / {
-        return 301 https://$host$request_uri;
-    }
-}
-
-# --- API: api.domain.com ---
-server {
-    listen 443 ssl;
-    server_name api.${DOMAIN};
-
-    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
-    include /etc/nginx/ssl-params.conf;
 
     location / {
         proxy_pass http://api:8000;
@@ -32,14 +19,14 @@ server {
     }
 }
 
-# --- Dashboard: dashboard.domain.com ---
+# Web subdomains (dashboard, admin, landing)
 server {
-    listen 443 ssl;
-    server_name dashboard.${DOMAIN};
+    listen 80;
+    server_name dashboard.${DOMAIN} admin.${DOMAIN} ${DOMAIN} www.${DOMAIN};
 
-    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
-    include /etc/nginx/ssl-params.conf;
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
 
     location / {
         proxy_pass http://web:3000;
@@ -50,38 +37,41 @@ server {
     }
 }
 
-# --- Admin: admin.domain.com ---
-server {
-    listen 443 ssl;
-    server_name admin.${DOMAIN};
+# --- HTTPS Servers (only if SSL cert exists) ---
+# These will be included only if certbot certificates are available
+# For now, we'll use HTTP fallback above
 
-    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
-    include /etc/nginx/ssl-params.conf;
+# Note: SSL server blocks are commented out until certificates are obtained
+# Uncomment these after running certbot successfully
 
-    location / {
-        proxy_pass http://web:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
+# server {
+#     listen 443 ssl;
+#     server_name api.${DOMAIN};
+#     ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+#     include /etc/nginx/ssl-params.conf;
+#     location / {
+#         proxy_pass http://api:8000;
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Real-IP $remote_addr;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#         proxy_set_header X-Forwarded-Proto $scheme;
+#         proxy_read_timeout 300s;
+#         proxy_connect_timeout 75s;
+#     }
+# }
 
-# --- Landing: domain.com / www.domain.com ---
-server {
-    listen 443 ssl;
-    server_name ${DOMAIN} www.${DOMAIN};
-
-    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
-    include /etc/nginx/ssl-params.conf;
-
-    location / {
-        proxy_pass http://web:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
+# server {
+#     listen 443 ssl;
+#     server_name dashboard.${DOMAIN} admin.${DOMAIN} ${DOMAIN} www.${DOMAIN};
+#     ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+#     include /etc/nginx/ssl-params.conf;
+#     location / {
+#         proxy_pass http://web:3000;
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Real-IP $remote_addr;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#         proxy_set_header X-Forwarded-Proto $scheme;
+#     }
+# }
