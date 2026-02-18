@@ -86,6 +86,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS}
       BIST_TLREF_DAILY_URL: https://borsaistanbul.com/datum/bisttlrefendeksi.csv
       BIST_TLREF_HISTORICAL_URL: https://borsaistanbul.com/datum/BISTTLREFENDEKSI_D.zip
+      BIST_BOND_LIST_URL: https://borsaistanbul.com/datum/tbliste.zip
     depends_on:
       postgres:
         condition: service_healthy

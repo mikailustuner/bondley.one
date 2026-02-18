@@ -5,90 +5,24 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { api } from "@/lib/api-client";
+import { api, BondListItem, BondStats } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 
-type BondItem = {
-  id: number;
-  isin_code: string;
-  bond_type: string;
-  issue_date: string;
-  maturity_date: string;
-  coupon_rate: number | string;
-  face_value: number | string;
-  is_active: boolean;
+const CURRENCY_COLORS: Record<string, string> = {
+  TRY: "default",
+  USD: "secondary",
+  EUR: "outline",
 };
-
-type CalcData = {
-  yield_to_maturity?: number | string;
-  spread?: number | string;
-  dirty_price?: number | string;
-  macaulay_duration?: number | string;
-};
-
-function BondRowWithCalc({ bond }: { bond: BondItem }) {
-  const [calc, setCalc] = useState<CalcData | null>(null);
-  const [price, setPrice] = useState<string>("-");
-
-  useEffect(() => {
-    const token = getToken();
-    if (!token) return;
-    (async () => {
-      try {
-        const calcs = await api.calculations.get(token, bond.isin_code);
-        if (calcs?.length) {
-          setCalc(calcs[calcs.length - 1]);
-        }
-        const md = await api.marketData.get(token, bond.isin_code);
-        if (md?.length) {
-          const cp = md[md.length - 1].clean_price;
-          if (cp != null) setPrice(parseFloat(String(cp)).toFixed(2));
-        }
-      } catch {
-        /* skip */
-      }
-    })();
-  }, [bond.isin_code]);
-
-  const ytm = calc?.yield_to_maturity ? parseFloat(String(calc.yield_to_maturity)) : null;
-  const spread = calc?.spread != null ? parseFloat(String(calc.spread)) : null;
-  const duration = calc?.macaulay_duration ? parseFloat(String(calc.macaulay_duration)).toFixed(3) : "-";
-  const coupon = parseFloat(String(bond.coupon_rate));
-
-  return (
-    <tr className="border-b border-border/30 last:border-0 hover:bg-secondary/30 transition-colors group">
-      <td className="py-3">
-        <Link
-          href={`/dashboard/bonds/${bond.isin_code}`}
-          className="font-mono-data text-data-sm text-foreground group-hover:text-primary transition-colors"
-        >
-          {bond.isin_code}
-        </Link>
-      </td>
-      <td className="py-3">
-        <Badge variant={bond.bond_type === "TRT" ? "default" : "secondary"}>{bond.bond_type}</Badge>
-      </td>
-      <td className="py-3 font-mono-data text-data-sm text-muted-foreground">
-        {new Date(bond.maturity_date).toLocaleDateString("tr-TR")}
-      </td>
-      <td className="py-3 font-mono-data text-data-sm text-foreground">
-        %{(coupon * 100).toFixed(2)}
-      </td>
-      <td className="py-3 text-right font-mono-data text-data-sm text-foreground">{price}</td>
-      <td className="py-3 text-right font-mono-data text-data-sm text-positive">
-        {ytm != null ? `%${(ytm * 100).toFixed(2)}` : "-"}
-      </td>
-      <td className="py-3 text-right font-mono-data text-data-sm text-muted-foreground">{duration}</td>
-    </tr>
-  );
-}
 
 export default function BondsListPage() {
-  const [bonds, setBonds] = useState<BondItem[]>([]);
+  const [bonds, setBonds] = useState<BondListItem[]>([]);
   const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState<BondStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [currencyFilter, setCurrencyFilter] = useState<string>("");
+  const [typeFilter, setTypeFilter] = useState<string>("");
 
   useEffect(() => {
     const token = getToken();
@@ -97,78 +31,267 @@ export default function BondsListPage() {
       setLoading(false);
       return;
     }
-    api.bonds
-      .list(token, { active_only: true, limit: 3000 })
-      .then((res) => {
-        setBonds(res.items || []);
-        setTotal(res.total ?? 0);
+
+    Promise.all([
+      api.bonds.list(token, { active_only: true, limit: 3000 }),
+      api.bonds.stats(token),
+    ])
+      .then(([listRes, statsRes]) => {
+        setBonds(listRes.items || []);
+        setTotal(listRes.total ?? 0);
+        setStats(statsRes);
       })
       .catch((e) => setError(e?.message || "Veri yuklenemedi"))
       .finally(() => setLoading(false));
   }, []);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return bonds;
-    const q = search.toUpperCase();
-    return bonds.filter((b) => b.isin_code.toUpperCase().includes(q));
-  }, [bonds, search]);
+    let result = bonds;
+    if (search.trim()) {
+      const q = search.toUpperCase();
+      result = result.filter(
+        (b) =>
+          b.isin_code.toUpperCase().includes(q) ||
+          (b.issuer && b.issuer.toUpperCase().includes(q)),
+      );
+    }
+    if (currencyFilter) {
+      result = result.filter((b) => b.currency === currencyFilter);
+    }
+    if (typeFilter) {
+      result = result.filter((b) => b.security_type && b.security_type.includes(typeFilter));
+    }
+    return result;
+  }, [bonds, search, currencyFilter, typeFilter]);
+
+  const securityTypes = useMemo(() => {
+    const types = new Set<string>();
+    bonds.forEach((b) => {
+      if (b.security_type) types.add(b.security_type);
+    });
+    return Array.from(types).sort();
+  }, [bonds]);
+
+  const currencies = useMemo(() => {
+    const curs = new Set<string>();
+    bonds.forEach((b) => curs.add(b.currency));
+    return Array.from(curs).sort();
+  }, [bonds]);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between animate-fade-up">
         <div>
           <h1 className="font-display text-display-md text-foreground">Tahviller</h1>
-          <p className="text-data-sm text-muted-foreground mt-1">Tum aktif Turk Devlet Tahvilleri</p>
+          <p className="text-data-sm text-muted-foreground mt-1">
+            BIST Borclanma Araclari — {total.toLocaleString("tr-TR")} aktif kayit
+          </p>
         </div>
-        <div className="w-64">
+      </div>
+
+      {stats && (
+        <div className="grid gap-px md:grid-cols-4 bg-border/30 rounded-lg overflow-hidden animate-fade-up">
+          <div className="bg-card p-5 grain">
+            <div className="text-label text-muted-foreground mb-2">TOPLAM TAHVIL</div>
+            <div className="font-mono-data text-stat text-primary">
+              {stats.total_bonds.toLocaleString("tr-TR")}
+            </div>
+            <div className="text-label text-muted-foreground/60 mt-1">Aktif kayit</div>
+          </div>
+          <div className="bg-card p-5 grain">
+            <div className="text-label text-muted-foreground mb-2">ORT. VADE</div>
+            <div className="font-mono-data text-stat text-foreground">
+              {stats.avg_days_to_maturity != null
+                ? `${Math.round(stats.avg_days_to_maturity)} gun`
+                : "—"}
+            </div>
+            <div className="text-label text-muted-foreground/60 mt-1">Kalan gun</div>
+          </div>
+          <div className="bg-card p-5 grain">
+            <div className="text-label text-muted-foreground mb-2">PARA BIRIMI</div>
+            <div className="font-mono-data text-stat text-foreground">
+              {Object.keys(stats.by_currency).length}
+            </div>
+            <div className="text-label text-muted-foreground/60 mt-1">
+              {Object.entries(stats.by_currency)
+                .sort(([, a], [, b]) => b - a)
+                .slice(0, 3)
+                .map(([k, v]) => `${k}: ${v}`)
+                .join(", ")}
+            </div>
+          </div>
+          <div className="bg-card p-5 grain">
+            <div className="text-label text-muted-foreground mb-2">MK TURU</div>
+            <div className="font-mono-data text-stat text-foreground">
+              {Object.keys(stats.by_security_type).length}
+            </div>
+            <div className="text-label text-muted-foreground/60 mt-1">Farkli tur</div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-3 animate-fade-up-delay-1">
+        <div className="flex-1 min-w-[200px]">
           <Input
-            placeholder="ISIN ile ara..."
+            placeholder="ISIN veya ihracciyla ara..."
             className="font-mono-data"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        <select
+          className="rounded-md border border-border bg-card px-3 py-2 text-data-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+          value={currencyFilter}
+          onChange={(e) => setCurrencyFilter(e.target.value)}
+        >
+          <option value="">Tum Para Birimleri</option>
+          {currencies.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+        <select
+          className="rounded-md border border-border bg-card px-3 py-2 text-data-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary max-w-[280px]"
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+        >
+          <option value="">Tum MK Turleri</option>
+          {securityTypes.map((t) => (
+            <option key={t} value={t}>
+              {t.length > 40 ? t.substring(0, 40) + "…" : t}
+            </option>
+          ))}
+        </select>
       </div>
 
       <Card className="animate-fade-up-delay-1">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardDescription>PORTFOY</CardDescription>
+              <CardDescription>BORCLANMA ARACLARI</CardDescription>
               <CardTitle className="mt-1">Tahvil Listesi</CardTitle>
             </div>
             <span className="text-label text-muted-foreground">
-              {search ? `${filtered.length} / ` : ""}{total} KAYIT
+              {search || currencyFilter || typeFilter
+                ? `${filtered.length} / `
+                : ""}
+              {total} KAYIT
             </span>
           </div>
         </CardHeader>
         <CardContent>
-          {loading && <p className="text-data-sm text-muted-foreground py-4">Yukleniyor...</p>}
+          {loading && (
+            <p className="text-data-sm text-muted-foreground py-4">Yukleniyor...</p>
+          )}
           {error && <p className="text-data-sm text-destructive py-4">{error}</p>}
           {!loading && !error && (
             <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
               <table className="w-full">
                 <thead className="sticky top-0 bg-card z-10">
                   <tr className="border-b border-border">
-                    {["ISIN KODU", "TIP", "VADE", "KUPON", "TEMIZ FIYAT", "YTM", "DURASYON"].map((h, i) => (
-                      <th
-                        key={h}
-                        className={`pb-3 text-label text-muted-foreground font-normal ${i >= 4 ? "text-right" : "text-left"}`}
-                      >
-                        {h}
-                      </th>
-                    ))}
+                    <th className="pb-3 text-left text-label text-muted-foreground font-normal">
+                      ISIN
+                    </th>
+                    <th className="pb-3 text-left text-label text-muted-foreground font-normal">
+                      IHRACÇI
+                    </th>
+                    <th className="pb-3 text-left text-label text-muted-foreground font-normal">
+                      TUR
+                    </th>
+                    <th className="pb-3 text-left text-label text-muted-foreground font-normal">
+                      GETIRI TURU
+                    </th>
+                    <th className="pb-3 text-center text-label text-muted-foreground font-normal">
+                      DOVIZ
+                    </th>
+                    <th className="pb-3 text-right text-label text-muted-foreground font-normal">
+                      VADE
+                    </th>
+                    <th className="pb-3 text-right text-label text-muted-foreground font-normal">
+                      SON FIYAT
+                    </th>
+                    <th className="pb-3 text-right text-label text-muted-foreground font-normal">
+                      GETIRI %
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((bond) => (
-                    <BondRowWithCalc key={bond.isin_code} bond={bond} />
+                    <tr
+                      key={bond.isin_code}
+                      className="border-b border-border/30 last:border-0 hover:bg-secondary/30 transition-colors group"
+                    >
+                      <td className="py-3">
+                        <Link
+                          href={`/dashboard/bonds/${bond.isin_code}`}
+                          className="font-mono-data text-data-sm text-foreground group-hover:text-primary transition-colors"
+                        >
+                          {bond.isin_code}
+                        </Link>
+                      </td>
+                      <td className="py-3 text-data-sm text-muted-foreground max-w-[200px] truncate">
+                        {bond.issuer
+                          ? bond.issuer.length > 35
+                            ? bond.issuer.substring(0, 35) + "…"
+                            : bond.issuer
+                          : "—"}
+                      </td>
+                      <td className="py-3">
+                        {bond.security_type ? (
+                          <span className="text-data-sm text-muted-foreground">
+                            {bond.security_type.split("/")[0].trim().length > 25
+                              ? bond.security_type.split("/")[0].trim().substring(0, 25) + "…"
+                              : bond.security_type.split("/")[0].trim()}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="py-3">
+                        {bond.yield_type ? (
+                          <span className="text-data-sm text-muted-foreground">
+                            {bond.yield_type.split("/")[0].trim().length > 20
+                              ? bond.yield_type.split("/")[0].trim().substring(0, 20) + "…"
+                              : bond.yield_type.split("/")[0].trim()}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="py-3 text-center">
+                        <Badge
+                          variant={
+                            (CURRENCY_COLORS[bond.currency] as any) || "outline"
+                          }
+                        >
+                          {bond.currency}
+                        </Badge>
+                      </td>
+                      <td className="py-3 text-right font-mono-data text-data-sm text-muted-foreground">
+                        {bond.days_to_maturity != null
+                          ? `${bond.days_to_maturity} gün`
+                          : bond.maturity_date
+                            ? new Date(bond.maturity_date).toLocaleDateString("tr-TR")
+                            : "—"}
+                      </td>
+                      <td className="py-3 text-right font-mono-data text-data-sm text-foreground">
+                        {bond.last_issue_price != null
+                          ? Number(bond.last_issue_price).toFixed(3)
+                          : "—"}
+                      </td>
+                      <td className="py-3 text-right font-mono-data text-data-sm text-positive">
+                        {bond.last_issue_yield != null
+                          ? `%${Number(bond.last_issue_yield).toFixed(2)}`
+                          : "—"}
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>
               {filtered.length === 0 && (
                 <p className="text-data-sm text-muted-foreground py-6 text-center">
-                  {search ? "Aramayla esklesen tahvil bulunamadi" : "Henuz tahvil eklenmemis"}
+                  {search || currencyFilter || typeFilter
+                    ? "Filtreyle eslesen tahvil bulunamadi"
+                    : "Henuz tahvil eklenmemis. Admin panelden tahvil listesini guncelleyin."}
                 </p>
               )}
             </div>

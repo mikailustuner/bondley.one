@@ -19,17 +19,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             <div className="hidden md:flex items-center gap-1">
               {[
-                { href: "/dashboard", label: "Genel Bakis", active: true },
+                { href: "/dashboard", label: "Genel Bakis" },
+                { href: "/dashboard/bonds", label: "Tahviller" },
                 { href: "/dashboard/analytics", label: "Analiz" },
               ].map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`px-3 py-1.5 rounded-sm text-data-sm transition-colors ${
-                    item.active
-                      ? "text-primary bg-primary/5"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                  }`}
+                  className="px-3 py-1.5 rounded-sm text-data-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                 >
                   {item.label}
                 </Link>

@@ -65,15 +65,16 @@ export default function LandingPage() {
               </div>
 
               <h1 className="font-display text-display-xl text-foreground">
-                TLREF Endeks
+                BIST Borclanma Araclari
                 <br />
                 <span className="text-primary">Takip Terminali</span>
               </h1>
             </div>
 
             <p className="text-lg text-muted-foreground leading-relaxed max-w-xl animate-fade-up-delay-1 font-body">
-              Borsa Istanbul BIST TLREF Endeks degerlerini gercek zamanli takip edin. Tarihsel
-              veriler, gunluk oranlar ve istatistiksel analiz tek bir terminalde.
+              Borsa Istanbul BIST TLREF Endeks degerleri ve 2000+ borclanma aracini gercek zamanli
+              takip edin. Tahvil listesi, tarihsel veriler, gunluk oranlar ve istatistiksel analiz
+              tek bir terminalde.
             </p>
 
             <div className="flex items-center gap-4 pt-2 animate-fade-up-delay-2">
@@ -126,6 +127,15 @@ export default function LandingPage() {
                 </div>
 
                 <div className="flex justify-between items-baseline border-b border-border/50 pb-3">
+                  <span className="text-label text-muted-foreground">AKTIF TAHVIL</span>
+                  <span className="font-mono-data text-data-sm text-primary">
+                    {summary?.total_bonds != null
+                      ? summary.total_bonds.toLocaleString("tr-TR")
+                      : "—"}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-baseline border-b border-border/50 pb-3">
                   <span className="text-label text-muted-foreground">SON TARIH</span>
                   <span className="font-mono-data text-data-sm text-muted-foreground">
                     {summary?.tlref_date
@@ -135,10 +145,10 @@ export default function LandingPage() {
                 </div>
 
                 <div className="flex justify-between items-baseline">
-                  <span className="text-label text-muted-foreground">TOPLAM KAYIT</span>
+                  <span className="text-label text-muted-foreground">TLREF KAYIT</span>
                   <span className="font-mono-data text-data-sm text-muted-foreground">
-                    {summary?.total_records
-                      ? summary.total_records.toLocaleString("tr-TR")
+                    {summary?.total_tlref_records
+                      ? summary.total_tlref_records.toLocaleString("tr-TR")
                       : "—"}
                   </span>
                 </div>
@@ -154,19 +164,19 @@ export default function LandingPage() {
         <div className="grid md:grid-cols-3 gap-px bg-border/50 rounded-lg overflow-hidden">
           {[
             {
+              number: "2.100+",
+              label: "BORCLANMA ARACI",
+              desc: "Devlet tahvili, hazine bonosu, ozel sektor tahvili, kira sertifikasi ve daha fazlasi BIST'ten otomatik cekilir.",
+            },
+            {
               number: "1.679+",
-              label: "TARIHSEL KAYIT",
-              desc: "Haziran 2019'dan bu yana tum BIST TLREF Endeks degerleri otomatik olarak cekilir.",
+              label: "TLREF KAYIT",
+              desc: "Haziran 2019'dan bu yana tum BIST TLREF Endeks degerleri otomatik olarak cekilir ve saklanir.",
             },
             {
               number: "18:30",
               label: "OTOMATIK GUNCELLEME",
-              desc: "Her is gunu Borsa Istanbul'dan gunluk TLREF endeks degeri otomatik cekilir.",
-            },
-            {
-              number: "<50ms",
-              label: "HESAPLAMA SURESI",
-              desc: "Gunluk oranlar, yillik bilesik getiri ve istatistikler aninda hesaplanir.",
+              desc: "Her is gunu Borsa Istanbul'dan gunluk TLREF endeks degeri ve tahvil listesi otomatik cekilir.",
             },
           ].map((item) => (
             <div key={item.label} className="bg-card p-8 grain">

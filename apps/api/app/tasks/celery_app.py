@@ -29,4 +29,9 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(hour=18, minute=30, day_of_week="1-5"),
         "options": {"queue": "default"},
     },
+    "fetch-bond-list": {
+        "task": "app.tasks.data_tasks.fetch_bond_list",
+        "schedule": crontab(hour=19, minute=0, day_of_week="1-5"),
+        "options": {"queue": "default"},
+    },
 }

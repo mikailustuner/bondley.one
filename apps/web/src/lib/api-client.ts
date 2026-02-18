@@ -25,6 +25,8 @@ async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promis
   return res.json();
 }
 
+// --- TLREF Types ---
+
 export interface TLREFRecord {
   id: number;
   rate_date: string;
@@ -50,8 +52,80 @@ export interface PublicSummary {
   tlref_date: string | null;
   tlref_daily_rate: number | null;
   tlref_annualized_rate: number | null;
-  total_records: number;
+  total_tlref_records: number;
+  total_bonds: number;
 }
+
+// --- Bond Types ---
+
+export interface BondListItem {
+  id: number;
+  isin_code: string;
+  issuer: string | null;
+  yield_type: string | null;
+  security_type: string | null;
+  currency: string;
+  maturity_date: string | null;
+  days_to_maturity: number | null;
+  last_issue_price: number | null;
+  last_issue_yield: number | null;
+  next_coupon_rate: number | null;
+  day_count_convention: string | null;
+  is_active: boolean;
+}
+
+export interface BondDetail {
+  id: number;
+  isin_code: string;
+  issuer: string | null;
+  issuance_type: string | null;
+  yield_type: string | null;
+  security_type: string | null;
+  coupon_frequency: string | null;
+  currency: string;
+  group_code: number | null;
+  first_issue_date: string | null;
+  maturity_date: string | null;
+  days_to_maturity: number | null;
+  total_issue_amount: number | null;
+  last_issue_date_text: string | null;
+  last_issue_price: number | null;
+  last_issue_yield: number | null;
+  first_issue_yield: number | null;
+  next_coupon_date: string | null;
+  next_coupon_rate: number | null;
+  spread: number | null;
+  first_issue_price: number | null;
+  quotation_method: string | null;
+  accrued_interest_text: string | null;
+  clean_price_text: string | null;
+  dirty_price_formula: string | null;
+  settlement_price_formula: string | null;
+  yield_formula: string | null;
+  compound_yield_formula: string | null;
+  day_count_convention: string | null;
+  remarks: string | null;
+  brokerage: string | null;
+  security_type_detail: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BondListResponse {
+  items: BondListItem[];
+  total: number;
+}
+
+export interface BondStats {
+  total_bonds: number;
+  by_security_type: Record<string, number>;
+  by_currency: Record<string, number>;
+  by_yield_type: Record<string, number>;
+  avg_days_to_maturity: number | null;
+}
+
+// --- API ---
 
 export const api = {
   auth: {
@@ -94,37 +168,43 @@ export const api = {
         { token },
       ),
     publicSummary: () => apiFetch<PublicSummary>("/admin/public-summary"),
+    syncAll: (token: string) =>
+      apiFetch<{ tlref_historical: any; tlref_daily: any; bonds: any }>("/admin/sync-all", {
+        method: "POST",
+        token,
+      }),
   },
 
   bonds: {
-    list: (token: string, params?: { skip?: number; limit?: number; active_only?: boolean }) => {
+    list: (
+      token: string,
+      params?: {
+        skip?: number;
+        limit?: number;
+        active_only?: boolean;
+        search?: string;
+        currency?: string;
+        security_type?: string;
+        yield_type?: string;
+      },
+    ) => {
       const query = new URLSearchParams();
       if (params?.skip) query.set("skip", String(params.skip));
       if (params?.limit) query.set("limit", String(params.limit));
       if (params?.active_only !== undefined) query.set("active_only", String(params.active_only));
-      return apiFetch<{ items: any[]; total: number }>(`/bonds/?${query}`, { token });
+      if (params?.search) query.set("search", params.search);
+      if (params?.currency) query.set("currency", params.currency);
+      if (params?.security_type) query.set("security_type", params.security_type);
+      if (params?.yield_type) query.set("yield_type", params.yield_type);
+      return apiFetch<BondListResponse>(`/bonds/?${query}`, { token });
     },
-    get: (token: string, isin: string) => apiFetch<any>(`/bonds/${isin}`, { token }),
-  },
-
-  marketData: {
-    get: (token: string, isin: string, params?: { start_date?: string; end_date?: string }) => {
-      const query = new URLSearchParams();
-      if (params?.start_date) query.set("start_date", params.start_date);
-      if (params?.end_date) query.set("end_date", params.end_date);
-      return apiFetch<any[]>(`/market-data/${isin}?${query}`, { token });
-    },
-  },
-
-  calculations: {
-    get: (token: string, isin: string) => apiFetch<any[]>(`/calculations/${isin}`, { token }),
-    run: (token: string, bondId: number) =>
-      apiFetch<any>("/calculations/run", {
-        method: "POST",
-        body: JSON.stringify({ bond_id: bondId }),
-        token,
-      }),
-    runAll: (token: string) => apiFetch<any>("/calculations/run-all", { method: "POST", token }),
+    get: (token: string, isin: string) => apiFetch<BondDetail>(`/bonds/${isin}`, { token }),
+    stats: (token: string) => apiFetch<BondStats>("/bonds/stats", { token }),
+    sync: (token: string) =>
+      apiFetch<{ status: string; bonds_upserted?: number; bonds_deactivated?: number }>(
+        "/bonds/sync",
+        { method: "POST", token },
+      ),
   },
 
   tlref: {

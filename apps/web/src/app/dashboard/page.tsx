@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TlrefIndexChart } from "@/components/charts/tlref-index-chart";
 import { TlrefRateChart } from "@/components/charts/tlref-rate-chart";
-import { api, TLREFRecord, TLREFStats } from "@/lib/api-client";
+import { api, TLREFRecord, TLREFStats, BondStats } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<TLREFStats | null>(null);
+  const [bondStats, setBondStats] = useState<BondStats | null>(null);
   const [history, setHistory] = useState<TLREFRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,13 +26,15 @@ export default function DashboardPage() {
       }
 
       try {
-        const [statsRes, historyRes] = await Promise.all([
+        const [statsRes, historyRes, bondStatsRes] = await Promise.all([
           api.tlref.stats(token),
           api.tlref.history(token, { limit: 2000 }),
+          api.bonds.stats(token).catch(() => null),
         ]);
 
         setStats(statsRes);
         setHistory(historyRes.items?.reverse() || []);
+        if (bondStatsRes) setBondStats(bondStatsRes);
       } catch (err: any) {
         setError(err.message || "Veri yuklenemedi");
       } finally {
@@ -42,14 +46,22 @@ export default function DashboardPage() {
   }, []);
 
   const indexData = history.map((r) => ({
-    date: new Date(r.rate_date).toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "2-digit" }),
+    date: new Date(r.rate_date).toLocaleDateString("tr-TR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+    }),
     value: r.index_value,
   }));
 
   const rateData = history
     .filter((r) => r.daily_rate != null)
     .map((r) => ({
-      date: new Date(r.rate_date).toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "2-digit" }),
+      date: new Date(r.rate_date).toLocaleDateString("tr-TR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "2-digit",
+      }),
       rate: +(r.daily_rate! * 100).toFixed(6),
     }));
 
@@ -65,26 +77,34 @@ export default function DashboardPage() {
         },
         {
           label: "GUNLUK ORAN",
-          value: stats.latest_daily_rate != null ? `%${stats.latest_daily_rate.toFixed(4)}` : "—",
+          value:
+            stats.latest_daily_rate != null ? `%${stats.latest_daily_rate.toFixed(4)}` : "—",
           sub: "Son is gunu",
         },
         {
           label: "YILLIK ORAN",
           value:
-            stats.annualized_rate_pct != null ? `%${stats.annualized_rate_pct.toFixed(2)}` : "—",
+            stats.annualized_rate_pct != null
+              ? `%${stats.annualized_rate_pct.toFixed(2)}`
+              : "—",
           sub: "Bilesik yillik",
         },
         {
-          label: "TOPLAM KAYIT",
-          value: stats.total_records.toLocaleString("tr-TR"),
-          sub: `${stats.first_date ? new Date(stats.first_date).toLocaleDateString("tr-TR") : ""} - ${stats.latest_date ? new Date(stats.latest_date).toLocaleDateString("tr-TR") : ""}`,
+          label: "AKTIF TAHVIL",
+          value: bondStats
+            ? bondStats.total_bonds.toLocaleString("tr-TR")
+            : "—",
+          sub: bondStats?.avg_days_to_maturity
+            ? `Ort. vade: ${Math.round(bondStats.avg_days_to_maturity)} gun`
+            : "",
+          link: "/dashboard/bonds",
         },
       ]
     : [
         { label: "TLREF ENDEKS", value: "—", sub: "", highlight: true },
         { label: "GUNLUK ORAN", value: "—", sub: "" },
         { label: "YILLIK ORAN", value: "—", sub: "" },
-        { label: "TOPLAM KAYIT", value: "—", sub: "" },
+        { label: "AKTIF TAHVIL", value: "—", sub: "" },
       ];
 
   return (
@@ -93,7 +113,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="font-display text-display-md text-foreground">Dashboard</h1>
           <p className="text-data-sm text-muted-foreground mt-1">
-            BIST TLREF Endeks Takip Terminali
+            BIST TLREF Endeks & Borclanma Araclari Terminali
           </p>
         </div>
         <div className="flex items-center gap-2 text-label text-muted-foreground">
@@ -119,21 +139,50 @@ export default function DashboardPage() {
       )}
 
       <div className="grid gap-px md:grid-cols-4 bg-border/30 rounded-lg overflow-hidden animate-fade-up">
-        {STATS.map((stat) => (
-          <div
-            key={stat.label}
-            className={`bg-card p-5 grain ${stat.highlight ? "amber-glow-border" : ""}`}
-          >
-            <div className="text-label text-muted-foreground mb-2">{stat.label}</div>
+        {STATS.map((stat) => {
+          const inner = (
             <div
-              className={`font-mono-data text-stat ${stat.highlight ? "text-primary" : "text-foreground"}`}
+              className={`bg-card p-5 grain ${stat.highlight ? "amber-glow-border" : ""} ${(stat as any).link ? "cursor-pointer hover:bg-secondary/30 transition-colors" : ""}`}
             >
-              {stat.value}
+              <div className="text-label text-muted-foreground mb-2">{stat.label}</div>
+              <div
+                className={`font-mono-data text-stat ${stat.highlight ? "text-primary" : "text-foreground"}`}
+              >
+                {stat.value}
+              </div>
+              <div className="text-label text-muted-foreground/60 mt-1">{stat.sub}</div>
             </div>
-            <div className="text-label text-muted-foreground/60 mt-1">{stat.sub}</div>
-          </div>
-        ))}
+          );
+          return (stat as any).link ? (
+            <Link key={stat.label} href={(stat as any).link}>
+              {inner}
+            </Link>
+          ) : (
+            <div key={stat.label}>{inner}</div>
+          );
+        })}
       </div>
+
+      {bondStats && bondStats.total_bonds > 0 && (
+        <div className="grid gap-px md:grid-cols-3 bg-border/30 rounded-lg overflow-hidden animate-fade-up-delay-1">
+          {Object.entries(bondStats.by_currency)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 3)
+            .map(([currency, count]) => (
+              <div key={currency} className="bg-card p-4 grain">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-label text-muted-foreground mb-1">{currency} TAHVIL</div>
+                    <div className="font-mono-data text-lg text-foreground">
+                      {count.toLocaleString("tr-TR")}
+                    </div>
+                  </div>
+                  <Badge variant="outline">{currency}</Badge>
+                </div>
+              </div>
+            ))}
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-1 animate-fade-up-delay-1">
         <Card>
@@ -197,32 +246,37 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[...history].reverse().slice(0, 50).map((r) => (
-                    <tr
-                      key={r.rate_date}
-                      className="border-b border-border/30 last:border-0 hover:bg-secondary/30 transition-colors"
-                    >
-                      <td className="py-2.5 font-mono-data text-data-sm text-foreground">
-                        {new Date(r.rate_date).toLocaleDateString("tr-TR")}
-                      </td>
-                      <td className="py-2.5 text-right font-mono-data text-data-sm text-primary">
-                        {r.index_value.toLocaleString("tr-TR", { maximumFractionDigits: 5 })}
-                      </td>
-                      <td className="py-2.5 text-right font-mono-data text-data-sm">
-                        {r.daily_rate != null ? (
-                          <span
-                            className={
-                              r.daily_rate >= 0 ? "text-positive" : "text-negative"
-                            }
-                          >
-                            %{(r.daily_rate * 100).toFixed(5)}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {[...history]
+                    .reverse()
+                    .slice(0, 50)
+                    .map((r) => (
+                      <tr
+                        key={r.rate_date}
+                        className="border-b border-border/30 last:border-0 hover:bg-secondary/30 transition-colors"
+                      >
+                        <td className="py-2.5 font-mono-data text-data-sm text-foreground">
+                          {new Date(r.rate_date).toLocaleDateString("tr-TR")}
+                        </td>
+                        <td className="py-2.5 text-right font-mono-data text-data-sm text-primary">
+                          {r.index_value.toLocaleString("tr-TR", {
+                            maximumFractionDigits: 5,
+                          })}
+                        </td>
+                        <td className="py-2.5 text-right font-mono-data text-data-sm">
+                          {r.daily_rate != null ? (
+                            <span
+                              className={
+                                r.daily_rate >= 0 ? "text-positive" : "text-negative"
+                              }
+                            >
+                              %{(r.daily_rate * 100).toFixed(5)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>

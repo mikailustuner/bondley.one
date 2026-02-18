@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models.bond import Bond
 from app.models.user import User
-from app.schemas.bond import BondResponse, BondListResponse
+from app.schemas.bond import BondResponse, BondListResponse, BondListItem, BondStatsResponse
 from app.api.deps import get_current_user, get_admin_user
+from app.services.bond_fetcher import BondFetcher
 
 router = APIRouter()
 
@@ -16,6 +17,10 @@ async def list_bonds(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=3000),
     active_only: bool = True,
+    search: str | None = Query(None, description="ISIN veya ihracciyla ara"),
+    currency: str | None = Query(None, description="Para birimi filtresi"),
+    security_type: str | None = Query(None, description="MK turu filtresi"),
+    yield_type: str | None = Query(None, description="Getiri turu filtresi"),
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
@@ -26,13 +31,82 @@ async def list_bonds(
         query = query.where(Bond.is_active == True)
         count_query = count_query.where(Bond.is_active == True)
 
-    total = (await db.execute(count_query)).scalar()
-    result = await db.execute(query.offset(skip).limit(limit).order_by(Bond.maturity_date))
+    if search:
+        pattern = f"%{search}%"
+        search_filter = or_(
+            Bond.isin_code.ilike(pattern),
+            Bond.issuer.ilike(pattern),
+        )
+        query = query.where(search_filter)
+        count_query = count_query.where(search_filter)
+
+    if currency:
+        query = query.where(Bond.currency == currency)
+        count_query = count_query.where(Bond.currency == currency)
+
+    if security_type:
+        query = query.where(Bond.security_type.ilike(f"%{security_type}%"))
+        count_query = count_query.where(Bond.security_type.ilike(f"%{security_type}%"))
+
+    if yield_type:
+        query = query.where(Bond.yield_type.ilike(f"%{yield_type}%"))
+        count_query = count_query.where(Bond.yield_type.ilike(f"%{yield_type}%"))
+
+    total = (await db.execute(count_query)).scalar() or 0
+    result = await db.execute(
+        query.order_by(Bond.maturity_date.asc().nullslast()).offset(skip).limit(limit)
+    )
     bonds = result.scalars().all()
 
     return BondListResponse(
-        items=[BondResponse.model_validate(b) for b in bonds],
+        items=[BondListItem.model_validate(b) for b in bonds],
         total=total,
+    )
+
+
+@router.get("/stats", response_model=BondStatsResponse)
+async def get_bond_stats(
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(get_current_user),
+):
+    total = (
+        await db.execute(select(func.count(Bond.id)).where(Bond.is_active == True))
+    ).scalar() or 0
+
+    sec_rows = await db.execute(
+        select(Bond.security_type, func.count(Bond.id))
+        .where(Bond.is_active == True, Bond.security_type.isnot(None))
+        .group_by(Bond.security_type)
+    )
+    by_security_type = {row[0]: row[1] for row in sec_rows.all()}
+
+    cur_rows = await db.execute(
+        select(Bond.currency, func.count(Bond.id))
+        .where(Bond.is_active == True)
+        .group_by(Bond.currency)
+    )
+    by_currency = {row[0]: row[1] for row in cur_rows.all()}
+
+    yt_rows = await db.execute(
+        select(Bond.yield_type, func.count(Bond.id))
+        .where(Bond.is_active == True, Bond.yield_type.isnot(None))
+        .group_by(Bond.yield_type)
+    )
+    by_yield_type = {row[0]: row[1] for row in yt_rows.all()}
+
+    avg_dtm = (
+        await db.execute(
+            select(func.avg(Bond.days_to_maturity))
+            .where(Bond.is_active == True, Bond.days_to_maturity.isnot(None))
+        )
+    ).scalar()
+
+    return BondStatsResponse(
+        total_bonds=total,
+        by_security_type=by_security_type,
+        by_currency=by_currency,
+        by_yield_type=by_yield_type,
+        avg_days_to_maturity=round(float(avg_dtm), 1) if avg_dtm else None,
     )
 
 
@@ -45,37 +119,15 @@ async def get_bond(
     result = await db.execute(select(Bond).where(Bond.isin_code == isin_code))
     bond = result.scalar_one_or_none()
     if not bond:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bond not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tahvil bulunamadi")
     return BondResponse.model_validate(bond)
 
 
-@router.post("/", status_code=status.HTTP_403_FORBIDDEN)
-async def create_bond(
+@router.post("/sync", tags=["Admin"])
+async def sync_bonds(
+    db: AsyncSession = Depends(get_db),
     _admin: User = Depends(get_admin_user),
 ):
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Tahviller sadece BIST otomatik sureci ile eklenir.",
-    )
-
-
-@router.patch("/{isin_code}", status_code=status.HTTP_403_FORBIDDEN)
-async def update_bond(
-    isin_code: str,
-    _admin: User = Depends(get_admin_user),
-):
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Tahviller sadece BIST otomatik sureci ile guncellenir.",
-    )
-
-
-@router.delete("/{isin_code}", status_code=status.HTTP_403_FORBIDDEN)
-async def delete_bond(
-    isin_code: str,
-    _admin: User = Depends(get_admin_user),
-):
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Tahviller sadece BIST otomatik sureci ile yonetilir; silme kapali.",
-    )
+    """Admin-only: BIST tbliste.zip indir, XLS parse et, tahvilleri guncelle."""
+    fetcher = BondFetcher(db)
+    return await fetcher.fetch_and_sync()
