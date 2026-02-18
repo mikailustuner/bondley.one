@@ -121,6 +121,21 @@ docker-compose -f docker-compose.prod.yml up -d --force-recreate nginx
 
 Kontrol: `chmod +x scripts/check-https.sh && ./scripts/check-https.sh` — sertifika, 443 ve firewall kontrolu yapar. Sunucuda 80/443 portlari acik olmali (ufw veya cloud guvenlik kurallari).
 
+**Nginx hâlâ 443 acmiyorsa (config/sertifika):**
+
+```bash
+# Nginx loglarinda hangi config kullanildigini gor (SSL mi HTTP-only mi)
+docker logs fincalc-nginx 2>&1
+
+# Volume icinde sertifika var mi, domain adi ne?
+docker run --rm -v certbot_certs:/etc/letsencrypt:ro alpine ls -la /etc/letsencrypt/live/
+
+# Container icinde DOMAIN ve sertifika kontrolu
+docker exec fincalc-nginx sh -c 'echo "DOMAIN=$DOMAIN"; ls -la /etc/letsencrypt/live/$DOMAIN/ 2>/dev/null || ls /etc/nginx/conf.d/'
+```
+
+Nginx image'i guncellendi (entrypoint: sertifika klasorunden DOMAIN otomatik tespit, config testi). Tekrar build edip ac: `docker-compose -f docker-compose.prod.yml build nginx --no-cache && docker-compose -f docker-compose.prod.yml up -d --force-recreate nginx`
+
 ## Varsayilan Giris
 
 - Email: `admin@fincalc.com`
