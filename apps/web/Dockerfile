@@ -32,9 +32,10 @@ RUN addgroup --system --gid 1001 nodejs && \
 
 WORKDIR /app
 
-# Standalone output: server.js is at ROOT of standalone, not in apps/web
+# Next.js standalone output preserves monorepo structure
+# Standalone contains: node_modules/, apps/web/server.js, packages/shared/, etc.
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
-# Static assets: must be under apps/web/.next/static for Next to serve them
+# Copy static assets (standalone already has public, but we ensure it's there)
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 
@@ -42,6 +43,10 @@ USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+# Node.js module resolution: look in /app/node_modules (standalone root)
+ENV NODE_PATH=/app/node_modules
 
-# server.js is at /app/server.js (root of standalone)
+# In monorepo standalone, server.js is at apps/web/server.js
+# node_modules is at /app/node_modules (standalone root)
+WORKDIR /app/apps/web
 CMD ["node", "server.js"]
