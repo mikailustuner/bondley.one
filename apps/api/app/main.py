@@ -16,6 +16,49 @@ ADMIN_EMAIL = "admin@fincalc.com"
 ADMIN_PASSWORD = "admin123"
 
 
+async def migrate_tlref_table():
+    """tlref_rates tablosunu eski sema'dan (rate_value/isin) yeni semaya (index_value/daily_rate) gunceller."""
+    async with async_session_factory() as session:
+        col_check = await session.execute(text(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name = 'tlref_rates' AND column_name = 'rate_value'"
+        ))
+        if col_check.scalar_one_or_none() is not None:
+            print("[startup] tlref_rates migration: rate_value -> index_value ...")
+            await session.execute(text(
+                "ALTER TABLE tlref_rates ADD COLUMN IF NOT EXISTS index_value DECIMAL(18,8)"
+            ))
+            await session.execute(text(
+                "UPDATE tlref_rates SET index_value = rate_value WHERE index_value IS NULL"
+            ))
+            await session.execute(text(
+                "ALTER TABLE tlref_rates ALTER COLUMN index_value SET NOT NULL"
+            ))
+            await session.execute(text(
+                "ALTER TABLE tlref_rates ADD COLUMN IF NOT EXISTS daily_rate DECIMAL(18,10)"
+            ))
+            await session.execute(text(
+                "ALTER TABLE tlref_rates DROP COLUMN IF EXISTS rate_value"
+            ))
+            await session.execute(text(
+                "ALTER TABLE tlref_rates DROP COLUMN IF EXISTS isin"
+            ))
+            await session.commit()
+            print("[startup] tlref_rates migration tamamlandi.")
+        else:
+            col_check2 = await session.execute(text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = 'tlref_rates' AND column_name = 'index_value'"
+            ))
+            if col_check2.scalar_one_or_none() is None:
+                print("[startup] tlref_rates tablosu bulunamadi veya beklenmeyen yapi, atlaniyor.")
+            else:
+                await session.execute(text(
+                    "ALTER TABLE tlref_rates ADD COLUMN IF NOT EXISTS daily_rate DECIMAL(18,10)"
+                ))
+                await session.commit()
+
+
 async def ensure_admin_user():
     """API baslangicinda admin hesabini olusturur veya sifreyi gunceller."""
     async with async_session_factory() as session:
@@ -40,6 +83,10 @@ async def ensure_admin_user():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    try:
+        await migrate_tlref_table()
+    except Exception as e:
+        print(f"[startup] tlref migration hatasi: {e}")
     try:
         await ensure_admin_user()
     except Exception as e:
