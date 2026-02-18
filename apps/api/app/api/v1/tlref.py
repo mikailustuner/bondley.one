@@ -78,7 +78,10 @@ async def sync_tlref_now(
     db: AsyncSession = Depends(get_db),
     _admin: User = Depends(get_admin_user),
 ):
-    """Admin-only: BIST'ten tarihsel + günlük TLREF indirip DB'ye yazar (ilk kurulum / manuel güncelleme)."""
+    """
+    Admin-only: BIST'ten tarihsel + günlük veri indirip DB'ye yazar.
+    Tahvil ISIN'lerini otomatik kesfeder, Bond + MarketData + TLREF kayitlari olusturur.
+    """
     fetcher = TLREFFetcher(db)
     historical = await fetcher.fetch_historical()
     daily = await fetcher.fetch_daily()
