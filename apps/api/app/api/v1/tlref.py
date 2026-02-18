@@ -1,3 +1,4 @@
+import logging
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -9,7 +10,10 @@ from app.models.tlref_rate import TLREFRate
 from app.models.user import User
 from app.schemas.tlref import TLREFRateResponse, TLREFRateListResponse
 from app.services.tlref_fetcher import TLREFFetcher
+from app.services.market_data_service import MarketDataService
 from app.api.deps import get_current_user, get_admin_user
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -79,10 +83,32 @@ async def sync_tlref_now(
     _admin: User = Depends(get_admin_user),
 ):
     """
-    Admin-only: BIST'ten tarihsel + günlük veri indirip DB'ye yazar.
-    Tahvil ISIN'lerini otomatik kesfeder, Bond + MarketData + TLREF kayitlari olusturur.
+    Admin-only: Tek butonla tam pipeline:
+    1. BIST'ten tarihsel + gunluk CSV/ZIP indir
+    2. TLREF oranlarini DB'ye yaz
+    3. Tahvil ISIN'lerini kesfet, Bond kayitlari olustur
+    4. Piyasa verilerini MarketData'ya yaz
+    5. Tum aktif tahviller icin hesaplamalari calistir (dirty price, YTM, spread, duration)
     """
     fetcher = TLREFFetcher(db)
+
+    # Adim 1-4: Indir + parse + DB'ye yaz
     historical = await fetcher.fetch_historical()
     daily = await fetcher.fetch_daily()
-    return {"historical": historical, "daily": daily}
+
+    # Adim 5: Hesaplamalari calistir
+    calc_result = {"calculated": 0, "errors": 0}
+    try:
+        service = MarketDataService(db)
+        results = await service.run_daily_calculations()
+        calc_result["calculated"] = len(results)
+        logger.info(f"Calculations completed for {len(results)} bonds")
+    except Exception as e:
+        logger.error(f"Calculation step failed: {e}")
+        calc_result["error"] = str(e)
+
+    return {
+        "historical": historical,
+        "daily": daily,
+        "calculations": calc_result,
+    }

@@ -43,14 +43,18 @@ export default function AdminPage() {
       const result = await api.tlref.syncNow(token);
       const h = result.historical ?? {};
       const d = result.daily ?? {};
+      const c = result.calculations ?? {};
       const parts: string[] = [];
       if (h.bonds_created) parts.push(`${h.bonds_created} yeni tahvil`);
       if (h.market_records) parts.push(`${h.market_records} piyasa verisi`);
       if (h.tlref_records) parts.push(`${h.tlref_records} TLREF`);
       if (d.bonds_created) parts.push(`+${d.bonds_created} gunluk tahvil`);
       if (d.market_records) parts.push(`+${d.market_records} gunluk piyasa`);
+      if (c.calculated) parts.push(`${c.calculated} tahvil hesaplandi`);
+      if (h.format) parts.push(`Format: ${h.format}`);
       if (h.status === "error") parts.push(`Tarihsel hata: ${h.error}`);
       if (d.status === "error") parts.push(`Gunluk hata: ${d.error}`);
+      if (c.error) parts.push(`Hesaplama hata: ${c.error}`);
       setSyncMessage({
         type: h.status === "error" && d.status === "error" ? "error" : "success",
         text: parts.length ? parts.join(" | ") : "Sync tamamlandi.",

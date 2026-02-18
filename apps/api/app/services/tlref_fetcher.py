@@ -3,7 +3,7 @@ Borsa Istanbul TLREF veri cekme servisi.
 
 Gunluk akis:
 1. CSV/ZIP dosyasini BIST sunucularindan indir
-2. Parse et (semicolon-delimited)
+2. Parse et — hem genis format (ISIN sutun basliklarinda) hem uzun format desteklenir
 3. TLREF oranlarini tlref_rates tablosuna yaz
 4. TRT/TRB ISIN kodlarini tespit et -> bonds tablosuna UPSERT
 5. Piyasa verilerini market_data tablosuna UPSERT
@@ -80,7 +80,6 @@ class TLREFFetcher:
     # ------------------------------------------------------------------
 
     async def fetch_daily(self) -> dict:
-        """Gunluk CSV indir -> TLREF + tahvil + market data."""
         logger.info("Fetching daily TLREF rate...")
         try:
             content = await self._download(self.DAILY_URL)
@@ -92,7 +91,6 @@ class TLREFFetcher:
             self._cleanup()
 
     async def fetch_historical(self) -> dict:
-        """Tarihsel ZIP indir -> TLREF + tahvil + market data."""
         logger.info("Fetching historical TLREF data...")
         try:
             content = await self._download(self.HISTORICAL_URL)
@@ -117,52 +115,164 @@ class TLREFFetcher:
 
     def _extract_zip(self, content: bytes) -> bytes:
         with zipfile.ZipFile(io.BytesIO(content)) as zf:
-            csv_files = [f for f in zf.namelist() if f.lower().endswith(".csv")]
+            all_files = zf.namelist()
+            logger.info(f"ZIP contains: {all_files}")
+            csv_files = [f for f in all_files if f.lower().endswith(".csv")]
             if not csv_files:
-                raise ValueError("ZIP dosyasinda CSV bulunamadi")
+                raise ValueError(f"ZIP dosyasinda CSV bulunamadi. Dosyalar: {all_files}")
             csv_name = csv_files[0]
             logger.info(f"Extracting {csv_name} from ZIP")
             return zf.read(csv_name)
 
     # ------------------------------------------------------------------
-    # Core processing
+    # Core processing — supports both wide & long CSV formats
     # ------------------------------------------------------------------
 
     async def _process_csv(self, content: bytes, tag: str = "") -> dict:
-        """
-        BIST CSV icerigini parse et:
-        - Her satirdaki TRT/TRB ISIN kodlarini bul -> bonds tablosuna ekle
-        - Sayisal degerleri market_data'ya yaz
-        - TLREF orani satirin degerinden cikarilir
-        """
         text = content.decode("utf-8-sig", errors="replace")
 
+        # Detect delimiter
+        df = None
         for delim in [";", ",", "\t"]:
             try:
-                df = pd.read_csv(io.StringIO(text), delimiter=delim, dtype=str, header=None)
-                if len(df.columns) >= 3:
+                test_df = pd.read_csv(io.StringIO(text), delimiter=delim, dtype=str, nrows=5)
+                if len(test_df.columns) >= 2:
+                    df = pd.read_csv(io.StringIO(text), delimiter=delim, dtype=str)
                     break
             except Exception:
                 continue
+        if df is None:
+            df = pd.read_csv(io.StringIO(text), dtype=str)
+
+        logger.info(f"[{tag}] CSV shape: {df.shape}, columns: {list(df.columns)[:10]}...")
+
+        # Debug: log first 3 rows
+        for i in range(min(3, len(df))):
+            row_vals = [str(v) for v in df.iloc[i].values if pd.notna(v)]
+            logger.info(f"[{tag}] Row {i}: {row_vals[:8]}...")
+
+        # Scan ALL text (headers + first rows) for ISIN codes
+        all_text = " ".join(str(c) for c in df.columns) + " "
+        for i in range(min(5, len(df))):
+            all_text += " ".join(str(v) for v in df.iloc[i].values if pd.notna(v)) + " "
+
+        all_isins_found = set(ISIN_RE.findall(all_text))
+        logger.info(f"[{tag}] ISINs found anywhere in CSV: {len(all_isins_found)}")
+        if all_isins_found:
+            logger.info(f"[{tag}] Sample ISINs: {list(all_isins_found)[:5]}")
+
+        # Detect format: check if column headers contain ISINs
+        header_isins = {}
+        for col_idx, col_name in enumerate(df.columns):
+            col_str = str(col_name).strip()
+            m = ISIN_RE.search(col_str)
+            if m:
+                header_isins[col_idx] = m.group(1)
+
+        if header_isins:
+            logger.info(f"[{tag}] WIDE FORMAT detected: {len(header_isins)} ISINs in column headers")
+            return await self._process_wide_format(df, header_isins, tag)
         else:
-            df = pd.read_csv(io.StringIO(text), dtype=str, header=None)
+            logger.info(f"[{tag}] LONG FORMAT: scanning rows for ISINs")
+            return await self._process_long_format(df, tag)
 
-        logger.info(f"[{tag}] CSV shape: {df.shape}")
+    # ------------------------------------------------------------------
+    # Wide format: columns = ISIN codes, rows = dates
+    # Headers like: TARIH | TRT060127T10 | TRT150228T18 | ...
+    # ------------------------------------------------------------------
 
-        # Baslik satirlarini atla (ilk 2 satir genellikle TR/EN header)
-        if df.shape[0] > 2:
-            header_text = " ".join(str(v) for v in df.iloc[0].values if pd.notna(v))
-            if "TARIH" in header_text.upper() or "DATE" in header_text.upper():
-                df = df.iloc[2:].reset_index(drop=True)
-            elif not any(ISIN_RE.search(str(v)) for v in df.iloc[0].values if pd.notna(v)):
-                first_data_row = 0
-                for i in range(min(5, len(df))):
-                    row_text = " ".join(str(v) for v in df.iloc[i].values if pd.notna(v))
-                    if ISIN_RE.search(row_text) or self._looks_like_date(row_text):
-                        first_data_row = i
-                        break
-                if first_data_row > 0:
-                    df = df.iloc[first_data_row:].reset_index(drop=True)
+    async def _process_wide_format(self, df: pd.DataFrame, header_isins: dict[int, str], tag: str) -> dict:
+        col_names = list(df.columns)
+        tlref_records: list[dict] = []
+        bond_isins: set[str] = set(header_isins.values())
+        market_records: list[dict] = []
+
+        # Find the date column (first column, or column with date-like values)
+        date_col_idx = 0
+
+        # Find TLREF column (not a bond ISIN, contains numeric values)
+        tlref_col_idx = None
+        for idx, col_name in enumerate(col_names):
+            col_upper = str(col_name).upper()
+            if idx not in header_isins and ("TLREF" in col_upper or "ENDEKS" in col_upper or "INDEX" in col_upper):
+                tlref_col_idx = idx
+                break
+
+        for _, row in df.iterrows():
+            values = row.values
+            # Parse date from first column
+            date_str = str(values[date_col_idx]).strip() if pd.notna(values[date_col_idx]) else ""
+            row_date = self._parse_single_date(date_str)
+            if row_date is None:
+                continue
+
+            # Extract TLREF rate
+            if tlref_col_idx is not None:
+                tlref_val = self._to_decimal(values[tlref_col_idx])
+                if tlref_val is not None:
+                    tlref_records.append({
+                        "rate_date": row_date,
+                        "rate_value": tlref_val,
+                        "isin": "TRIXIST00015",
+                        "source": "BIST",
+                    })
+
+            # Extract bond market data from each ISIN column
+            for col_idx, isin in header_isins.items():
+                if col_idx >= len(values):
+                    continue
+                val = self._to_decimal(values[col_idx])
+                if val is not None:
+                    market_records.append({
+                        "isin": isin,
+                        "trade_date": row_date,
+                        "clean_price": val,
+                        "tlref_index": None,
+                        "fark": None,
+                    })
+
+        # Deduplicate TLREF
+        tlref_unique: dict[date, dict] = {}
+        for r in tlref_records:
+            tlref_unique[r["rate_date"]] = r
+        tlref_deduped = list(tlref_unique.values())
+
+        tlref_count = await self._upsert_tlref(tlref_deduped)
+        bonds_count = await self._upsert_bonds(bond_isins)
+        market_count = await self._upsert_market_data(market_records)
+
+        result = {
+            "status": "success",
+            "tlref_records": tlref_count,
+            "bonds_created": bonds_count,
+            "market_records": market_count,
+            "format": "wide",
+        }
+        logger.info(f"[{tag}] Wide format sync complete: {result}")
+        return result
+
+    # ------------------------------------------------------------------
+    # Long format: each row has date + ISIN + values
+    # Rows like: 01/01/2024 | TRT060127T10 | TLREF Endeksi | 98.45 | 1234.56
+    # ------------------------------------------------------------------
+
+    async def _process_long_format(self, df: pd.DataFrame, tag: str) -> dict:
+        # Try to skip header rows
+        start_row = 0
+        for i in range(min(5, len(df))):
+            row_vals = [str(v).strip() for v in df.iloc[i].values if pd.notna(v)]
+            row_text = " ".join(row_vals)
+            if self._looks_like_date(row_text) or ISIN_RE.search(row_text):
+                start_row = i
+                break
+            header_upper = row_text.upper()
+            if "TARIH" in header_upper or "DATE" in header_upper:
+                start_row = i + 1
+                continue
+
+        if start_row > 0:
+            df = df.iloc[start_row:].reset_index(drop=True)
+            logger.info(f"[{tag}] Skipped {start_row} header rows")
 
         tlref_records: list[dict] = []
         bond_isins: set[str] = set()
@@ -174,19 +284,13 @@ class TLREFFetcher:
                 continue
 
             row_text = " ".join(values)
-
-            # Tarih bul
             row_date = self._extract_date(values)
             if row_date is None:
                 continue
 
-            # ISIN kodlarini bul
             isins_found = ISIN_RE.findall(row_text)
-
-            # Sayisal degerleri cikar
             numerics = self._extract_numerics(values)
 
-            # TLREF orani (ISIN degil, genel oran satiri olabilir)
             if not isins_found:
                 if numerics:
                     tlref_records.append({
@@ -199,33 +303,21 @@ class TLREFFetcher:
 
             for isin in isins_found:
                 bond_isins.add(isin)
-
                 if numerics:
-                    rec = {
+                    market_records.append({
                         "isin": isin,
                         "trade_date": row_date,
                         "clean_price": numerics[0],
                         "tlref_index": numerics[1] if len(numerics) > 1 else None,
                         "fark": numerics[2] if len(numerics) > 2 else None,
-                    }
-                    market_records.append(rec)
+                    })
 
-                    # Eger satirin degerlerinde TLREF orani da varsa kaydet
-                    if len(numerics) > 1:
-                        tlref_records.append({
-                            "rate_date": row_date,
-                            "rate_value": numerics[1] if numerics[1] > Decimal("0.01") else numerics[0],
-                            "isin": "TRIXIST00015",
-                            "source": "BIST",
-                        })
-
-        # Deduplicate TLREF records (ayni gun icin en son)
+        # Deduplicate TLREF
         tlref_unique: dict[date, dict] = {}
         for r in tlref_records:
             tlref_unique[r["rate_date"]] = r
         tlref_deduped = list(tlref_unique.values())
 
-        # DB operations
         tlref_count = await self._upsert_tlref(tlref_deduped)
         bonds_count = await self._upsert_bonds(bond_isins)
         market_count = await self._upsert_market_data(market_records)
@@ -235,17 +327,27 @@ class TLREFFetcher:
             "tlref_records": tlref_count,
             "bonds_created": bonds_count,
             "market_records": market_count,
+            "format": "long",
         }
-        logger.info(f"[{tag}] Sync complete: {result}")
+        logger.info(f"[{tag}] Long format sync complete: {result}")
         return result
 
     # ------------------------------------------------------------------
-    # Helpers: date / numeric extraction
+    # Helpers
     # ------------------------------------------------------------------
 
     @staticmethod
     def _looks_like_date(text: str) -> bool:
         return bool(re.search(r"\d{2}[/.\-]\d{2}[/.\-]\d{2,4}", text))
+
+    @staticmethod
+    def _parse_single_date(date_str: str) -> date | None:
+        for fmt in ("%d/%m/%Y", "%d.%m.%Y", "%Y-%m-%d", "%d/%m/%y", "%d.%m.%y"):
+            try:
+                return datetime.strptime(date_str.strip(), fmt).date()
+            except ValueError:
+                continue
+        return None
 
     @staticmethod
     def _extract_date(values: list[str]) -> date | None:
@@ -271,6 +373,19 @@ class TLREFFetcher:
             except (InvalidOperation, ValueError):
                 continue
         return nums
+
+    @staticmethod
+    def _to_decimal(val) -> Decimal | None:
+        if pd.isna(val):
+            return None
+        try:
+            cleaned = str(val).replace(",", ".").replace("%", "").replace(" ", "").strip()
+            if not cleaned or cleaned == "nan":
+                return None
+            d = Decimal(cleaned)
+            return d if d != 0 else None
+        except (InvalidOperation, ValueError):
+            return None
 
     # ------------------------------------------------------------------
     # DB upsert operations
@@ -334,7 +449,7 @@ class TLREFFetcher:
         if created:
             await self.db.flush()
             await self.db.commit()
-        logger.info(f"Created {created} new bonds (total ISINs: {len(isins)})")
+        logger.info(f"Created {created} new bonds (total ISINs in data: {len(isins)}, already existing: {len(existing)})")
         return created
 
     async def _upsert_market_data(self, records: list[dict]) -> int:
@@ -354,14 +469,13 @@ class TLREFFetcher:
             bond_id = isin_to_id.get(r["isin"])
             if bond_id is None:
                 continue
-            rec = {
+            db_records.append({
                 "bond_id": bond_id,
                 "trade_date": r["trade_date"],
                 "clean_price": r["clean_price"],
                 "tlref_index": r.get("tlref_index"),
                 "fark": r.get("fark"),
-            }
-            db_records.append(rec)
+            })
 
         if not db_records:
             return 0
