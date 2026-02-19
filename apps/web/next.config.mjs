@@ -3,16 +3,16 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+// Monorepo root (one level up from apps/web)
+const monorepoRoot = path.resolve(__dirname, "../..");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
   transpilePackages: ["@fincalc/shared"],
   // Turbopack root directory for monorepo setup
-  experimental: {
-    turbo: {
-      root: path.resolve(__dirname),
-    },
+  turbopack: {
+    root: monorepoRoot,
   },
   async rewrites() {
     return [
