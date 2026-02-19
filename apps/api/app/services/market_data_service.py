@@ -83,6 +83,7 @@ class MarketDataService:
 
         results = []
         for bond in bonds:
+            # Belirli tarih icin market data kontrolu - yoksa atla (varsayilan deger kullanma)
             md_result = await self.db.execute(
                 select(MarketData)
                 .where(MarketData.bond_id == bond.id, MarketData.trade_date == calc_date)
@@ -90,16 +91,8 @@ class MarketDataService:
             market_data = md_result.scalar_one_or_none()
 
             if not market_data:
-                md_result = await self.db.execute(
-                    select(MarketData)
-                    .where(MarketData.bond_id == bond.id)
-                    .order_by(MarketData.trade_date.desc())
-                    .limit(1)
-                )
-                market_data = md_result.scalar_one_or_none()
-
-            if not market_data:
-                logger.warning(f"No market data for {bond.isin_code}, skipping")
+                # Belirli tarih icin veri yok - atla (varsayilan deger veya en son veri kullanma)
+                logger.warning(f"No market data for {bond.isin_code} on date {calc_date}, skipping")
                 continue
 
             try:

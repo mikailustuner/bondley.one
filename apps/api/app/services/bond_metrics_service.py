@@ -189,10 +189,11 @@ class BondMetricsService:
         bond: Bond,
         settlement_date: date,
         clean_price_override: Decimal | None = None,
-    ) -> dict:
+    ) -> dict | None:
         """
         Tek tahvil icin tum hesaplanan metrikleri uretir.
-        clean_price: market_data'dan veya bond.last_issue_price; override verilirse o kullanilir.
+        Belirli tarih icin market_data yoksa None dondurur (varsayilan deger kullanmaz).
+        clean_price: market_data'dan; override verilirse o kullanilir.
         """
         period_days, freq_per_year = parse_coupon_frequency(bond.coupon_frequency)
         period_start, period_end = get_current_coupon_period(
@@ -203,17 +204,20 @@ class BondMetricsService:
             settlement_date,
         )
 
+        # Belirli tarih icin market data kontrolu - yoksa None dondur
         clean_price = clean_price_override
         if clean_price is None:
             clean_price = await self.get_clean_price(bond.id, settlement_date)
-        if clean_price is None and bond.last_issue_price is not None:
-            clean_price = bond.last_issue_price
-        if clean_price is None:
-            clean_price = FACE_VALUE
+            if clean_price is None:
+                # Belirli tarih icin veri yok - None dondur (varsayilan deger kullanma)
+                logger.warning(f"No market data for bond {bond.isin_code} on date {settlement_date}")
+                return None
 
         clean_price = Decimal(str(clean_price))
 
         # TLREF oranlari (donem basi/sonu onceki is gunu)
+        # Not: TLREF için "önceki iş günü" mantığı kullanılıyor, bu yüzden None kontrolü yapmıyoruz
+        # Eğer TLREF verisi yoksa, ilgili metrikler None olarak kalacak
         tlref_start = await self.get_tlref_for_business_day(period_start) if period_start else None
         tlref_end = await self.get_tlref_for_business_day(period_end) if period_end else None
 

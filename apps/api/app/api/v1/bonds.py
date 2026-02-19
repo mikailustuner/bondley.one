@@ -3,8 +3,11 @@ from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from datetime import date
+import logging
 
 from app.core.database import get_db
+
+logger = logging.getLogger(__name__)
 from app.models.bond import Bond
 from app.models.calculation import Calculation
 from app.models.market_data import MarketData
@@ -207,8 +210,13 @@ async def get_bond(
         try:
             metrics_svc = BondMetricsService(db)
             metrics = await metrics_svc.compute_metrics(bond, calc_date)
-            base.calculated_metrics = BondCalculatedMetrics(**metrics)
-        except Exception:
+            if metrics is None:
+                # Belirli tarih icin veri yok - None olarak bırak (frontend'e bildirilecek)
+                base.calculated_metrics = None
+            else:
+                base.calculated_metrics = BondCalculatedMetrics(**metrics)
+        except Exception as e:
+            logger.warning(f"Metrics calculation failed for {isin_code} on {calc_date}: {e}")
             base.calculated_metrics = None
     return base
 

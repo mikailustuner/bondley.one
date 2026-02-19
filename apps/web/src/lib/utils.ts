@@ -41,12 +41,19 @@ export function formatPercentFromDecimal(
 
 export function formatDecimal(
   value: number | string | null | undefined,
-  digits = 2
+  digits = 2,
+  minDigits?: number
 ): string {
   if (value == null) return "—";
   const num = typeof value === "string" ? parseFloat(value) : value;
   if (Number.isNaN(num)) return "—";
-  return num.toLocaleString("tr-TR", { maximumFractionDigits: digits });
+  const options: Intl.NumberFormatOptions = {
+    maximumFractionDigits: digits,
+  };
+  if (minDigits !== undefined) {
+    options.minimumFractionDigits = minDigits;
+  }
+  return num.toLocaleString("tr-TR", options);
 }
 
 export function formatDate(dateStr: string | null | undefined): string {

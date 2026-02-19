@@ -166,13 +166,13 @@ export default function BondDetailPage({ params }: { params: { isin: string } })
               <div className="rounded-lg border border-border/50 bg-card p-4">
                 <div className="text-label text-muted-foreground mb-1">Kirli Fiyat</div>
                 <div className="font-mono-data text-stat text-primary">
-                  {formatDecimal(bond.calculated_metrics.dirty_price, 4)}
+                  {formatDecimal(bond.calculated_metrics.dirty_price, 8, 8)}
                 </div>
               </div>
               <div className="rounded-lg border border-border/50 bg-card p-4">
                 <div className="text-label text-muted-foreground mb-1">Birikmis Faiz</div>
                 <div className="font-mono-data text-stat">
-                  {formatDecimal(bond.calculated_metrics.accrued_interest, 4)}
+                  {formatDecimal(bond.calculated_metrics.accrued_interest, 8, 8)}
                 </div>
               </div>
               <div className="rounded-lg border border-border/50 bg-card p-4">
@@ -185,7 +185,7 @@ export default function BondDetailPage({ params }: { params: { isin: string } })
               </div>
               <div className="rounded-lg border border-border/50 bg-card p-4">
                 <div className="text-label text-muted-foreground mb-1">Temiz Fiyat (Kullanilan)</div>
-                <div className="font-mono-data text-stat">{formatDecimal(bond.calculated_metrics.clean_price_used, 4)}</div>
+                <div className="font-mono-data text-stat">{formatDecimal(bond.calculated_metrics.clean_price_used, 8, 8)}</div>
               </div>
               {bond.calculated_metrics.annual_reference_rate != null && (
                 <div className="rounded-lg border border-border/50 bg-card p-4">
@@ -265,10 +265,29 @@ export default function BondDetailPage({ params }: { params: { isin: string } })
       )}
 
       {!bond.calculated_metrics && !metricsLoading && (
-        <p className="text-data-sm text-muted-foreground animate-fade-up">
-          Bu tarih icin hesaplama kaydi bulunamadi. Piyasa verisi girildikten sonra gunluk hesaplama
-          calistirilmali veya baska bir tarih secin.
-        </p>
+        <Card>
+          <CardHeader>
+            <CardTitle>Hesaplanan Metrikler</CardTitle>
+            <CardDescription>
+              {selectedDate === todayISO()
+                ? "Bugun icin"
+                : `${formatDate(selectedDate)} tarihi icin`}{" "}
+              piyasa verisi bulunamadi
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="p-4 bg-muted/50 border border-border rounded-xl text-center">
+              <p className="text-sm text-muted-foreground">
+                {selectedDate === todayISO()
+                  ? "Bugun icin piyasa verisi henuz yuklenmemis veya mevcut degil."
+                  : `${formatDate(selectedDate)} tarihi icin piyasa verisi bulunmamaktadir.`}
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Lutfen baska bir tarih secin veya veri yukleme islemini bekleyin.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid gap-px md:grid-cols-4 bg-border/30 rounded-lg overflow-hidden animate-fade-up">
