@@ -46,34 +46,55 @@ def parse_clean_price_text(price_text: str) -> Decimal | None:
     if not price_text:
         return None
     
-    # Remove common formatting characters
-    cleaned = str(price_text).replace(",", ".").replace(" ", "").strip()
+    # Convert to string and strip
+    price_str = str(price_text).strip()
     
-    # Remove currency symbols, parentheses, etc.
+    # Handle empty or dash
+    if not price_str or price_str == "-" or price_str.lower() == "nan":
+        return None
+    
+    # Try direct decimal conversion first (in case it's already numeric)
+    try:
+        # If it's already a number-like string, try direct conversion
+        if re.match(r'^-?\d+\.?\d*$', price_str.replace(",", ".")):
+            price = Decimal(price_str.replace(",", "."))
+            if 0 <= price <= 1000:
+                return price
+    except (InvalidOperation, ValueError):
+        pass
+    
+    # Remove common formatting characters
+    cleaned = price_str.replace(",", ".").replace(" ", "").replace("'", "").replace('"', "").strip()
+    
+    # Remove currency symbols, parentheses, etc. but keep digits and dots
     cleaned = re.sub(r'[^\d.]', '', cleaned)
     
-    if not cleaned or cleaned == "-" or cleaned == ".":
+    # Remove multiple dots (keep only first one)
+    if cleaned.count('.') > 1:
+        parts = cleaned.split('.')
+        cleaned = parts[0] + '.' + ''.join(parts[1:])
+    
+    if not cleaned or cleaned == "-" or cleaned == "." or cleaned == "":
         return None
     
     try:
         price = Decimal(cleaned)
         # Sanity check: clean price should be reasonable (between 0 and 1000)
         if price < 0 or price > 1000:
-            log(f"⚠️  Clean price out of range: {price} (from '{price_text}')")
             return None
         return price
-    except (InvalidOperation, ValueError) as e:
-        log(f"⚠️  Could not parse clean_price '{price_text}': {e}")
+    except (InvalidOperation, ValueError):
         return None
 
 
-async def populate_market_data(trade_date: date, dry_run: bool = False):
+async def populate_market_data(trade_date: date, dry_run: bool = False, debug: bool = False):
     """
     Bonds tablosundaki clean_price_text değerlerini parse edip market_data tablosuna yazar.
     
     Args:
         trade_date: Market data için kullanılacak tarih
         dry_run: True ise sadece önizleme yapar, veritabanına yazmaz
+        debug: True ise parse edilemeyen örnekleri gösterir
     """
     log("=" * 60)
     log("Market Data Doldurma Script'i")
@@ -95,16 +116,40 @@ async def populate_market_data(trade_date: date, dry_run: bool = False):
         market_data_records = []
         skipped_no_price = 0
         skipped_invalid_price = 0
+        used_last_issue_price = 0
+        debug_samples = []  # Parse edilemeyen örnekler için
         
         for bond in bonds:
-            if not bond.clean_price_text:
-                skipped_no_price += 1
-                continue
+            clean_price = None
             
-            clean_price = parse_clean_price_text(bond.clean_price_text)
+            # Önce clean_price_text'i dene
+            if bond.clean_price_text:
+                clean_price = parse_clean_price_text(bond.clean_price_text)
+            
+            # Eğer clean_price_text parse edilemediyse, last_issue_price'ı kullan
+            if clean_price is None and bond.last_issue_price is not None:
+                try:
+                    clean_price = Decimal(str(bond.last_issue_price))
+                    if 0 <= clean_price <= 1000:
+                        used_last_issue_price += 1
+                    else:
+                        clean_price = None
+                except (InvalidOperation, ValueError):
+                    clean_price = None
+            
             if clean_price is None:
                 skipped_invalid_price += 1
+                if debug and len(debug_samples) < 10:
+                    debug_samples.append({
+                        "isin": bond.isin_code,
+                        "clean_price_text": bond.clean_price_text,
+                        "last_issue_price": bond.last_issue_price,
+                        "clean_price_text_type": type(bond.clean_price_text).__name__ if bond.clean_price_text else None,
+                    })
                 continue
+            
+            if not bond.clean_price_text and clean_price:
+                skipped_no_price += 1
             
             market_data_records.append({
                 "bond_id": bond.id,
@@ -115,6 +160,20 @@ async def populate_market_data(trade_date: date, dry_run: bool = False):
         log(f"\n✅ Parse edilen kayıt sayısı: {len(market_data_records)}")
         log(f"⏭️  clean_price_text olmayan: {skipped_no_price}")
         log(f"⏭️  Parse edilemeyen: {skipped_invalid_price}")
+        if used_last_issue_price > 0:
+            log(f"📌 last_issue_price kullanılan: {used_last_issue_price}")
+        
+        # Debug: Parse edilemeyen örnekleri göster
+        if debug and debug_samples:
+            log(f"\n🔍 Parse edilemeyen örnekler (ilk 10):")
+            for i, sample in enumerate(debug_samples, 1):
+                log(f"  {i}. ISIN: {sample['isin']}")
+                log(f"     clean_price_text: '{sample['clean_price_text']}' (type: {sample.get('clean_price_text_type', 'None')})")
+                log(f"     last_issue_price: {sample['last_issue_price']}")
+                # Parse denemesi
+                if sample['clean_price_text']:
+                    parsed = parse_clean_price_text(sample['clean_price_text'])
+                    log(f"     Parse sonucu: {parsed}")
         
         if dry_run:
             log("\n🔍 DRY RUN MODU - Veritabanına yazılmayacak")
@@ -176,6 +235,11 @@ async def main():
         action="store_true",
         help="Sadece önizleme yap, veritabanına yazma",
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Parse edilemeyen örnekleri göster",
+    )
     
     args = parser.parse_args()
     
@@ -192,7 +256,7 @@ async def main():
         log(f"⚠️  Tarih belirtilmedi, bugünün tarihi kullanılıyor: {trade_date}")
     
     try:
-        await populate_market_data(trade_date, dry_run=args.dry_run)
+        await populate_market_data(trade_date, dry_run=args.dry_run, debug=args.debug)
     except Exception as e:
         log(f"\n❌ Hata: {e}")
         import traceback
