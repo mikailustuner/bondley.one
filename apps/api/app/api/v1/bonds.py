@@ -136,6 +136,9 @@ async def get_bond(
     if not bond:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tahvil bulunamadi")
 
+    # Get bond.id immediately to avoid lazy loading issues
+    bond_id = bond.id
+    
     base = BondDetailWithMetrics.model_validate(bond)
     calc_date = settlement_date or date.today()
 
@@ -149,7 +152,7 @@ async def get_bond(
     try:
         await MetricsService.track_bond_view(
             db=db,
-            bond_id=bond.id,
+            bond_id=bond_id,
             user_id=user.id,
             ip_address=client_host,
             user_agent=user_agent,
@@ -162,7 +165,7 @@ async def get_bond(
     # Once DB'de (calculations) kayit var mi kontrol et; varsa oradan doldur.
     calc_result = await db.execute(
         select(Calculation).where(
-            Calculation.bond_id == bond.id,
+            Calculation.bond_id == bond_id,
             Calculation.calc_date == calc_date,
         )
     )
@@ -170,7 +173,7 @@ async def get_bond(
     if stored_calc is not None:
         md_result = await db.execute(
             select(MarketData.clean_price).where(
-                MarketData.bond_id == bond.id,
+                MarketData.bond_id == bond_id,
                 MarketData.trade_date == calc_date,
             )
         )
