@@ -49,8 +49,17 @@ def parse_clean_price_text(price_text: str) -> Decimal | None:
     # Convert to string and strip
     price_str = str(price_text).strip()
     
-    # Handle empty or dash
+    # Handle empty, dash, or placeholder text
     if not price_str or price_str == "-" or price_str.lower() == "nan":
+        return None
+    
+    # Skip placeholder text like "Giriş/Input", "Input", etc.
+    placeholder_patterns = [
+        "giriş", "input", "entry", "manuel", "manual", 
+        "yok", "none", "null", "boş", "empty"
+    ]
+    price_lower = price_str.lower()
+    if any(pattern in price_lower for pattern in placeholder_patterns):
         return None
     
     # Try direct decimal conversion first (in case it's already numeric)
