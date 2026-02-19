@@ -1,9 +1,20 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
 
+const NAV_ITEMS = [
+  { href: "/dashboard", label: "Genel Bakis" },
+  { href: "/dashboard/bonds", label: "Tahviller" },
+  { href: "/dashboard/analytics", label: "Analiz" },
+];
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
   return (
     <div className="min-h-screen bg-background">
       <div className="data-strip" />
@@ -25,19 +36,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="h-4 w-px bg-border" />
 
             <div className="hidden md:flex items-center gap-1">
-              {[
-                { href: "/dashboard", label: "Genel Bakis" },
-                { href: "/dashboard/bonds", label: "Tahviller" },
-                { href: "/dashboard/analytics", label: "Analiz" },
-              ].map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="px-3 py-1.5 rounded-sm text-data-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {NAV_ITEMS.map((item) => {
+                const isActive =
+                  pathname === item.href ||
+                  (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`px-3 py-1.5 rounded-sm text-data-sm transition-colors ${
+                      isActive
+                        ? "bg-primary/10 text-primary font-medium"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
             </div>
           </div>
 
@@ -52,7 +68,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </nav>
 
-      <main className="container mx-auto py-6">{children}</main>
+      <main className="container mx-auto py-6">
+        <div key={pathname} className="animate-fade-in">
+          {children}
+        </div>
+      </main>
     </div>
   );
 }

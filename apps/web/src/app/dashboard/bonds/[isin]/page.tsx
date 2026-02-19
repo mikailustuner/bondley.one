@@ -4,12 +4,35 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/empty-state";
+import { Button } from "@/components/ui/button";
+import { FileQuestion, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { api, BondDetail } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function lastBusinessDayISO(): string {
+  const d = new Date();
+  const day = d.getDay();
+  if (day === 0) d.setDate(d.getDate() - 2);
+  else if (day === 6) d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function weekAgoISO(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 7);
+  return d.toISOString().slice(0, 10);
+}
+
+function monthAgoISO(): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() - 1);
+  return d.toISOString().slice(0, 10);
 }
 
 export default function BondDetailPage({
@@ -23,6 +46,8 @@ export default function BondDetailPage({
   const [metricsLoading, setMetricsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(() => todayISO());
+  const [prevIsin, setPrevIsin] = useState<string | null>(null);
+  const [nextIsin, setNextIsin] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isin) {
@@ -52,14 +77,56 @@ export default function BondDetailPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isin, selectedDate]);
 
+  useEffect(() => {
+    if (!isin) return;
+    try {
+      const raw = sessionStorage.getItem("bondley_bonds_isins");
+      const list: string[] = raw ? JSON.parse(raw) : [];
+      const idx = list.indexOf(isin);
+      if (idx > 0) setPrevIsin(list[idx - 1] ?? null);
+      else setPrevIsin(null);
+      if (idx >= 0 && idx < list.length - 1) setNextIsin(list[idx + 1] ?? null);
+      else setNextIsin(null);
+    } catch {
+      setPrevIsin(null);
+      setNextIsin(null);
+    }
+  }, [isin]);
+
   if (!isin)
-    return <div className="py-12 text-center text-destructive text-sm">Tahvil kodu belirtilmedi</div>;
+    return (
+      <EmptyState
+        variant="error"
+        title="Tahvil kodu belirtilmedi"
+        icon={<AlertCircle className="h-7 w-7" />}
+        action={{ label: "Listeye don", href: "/dashboard/bonds" }}
+      />
+    );
   if (loading)
     return <div className="py-12 text-center text-muted-foreground text-sm">Yukleniyor...</div>;
   if (error)
-    return <div className="py-12 text-center text-destructive text-sm">{error}</div>;
+    return (
+      <EmptyState
+        variant="error"
+        title={error === "Giris yapmaniz gerekiyor" ? "Giris gerekli" : "Hata"}
+        description={error}
+        icon={<AlertCircle className="h-7 w-7" />}
+        action={
+          error === "Giris yapmaniz gerekiyor"
+            ? { label: "Giris yap", href: "/login" }
+            : { label: "Listeye don", href: "/dashboard/bonds" }
+        }
+      />
+    );
   if (!bond)
-    return <div className="py-12 text-center text-muted-foreground text-sm">Tahvil bulunamadi</div>;
+    return (
+      <EmptyState
+        title="Tahvil bulunamadi"
+        description="Belirtilen ISIN ile bir tahvil kaydi bulunamadi."
+        icon={<FileQuestion className="h-7 w-7" />}
+        action={{ label: "Listeye don", href: "/dashboard/bonds" }}
+      />
+    );
 
   const topMetrics = [
     {
@@ -130,19 +197,56 @@ export default function BondDetailPage({
   return (
     <div className="space-y-6">
       <div className="animate-fade-up">
-        <div className="flex items-center gap-3 mb-2">
-          <Link
-            href="/dashboard/bonds"
-            className="text-data-sm text-muted-foreground hover:text-primary transition-colors"
-          >
-            Tahviller
-          </Link>
-          <span className="text-muted-foreground/40">/</span>
+        <nav aria-label="Breadcrumb" className="mb-2">
+          <ol className="flex flex-wrap items-center gap-2 text-data-sm">
+            <li>
+              <Link
+                href="/dashboard/bonds"
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
+                Tahviller
+              </Link>
+            </li>
+            <li className="text-muted-foreground/40" aria-hidden>/</li>
+            <li aria-current="page" className="font-mono-data text-foreground">
+              {bond.isin_code}
+            </li>
+          </ol>
+        </nav>
+        <div className="flex flex-wrap items-center gap-2">
           <h1 className="font-mono-data text-display-md text-foreground">{bond.isin_code}</h1>
           <Badge variant="default">{bond.currency}</Badge>
           {!bond.is_active && <Badge variant="destructive">PASIF</Badge>}
+          <div className="ml-auto flex items-center gap-1">
+            {prevIsin ? (
+              <Link href={`/dashboard/bonds/${prevIsin}`}>
+                <Button variant="outline" size="sm" className="gap-1">
+                  <ChevronLeft className="h-4 w-4" />
+                  Onceki
+                </Button>
+              </Link>
+            ) : (
+              <Button variant="outline" size="sm" className="gap-1" disabled>
+                <ChevronLeft className="h-4 w-4" />
+                Onceki
+              </Button>
+            )}
+            {nextIsin ? (
+              <Link href={`/dashboard/bonds/${nextIsin}`}>
+                <Button variant="outline" size="sm" className="gap-1">
+                  Sonraki
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            ) : (
+              <Button variant="outline" size="sm" className="gap-1" disabled>
+                Sonraki
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
-        <p className="text-data-sm text-muted-foreground">
+        <p className="text-data-sm text-muted-foreground mt-1">
           {bond.issuer || "Bilinmiyor"} &middot;{" "}
           {bond.security_type ? bond.security_type.split("/")[0].trim() : "—"}
         </p>
@@ -152,14 +256,56 @@ export default function BondDetailPage({
         <label className="text-label text-muted-foreground" htmlFor="bond-settlement-date">
           Hesaplama tarihi
         </label>
-        <input
-          id="bond-settlement-date"
-          type="date"
-          value={selectedDate}
-          max={todayISO()}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          className="rounded-md border border-border bg-card px-3 py-2 font-mono-data text-data-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            id="bond-settlement-date"
+            type="date"
+            value={selectedDate}
+            max={todayISO()}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="rounded-md border border-border bg-card px-3 py-2 font-mono-data text-data-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+          <div className="flex flex-wrap gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedDate(todayISO())}
+              className="text-data-sm"
+            >
+              Bugun
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedDate(lastBusinessDayISO())}
+              className="text-data-sm"
+            >
+              Son is gunu
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedDate(weekAgoISO())}
+              className="text-data-sm"
+            >
+              1 hafta once
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedDate(monthAgoISO())}
+              className="text-data-sm"
+            >
+              1 ay once
+            </Button>
+          </div>
+        </div>
+        {!bond.calculated_metrics && !metricsLoading && (
+          <span className="text-label text-muted-foreground flex items-center gap-1">
+            <AlertCircle className="h-4 w-4" />
+            Bu tarih icin piyasa verisi yok
+          </span>
+        )}
         {metricsLoading && (
           <span className="text-label text-muted-foreground">Hesaplaniyor...</span>
         )}

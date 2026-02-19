@@ -5,6 +5,9 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/empty-state";
+import { AlertCircle, Inbox } from "lucide-react";
 import { api, BondListItem, BondStats } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
@@ -90,7 +93,18 @@ export default function BondsListPage() {
         </div>
       </div>
 
-      {stats && (
+      {loading && (
+        <div className="grid gap-px md:grid-cols-4 bg-border/30 rounded-lg overflow-hidden animate-fade-up">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-card p-5 grain">
+              <Skeleton className="h-3 w-24 mb-2" />
+              <Skeleton className="h-8 w-16 mb-1" />
+              <Skeleton className="h-3 w-20" />
+            </div>
+          ))}
+        </div>
+      )}
+      {stats && !loading && (
         <div className="grid gap-px md:grid-cols-4 bg-border/30 rounded-lg overflow-hidden animate-fade-up">
           <div className="bg-card p-5 grain">
             <div className="text-label text-muted-foreground mb-2">TOPLAM TAHVIL</div>
@@ -181,11 +195,143 @@ export default function BondsListPage() {
         </CardHeader>
         <CardContent>
           {loading && (
-            <p className="text-data-sm text-muted-foreground py-4">Yukleniyor...</p>
-          )}
-          {error && <p className="text-data-sm text-destructive py-4">{error}</p>}
-          {!loading && !error && (
             <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+              <table className="w-full">
+                <thead className="sticky top-0 bg-card z-10">
+                  <tr className="border-b border-border">
+                    <th className="pb-3 text-left text-label text-muted-foreground font-normal">
+                      ISIN
+                    </th>
+                    <th className="pb-3 text-left text-label text-muted-foreground font-normal">
+                      IHRACÇI
+                    </th>
+                    <th className="pb-3 text-left text-label text-muted-foreground font-normal">
+                      TUR
+                    </th>
+                    <th className="pb-3 text-left text-label text-muted-foreground font-normal">
+                      GETIRI TURU
+                    </th>
+                    <th className="pb-3 text-center text-label text-muted-foreground font-normal">
+                      DOVIZ
+                    </th>
+                    <th className="pb-3 text-right text-label text-muted-foreground font-normal">
+                      VADE
+                    </th>
+                    <th className="pb-3 text-right text-label text-muted-foreground font-normal">
+                      SON FIYAT
+                    </th>
+                    <th className="pb-3 text-right text-label text-muted-foreground font-normal">
+                      GETIRI %
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({ length: 18 }).map((_, i) => (
+                    <tr
+                      key={i}
+                      className="border-b border-border/30 last:border-0"
+                    >
+                      <td className="py-3"><Skeleton className="h-5 w-28" /></td>
+                      <td className="py-3"><Skeleton className="h-5 w-40" /></td>
+                      <td className="py-3"><Skeleton className="h-5 w-24" /></td>
+                      <td className="py-3"><Skeleton className="h-5 w-20" /></td>
+                      <td className="py-3 text-center"><Skeleton className="h-5 w-10 mx-auto" /></td>
+                      <td className="py-3 text-right"><Skeleton className="h-5 w-16 ml-auto" /></td>
+                      <td className="py-3 text-right"><Skeleton className="h-5 w-14 ml-auto" /></td>
+                      <td className="py-3 text-right"><Skeleton className="h-5 w-12 ml-auto" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {error && !loading && (
+            <EmptyState
+              variant="error"
+              title="Veri yuklenemedi"
+              description={error}
+              icon={<AlertCircle className="h-7 w-7" />}
+              action={{ label: "Yenile", onClick: () => window.location.reload() }}
+            />
+          )}
+          {!loading && !error && filtered.length === 0 && (
+            <EmptyState
+              title={
+                search || currencyFilter || typeFilter
+                  ? "Filtreyle eslesen tahvil yok"
+                  : "Henuz tahvil yok"
+              }
+              description={
+                search || currencyFilter || typeFilter
+                  ? "Arama veya filtreleri degistirerek tekrar deneyin."
+                  : "Admin panelden tahvil listesini guncelleyebilirsiniz."
+              }
+              icon={<Inbox className="h-7 w-7" />}
+              action={
+                search || currencyFilter || typeFilter
+                  ? {
+                      label: "Filtreleri temizle",
+                      onClick: () => {
+                        setSearch("");
+                        setCurrencyFilter("");
+                        setTypeFilter("");
+                      },
+                    }
+                  : undefined
+              }
+            />
+          )}
+          {!loading && !error && filtered.length > 0 && (
+            <>
+              <div className="block md:hidden space-y-3 max-h-[600px] overflow-y-auto">
+                {filtered.map((bond) => (
+                  <Link
+                    key={bond.isin_code}
+                    href={`/dashboard/bonds/${bond.isin_code}`}
+                    onClick={() => {
+                      try {
+                        sessionStorage.setItem(
+                          "bondley_bonds_isins",
+                          JSON.stringify(filtered.map((b) => b.isin_code))
+                        );
+                      } catch {
+                        // ignore
+                      }
+                    }}
+                    className="block rounded-xl border border-border bg-card p-4 hover:bg-secondary/30 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono-data text-data-sm font-medium text-primary">
+                        {bond.isin_code}
+                      </span>
+                      <Badge
+                        variant={(CURRENCY_COLORS[bond.currency] as any) || "outline"}
+                        className="shrink-0"
+                      >
+                        {bond.currency}
+                      </Badge>
+                    </div>
+                    <p className="text-data-sm text-muted-foreground truncate mt-1">
+                      {bond.issuer || "—"}
+                    </p>
+                    <div className="flex justify-between text-data-sm mt-2 text-muted-foreground">
+                      <span>
+                        Vade:{" "}
+                        {bond.days_to_maturity != null
+                          ? `${bond.days_to_maturity} gun`
+                          : formatDate(bond.maturity_date)}
+                      </span>
+                      <span className="text-foreground font-mono-data">
+                        {formatDecimal(bond.last_issue_price, 3)}
+                      </span>
+                    </div>
+                    <div className="text-data-sm text-positive font-mono-data mt-1">
+                      {bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              <div className="hidden md:block overflow-x-auto max-h-[600px] overflow-y-auto">
               <table className="w-full">
                 <thead className="sticky top-0 bg-card z-10">
                   <tr className="border-b border-border">
@@ -225,6 +371,16 @@ export default function BondsListPage() {
                         <Link
                           href={`/dashboard/bonds/${bond.isin_code}`}
                           className="font-mono-data text-data-sm text-foreground group-hover:text-primary transition-colors"
+                          onClick={() => {
+                            try {
+                              sessionStorage.setItem(
+                                "bondley_bonds_isins",
+                                JSON.stringify(filtered.map((b) => b.isin_code))
+                              );
+                            } catch {
+                              // ignore
+                            }
+                          }}
                         >
                           {bond.isin_code}
                         </Link>
@@ -282,14 +438,8 @@ export default function BondsListPage() {
                   ))}
                 </tbody>
               </table>
-              {filtered.length === 0 && (
-                <p className="text-data-sm text-muted-foreground py-6 text-center">
-                  {search || currencyFilter || typeFilter
-                    ? "Filtreyle eslesen tahvil bulunamadi"
-                    : "Henuz tahvil eklenmemis. Admin panelden tahvil listesini guncelleyin."}
-                </p>
-              )}
             </div>
+            </>
           )}
         </CardContent>
       </Card>
