@@ -13,6 +13,15 @@ interface EmptyStateAction {
   onClick?: () => void;
 }
 
+function isEmptyStateAction(a: EmptyStateAction | ReactNode): a is EmptyStateAction {
+  return (
+    typeof a === "object" &&
+    a !== null &&
+    "label" in a &&
+    typeof (a as EmptyStateAction).label === "string"
+  );
+}
+
 interface EmptyStateProps {
   title: string;
   description?: string;
@@ -61,24 +70,24 @@ export function EmptyState({
       )}
       {action && (
         <div className="mt-6">
-          {typeof action === "object" && "label" in action && (action as EmptyStateAction).label ? (
-            (action as EmptyStateAction).href ? (
-              <Link href={(action as EmptyStateAction).href!}>
+          {isEmptyStateAction(action) ? (
+            action.href ? (
+              <Link href={action.href}>
                 <Button variant={isError ? "destructive" : "default"} size="sm">
-                  {(action as EmptyStateAction).label}
+                  {action.label}
                 </Button>
               </Link>
             ) : (
               <Button
                 variant={isError ? "destructive" : "default"}
                 size="sm"
-                onClick={(action as EmptyStateAction).onClick}
+                onClick={action.onClick}
               >
-                {(action as EmptyStateAction).label}
+                {action.label}
               </Button>
             )
           ) : (
-            action
+            (action as ReactNode)
           )}
         </div>
       )}
