@@ -289,12 +289,31 @@ async def ensure_admin_user():
             logger.debug("[startup] Admin user already exists: %s (password/role not changed)", admin_email)
 
 
+async def _test_database_connection():
+    """Test database connection and log connection info (without password)."""
+    try:
+        async with engine.begin() as conn:
+            result = await conn.execute(text("SELECT version()"))
+            version = result.scalar()
+            logger.info("[startup] Database connected successfully. PostgreSQL version: %s", version[:50] if version else "unknown")
+    except Exception as e:
+        logger.error("[startup] Database connection failed: %s", str(e))
+        logger.error("[startup] Database config: host=%s, port=%s, db=%s, user=%s", 
+                     settings.POSTGRES_HOST, settings.POSTGRES_PORT, settings.POSTGRES_DB, settings.POSTGRES_USER)
+        raise
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         settings.validate_production_secrets()
     except ValueError as e:
         logger.error("[startup] %s", e)
+        raise
+    try:
+        await _test_database_connection()
+    except Exception as e:
+        logger.exception("[startup] Database connection test failed: %s", e)
         raise
     try:
         await _run_migrations()

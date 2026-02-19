@@ -1,5 +1,6 @@
 from pathlib import Path
 from functools import lru_cache
+from urllib.parse import quote_plus
 
 from pydantic_settings import BaseSettings
 
@@ -20,15 +21,21 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
+        # URL encode password to handle special characters like -, _, @, etc.
+        encoded_password = quote_plus(self.POSTGRES_PASSWORD)
+        encoded_user = quote_plus(self.POSTGRES_USER)
         return (
-            f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"postgresql+asyncpg://{encoded_user}:{encoded_password}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
     @property
     def DATABASE_URL_SYNC(self) -> str:
+        # URL encode password to handle special characters like -, _, @, etc.
+        encoded_password = quote_plus(self.POSTGRES_PASSWORD)
+        encoded_user = quote_plus(self.POSTGRES_USER)
         return (
-            f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"postgresql://{encoded_user}:{encoded_password}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
