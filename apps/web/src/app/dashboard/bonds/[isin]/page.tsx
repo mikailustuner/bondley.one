@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,8 +12,12 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-export default function BondDetailPage({ params }: { params: { isin: string } }) {
-  const { isin } = params;
+export default function BondDetailPage({
+  params,
+}: {
+  params: Promise<{ isin: string }>;
+}) {
+  const { isin } = use(params);
   const [bond, setBond] = useState<BondDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [metricsLoading, setMetricsLoading] = useState(false);
@@ -21,15 +25,21 @@ export default function BondDetailPage({ params }: { params: { isin: string } })
   const [selectedDate, setSelectedDate] = useState<string>(() => todayISO());
 
   useEffect(() => {
+    if (!isin) {
+      setError("Tahvil kodu belirtilmedi");
+      setLoading(false);
+      return;
+    }
     const token = getToken();
     if (!token) {
       setError("Giris yapmaniz gerekiyor");
       setLoading(false);
       return;
     }
-    const isInitial = bond === null || bond.isin_code !== isin;
+    const isInitial = bond === null || bond?.isin_code !== isin;
     if (isInitial) setLoading(true);
     else setMetricsLoading(true);
+    setError(null);
     api.bonds
       .get(token, isin, { settlement_date: selectedDate })
       .then(setBond)
@@ -42,6 +52,8 @@ export default function BondDetailPage({ params }: { params: { isin: string } })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isin, selectedDate]);
 
+  if (!isin)
+    return <div className="py-12 text-center text-destructive text-sm">Tahvil kodu belirtilmedi</div>;
   if (loading)
     return <div className="py-12 text-center text-muted-foreground text-sm">Yukleniyor...</div>;
   if (error)
