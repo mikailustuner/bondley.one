@@ -88,8 +88,9 @@ def parse_clean_price_text(price_text: str) -> Decimal | None:
     
     try:
         price = Decimal(cleaned)
-        # Sanity check: clean price should be reasonable (between 0 and 1000)
-        if price < 0 or price > 1000:
+        # Sanity check: clean price should be reasonable (strictly positive, max 1000)
+        # BondCalculator requires clean_price > 0 (not 0 or negative)
+        if price <= 0 or price > 1000:
             return None
         return price
     except (InvalidOperation, ValueError):
@@ -139,7 +140,8 @@ async def populate_market_data(trade_date: date, dry_run: bool = False, debug: b
             if clean_price is None and bond.last_issue_price is not None:
                 try:
                     clean_price = Decimal(str(bond.last_issue_price))
-                    if 0 <= clean_price <= 1000:
+                    # clean_price kesinlikle pozitif olmalı (> 0) - BondCalculator gereksinimi
+                    if 0 < clean_price <= 1000:
                         used_last_issue_price += 1
                     else:
                         clean_price = None

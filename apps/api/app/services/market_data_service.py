@@ -95,6 +95,13 @@ class MarketDataService:
                 logger.warning(f"No market data for {bond.isin_code} on date {calc_date}, skipping")
                 continue
 
+            # clean_price kesinlikle pozitif olmalı (> 0) - BondCalculator gereksinimi
+            if market_data.clean_price <= 0:
+                logger.warning(
+                    f"Skipping {bond.isin_code}: clean_price must be strictly positive, got {market_data.clean_price}"
+                )
+                continue
+
             try:
                 result = await self.run_calculations_for_bond(
                     bond, calc_date, market_data.clean_price
