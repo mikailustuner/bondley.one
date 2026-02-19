@@ -15,11 +15,8 @@ Kaynaklar:
 import io
 import logging
 import zipfile
-import tempfile
-import shutil
 from datetime import datetime, date
-from decimal import Decimal, InvalidOperation
-from pathlib import Path
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 import httpx
 from sqlalchemy import select
@@ -39,13 +36,6 @@ class TLREFFetcher:
 
     def __init__(self, db: AsyncSession):
         self.db = db
-        self._temp_dir: Path | None = None
-
-    @property
-    def temp_dir(self) -> Path:
-        if self._temp_dir is None:
-            self._temp_dir = Path(tempfile.mkdtemp(prefix="tlref_"))
-        return self._temp_dir
 
     async def fetch_daily(self) -> dict:
         logger.info("Fetching daily TLREF index...")
@@ -57,8 +47,6 @@ class TLREFFetcher:
         except Exception as e:
             logger.error(f"Daily TLREF fetch failed: {e}")
             return {"status": "error", "error": str(e)}
-        finally:
-            self._cleanup()
 
     async def fetch_historical(self) -> dict:
         logger.info("Fetching historical TLREF index...")
@@ -76,8 +64,6 @@ class TLREFFetcher:
         except Exception as e:
             logger.error(f"Historical TLREF fetch failed: {e}")
             return {"status": "error", "error": str(e)}
-        finally:
-            self._cleanup()
 
     async def _download(self, url: str) -> bytes:
         async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
@@ -207,9 +193,11 @@ class TLREFFetcher:
         for i in range(1, len(all_rates)):
             prev = all_rates[i - 1]
             curr = all_rates[i]
-            if prev.index_value and prev.index_value > 0:
-                daily = (curr.index_value - prev.index_value) / prev.index_value
-                curr.daily_rate = daily
+            prev_val = Decimal(str(prev.index_value)) if prev.index_value is not None else None
+            curr_val = Decimal(str(curr.index_value)) if curr.index_value is not None else None
+            if prev_val is not None and curr_val is not None and prev_val > 0:
+                daily = (curr_val - prev_val) / prev_val
+                curr.daily_rate = daily.quantize(Decimal("0.0000000001"), rounding=ROUND_HALF_UP)
                 updated += 1
 
         await self.db.commit()
@@ -241,8 +229,3 @@ class TLREFFetcher:
             return Decimal(cleaned)
         except (InvalidOperation, ValueError):
             return None
-
-    def _cleanup(self):
-        if self._temp_dir and self._temp_dir.exists():
-            shutil.rmtree(self._temp_dir, ignore_errors=True)
-            self._temp_dir = None

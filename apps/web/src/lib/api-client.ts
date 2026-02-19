@@ -17,8 +17,15 @@ async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promis
   const res = await fetch(`${API_BASE}${endpoint}`, { headers, ...rest });
 
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(error.detail || `API Error: ${res.status}`);
+    const body = await res.json().catch(() => ({ detail: res.statusText }));
+    const detail = body.detail;
+    const message =
+      typeof detail === "string"
+        ? detail
+        : Array.isArray(detail) && detail.length > 0
+          ? detail.map((e: { msg?: string }) => e.msg ?? "").filter(Boolean).join("; ") || `API Error: ${res.status}`
+          : (body as { message?: string }).message ?? `API Error: ${res.status}`;
+    throw new Error(message);
   }
 
   if (res.status === 204) return undefined as T;
@@ -57,6 +64,10 @@ export interface PublicSummary {
 }
 
 // --- Bond Types ---
+// API units: last_issue_yield, first_issue_yield = percent (e.g. 44.5 = 44.5%). Display with formatPercent().
+// next_coupon_rate = decimal (e.g. 0.05 = 5%). Display with formatPercentFromDecimal().
+// BondCalculatedMetrics rates (yield_to_maturity, spread, annual_*, periodic_coupon_rate) = decimal. Use formatPercentFromDecimal().
+// rate_change_today_pct = already in percent. Use formatPercent().
 
 export interface BondListItem {
   id: number;
@@ -217,7 +228,12 @@ export const api = {
       if (params?.yield_type) query.set("yield_type", params.yield_type);
       return apiFetch<BondListResponse>(`/bonds/?${query}`, { token });
     },
-    get: (token: string, isin: string) => apiFetch<BondDetail>(`/bonds/${isin}`, { token }),
+    get: (token: string, isin: string, params?: { settlement_date?: string }) => {
+      const query = new URLSearchParams();
+      if (params?.settlement_date) query.set("settlement_date", params.settlement_date);
+      const qs = query.toString();
+      return apiFetch<BondDetail>(`/bonds/${isin}${qs ? `?${qs}` : ""}`, { token });
+    },
     stats: (token: string) => apiFetch<BondStats>("/bonds/stats", { token }),
     sync: (token: string) =>
       apiFetch<{ status: string; bonds_upserted?: number; bonds_deactivated?: number }>(

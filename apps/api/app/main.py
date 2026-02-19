@@ -1,4 +1,6 @@
 from contextlib import asynccontextmanager
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,11 +13,10 @@ from app.models.user import User
 from app.models import Bond, MarketData, Calculation, TLREFRate  # noqa: F401
 from app.api.v1.router import api_router
 
+import logging
+logger = logging.getLogger(__name__)
+
 settings = get_settings()
-
-ADMIN_EMAIL = "admin@fincalc.com"
-ADMIN_PASSWORD = "admin123"
-
 MIGRATION_LOCK_ID = 999999
 
 
@@ -27,7 +28,7 @@ async def _run_migrations():
         try:
             # 1) create_all — eksik tablolari olustur
             await conn.run_sync(Base.metadata.create_all)
-            print("[startup] Tum tablolar kontrol edildi / olusturuldu.")
+            logger.info("[startup] Tum tablolar kontrol edildi / olusturuldu.")
 
             # 2) tlref migration
             await _migrate_tlref(conn)
@@ -46,7 +47,7 @@ async def _migrate_tlref(conn):
     has_old = col_check.scalar_one_or_none() is not None
 
     if has_old:
-        print("[startup] tlref_rates migration: rate_value -> index_value ...")
+        logger.info("[startup] tlref_rates migration: rate_value -> index_value ...")
         await conn.execute(text(
             "ALTER TABLE tlref_rates ADD COLUMN IF NOT EXISTS index_value DECIMAL(18,8)"
         ))
@@ -65,7 +66,7 @@ async def _migrate_tlref(conn):
             await conn.execute(text(
                 "ALTER TABLE tlref_rates ALTER COLUMN index_value SET NOT NULL"
             ))
-        print(f"[startup] tlref_rates migration tamamlandi. {cnt or 0} kayit.")
+        logger.info("[startup] tlref_rates migration tamamlandi. %s kayit.", cnt or 0)
     else:
         await conn.execute(text(
             "ALTER TABLE tlref_rates ADD COLUMN IF NOT EXISTS index_value DECIMAL(18,8)"
@@ -73,7 +74,7 @@ async def _migrate_tlref(conn):
         await conn.execute(text(
             "ALTER TABLE tlref_rates ADD COLUMN IF NOT EXISTS daily_rate DECIMAL(18,10)"
         ))
-        print("[startup] tlref_rates: sutunlar mevcut.")
+        logger.info("[startup] tlref_rates: sutunlar mevcut.")
 
 
 async def _migrate_bonds(conn):
@@ -82,7 +83,7 @@ async def _migrate_bonds(conn):
         "WHERE table_schema = 'public' AND table_name = 'bonds'"
     ))
     if has_table.scalar_one_or_none() is None:
-        print("[startup] bonds tablosu create_all ile olusturuldu.")
+        logger.info("[startup] bonds tablosu create_all ile olusturuldu.")
         return
 
     has_old = await conn.execute(text(
@@ -90,20 +91,20 @@ async def _migrate_bonds(conn):
         "WHERE table_name = 'bonds' AND column_name = 'bond_type'"
     ))
     if has_old.scalar_one_or_none() is not None:
-        print("[startup] bonds: eski sema tespit edildi, guncelleniyor...")
+        logger.info("[startup] bonds: eski sema tespit edildi, guncelleniyor...")
         row_count = (await conn.execute(text("SELECT COUNT(*) FROM bonds"))).scalar()
         if row_count == 0:
             await conn.execute(text("DROP TABLE IF EXISTS calculations CASCADE"))
             await conn.execute(text("DROP TABLE IF EXISTS market_data CASCADE"))
             await conn.execute(text("DROP TABLE IF EXISTS bonds CASCADE"))
             await conn.run_sync(Base.metadata.create_all)
-            print("[startup] Eski bos bonds silindi, yeni sema olusturuldu.")
+            logger.info("[startup] Eski bos bonds silindi, yeni sema olusturuldu.")
         else:
             await _add_new_bond_columns(conn)
-            print("[startup] bonds: yeni sutunlar eklendi (veri korundu).")
+            logger.info("[startup] bonds: yeni sutunlar eklendi (veri korundu).")
     else:
         await _add_new_bond_columns(conn)
-        print("[startup] bonds: sutunlar kontrol edildi.")
+        logger.info("[startup] bonds: sutunlar kontrol edildi.")
     await _widen_bonds_varchar_columns(conn)
 
 
@@ -113,7 +114,7 @@ async def _widen_bonds_varchar_columns(conn):
         await conn.execute(text(
             f"ALTER TABLE bonds ALTER COLUMN {col} TYPE VARCHAR(100)"
         ))
-    print("[startup] bonds: varchar(100) genisletmesi uygulandi.")
+    logger.info("[startup] bonds: varchar(100) genisletmesi uygulandi.")
 
 
 async def _add_new_bond_columns(conn):
@@ -139,36 +140,47 @@ async def _add_new_bond_columns(conn):
 
 
 async def ensure_admin_user():
+    """Create initial admin user only if none exists. Never overwrite existing admin password or role."""
+    admin_email = settings.ADMIN_EMAIL
+    init_password = (settings.ADMIN_INIT_PASSWORD or "").strip()
     async with async_session_factory() as session:
-        result = await session.execute(select(User).where(User.email == ADMIN_EMAIL))
+        result = await session.execute(select(User).where(User.email == admin_email))
         admin = result.scalar_one_or_none()
         if admin is None:
+            if not init_password and settings.ENVIRONMENT == "production":
+                logger.error("[startup] ADMIN_INIT_PASSWORD must be set in production to create initial admin. Skipping admin creation.")
+                return
+            password_to_use = init_password if init_password else "admin123"
+            if not init_password:
+                logger.warning("[startup] ADMIN_INIT_PASSWORD not set; using dev default for initial admin. Set it in production.")
             admin = User(
-                email=ADMIN_EMAIL,
-                password_hash=hash_password(ADMIN_PASSWORD),
+                email=admin_email,
+                password_hash=hash_password(password_to_use),
                 full_name="System Admin",
                 role="admin",
             )
             session.add(admin)
             await session.commit()
-            print(f"[startup] Admin olusturuldu: {ADMIN_EMAIL}")
+            logger.info("[startup] Admin created: %s", admin_email)
         else:
-            admin.password_hash = hash_password(ADMIN_PASSWORD)
-            admin.role = "admin"
-            await session.commit()
-            print(f"[startup] Admin guncellendi: {ADMIN_EMAIL}")
+            logger.debug("[startup] Admin user already exists: %s (password/role not changed)", admin_email)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
+        settings.validate_production_secrets()
+    except ValueError as e:
+        logger.error("[startup] %s", e)
+        raise
+    try:
         await _run_migrations()
     except Exception as e:
-        print(f"[startup] Migration hatasi: {e}")
+        logger.exception("[startup] Migration hatasi: %s", e)
     try:
         await ensure_admin_user()
     except Exception as e:
-        print(f"[startup] Admin seed hatasi: {e}")
+        logger.exception("[startup] Admin seed hatasi: %s", e)
     yield
 
 
@@ -179,6 +191,16 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 
+# Security headers (run first: add before CORS so it executes after CORS in the stack)
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,

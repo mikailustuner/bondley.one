@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { api, BondListItem, BondStats } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
+import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
 
 const CURRENCY_COLORS: Record<string, string> = {
   TRY: "default",
@@ -84,7 +85,7 @@ export default function BondsListPage() {
         <div>
           <h1 className="font-display text-display-md text-foreground">Tahviller</h1>
           <p className="text-data-sm text-muted-foreground mt-1">
-            BIST Borclanma Araclari — {total.toLocaleString("tr-TR")} aktif kayit
+            BIST Borclanma Araclari — {formatDecimal(total, 0)} aktif kayit
           </p>
         </div>
       </div>
@@ -94,7 +95,7 @@ export default function BondsListPage() {
           <div className="bg-card p-5 grain">
             <div className="text-label text-muted-foreground mb-2">TOPLAM TAHVIL</div>
             <div className="font-mono-data text-stat text-primary">
-              {stats.total_bonds.toLocaleString("tr-TR")}
+              {formatDecimal(stats.total_bonds, 0)}
             </div>
             <div className="text-label text-muted-foreground/60 mt-1">Aktif kayit</div>
           </div>
@@ -269,19 +270,13 @@ export default function BondsListPage() {
                       <td className="py-3 text-right font-mono-data text-data-sm text-muted-foreground">
                         {bond.days_to_maturity != null
                           ? `${bond.days_to_maturity} gün`
-                          : bond.maturity_date
-                            ? new Date(bond.maturity_date).toLocaleDateString("tr-TR")
-                            : "—"}
+                          : formatDate(bond.maturity_date)}
                       </td>
                       <td className="py-3 text-right font-mono-data text-data-sm text-foreground">
-                        {bond.last_issue_price != null
-                          ? Number(bond.last_issue_price).toFixed(3)
-                          : "—"}
+                        {formatDecimal(bond.last_issue_price, 3)}
                       </td>
                       <td className="py-3 text-right font-mono-data text-data-sm text-positive">
-                        {bond.last_issue_yield != null
-                          ? `%${Number(bond.last_issue_yield).toFixed(2)}`
-                          : "—"}
+                        {bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"}
                       </td>
                     </tr>
                   ))}

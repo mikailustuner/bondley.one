@@ -10,36 +10,26 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.constants import FACE_VALUE
 from app.models.bond import Bond
 from app.models.market_data import MarketData
 from app.models.calculation import Calculation
-from app.models.tlref_rate import TLREFRate
 from app.services.bond_calculator import BondCalculator
-from app.services.bond_metrics_service import parse_coupon_frequency
+from app.services.bond_metrics_service import bond_to_calculator_inputs, get_tlref_annual_yield_for_date
 
 logger = logging.getLogger(__name__)
-
-FACE_VALUE = Decimal("100")
 
 
 class MarketDataService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    def _bond_to_calculator_inputs(self, bond: Bond) -> tuple[date, date, Decimal, int] | None:
-        """Bond (tbliste) -> (issue_date, maturity_date, coupon_rate, coupon_frequency_int)."""
-        if not bond.first_issue_date or not bond.maturity_date:
-            return None
-        _, freq = parse_coupon_frequency(bond.coupon_frequency)
-        coupon_rate = bond.next_coupon_rate if bond.next_coupon_rate is not None else Decimal("0")
-        return (bond.first_issue_date, bond.maturity_date, coupon_rate, freq)
-
     async def run_calculations_for_bond(
         self, bond: Bond, calc_date: date, clean_price: Decimal
     ) -> dict:
         """Tek bir tahvil icin tum hesaplamalari calistir ve DB'ye kaydet."""
-        tlref_rate = await self._get_tlref_rate(calc_date)
-        inputs = self._bond_to_calculator_inputs(bond)
+        tlref_rate = await get_tlref_annual_yield_for_date(self.db, calc_date)
+        inputs = bond_to_calculator_inputs(bond)
         if not inputs:
             raise ValueError(f"Bond {bond.isin_code}: first_issue_date veya maturity_date eksik")
 
@@ -51,6 +41,7 @@ class MarketDataService:
             coupon_rate=coupon_rate,
             face_value=FACE_VALUE,
             coupon_frequency=coupon_frequency_int,
+            next_coupon_date=bond.next_coupon_date,
         )
 
         result = calculator.full_analysis(clean_price, calc_date, tlref_rate)
@@ -77,7 +68,6 @@ class MarketDataService:
             },
         )
         await self.db.execute(stmt)
-        await self.db.commit()
 
         return result
 
@@ -123,17 +113,3 @@ class MarketDataService:
 
         logger.info(f"Completed calculations for {len(results)}/{len(bonds)} bonds")
         return results
-
-    async def _get_tlref_rate(self, target_date: date) -> Decimal | None:
-        result = await self.db.execute(
-            select(TLREFRate)
-            .where(TLREFRate.rate_date <= target_date)
-            .order_by(TLREFRate.rate_date.desc())
-            .limit(1)
-        )
-        rate = result.scalar_one_or_none()
-        if rate is None:
-            return None
-        if rate.daily_rate is not None:
-            return rate.daily_rate * 365
-        return rate.index_value

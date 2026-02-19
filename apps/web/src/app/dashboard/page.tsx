@@ -1,99 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TlrefIndexChart } from "@/components/charts/tlref-index-chart";
 import { TlrefRateChart } from "@/components/charts/tlref-rate-chart";
-import { api, TLREFRecord, TLREFStats, BondStats } from "@/lib/api-client";
-import { getToken } from "@/lib/auth";
+import { useTlrefHistory } from "@/hooks/use-tlref-history";
+import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<TLREFStats | null>(null);
-  const [bondStats, setBondStats] = useState<BondStats | null>(null);
-  const [history, setHistory] = useState<TLREFRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const token = getToken();
-      if (!token) {
-        setError("Giris yapmaniz gerekiyor");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const [statsRes, historyRes, bondStatsRes] = await Promise.all([
-          api.tlref.stats(token),
-          api.tlref.history(token, { limit: 2000 }),
-          api.bonds.stats(token).catch(() => null),
-        ]);
-
-        setStats(statsRes);
-        setHistory(historyRes.items?.reverse() || []);
-        if (bondStatsRes) setBondStats(bondStatsRes);
-      } catch (err: any) {
-        setError(err.message || "Veri yuklenemedi");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const indexData = history.map((r) => ({
-    date: new Date(r.rate_date).toLocaleDateString("tr-TR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "2-digit",
-    }),
-    value: r.index_value,
-  }));
-
-  const rateData = history
-    .filter((r) => r.daily_rate != null)
-    .map((r) => ({
-      date: new Date(r.rate_date).toLocaleDateString("tr-TR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "2-digit",
-      }),
-      rate: +(r.daily_rate! * 100).toFixed(6),
-    }));
+  const { history, indexData, rateData, stats, bondStats, loading, error } = useTlrefHistory();
 
   const STATS = stats
     ? [
         {
           label: "TLREF ENDEKS",
-          value: stats.latest_index.toLocaleString("tr-TR", { maximumFractionDigits: 2 }),
-          sub: stats.latest_date
-            ? new Date(stats.latest_date).toLocaleDateString("tr-TR")
-            : "",
+          value: formatDecimal(stats.latest_index, 2),
+          sub: stats.latest_date ? formatDate(stats.latest_date) : "",
           highlight: true,
         },
         {
           label: "GUNLUK ORAN",
-          value:
-            stats.latest_daily_rate != null ? `%${stats.latest_daily_rate.toFixed(4)}` : "—",
+          value: formatPercentFromDecimal(stats.latest_daily_rate, 4),
           sub: "Son is gunu",
         },
         {
           label: "YILLIK ORAN",
-          value:
-            stats.annualized_rate_pct != null
-              ? `%${stats.annualized_rate_pct.toFixed(2)}`
-              : "—",
+          value: stats.annualized_rate_pct != null ? formatPercent(stats.annualized_rate_pct) : "—",
           sub: "Bilesik yillik",
         },
         {
           label: "AKTIF TAHVIL",
-          value: bondStats
-            ? bondStats.total_bonds.toLocaleString("tr-TR")
-            : "—",
+          value: bondStats ? formatDecimal(bondStats.total_bonds, 0) : "—",
           sub: bondStats?.avg_days_to_maturity
             ? `Ort. vade: ${Math.round(bondStats.avg_days_to_maturity)} gun`
             : "",
@@ -174,7 +112,7 @@ export default function DashboardPage() {
                   <div>
                     <div className="text-label text-muted-foreground mb-1">{currency} TAHVIL</div>
                     <div className="font-mono-data text-lg text-foreground">
-                      {count.toLocaleString("tr-TR")}
+                      {formatDecimal(count, 0)}
                     </div>
                   </div>
                   <Badge variant="outline">{currency}</Badge>
@@ -255,12 +193,10 @@ export default function DashboardPage() {
                         className="border-b border-border/30 last:border-0 hover:bg-secondary/30 transition-colors"
                       >
                         <td className="py-2.5 font-mono-data text-data-sm text-foreground">
-                          {new Date(r.rate_date).toLocaleDateString("tr-TR")}
+                          {formatDate(r.rate_date)}
                         </td>
                         <td className="py-2.5 text-right font-mono-data text-data-sm text-primary">
-                          {r.index_value.toLocaleString("tr-TR", {
-                            maximumFractionDigits: 5,
-                          })}
+                          {formatDecimal(r.index_value, 5)}
                         </td>
                         <td className="py-2.5 text-right font-mono-data text-data-sm">
                           {r.daily_rate != null ? (
@@ -269,7 +205,7 @@ export default function DashboardPage() {
                                 r.daily_rate >= 0 ? "text-positive" : "text-negative"
                               }
                             >
-                              %{(r.daily_rate * 100).toFixed(5)}
+                              {formatPercentFromDecimal(r.daily_rate, 5)}
                             </span>
                           ) : (
                             <span className="text-muted-foreground">—</span>

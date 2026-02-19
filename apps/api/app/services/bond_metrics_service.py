@@ -1,6 +1,9 @@
 """
 Tahvil hesaplama metrikleri: TLREF formulleri, kupon donemi, kirli fiyat, birikmis faiz,
 YTM, durasyon, konveksite, oran degisimi. Bond modeli (tbliste) ile uyumlu.
+
+Gun sayimi: Hesaplamalar 365 gun yili ve gercek gun sayimi (Act) ile yapilir.
+Bond.day_count_convention (30/360 vb.) su an kullanilmaz; ileride eklenebilir.
 """
 
 from datetime import date, timedelta
@@ -11,14 +14,13 @@ import re
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.constants import FACE_VALUE
 from app.models.bond import Bond
 from app.models.market_data import MarketData
 from app.models.tlref_rate import TLREFRate
 from app.services.bond_calculator import BondCalculator
 
 logger = logging.getLogger(__name__)
-
-FACE_VALUE = Decimal("100")
 
 # coupon_frequency string -> (period_days, frequency_per_year)
 COUPON_FREQUENCY_MAP = [
@@ -107,6 +109,39 @@ def periodic_coupon_rate(annual_coupon: Decimal | None, period_days: int) -> Dec
     )
 
 
+def bond_to_calculator_inputs(bond: Bond) -> tuple[date, date, Decimal, int] | None:
+    """
+    Bond -> (issue_date, maturity_date, coupon_rate, coupon_frequency_int).
+    Eksik zorunlu alan varsa None. Donus tipi None degilse tarihler kesin dolu.
+    """
+    issue_date = bond.first_issue_date
+    maturity_date = bond.maturity_date
+    if not issue_date or not maturity_date:
+        return None
+    period_days, freq = parse_coupon_frequency(bond.coupon_frequency)
+    coupon_rate = bond.next_coupon_rate if bond.next_coupon_rate is not None else Decimal("0")
+    return (issue_date, maturity_date, coupon_rate, freq)
+
+
+async def get_tlref_annual_yield_for_date(db: AsyncSession, target_date: date) -> Decimal | None:
+    """
+    Hedef tarih icin TLREF yillik getiri: daily_rate * 365.
+    rate_date <= target_date olan en son kaydin daily_rate'i kullanilir; yoksa None.
+    """
+    result = await db.execute(
+        select(TLREFRate)
+        .where(TLREFRate.rate_date <= target_date)
+        .order_by(TLREFRate.rate_date.desc())
+        .limit(1)
+    )
+    row = result.scalar_one_or_none()
+    if row is None:
+        return None
+    if row.daily_rate is not None:
+        return row.daily_rate * Decimal("365")
+    return None
+
+
 class BondMetricsService:
     """Tahvil metriklerini TLREF ve Bond verisiyle hesaplar."""
 
@@ -148,19 +183,6 @@ class BondMetricsService:
         )
         row = result.scalar_one_or_none()
         return row[0] if row else None
-
-    def _bond_to_calculator_inputs(self, bond: Bond) -> tuple[date | None, date | None, Decimal, int] | None:
-        """
-        Bond -> (issue_date, maturity_date, coupon_rate, coupon_frequency_int).
-        Eksik zorunlu alan varsa None.
-        """
-        issue_date = bond.first_issue_date
-        maturity_date = bond.maturity_date
-        if not issue_date or not maturity_date:
-            return None
-        period_days, freq = parse_coupon_frequency(bond.coupon_frequency)
-        coupon_rate = bond.next_coupon_rate if bond.next_coupon_rate is not None else Decimal("0")
-        return (issue_date, maturity_date, coupon_rate, freq)
 
     async def compute_metrics(
         self,
@@ -252,7 +274,7 @@ class BondMetricsService:
         convexity = None
         coupon_payment_amount = None
 
-        inputs = self._bond_to_calculator_inputs(bond)
+        inputs = bond_to_calculator_inputs(bond)
         if inputs:
             issue_date, maturity_date, coupon_rate, coupon_frequency_int = inputs
             try:
@@ -263,6 +285,7 @@ class BondMetricsService:
                     coupon_rate=coupon_rate,
                     face_value=FACE_VALUE,
                     coupon_frequency=coupon_frequency_int,
+                    next_coupon_date=bond.next_coupon_date,
                 )
                 ytm = calc.yield_to_maturity(clean_price, settlement_date)
                 if bond.next_coupon_rate is not None:
@@ -297,19 +320,7 @@ class BondMetricsService:
         }
 
     async def _get_tlref_annual_yield(self, target_date: date) -> Decimal | None:
-        """Hedef tarih icin TLREF yillik getiri (daily_rate * 365 veya index kullanimi)."""
-        result = await self.db.execute(
-            select(TLREFRate)
-            .where(TLREFRate.rate_date <= target_date)
-            .order_by(TLREFRate.rate_date.desc())
-            .limit(1)
-        )
-        row = result.scalar_one_or_none()
-        if row is None:
-            return None
-        if row.daily_rate is not None:
-            return row.daily_rate * Decimal("365")
-        return row.index_value
+        return await get_tlref_annual_yield_for_date(self.db, target_date)
 
     def _convexity(
         self, calc: BondCalculator, clean_price: Decimal, settlement_date: date

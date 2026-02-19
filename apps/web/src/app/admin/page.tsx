@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
+import { formatDecimal, formatDate } from "@/lib/utils";
 
 export default function AdminPage() {
   const [syncing, setSyncing] = useState(false);
@@ -183,21 +184,21 @@ export default function AdminPage() {
             <div className="bg-card p-5 grain">
               <div className="text-label text-muted-foreground mb-2">TLREF KAYIT</div>
               <div className="font-mono-data text-stat text-foreground">
-                {stats.tlref_count.toLocaleString("tr-TR")}
+                {formatDecimal(stats.tlref_count, 0)}
               </div>
               <div className="text-label text-muted-foreground/60 mt-1">Endeks kaydi</div>
             </div>
             <div className="bg-card p-5 grain amber-glow-border">
               <div className="text-label text-muted-foreground mb-2">TAHVIL</div>
               <div className="font-mono-data text-stat text-primary">
-                {stats.bonds_count.toLocaleString("tr-TR")}
+                {formatDecimal(stats.bonds_count, 0)}
               </div>
               <div className="text-label text-muted-foreground/60 mt-1">Aktif borclanma araci</div>
             </div>
             <div className="bg-card p-5 grain">
               <div className="text-label text-muted-foreground mb-2">KULLANICI</div>
               <div className="font-mono-data text-stat text-foreground">
-                {stats.users_count.toLocaleString("tr-TR")}
+                {formatDecimal(stats.users_count, 0)}
               </div>
               <div className="text-label text-muted-foreground/60 mt-1">Kayitli hesap</div>
             </div>
@@ -274,37 +275,31 @@ export default function AdminPage() {
               <div className="flex justify-between items-center py-2.5 border-b border-border/30">
                 <span className="text-data-sm text-muted-foreground">Son TLREF Tarihi</span>
                 <span className="font-mono-data text-label text-foreground">
-                  {tlrefLatest
-                    ? new Date(tlrefLatest.rate_date).toLocaleDateString("tr-TR")
-                    : "—"}
+                  {formatDate(tlrefLatest?.rate_date)}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2.5 border-b border-border/30">
                 <span className="text-data-sm text-muted-foreground">Son Endeks Degeri</span>
                 <span className="font-mono-data text-label text-primary">
-                  {tlrefLatest
-                    ? tlrefLatest.index_value.toLocaleString("tr-TR", {
-                        maximumFractionDigits: 5,
-                      })
-                    : "—"}
+                  {formatDecimal(tlrefLatest?.index_value, 5)}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2.5 border-b border-border/30">
                 <span className="text-data-sm text-muted-foreground">Aktif Tahvil</span>
                 <span className="font-mono-data text-label text-primary">
-                  {stats ? stats.bonds_count.toLocaleString("tr-TR") : "—"}
+                  {formatDecimal(stats?.bonds_count, 0)}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2.5 border-b border-border/30">
                 <span className="text-data-sm text-muted-foreground">Toplam TLREF Kaydi</span>
                 <span className="font-mono-data text-label text-foreground">
-                  {stats ? stats.tlref_count.toLocaleString("tr-TR") : "—"}
+                  {formatDecimal(stats?.tlref_count, 0)}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2.5 border-b border-border/30">
                 <span className="text-data-sm text-muted-foreground">Kullanici Sayisi</span>
                 <span className="font-mono-data text-label text-foreground">
-                  {stats ? stats.users_count.toLocaleString("tr-TR") : "—"}
+                  {formatDecimal(stats?.users_count, 0)}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2.5">

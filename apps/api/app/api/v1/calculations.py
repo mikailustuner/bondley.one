@@ -1,3 +1,4 @@
+import logging
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -13,6 +14,7 @@ from app.services.market_data_service import MarketDataService
 from app.api.deps import get_current_user
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/{isin_code}", response_model=list[CalculationResponse])
@@ -71,8 +73,21 @@ async def trigger_calculation(
             detail="No market data available for this bond",
         )
 
-    result = await service.run_calculations_for_bond(bond, calc_date, market_data.clean_price)
-    return result
+    try:
+        result = await service.run_calculations_for_bond(bond, calc_date, market_data.clean_price)
+        return result
+    except ValueError as e:
+        logger.warning("Calculation failed for bond %s: %s", bond.isin_code, e)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e) or "Calculation failed for this bond (invalid dates or missing data)",
+        ) from e
+    except Exception as e:
+        logger.exception("Unexpected error running calculation for bond %s: %s", bond.isin_code, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Calculation could not be completed. Please try again later.",
+        ) from e
 
 
 @router.post("/run-all", response_model=dict)

@@ -34,6 +34,11 @@ if [ "$JWT_SECRET_KEY" = "BURAYA_64_KARAKTER_RANDOM_STRING_YAZ" ]; then
     error "JWT_SECRET_KEY .env dosyasinda guncellenmemis!"
 fi
 
+# Production'da API secret dogrulamasi icin ENVIRONMENT=production olmali
+if [ -z "$ENVIRONMENT" ] || [ "$ENVIRONMENT" != "production" ]; then
+    warn "ENVIRONMENT production degil. .env icinde ENVIRONMENT=production ekleyin (API startup secret dogrulamasi icin)."
+fi
+
 log "Domain: $DOMAIN"
 log "Pre-flight checks passed."
 
@@ -157,6 +162,6 @@ log "  Dashboard: https://dashboard.$DOMAIN"
 log "  Admin:     https://admin.$DOMAIN"
 log "  API:       https://api.$DOMAIN/api/docs"
 log ""
-log "  Admin giris: admin@fincalc.com / admin123"
-log "  (ONEMLI: Ilk giriste admin sifresini degistirin!)"
+log "  Admin giris: .env icindeki ADMIN_EMAIL / ADMIN_INIT_PASSWORD ile giris yapin"
+log "  (ONEMLI: Ilk giriste admin sifresini degistirin; .env.production asla commit etmeyin)"
 log ""

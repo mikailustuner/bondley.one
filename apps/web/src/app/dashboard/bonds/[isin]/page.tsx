@@ -6,27 +6,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { api, BondDetail } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
+import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
 
-function fmt(val: number | string | null | undefined, decimals = 2): string {
-  if (val == null) return "—";
-  const n = typeof val === "string" ? parseFloat(val) : val;
-  return isNaN(n) ? "—" : n.toLocaleString("tr-TR", { maximumFractionDigits: decimals });
-}
-
-function fmtDate(val: string | null | undefined): string {
-  if (!val) return "—";
-  try {
-    return new Date(val).toLocaleDateString("tr-TR");
-  } catch {
-    return val;
-  }
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 export default function BondDetailPage({ params }: { params: { isin: string } }) {
   const { isin } = params;
   const [bond, setBond] = useState<BondDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [metricsLoading, setMetricsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(() => todayISO());
 
   useEffect(() => {
     const token = getToken();
@@ -35,12 +27,20 @@ export default function BondDetailPage({ params }: { params: { isin: string } })
       setLoading(false);
       return;
     }
+    const isInitial = bond === null || bond.isin_code !== isin;
+    if (isInitial) setLoading(true);
+    else setMetricsLoading(true);
     api.bonds
-      .get(token, isin)
+      .get(token, isin, { settlement_date: selectedDate })
       .then(setBond)
       .catch((e) => setError(e?.message || "Tahvil bulunamadi"))
-      .finally(() => setLoading(false));
-  }, [isin]);
+      .finally(() => {
+        setLoading(false);
+        setMetricsLoading(false);
+      });
+    // Run when isin or selectedDate changes; bond used only to distinguish initial vs date-change load
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isin, selectedDate]);
 
   if (loading)
     return <div className="py-12 text-center text-muted-foreground text-sm">Yukleniyor...</div>;
@@ -52,12 +52,12 @@ export default function BondDetailPage({ params }: { params: { isin: string } })
   const topMetrics = [
     {
       label: "SON IHRAC FIYATI",
-      value: bond.last_issue_price != null ? fmt(bond.last_issue_price, 3) : "—",
+      value: formatDecimal(bond.last_issue_price, 3),
       highlight: true,
     },
     {
       label: "SON IHRAC GETIRISI",
-      value: bond.last_issue_yield != null ? `%${fmt(bond.last_issue_yield, 2)}` : "—",
+      value: bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—",
     },
     {
       label: "VADEYE KALAN",
@@ -65,7 +65,7 @@ export default function BondDetailPage({ params }: { params: { isin: string } })
     },
     {
       label: "KUPON ORANI",
-      value: bond.next_coupon_rate != null ? `%${fmt(bond.next_coupon_rate, 4)}` : "—",
+      value: formatPercentFromDecimal(bond.next_coupon_rate, 4),
     },
   ];
 
@@ -84,33 +84,24 @@ export default function BondDetailPage({ params }: { params: { isin: string } })
   ];
 
   const dateInfo = [
-    ["Ilk Ihrac Tarihi", fmtDate(bond.first_issue_date)],
-    ["Itfa Tarihi", fmtDate(bond.maturity_date)],
+    ["Ilk Ihrac Tarihi", formatDate(bond.first_issue_date)],
+    ["Itfa Tarihi", formatDate(bond.maturity_date)],
     ["Son Ihrac Tarihi", bond.last_issue_date_text || "—"],
-    ["Sonraki Kupon Tarihi", fmtDate(bond.next_coupon_date)],
+    ["Sonraki Kupon Tarihi", formatDate(bond.next_coupon_date)],
     ["Vadeye Kalan Gun", bond.days_to_maturity != null ? `${bond.days_to_maturity}` : "—"],
   ];
 
   const financialInfo = [
-    ["Ilk Ihrac Fiyati", bond.first_issue_price != null ? fmt(bond.first_issue_price, 3) : "—"],
-    ["Son Ihrac Fiyati", bond.last_issue_price != null ? fmt(bond.last_issue_price, 3) : "—"],
-    [
-      "Ilk Ihrac Getirisi %",
-      bond.first_issue_yield != null ? `%${fmt(bond.first_issue_yield, 2)}` : "—",
-    ],
-    [
-      "Son Ihrac Getirisi %",
-      bond.last_issue_yield != null ? `%${fmt(bond.last_issue_yield, 2)}` : "—",
-    ],
-    [
-      "Sonraki Kupon Orani %",
-      bond.next_coupon_rate != null ? `%${fmt(bond.next_coupon_rate, 4)}` : "—",
-    ],
-    ["Spread %", bond.spread != null ? `%${fmt(bond.spread, 4)}` : "—"],
+    ["Ilk Ihrac Fiyati", formatDecimal(bond.first_issue_price, 3)],
+    ["Son Ihrac Fiyati", formatDecimal(bond.last_issue_price, 3)],
+    ["Ilk Ihrac Getirisi %", bond.first_issue_yield != null ? formatPercent(bond.first_issue_yield) : "—"],
+    ["Son Ihrac Getirisi %", bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"],
+    ["Sonraki Kupon Orani %", formatPercentFromDecimal(bond.next_coupon_rate, 4)],
+    ["Spread %", formatPercentFromDecimal(bond.spread, 4)],
     [
       "Toplam Ihrac Tutari",
       bond.total_issue_amount != null
-        ? `${fmt(bond.total_issue_amount, 0)} (x1000 ${bond.currency})`
+        ? `${formatDecimal(bond.total_issue_amount, 0)} (x1000 ${bond.currency})`
         : "—",
     ],
   ];
@@ -145,43 +136,62 @@ export default function BondDetailPage({ params }: { params: { isin: string } })
         </p>
       </div>
 
-      {bond.calculated_metrics && (
+      <div className="animate-fade-up flex flex-wrap items-center gap-3">
+        <label className="text-label text-muted-foreground" htmlFor="bond-settlement-date">
+          Hesaplama tarihi
+        </label>
+        <input
+          id="bond-settlement-date"
+          type="date"
+          value={selectedDate}
+          max={todayISO()}
+          onChange={(e) => setSelectedDate(e.target.value)}
+          className="rounded-md border border-border bg-card px-3 py-2 font-mono-data text-data-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+        {metricsLoading && (
+          <span className="text-label text-muted-foreground">Hesaplaniyor...</span>
+        )}
+      </div>
+
+      {bond.calculated_metrics && !metricsLoading && (
         <Card className="animate-fade-up border-primary/30 bg-primary/5">
           <CardHeader>
             <CardDescription>HESAPLANAN METRIKLER</CardDescription>
-            <CardTitle className="mt-1">Kirli Fiyat, Oran Degisimi, Getiri ve Risk</CardTitle>
+            <CardTitle className="mt-1">
+              Kirli Fiyat, Oran Degisimi, Getiri ve Risk — {formatDate(selectedDate)} tarihi icin
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-lg border border-border/50 bg-card p-4">
                 <div className="text-label text-muted-foreground mb-1">Kirli Fiyat</div>
                 <div className="font-mono-data text-stat text-primary">
-                  {fmt(bond.calculated_metrics.dirty_price, 4)}
+                  {formatDecimal(bond.calculated_metrics.dirty_price, 4)}
                 </div>
               </div>
               <div className="rounded-lg border border-border/50 bg-card p-4">
                 <div className="text-label text-muted-foreground mb-1">Birikmis Faiz</div>
                 <div className="font-mono-data text-stat">
-                  {fmt(bond.calculated_metrics.accrued_interest, 4)}
+                  {formatDecimal(bond.calculated_metrics.accrued_interest, 4)}
                 </div>
               </div>
               <div className="rounded-lg border border-border/50 bg-card p-4">
                 <div className="text-label text-muted-foreground mb-1">Oran Degisimi (Gunluk TLREF %)</div>
                 <div className="font-mono-data text-stat">
                   {bond.calculated_metrics.rate_change_today_pct != null
-                    ? `%${fmt(bond.calculated_metrics.rate_change_today_pct, 4)}`
+                    ? formatPercent(bond.calculated_metrics.rate_change_today_pct)
                     : "—"}
                 </div>
               </div>
               <div className="rounded-lg border border-border/50 bg-card p-4">
                 <div className="text-label text-muted-foreground mb-1">Temiz Fiyat (Kullanilan)</div>
-                <div className="font-mono-data text-stat">{fmt(bond.calculated_metrics.clean_price_used, 4)}</div>
+                <div className="font-mono-data text-stat">{formatDecimal(bond.calculated_metrics.clean_price_used, 4)}</div>
               </div>
               {bond.calculated_metrics.annual_reference_rate != null && (
                 <div className="rounded-lg border border-border/50 bg-card p-4">
                   <div className="text-label text-muted-foreground mb-1">Yillik Gosterge Faiz Orani</div>
                   <div className="font-mono-data text-stat">
-                    %{fmt(bond.calculated_metrics.annual_reference_rate, 4)}
+                    {formatPercentFromDecimal(bond.calculated_metrics.annual_reference_rate, 4)}
                   </div>
                 </div>
               )}
@@ -189,7 +199,7 @@ export default function BondDetailPage({ params }: { params: { isin: string } })
                 <div className="rounded-lg border border-border/50 bg-card p-4">
                   <div className="text-label text-muted-foreground mb-1">Yillik Kupon Faiz Orani</div>
                   <div className="font-mono-data text-stat">
-                    %{fmt(bond.calculated_metrics.annual_coupon_rate, 4)}
+                    {formatPercentFromDecimal(bond.calculated_metrics.annual_coupon_rate, 4)}
                   </div>
                 </div>
               )}
@@ -197,7 +207,7 @@ export default function BondDetailPage({ params }: { params: { isin: string } })
                 <div className="rounded-lg border border-border/50 bg-card p-4">
                   <div className="text-label text-muted-foreground mb-1">Donemsel Kupon Faiz Orani</div>
                   <div className="font-mono-data text-stat">
-                    %{fmt(bond.calculated_metrics.periodic_coupon_rate, 4)}
+                    {formatPercentFromDecimal(bond.calculated_metrics.periodic_coupon_rate, 4)}
                   </div>
                 </div>
               )}
@@ -205,7 +215,7 @@ export default function BondDetailPage({ params }: { params: { isin: string } })
                 <div className="rounded-lg border border-border/50 bg-card p-4">
                   <div className="text-label text-muted-foreground mb-1">Vadeye Kadar Getiri (YTM)</div>
                   <div className="font-mono-data text-stat">
-                    %{fmt(bond.calculated_metrics.yield_to_maturity, 4)}
+                    {formatPercentFromDecimal(bond.calculated_metrics.yield_to_maturity, 4)}
                   </div>
                 </div>
               )}
@@ -213,7 +223,7 @@ export default function BondDetailPage({ params }: { params: { isin: string } })
                 <div className="rounded-lg border border-border/50 bg-card p-4">
                   <div className="text-label text-muted-foreground mb-1">Spread</div>
                   <div className="font-mono-data text-stat">
-                    %{fmt(bond.calculated_metrics.spread, 4)}
+                    {formatPercentFromDecimal(bond.calculated_metrics.spread, 4)}
                   </div>
                 </div>
               )}
@@ -221,7 +231,7 @@ export default function BondDetailPage({ params }: { params: { isin: string } })
                 <div className="rounded-lg border border-border/50 bg-card p-4">
                   <div className="text-label text-muted-foreground mb-1">Modifiye Durasyon</div>
                   <div className="font-mono-data text-stat">
-                    {fmt(bond.calculated_metrics.modified_duration, 4)}
+                    {formatDecimal(bond.calculated_metrics.modified_duration, 4)}
                   </div>
                 </div>
               )}
@@ -229,7 +239,7 @@ export default function BondDetailPage({ params }: { params: { isin: string } })
                 <div className="rounded-lg border border-border/50 bg-card p-4">
                   <div className="text-label text-muted-foreground mb-1">Macaulay Durasyon</div>
                   <div className="font-mono-data text-stat">
-                    {fmt(bond.calculated_metrics.macaulay_duration, 4)}
+                    {formatDecimal(bond.calculated_metrics.macaulay_duration, 4)}
                   </div>
                 </div>
               )}
@@ -237,7 +247,7 @@ export default function BondDetailPage({ params }: { params: { isin: string } })
                 <div className="rounded-lg border border-border/50 bg-card p-4">
                   <div className="text-label text-muted-foreground mb-1">Konveksite</div>
                   <div className="font-mono-data text-stat">
-                    {fmt(bond.calculated_metrics.convexity, 4)}
+                    {formatDecimal(bond.calculated_metrics.convexity, 4)}
                   </div>
                 </div>
               )}
@@ -245,7 +255,7 @@ export default function BondDetailPage({ params }: { params: { isin: string } })
                 <div className="rounded-lg border border-border/50 bg-card p-4">
                   <div className="text-label text-muted-foreground mb-1">Kupon Odeme Tutari</div>
                   <div className="font-mono-data text-stat">
-                    {fmt(bond.calculated_metrics.coupon_payment_amount, 4)}
+                    {formatDecimal(bond.calculated_metrics.coupon_payment_amount, 4)}
                   </div>
                 </div>
               )}
@@ -254,9 +264,10 @@ export default function BondDetailPage({ params }: { params: { isin: string } })
         </Card>
       )}
 
-      {!bond.calculated_metrics && (
+      {!bond.calculated_metrics && !metricsLoading && (
         <p className="text-data-sm text-muted-foreground animate-fade-up">
-          Hesaplanan metrikler su an kullanilamiyor (TLREF veya tahvil tarihleri eksik olabilir).
+          Bu tarih icin hesaplama kaydi bulunamadi. Piyasa verisi girildikten sonra gunluk hesaplama
+          calistirilmali veya baska bir tarih secin.
         </p>
       )}
 

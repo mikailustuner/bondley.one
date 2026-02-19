@@ -1,9 +1,11 @@
 """
 Turk Devlet Tahvilleri icin finansal hesaplama motoru.
 
-Tum hesaplamalarda Decimal aritmetigi kullanilir.
-float donusumu yalnizca numpy_financial.irr() cagrisi icin yapilir
-ve sonuc hemen Decimal'e geri cevirilir.
+- Tum hesaplamalarda Decimal aritmetigi kullanilir.
+- float donusumu yalnizca numpy_financial.irr() cagrisi icin yapilir; sonuc hemen Decimal'e cevirilir.
+- YTM: Bond Equivalent Yield (BEY), yani periyodik IRR * kupon frekansi.
+- Birikmis faiz ve kupon donemi: Act/Act (gercek gun sayimi). day_count_convention (30/360 vb.) su an uygulanmaz.
+- Spread: Ondalik doner (0.01 = %1 = 100 bp). Baz puan icin 10000 ile carpin.
 """
 
 from dataclasses import dataclass
@@ -20,8 +22,6 @@ class BondCashFlow:
 
 
 class BondCalculator:
-    COUPON_PERIOD_DAYS = 182
-
     def __init__(
         self,
         isin: str,
@@ -30,16 +30,33 @@ class BondCalculator:
         coupon_rate: Decimal,
         face_value: Decimal = Decimal("100"),
         coupon_frequency: int = 2,
+        next_coupon_date: date | None = None,
     ):
+        if coupon_frequency < 1:
+            raise ValueError("coupon_frequency must be >= 1")
         self.isin = isin
         self.issue_date = issue_date
         self.maturity_date = maturity_date
         self.coupon_rate = Decimal(str(coupon_rate))
         self.face_value = Decimal(str(face_value))
         self.coupon_frequency = coupon_frequency
+        self._next_coupon_date_anchor = next_coupon_date
         self.coupon_payment = (
             self.face_value * self.coupon_rate / Decimal(str(self.coupon_frequency))
         )
+
+    def _validate_settlement(self, settlement_date: date) -> None:
+        """Raises ValueError if settlement is after maturity (YTM/price undefined)."""
+        if settlement_date > self.maturity_date:
+            raise ValueError(
+                f"settlement_date ({settlement_date}) cannot be after maturity_date ({self.maturity_date})"
+            )
+
+    def _validate_clean_price(self, clean_price: Decimal) -> None:
+        """Raises ValueError if clean_price is not strictly positive."""
+        p = Decimal(str(clean_price))
+        if p <= 0:
+            raise ValueError("clean_price must be strictly positive")
 
     def _last_coupon_date(self, settlement_date: date) -> date:
         """Son kupon odeme tarihini hesapla (settlement_date'den onceki en yakin kupon)."""
@@ -60,9 +77,28 @@ class BondCalculator:
         return self.maturity_date
 
     def _all_coupon_dates(self) -> list[date]:
-        """Ihrac tarihinden vadeye kadar tum kupon tarihlerini uret."""
+        """
+        Ihrac tarihinden vadeye kadar tum kupon tarihlerini uret.
+        next_coupon_date verildiyse BIST ile uyumlu olarak o tarihten geriye/ileriye period_days ile uretir.
+        """
+        period_days = 365 // max(1, self.coupon_frequency)
+        if self._next_coupon_date_anchor is not None:
+            anchor = self._next_coupon_date_anchor
+            dates = []
+            current = anchor
+            while current <= self.maturity_date:
+                dates.append(current)
+                current += timedelta(days=period_days)
+            current = anchor - timedelta(days=period_days)
+            while current >= self.issue_date:
+                dates.append(current)
+                current -= timedelta(days=period_days)
+            dates.sort()
+            if not dates or dates[-1] != self.maturity_date:
+                dates.append(self.maturity_date)
+                dates.sort()
+            return dates
         dates = []
-        period_days = 365 // self.coupon_frequency
         current = self.issue_date + timedelta(days=period_days)
         while current <= self.maturity_date:
             dates.append(current)
@@ -71,19 +107,29 @@ class BondCalculator:
             dates.append(self.maturity_date)
         return dates
 
+    def _period_days(self) -> int:
+        """Iki kupon arasi gun sayisi; _all_coupon_dates ile uyumlu (365 // coupon_frequency)."""
+        return 365 // max(1, self.coupon_frequency)
+
     def accrued_interest(self, settlement_date: date) -> Decimal:
         """
         Birikmis Faiz = C * (D_passed / D_period)
+        Act/Act: D_period = gercek donem gunu (son kupon -> sonraki kupon).
 
         C: Kupon odemesi
         D_passed: Son kupon tarihinden settlement_date'e gecen gun
-        D_period: Iki kupon arasi toplam gun (Turkiye tahvilleri: 182)
+        D_period: Donem icindeki gercek gun sayisi (next_coupon - last_coupon)
         """
+        self._validate_settlement(settlement_date)
         last_coupon = self._last_coupon_date(settlement_date)
-        days_passed = Decimal(str((settlement_date - last_coupon).days))
-        period_days = Decimal(str(self.COUPON_PERIOD_DAYS))
-
-        accrued = self.coupon_payment * (days_passed / period_days)
+        next_coupon = self._next_coupon_date(settlement_date)
+        days_passed = (settlement_date - last_coupon).days
+        days_in_period = (next_coupon - last_coupon).days
+        if days_in_period <= 0:
+            return Decimal("0")
+        accrued = self.coupon_payment * (
+            Decimal(str(days_passed)) / Decimal(str(days_in_period))
+        )
         return accrued.quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
 
     def dirty_price(self, clean_price: Decimal, settlement_date: date) -> Decimal:
@@ -91,6 +137,8 @@ class BondCalculator:
         Kirli Fiyat = Temiz Fiyat + Birikmis Faiz
         P_dirty = P_clean + (C * D_passed / D_period)
         """
+        self._validate_clean_price(clean_price)
+        self._validate_settlement(settlement_date)
         clean = Decimal(str(clean_price))
         accrued = self.accrued_interest(settlement_date)
         return (clean + accrued).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
@@ -100,6 +148,7 @@ class BondCalculator:
         Gelecekteki nakit akislarini uret.
         Son kupon + anapara odemesini icerir.
         """
+        self._validate_settlement(settlement_date)
         flows: list[BondCashFlow] = []
         coupon_dates = self._all_coupon_dates()
 
@@ -120,11 +169,13 @@ class BondCalculator:
     def yield_to_maturity(self, clean_price: Decimal, settlement_date: date) -> Decimal:
         """
         Ic Verim Orani (IRR / Yield to Maturity).
+        Sonuc Bond Equivalent Yield (BEY): periyodik IRR * frekans.
 
         Nakit akis dizisi: [-Kirli_Fiyat, Kupon1, Kupon2, ..., KuponN + Anapara]
         numpy_financial.irr() ile hesaplanir.
-        Sonuc yillik orana cevirilir.
         """
+        self._validate_settlement(settlement_date)
+        self._validate_clean_price(clean_price)
         d_price = self.dirty_price(clean_price, settlement_date)
         cash_flows = self.generate_cash_flows(settlement_date)
 
@@ -143,8 +194,8 @@ class BondCalculator:
 
     def spread(self, bond_yield: Decimal, tlref_yield: Decimal) -> Decimal:
         """
-        Spread = Yield_Bond - Yield_Benchmark (TLREF)
-        Sonuc baz puan (bp) olarak dondurulur.
+        Spread = Yield_Bond - Yield_Benchmark (TLREF).
+        Sonuc ondalik (0.01 = %1 = 100 bp). Baz puan icin 10000 ile carpin.
         """
         s = Decimal(str(bond_yield)) - Decimal(str(tlref_yield))
         return s.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
@@ -154,6 +205,8 @@ class BondCalculator:
         Modifiye Durasyon = Macaulay Durasyon / (1 + y/k)
         y: periyodik verim, k: kupon frekansi
         """
+        self._validate_settlement(settlement_date)
+        self._validate_clean_price(clean_price)
         mac_dur = self.macaulay_duration(clean_price, settlement_date)
         ytm = self.yield_to_maturity(clean_price, settlement_date)
 
@@ -169,11 +222,13 @@ class BondCalculator:
         Macaulay Durasyon = Sum(t_i * PV(CF_i)) / Price
         t_i: yil olarak zaman, PV: bugunki deger
         """
+        self._validate_settlement(settlement_date)
+        self._validate_clean_price(clean_price)
         d_price = self.dirty_price(clean_price, settlement_date)
         cash_flows = self.generate_cash_flows(settlement_date)
         ytm = self.yield_to_maturity(clean_price, settlement_date)
 
-        if not cash_flows or ytm == 0 or d_price == 0:
+        if not cash_flows or ytm == 0 or d_price <= 0:
             return Decimal("0")
 
         periodic_yield = ytm / Decimal(str(self.coupon_frequency))
@@ -182,7 +237,7 @@ class BondCalculator:
         for cf in cash_flows:
             days_to_cf = Decimal(str((cf.payment_date - settlement_date).days))
             years = days_to_cf / Decimal("365")
-            periods = days_to_cf / Decimal(str(self.COUPON_PERIOD_DAYS))
+            periods = days_to_cf / Decimal(str(self._period_days()))
             discount = (Decimal("1") + periodic_yield) ** periods
             if discount != 0:
                 pv = cf.amount / discount
@@ -193,6 +248,8 @@ class BondCalculator:
 
     def full_analysis(self, clean_price: Decimal, settlement_date: date, tlref_rate: Decimal | None = None) -> dict:
         """Tek seferde tum hesaplamalari calistir."""
+        self._validate_settlement(settlement_date)
+        self._validate_clean_price(clean_price)
         ai = self.accrued_interest(settlement_date)
         dp = self.dirty_price(clean_price, settlement_date)
         ytm = self.yield_to_maturity(clean_price, settlement_date)

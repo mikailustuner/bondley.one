@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { api, PublicSummary } from "@/lib/api-client";
+import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
 
 export default function LandingPage() {
   const [summary, setSummary] = useState<PublicSummary | null>(null);
@@ -100,20 +101,14 @@ export default function LandingPage() {
                 <div className="flex justify-between items-baseline border-b border-border/50 pb-3">
                   <span className="text-label text-muted-foreground">TLREF ENDEKS</span>
                   <span className="font-mono-data text-stat text-primary">
-                    {summary?.tlref_index != null
-                      ? summary.tlref_index.toLocaleString("tr-TR", {
-                          maximumFractionDigits: 2,
-                        })
-                      : "—"}
+                    {formatDecimal(summary?.tlref_index, 2)}
                   </span>
                 </div>
 
                 <div className="flex justify-between items-baseline border-b border-border/50 pb-3">
                   <span className="text-label text-muted-foreground">GUNLUK ORAN</span>
                   <span className="font-mono-data text-data-sm text-positive">
-                    {summary?.tlref_daily_rate != null
-                      ? `%${summary.tlref_daily_rate.toFixed(4)}`
-                      : "—"}
+                    {formatPercentFromDecimal(summary?.tlref_daily_rate, 4)}
                   </span>
                 </div>
 
@@ -121,7 +116,7 @@ export default function LandingPage() {
                   <span className="text-label text-muted-foreground">YILLIK ORAN</span>
                   <span className="font-mono-data text-data-sm text-foreground">
                     {summary?.tlref_annualized_rate != null
-                      ? `%${summary.tlref_annualized_rate.toFixed(2)}`
+                      ? formatPercent(summary.tlref_annualized_rate)
                       : "—"}
                   </span>
                 </div>
@@ -129,27 +124,21 @@ export default function LandingPage() {
                 <div className="flex justify-between items-baseline border-b border-border/50 pb-3">
                   <span className="text-label text-muted-foreground">AKTIF TAHVIL</span>
                   <span className="font-mono-data text-data-sm text-primary">
-                    {summary?.total_bonds != null
-                      ? summary.total_bonds.toLocaleString("tr-TR")
-                      : "—"}
+                    {formatDecimal(summary?.total_bonds, 0)}
                   </span>
                 </div>
 
                 <div className="flex justify-between items-baseline border-b border-border/50 pb-3">
                   <span className="text-label text-muted-foreground">SON TARIH</span>
                   <span className="font-mono-data text-data-sm text-muted-foreground">
-                    {summary?.tlref_date
-                      ? new Date(summary.tlref_date).toLocaleDateString("tr-TR")
-                      : "—"}
+                    {formatDate(summary?.tlref_date)}
                   </span>
                 </div>
 
                 <div className="flex justify-between items-baseline">
                   <span className="text-label text-muted-foreground">TLREF KAYIT</span>
                   <span className="font-mono-data text-data-sm text-muted-foreground">
-                    {summary?.total_tlref_records
-                      ? summary.total_tlref_records.toLocaleString("tr-TR")
-                      : "—"}
+                    {formatDecimal(summary?.total_tlref_records, 0)}
                   </span>
                 </div>
               </div>

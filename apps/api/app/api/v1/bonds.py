@@ -6,6 +6,8 @@ from datetime import date
 
 from app.core.database import get_db
 from app.models.bond import Bond
+from app.models.calculation import Calculation
+from app.models.market_data import MarketData
 from app.models.user import User
 from app.schemas.bond import (
     BondResponse,
@@ -134,12 +136,51 @@ async def get_bond(
 
     base = BondDetailWithMetrics.model_validate(bond)
     calc_date = settlement_date or date.today()
-    try:
-        metrics_svc = BondMetricsService(db)
-        metrics = await metrics_svc.compute_metrics(bond, calc_date)
-        base.calculated_metrics = BondCalculatedMetrics(**metrics)
-    except Exception:
-        base.calculated_metrics = None
+
+    # Once DB'de (calculations) kayit var mi kontrol et; varsa oradan doldur.
+    calc_result = await db.execute(
+        select(Calculation).where(
+            Calculation.bond_id == bond.id,
+            Calculation.calc_date == calc_date,
+        )
+    )
+    stored_calc = calc_result.scalar_one_or_none()
+    if stored_calc is not None:
+        md_result = await db.execute(
+            select(MarketData.clean_price).where(
+                MarketData.bond_id == bond.id,
+                MarketData.trade_date == calc_date,
+            )
+        )
+        md_row = md_result.one_or_none()
+        if md_row and md_row[0] is not None:
+            clean_price_used = float(md_row[0])
+        else:
+            clean_price_used = float(stored_calc.dirty_price - stored_calc.accrued_interest)
+        base.calculated_metrics = BondCalculatedMetrics(
+            annual_reference_rate=None,
+            annual_coupon_rate=None,
+            periodic_coupon_rate=None,
+            accrued_interest=float(stored_calc.accrued_interest),
+            dirty_price=float(stored_calc.dirty_price),
+            clean_price_used=clean_price_used,
+            rate_change_today_pct=None,
+            yield_to_maturity=float(stored_calc.yield_to_maturity),
+            spread=float(stored_calc.spread) if stored_calc.spread is not None else None,
+            modified_duration=float(stored_calc.modified_duration) if stored_calc.modified_duration is not None else None,
+            macaulay_duration=float(stored_calc.macaulay_duration) if stored_calc.macaulay_duration is not None else None,
+            convexity=None,
+            coupon_payment_amount=None,
+            period_days=None,
+            next_coupon_date=None,
+        )
+    else:
+        try:
+            metrics_svc = BondMetricsService(db)
+            metrics = await metrics_svc.compute_metrics(bond, calc_date)
+            base.calculated_metrics = BondCalculatedMetrics(**metrics)
+        except Exception:
+            base.calculated_metrics = None
     return base
 
 

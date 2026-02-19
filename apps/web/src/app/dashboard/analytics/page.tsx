@@ -1,40 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TlrefIndexChart } from "@/components/charts/tlref-index-chart";
 import { TlrefRateChart } from "@/components/charts/tlref-rate-chart";
-import { api, TLREFRecord, BondStats } from "@/lib/api-client";
-import { getToken } from "@/lib/auth";
+import { useTlrefHistory } from "@/hooks/use-tlref-history";
+import { formatDecimal, formatPercent } from "@/lib/utils";
 
 export default function AnalyticsPage() {
-  const [history, setHistory] = useState<TLREFRecord[]>([]);
-  const [bondStats, setBondStats] = useState<BondStats | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-
-    (async () => {
-      try {
-        const [res, bs] = await Promise.all([
-          api.tlref.history(token, { limit: 2000 }),
-          api.bonds.stats(token).catch(() => null),
-        ]);
-        setHistory(res.items?.reverse() || []);
-        if (bs) setBondStats(bs);
-      } catch {
-        /* skip */
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+  const { history, indexData, rateData, bondStats, loading } = useTlrefHistory();
 
   if (loading) {
     return (
@@ -44,40 +18,21 @@ export default function AnalyticsPage() {
     );
   }
 
-  const indexData = history.map((r) => ({
-    date: new Date(r.rate_date).toLocaleDateString("tr-TR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "2-digit",
-    }),
-    value: r.index_value,
-  }));
-
-  const rateData = history
-    .filter((r) => r.daily_rate != null)
-    .map((r) => ({
-      date: new Date(r.rate_date).toLocaleDateString("tr-TR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "2-digit",
-      }),
-      rate: +(r.daily_rate! * 100).toFixed(6),
-    }));
-
   const last30 = history.slice(-30);
-  const avgDailyRate =
-    (last30.filter((r) => r.daily_rate != null).reduce((acc, r) => acc + (r.daily_rate ?? 0), 0) /
-      (last30.filter((r) => r.daily_rate != null).length || 1)) *
-    100;
+  const dailyRates = last30.filter((r) => r.daily_rate != null);
+  const avgDailyRatePct =
+    dailyRates.length > 0
+      ? (dailyRates.reduce((acc, r) => acc + (r.daily_rate ?? 0), 0) / dailyRates.length) * 100
+      : null;
 
-  const minIndex = history.length ? Math.min(...history.map((r) => r.index_value)) : 0;
-  const maxIndex = history.length ? Math.max(...history.map((r) => r.index_value)) : 0;
-  const totalReturn =
+  const minIndex = history.length ? Math.min(...history.map((r) => r.index_value)) : null;
+  const maxIndex = history.length ? Math.max(...history.map((r) => r.index_value)) : null;
+  const totalReturnPct =
     history.length >= 2
       ? ((history[history.length - 1].index_value - history[0].index_value) /
           history[0].index_value) *
         100
-      : 0;
+      : null;
 
   const sortedSecTypes = bondStats
     ? Object.entries(bondStats.by_security_type).sort(([, a], [, b]) => b - a)
@@ -98,27 +53,29 @@ export default function AnalyticsPage() {
       <div className="grid gap-px md:grid-cols-4 bg-border/30 rounded-lg overflow-hidden animate-fade-up">
         <div className="bg-card p-5 grain">
           <div className="text-label text-muted-foreground mb-2">TOPLAM GETIRI</div>
-          <div className="font-mono-data text-stat text-positive">%{totalReturn.toFixed(2)}</div>
+          <div className="font-mono-data text-stat text-positive">
+            {totalReturnPct != null ? formatPercent(totalReturnPct) : "—"}
+          </div>
           <div className="text-label text-muted-foreground/60 mt-1">Kumulatif</div>
         </div>
         <div className="bg-card p-5 grain">
           <div className="text-label text-muted-foreground mb-2">ORT. GUNLUK</div>
           <div className="font-mono-data text-stat text-foreground">
-            %{avgDailyRate.toFixed(4)}
+            {avgDailyRatePct != null ? formatPercent(avgDailyRatePct) : "—"}
           </div>
           <div className="text-label text-muted-foreground/60 mt-1">Son 30 gun</div>
         </div>
         <div className="bg-card p-5 grain">
           <div className="text-label text-muted-foreground mb-2">EN DUSUK</div>
           <div className="font-mono-data text-stat text-foreground">
-            {minIndex.toLocaleString("tr-TR", { maximumFractionDigits: 2 })}
+            {minIndex != null ? formatDecimal(minIndex, 2) : "—"}
           </div>
           <div className="text-label text-muted-foreground/60 mt-1">Endeks</div>
         </div>
         <div className="bg-card p-5 grain">
           <div className="text-label text-muted-foreground mb-2">EN YUKSEK</div>
           <div className="font-mono-data text-stat text-foreground">
-            {maxIndex.toLocaleString("tr-TR", { maximumFractionDigits: 2 })}
+            {maxIndex != null ? formatDecimal(maxIndex, 2) : "—"}
           </div>
           <div className="text-label text-muted-foreground/60 mt-1">Endeks</div>
         </div>
@@ -171,7 +128,10 @@ export default function AnalyticsPage() {
               <CardContent>
                 <div className="space-y-0">
                   {sortedSecTypes.map(([type, count]) => {
-                    const pct = ((count / bondStats.total_bonds) * 100).toFixed(1);
+                    const pct =
+                      bondStats.total_bonds > 0
+                        ? formatDecimal((count / bondStats.total_bonds) * 100, 1)
+                        : "0";
                     const shortName = type.split("/")[0].trim();
                     return (
                       <div
@@ -186,7 +146,7 @@ export default function AnalyticsPage() {
                             <div
                               className="bg-primary h-1.5 rounded-full"
                               style={{
-                                width: `${Math.min(parseFloat(pct), 100)}%`,
+                                width: `${Math.min((count / bondStats.total_bonds) * 100, 100)}%`,
                               }}
                             />
                           </div>
@@ -209,7 +169,10 @@ export default function AnalyticsPage() {
               <CardContent>
                 <div className="space-y-0">
                   {sortedYieldTypes.map(([type, count]) => {
-                    const pct = ((count / bondStats.total_bonds) * 100).toFixed(1);
+                    const pct =
+                      bondStats.total_bonds > 0
+                        ? formatDecimal((count / bondStats.total_bonds) * 100, 1)
+                        : "0";
                     const shortName = type.split("/")[0].trim();
                     return (
                       <div
@@ -224,7 +187,7 @@ export default function AnalyticsPage() {
                             <div
                               className="bg-primary h-1.5 rounded-full"
                               style={{
-                                width: `${Math.min(parseFloat(pct), 100)}%`,
+                                width: `${Math.min((count / bondStats.total_bonds) * 100, 100)}%`,
                               }}
                             />
                           </div>
@@ -253,10 +216,12 @@ export default function AnalyticsPage() {
                     <div key={currency} className="bg-card p-4">
                       <div className="text-label text-muted-foreground mb-1">{currency}</div>
                       <div className="font-mono-data text-lg text-foreground">
-                        {count.toLocaleString("tr-TR")}
+                        {formatDecimal(count, 0)}
                       </div>
                       <div className="text-label text-muted-foreground/60">
-                        %{((count / bondStats.total_bonds) * 100).toFixed(1)}
+                        {bondStats.total_bonds > 0
+                          ? formatPercent((count / bondStats.total_bonds) * 100)
+                          : "—"}
                       </div>
                     </div>
                   ))}

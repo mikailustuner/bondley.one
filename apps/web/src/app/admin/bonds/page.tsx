@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api, BondListItem } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
+import { formatPercent } from "@/lib/utils";
 
 export default function AdminBondsPage() {
   const [bonds, setBonds] = useState<BondListItem[]>([]);
@@ -159,9 +160,7 @@ export default function AdminBondsPage() {
                         {bond.days_to_maturity ?? "—"}
                       </td>
                       <td className="py-3 font-mono-data text-data-sm text-positive">
-                        {bond.last_issue_yield != null
-                          ? `%${Number(bond.last_issue_yield).toFixed(2)}`
-                          : "—"}
+                        {bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"}
                       </td>
                       <td className="py-3">
                         <Badge variant={bond.is_active ? "default" : "destructive"}>

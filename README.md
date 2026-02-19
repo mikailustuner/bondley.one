@@ -144,10 +144,12 @@ docker exec fincalc-nginx sh -c 'echo "DOMAIN=$DOMAIN"; ls -la /etc/letsencrypt/
 
 Nginx image'i guncellendi (entrypoint: sertifika klasorunden DOMAIN otomatik tespit, config testi). Tekrar build edip ac: `docker-compose -f docker-compose.prod.yml build nginx --no-cache && docker-compose -f docker-compose.prod.yml up -d --force-recreate nginx`
 
-## Varsayilan Giris
+## Varsayilan Giris (sadece gelistirme)
 
 - Email: `admin@fincalc.com`
-- Sifre: `admin123`
+- Sifre: `admin123` (production'da `ADMIN_INIT_PASSWORD` ile ilk admin olusturulur; ilk giriste sifreyi degistirin).
+
+**Production icin:** [docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md) dosyasindaki maddeleri uygulayin (ENVIRONMENT, secret'lar, sifre degisimi).
 
 ## Proje Yapisi
 

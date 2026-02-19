@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AdminGuard } from "@/components/admin-guard";
+import { LogoutButton } from "@/components/logout-button";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -47,6 +48,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             >
               Dashboard
             </Link>
+            <LogoutButton className="px-3 py-1.5 rounded-sm text-data-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50" />
             <ThemeToggle />
           </div>
         </div>

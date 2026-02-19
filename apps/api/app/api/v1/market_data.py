@@ -62,7 +62,6 @@ async def create_market_data(
         },
     )
     await db.execute(stmt)
-    await db.commit()
 
     result = await db.execute(
         select(MarketData)
