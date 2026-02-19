@@ -6,7 +6,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-background">
       <div className="data-strip" />
-      <nav className="border-b border-border/50 bg-background/90 backdrop-blur-md sticky top-0 z-50">
+      <nav className="border-b border-border/50 glass-surface sticky top-0 z-50">
         <div className="container mx-auto flex h-12 items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href="/dashboard" className="flex items-center gap-2.5">

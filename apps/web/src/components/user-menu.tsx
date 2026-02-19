@@ -50,7 +50,7 @@ export function UserMenu() {
 
   if (!mounted) {
     return (
-      <div className="h-9 w-9 rounded-md bg-secondary/50 animate-pulse" />
+      <div className="h-9 w-9 rounded-xl bg-secondary/50 animate-pulse" />
     );
   }
 
@@ -111,8 +111,8 @@ export function UserMenu() {
         ref={triggerRef}
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "flex items-center gap-2 px-2 py-1.5 rounded-md transition-all duration-200",
-          "hover:bg-secondary/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+          "flex items-center gap-2 px-2 py-1.5 rounded-xl transition-all duration-200",
+          "hover:bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 focus-visible:ring-offset-2",
           "active:scale-[0.98]",
           isOpen && "bg-secondary"
         )}
@@ -122,11 +122,11 @@ export function UserMenu() {
       >
         <div
           className={cn(
-            "h-8 w-8 rounded-md flex items-center justify-center text-xs font-bold font-display",
+            "h-8 w-8 rounded-xl flex items-center justify-center text-xs font-bold font-display",
             "transition-all duration-200",
             "hover:scale-105 active:scale-95",
             getAvatarColor(),
-            isOpen && "ring-2 ring-ring ring-offset-2 ring-offset-background"
+            isOpen && "ring-2 ring-emerald-500/50 ring-offset-2 ring-offset-background"
           )}
         >
           {getInitials()}
@@ -142,7 +142,7 @@ export function UserMenu() {
       {isOpen && (
         <div
           className={cn(
-            "absolute right-0 mt-2 w-64 rounded-md border border-border bg-card shadow-lg",
+            "absolute right-0 mt-2 w-64 rounded-2xl border border-border glass-surface shadow-xl",
             "z-50 overflow-hidden",
             "animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200",
             "md:w-64 w-[calc(100vw-2rem)] max-w-[280px]"
@@ -154,7 +154,7 @@ export function UserMenu() {
             <div className="flex items-center gap-3">
               <div
                 className={cn(
-                  "h-10 w-10 rounded-md flex items-center justify-center text-sm font-bold font-display",
+                  "h-10 w-10 rounded-xl flex items-center justify-center text-sm font-bold font-display",
                   getAvatarColor()
                 )}
               >

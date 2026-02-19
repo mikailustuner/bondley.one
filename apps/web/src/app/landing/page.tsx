@@ -30,7 +30,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background grain">
       <div className="data-strip" />
 
-      <nav className="border-b border-border/50 backdrop-blur-md sticky top-0 z-50 bg-background/80">
+      <nav className="border-b border-border/50 glass-surface sticky top-0 z-50">
         <div className="container mx-auto flex h-14 items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-7 w-7 rounded-sm bg-primary flex items-center justify-center">

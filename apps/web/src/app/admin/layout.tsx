@@ -10,7 +10,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <AdminGuard>
     <div className="min-h-screen bg-background">
       <div className="h-[2px] bg-destructive/60" />
-      <nav className="border-b border-border/50 bg-background/90 backdrop-blur-md sticky top-0 z-50">
+      <nav className="border-b border-border/50 glass-surface sticky top-0 z-50">
         <div className="container mx-auto flex h-12 items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href="/admin" className="flex items-center gap-2.5">
@@ -65,7 +65,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 function Badge({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
     <span
-      className={`inline-flex items-center rounded-sm border border-destructive/30 bg-destructive/10 px-1.5 py-0.5 text-[9px] font-mono tracking-widest text-destructive uppercase ${className}`}
+      className={`inline-flex items-center rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-[9px] font-mono tracking-widest text-destructive uppercase ${className}`}
     >
       {children}
     </span>
