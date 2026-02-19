@@ -176,6 +176,32 @@ export const api = {
         body: JSON.stringify(data),
       }),
     me: (token: string) => apiFetch<any>("/auth/me", { token }),
+    updateProfile: (token: string, data: { full_name?: string; company?: string; location?: string }) =>
+      apiFetch<any>("/auth/me", {
+        method: "PUT",
+        token,
+        body: JSON.stringify(data),
+      }),
+    changePassword: (token: string, data: { current_password: string; new_password: string }) =>
+      apiFetch<{ message: string }>("/auth/change-password", {
+        method: "POST",
+        token,
+        body: JSON.stringify(data),
+      }),
+    changeEmail: (token: string, data: { new_email: string }) =>
+      apiFetch<any>("/auth/change-email", {
+        method: "POST",
+        token,
+        body: JSON.stringify(data),
+      }),
+    getPermissions: (token: string) =>
+      apiFetch<{
+        role: string;
+        is_admin: boolean;
+        is_pro_user: boolean;
+        is_premium_user: boolean;
+        role_level: number;
+      }>("/auth/permissions", { token }),
     usersList: (token: string) =>
       apiFetch<
         {
@@ -203,6 +229,121 @@ export const api = {
         method: "POST",
         token,
       }),
+    updateUser: (token: string, userId: number, data: { full_name?: string; company?: string; location?: string }) =>
+      apiFetch<any>(`/admin/users/${userId}`, {
+        method: "PUT",
+        token,
+        body: JSON.stringify(data),
+      }),
+    updateUserRole: (token: string, userId: number, role: string) =>
+      apiFetch<any>(`/admin/users/${userId}/role?role=${role}`, {
+        method: "PUT",
+        token,
+      }),
+    updateUserStatus: (token: string, userId: number, is_active: boolean) =>
+      apiFetch<any>(`/admin/users/${userId}/status?is_active=${is_active}`, {
+        method: "PUT",
+        token,
+      }),
+    deleteUser: (token: string, userId: number) =>
+      apiFetch<void>(`/admin/users/${userId}`, {
+        method: "DELETE",
+        token,
+      }),
+    getLogs: (
+      token: string,
+      params?: {
+        skip?: number;
+        limit?: number;
+        user_id?: number;
+        action?: string;
+        resource_type?: string;
+        resource_id?: string;
+        start_date?: string;
+        end_date?: string;
+      },
+    ) => {
+      const query = new URLSearchParams();
+      if (params?.skip !== undefined) query.set("skip", String(params.skip));
+      if (params?.limit !== undefined) query.set("limit", String(params.limit));
+      if (params?.user_id !== undefined) query.set("user_id", String(params.user_id));
+      if (params?.action) query.set("action", params.action);
+      if (params?.resource_type) query.set("resource_type", params.resource_type);
+      if (params?.resource_id) query.set("resource_id", params.resource_id);
+      if (params?.start_date) query.set("start_date", params.start_date);
+      if (params?.end_date) query.set("end_date", params.end_date);
+      return apiFetch<{
+        logs: Array<{
+          id: number;
+          user_id: number | null;
+          action: string;
+          resource_type: string | null;
+          resource_id: string | null;
+          ip_address: string | null;
+          request_method: string | null;
+          request_path: string | null;
+          status_code: number | null;
+          details: any;
+          created_at: string;
+        }>;
+        total: number;
+        skip: number;
+        limit: number;
+      }>(`/admin/logs?${query}`, { token });
+    },
+    getLogDetail: (token: string, logId: number) =>
+      apiFetch<any>(`/admin/logs/${logId}`, { token }),
+    getLogStats: (token: string, params?: { start_date?: string; end_date?: string }) => {
+      const query = new URLSearchParams();
+      if (params?.start_date) query.set("start_date", params.start_date);
+      if (params?.end_date) query.set("end_date", params.end_date);
+      return apiFetch<{ stats: Record<string, number>; start_date: string | null; end_date: string | null }>(
+        `/admin/logs/stats?${query}`,
+        { token },
+      );
+    },
+    getBondMetrics: (token: string, params?: { limit?: number; start_date?: string; end_date?: string }) => {
+      const query = new URLSearchParams();
+      if (params?.limit !== undefined) query.set("limit", String(params.limit));
+      if (params?.start_date) query.set("start_date", params.start_date);
+      if (params?.end_date) query.set("end_date", params.end_date);
+      return apiFetch<{
+        bonds: Array<{
+          bond_id: number;
+          isin_code: string;
+          issuer: string | null;
+          view_count: number;
+          unique_users: number;
+        }>;
+      }>(`/admin/metrics/bonds?${query}`, { token });
+    },
+    getUserMetrics: (token: string, params?: { limit?: number; start_date?: string; end_date?: string }) => {
+      const query = new URLSearchParams();
+      if (params?.limit !== undefined) query.set("limit", String(params.limit));
+      if (params?.start_date) query.set("start_date", params.start_date);
+      if (params?.end_date) query.set("end_date", params.end_date);
+      return apiFetch<{
+        users: Array<{
+          user_id: number;
+          total_bonds_viewed: number;
+          total_api_calls: number;
+          total_calculations: number;
+        }>;
+      }>(`/admin/metrics/users?${query}`, { token });
+    },
+    getMetricsOverview: (token: string, days?: number) => {
+      const query = new URLSearchParams();
+      if (days !== undefined) query.set("days", String(days));
+      return apiFetch<{
+        period_days: number;
+        start_date: string;
+        end_date: string;
+        total_bond_views: number;
+        unique_users: number;
+        total_api_calls: number;
+        total_calculations: number;
+      }>(`/admin/metrics/overview?${query}`, { token });
+    },
   },
 
   bonds: {
@@ -255,5 +396,22 @@ export const api = {
     stats: (token: string) => apiFetch<TLREFStats>("/tlref/stats", { token }),
     syncNow: (token: string) =>
       apiFetch<{ historical: any; daily: any }>("/tlref/sync-now", { method: "POST", token }),
+  },
+
+  metrics: {
+    getMyStats: (token: string, params?: { start_date?: string; end_date?: string }) => {
+      const query = new URLSearchParams();
+      if (params?.start_date) query.set("start_date", params.start_date);
+      if (params?.end_date) query.set("end_date", params.end_date);
+      return apiFetch<{
+        user_id: number;
+        metrics: Array<{
+          date: string;
+          bonds_viewed: number;
+          api_calls: number;
+          calculations_run: number;
+        }>;
+      }>(`/metrics/my-stats?${query}`, { token });
+    },
   },
 };

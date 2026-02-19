@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AdminGuard } from "@/components/admin-guard";
-import { LogoutButton } from "@/components/logout-button";
+import { UserMenu } from "@/components/user-menu";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -27,8 +27,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               {[
                 { href: "/admin", label: "Genel" },
                 { href: "/admin/bonds", label: "Tahviller" },
-                { href: "/admin/import", label: "Veri Aktarimi" },
                 { href: "/admin/users", label: "Kullanicilar" },
+                { href: "/admin/logs", label: "Loglar" },
+                { href: "/admin/metrics", label: "Metrikler" },
+                { href: "/admin/import", label: "Veri Aktarimi" },
               ].map((item) => (
                 <Link
                   key={item.href}
@@ -48,8 +50,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             >
               Dashboard
             </Link>
-            <LogoutButton className="px-3 py-1.5 rounded-sm text-data-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50" />
             <ThemeToggle />
+            <UserMenu />
           </div>
         </div>
       </nav>

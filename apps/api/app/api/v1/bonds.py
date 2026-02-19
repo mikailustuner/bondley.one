@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +20,7 @@ from app.schemas.bond import (
 from app.api.deps import get_current_user, get_admin_user
 from app.services.bond_fetcher import BondFetcher
 from app.services.bond_metrics_service import BondMetricsService
+from app.services.metrics_service import MetricsService
 
 router = APIRouter()
 
@@ -126,8 +127,9 @@ async def get_bond_stats(
 async def get_bond(
     isin_code: str,
     settlement_date: date | None = Query(None, description="Hesaplama tarihi (varsayilan: bugun)"),
+    request: Request = None,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
     result = await db.execute(select(Bond).where(Bond.isin_code == isin_code))
     bond = result.scalar_one_or_none()
@@ -136,6 +138,26 @@ async def get_bond(
 
     base = BondDetailWithMetrics.model_validate(bond)
     calc_date = settlement_date or date.today()
+
+    # Track bond view
+    client_host = None
+    user_agent = None
+    if request:
+        client_host = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+
+    try:
+        await MetricsService.track_bond_view(
+            db=db,
+            bond_id=bond.id,
+            user_id=user.id,
+            ip_address=client_host,
+            user_agent=user_agent,
+            settlement_date=calc_date,
+        )
+    except Exception:
+        # Don't fail the request if tracking fails
+        pass
 
     # Once DB'de (calculations) kayit var mi kontrol et; varsa oradan doldur.
     calc_result = await db.execute(

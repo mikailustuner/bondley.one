@@ -33,3 +33,62 @@ export function isAdmin(): boolean {
   const user = getUser();
   return user?.role === "admin";
 }
+
+export function isProUser(): boolean {
+  const user = getUser();
+  return user?.role === "pro_user" || user?.role === "admin";
+}
+
+export function isPremiumUser(): boolean {
+  const user = getUser();
+  return user?.role === "premium_user" || user?.role === "pro_user" || user?.role === "admin";
+}
+
+export function isFreeUser(): boolean {
+  const user = getUser();
+  return user?.role === "free_user";
+}
+
+export function hasRole(role: string): boolean {
+  const user = getUser();
+  if (!user) return false;
+  
+  const roleHierarchy: Record<string, number> = {
+    admin: 4,
+    pro_user: 3,
+    premium_user: 2,
+    free_user: 1,
+  };
+  
+  const userLevel = roleHierarchy[user.role] || 0;
+  const requiredLevel = roleHierarchy[role] || 999;
+  
+  return userLevel >= requiredLevel;
+}
+
+export function getUserPermissions(): {
+  role: string;
+  is_admin: boolean;
+  is_pro_user: boolean;
+  is_premium_user: boolean;
+  is_free_user: boolean;
+} {
+  const user = getUser();
+  if (!user) {
+    return {
+      role: "",
+      is_admin: false,
+      is_pro_user: false,
+      is_premium_user: false,
+      is_free_user: false,
+    };
+  }
+  
+  return {
+    role: user.role || "",
+    is_admin: isAdmin(),
+    is_pro_user: isProUser(),
+    is_premium_user: isPremiumUser(),
+    is_free_user: isFreeUser(),
+  };
+}

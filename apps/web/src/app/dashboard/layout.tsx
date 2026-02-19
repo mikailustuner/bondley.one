@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { LogoutButton } from "@/components/logout-button";
+import { UserMenu } from "@/components/user-menu";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -41,7 +41,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               CANLI
             </div>
             <ThemeToggle />
-            <LogoutButton className="px-3 py-1.5 rounded-sm text-data-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50" />
+            <UserMenu />
           </div>
         </div>
       </nav>

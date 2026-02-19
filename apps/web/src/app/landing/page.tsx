@@ -4,11 +4,20 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { UserMenu } from "@/components/user-menu";
+import { getUser } from "@/lib/auth";
 import { api, PublicSummary } from "@/lib/api-client";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
 
 export default function LandingPage() {
   const [summary, setSummary] = useState<PublicSummary | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    setMounted(true);
+    setUser(getUser());
+  }, []);
 
   useEffect(() => {
     api.admin
@@ -37,21 +46,36 @@ export default function LandingPage() {
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <Link
-              href="/dashboard"
-              className="text-data-sm text-muted-foreground hover:text-primary transition-colors"
-            >
-              Dashboard
-            </Link>
-            <ThemeToggle />
-            <Link href="/signup">
-              <Button variant="outline" size="sm">
-                Kayit Ol
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button size="sm">Giris Yap</Button>
-            </Link>
+            {mounted && user ? (
+              <>
+                <Link
+                  href="/dashboard"
+                  className="text-data-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Dashboard
+                </Link>
+                <ThemeToggle />
+                <UserMenu />
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/dashboard"
+                  className="text-data-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Dashboard
+                </Link>
+                <ThemeToggle />
+                <Link href="/signup">
+                  <Button variant="outline" size="sm">
+                    Kayit Ol
+                  </Button>
+                </Link>
+                <Link href="/login">
+                  <Button size="sm">Giris Yap</Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>

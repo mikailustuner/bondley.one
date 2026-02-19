@@ -88,8 +88,8 @@ CREATE TABLE IF NOT EXISTS users (
     full_name       VARCHAR(255),
     company         VARCHAR(255),
     location        VARCHAR(255),
-    role            VARCHAR(20) NOT NULL DEFAULT 'user'
-                    CHECK (role IN ('admin', 'user')),
+    role            VARCHAR(20) NOT NULL DEFAULT 'free_user'
+                    CHECK (role IN ('admin', 'premium_user', 'pro_user', 'free_user')),
     is_active       BOOLEAN NOT NULL DEFAULT TRUE,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -105,6 +105,60 @@ CREATE INDEX IF NOT EXISTS idx_market_data_bond_date ON market_data(bond_id, tra
 CREATE INDEX IF NOT EXISTS idx_calculations_bond_date ON calculations(bond_id, calc_date);
 CREATE INDEX IF NOT EXISTS idx_tlref_rates_date ON tlref_rates(rate_date);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+-- audit_logs: Sistem loglari ve audit kayitlari
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id              SERIAL PRIMARY KEY,
+    user_id         INT REFERENCES users(id) ON DELETE SET NULL,
+    action          VARCHAR(100) NOT NULL,
+    resource_type   VARCHAR(50),
+    resource_id     VARCHAR(255),
+    ip_address      VARCHAR(45),
+    user_agent      TEXT,
+    request_method  VARCHAR(10),
+    request_path    VARCHAR(500),
+    status_code     INT,
+    details         JSONB,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at);
+
+-- bond_views: Tahvil goruntulenme takibi
+CREATE TABLE IF NOT EXISTS bond_views (
+    id              SERIAL PRIMARY KEY,
+    bond_id         INT NOT NULL REFERENCES bonds(id) ON DELETE CASCADE,
+    user_id         INT REFERENCES users(id) ON DELETE SET NULL,
+    viewed_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ip_address      VARCHAR(45),
+    user_agent      TEXT,
+    settlement_date DATE
+);
+
+CREATE INDEX IF NOT EXISTS idx_bond_views_bond ON bond_views(bond_id);
+CREATE INDEX IF NOT EXISTS idx_bond_views_user ON bond_views(user_id);
+CREATE INDEX IF NOT EXISTS idx_bond_views_date ON bond_views(viewed_at);
+CREATE INDEX IF NOT EXISTS idx_bond_views_bond_date ON bond_views(bond_id, viewed_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bond_views_unique ON bond_views(bond_id, user_id, DATE(viewed_at));
+
+-- user_metrics: Kullanici metrikleri
+CREATE TABLE IF NOT EXISTS user_metrics (
+    id              SERIAL PRIMARY KEY,
+    user_id         INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    metric_date     DATE NOT NULL,
+    bonds_viewed    INT DEFAULT 0,
+    api_calls       INT DEFAULT 0,
+    calculations_run INT DEFAULT 0,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(user_id, metric_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_metrics_user ON user_metrics(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_metrics_date ON user_metrics(metric_date);
 
 -- Seed: Default admin user (password: admin123 - bcrypt hashed)
 INSERT INTO users (email, password_hash, full_name, role)

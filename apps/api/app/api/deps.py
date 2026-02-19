@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import decode_access_token
+from app.core.permissions import is_premium_user, is_pro_user
 from app.models.user import User
 
 security = HTTPBearer()
@@ -41,3 +42,36 @@ async def get_admin_user(user: User = Depends(get_current_user)) -> User:
     if user.role != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return user
+
+
+async def get_premium_user(user: User = Depends(get_current_user)) -> User:
+    """Require premium_user, pro_user, or admin role."""
+    if not is_premium_user(user.role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Premium user access required"
+        )
+    return user
+
+
+async def get_pro_user(user: User = Depends(get_current_user)) -> User:
+    """Require pro_user or admin role."""
+    if not is_pro_user(user.role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Pro user access required"
+        )
+    return user
+
+
+def require_role(required_role: str):
+    """Factory function to create a dependency that requires a specific role."""
+    async def role_checker(user: User = Depends(get_current_user)) -> User:
+        from app.core.permissions import has_role_permission
+        if not has_role_permission(user.role, required_role):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"{required_role} access required"
+            )
+        return user
+    return role_checker
