@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
@@ -33,17 +34,22 @@ export default function LandingPage() {
       <nav className="border-b border-border/50 glass-surface sticky top-0 z-50">
         <div className="container mx-auto flex h-14 items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-7 w-7 rounded-sm bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-display font-bold text-[10px] tracking-tight">
-                FC
+            <Link href="/" className="flex items-center gap-2.5">
+              <Image
+                src="/logo.png"
+                alt="Bondley Logo"
+                width={28}
+                height={28}
+                className="h-7 w-7 object-contain"
+                priority
+              />
+              <span className="font-display font-semibold text-sm tracking-tight text-foreground">
+                Bondley
               </span>
-            </div>
-            <span className="font-display font-semibold text-sm tracking-tight text-foreground">
-              FinCalc
-            </span>
-            <span className="text-label text-muted-foreground hidden sm:inline ml-2">
-              TERMINAL v1.0
-            </span>
+              <span className="text-label text-muted-foreground hidden sm:inline ml-2">
+                v1.0
+              </span>
+            </Link>
           </div>
           <div className="flex items-center gap-3">
             {mounted && user ? (
@@ -205,7 +211,7 @@ export default function LandingPage() {
 
       <footer className="border-t border-border/50 py-6">
         <div className="container mx-auto flex items-center justify-between">
-          <span className="text-label text-muted-foreground">&copy; 2026 FINCALC</span>
+          <span className="text-label text-muted-foreground">&copy; 2026 Bondley</span>
           <span className="text-label text-muted-foreground">ISTANBUL, TURKIYE</span>
         </div>
       </footer>

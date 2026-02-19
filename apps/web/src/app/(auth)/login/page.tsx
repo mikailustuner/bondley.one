@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,11 +39,18 @@ export default function LoginPage() {
 
       <div className="w-full max-w-sm animate-fade-up">
         <div className="text-center mb-8">
-          <div className="inline-flex h-10 w-10 rounded-sm bg-primary items-center justify-center mb-4">
-            <span className="text-primary-foreground font-display font-bold text-sm">FC</span>
+          <div className="inline-flex h-10 w-10 items-center justify-center mb-4">
+            <Image
+              src="/logo.png"
+              alt="Bondley Logo"
+              width={40}
+              height={40}
+              className="h-10 w-10 object-contain"
+              priority
+            />
           </div>
-          <h1 className="font-display text-display-md text-foreground">FinCalc</h1>
-          <p className="text-label text-muted-foreground mt-2">TAHVIL ANALIZ TERMINALI</p>
+          <h1 className="font-display text-display-md text-foreground">Bondley</h1>
+          <p className="text-label text-muted-foreground mt-2">TAHVIL ANALIZ PLATFORMU</p>
         </div>
 
         <Card className="amber-glow-border">
@@ -97,7 +105,7 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-label text-muted-foreground/50 mt-6">&copy; 2026 FINCALC TERMINAL</p>
+        <p className="text-center text-label text-muted-foreground/50 mt-6">&copy; 2026 Bondley</p>
       </div>
     </div>
   );

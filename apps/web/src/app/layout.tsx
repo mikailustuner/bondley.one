@@ -22,8 +22,12 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "FinCalc — Turk Devlet Tahvil Terminali",
-  description: "TRT ve TRB kodlu Turk Devlet Tahvilleri icin degerleme, fiyat takibi ve analiz terminali",
+  title: "Bondley — Turk Devlet Tahvil Analiz Platformu",
+  description: "TRT ve TRB kodlu Turk Devlet Tahvilleri icin degerleme, fiyat takibi ve analiz platformu",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

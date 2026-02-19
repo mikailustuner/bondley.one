@@ -1,4 +1,4 @@
-# FinCalc - Turk Devlet Tahvil Analiz Platformu
+# Bondley - Turk Devlet Tahvil Analiz Platformu
 
 Turk Devlet Tahvilleri (TRT/TRB) icin degerleme, fiyat takibi ve analiz sistemi.
 
@@ -149,12 +149,14 @@ Nginx image'i guncellendi (entrypoint: sertifika klasorunden DOMAIN otomatik tes
 - Email: `admin@fincalc.com`
 - Sifre: `admin123` (production'da `ADMIN_INIT_PASSWORD` ile ilk admin olusturulur; ilk giriste sifreyi degistirin).
 
+**Not:** Domain referansları (admin@fincalc.com vb.) domain alındıktan sonra güncellenecektir.
+
 **Production icin:** [docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md) dosyasindaki maddeleri uygulayin (ENVIRONMENT, secret'lar, sifre degisimi).
 
 ## Proje Yapisi
 
 ```
-FinCalc/
+Bondley/
 ├── apps/
 │   ├── web/          # Next.js 14 Frontend
 │   └── api/          # Python FastAPI Backend

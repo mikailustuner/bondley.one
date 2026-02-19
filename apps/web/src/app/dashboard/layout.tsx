@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
 
@@ -10,10 +11,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="container mx-auto flex h-12 items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href="/dashboard" className="flex items-center gap-2.5">
-              <div className="h-6 w-6 rounded-sm bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-display font-bold text-[9px]">FC</span>
-              </div>
-              <span className="font-display font-semibold text-sm tracking-tight">FinCalc</span>
+              <Image
+                src="/logo.png"
+                alt="Bondley Logo"
+                width={24}
+                height={24}
+                className="h-6 w-6 object-contain"
+                priority
+              />
+              <span className="font-display font-semibold text-sm tracking-tight">Bondley</span>
             </Link>
 
             <div className="h-4 w-px bg-border" />

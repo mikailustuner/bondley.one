@@ -10,7 +10,7 @@ _ENV_FILE = _PROJECT_ROOT / ".env"
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "FinCalc API"
+    PROJECT_NAME: str = "Bondley API"
     API_V1_PREFIX: str = "/api/v1"
 
     POSTGRES_USER: str = "fincalc"

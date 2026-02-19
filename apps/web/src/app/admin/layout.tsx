@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AdminGuard } from "@/components/admin-guard";
 import { UserMenu } from "@/components/user-menu";
@@ -14,10 +15,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="container mx-auto flex h-12 items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href="/admin" className="flex items-center gap-2.5">
-              <div className="h-6 w-6 rounded-sm bg-destructive/80 flex items-center justify-center">
-                <span className="text-white font-display font-bold text-[9px]">FC</span>
-              </div>
-              <span className="font-display font-semibold text-sm tracking-tight">FinCalc</span>
+              <Image
+                src="/logo.png"
+                alt="Bondley Logo"
+                width={24}
+                height={24}
+                className="h-6 w-6 object-contain"
+                priority
+              />
+              <span className="font-display font-semibold text-sm tracking-tight">Bondley</span>
               <Badge className="ml-1">ADMIN</Badge>
             </Link>
 
