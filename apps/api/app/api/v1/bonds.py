@@ -160,7 +160,11 @@ async def get_bond(
         )
     except Exception:
         # Don't fail the request if tracking fails
-        pass
+        # Rollback any partial transaction to avoid "transaction aborted" errors
+        try:
+            await db.rollback()
+        except Exception:
+            pass
 
     # Once DB'de (calculations) kayit var mi kontrol et; varsa oradan doldur.
     calc_result = await db.execute(

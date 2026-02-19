@@ -35,29 +35,27 @@ class MetricsService:
         try:
             await db.flush()
         except Exception:
-            # If unique constraint violation, ignore (already counted today)
-            await db.rollback()
-            # Return existing record if needed
-            result = await db.execute(
-                select(BondView).where(
-                    and_(
-                        BondView.bond_id == bond_id,
-                        BondView.user_id == user_id,
-                        func.date(BondView.viewed_at) == date.today()
-                    )
-                ).limit(1)
-            )
-            existing = result.scalar_one_or_none()
-            if existing:
-                return existing
-            # If no existing record found, try again
-            await db.rollback()
-            db.add(bond_view)
-            await db.flush()
+            # If unique constraint violation or any other error, rollback and skip tracking
+            # This prevents transaction abort errors
+            try:
+                await db.rollback()
+            except Exception:
+                pass
+            # Skip tracking for this request if insert fails
+            # The unique constraint prevents duplicate views per day anyway
+            return None
 
         # Update user metrics for today
-        if user_id:
-            await MetricsService._update_user_metrics(db, user_id, increment_bonds_viewed=True)
+        if user_id and bond_view:
+            try:
+                await MetricsService._update_user_metrics(db, user_id, increment_bonds_viewed=True)
+            except Exception:
+                # If metrics update fails, rollback and skip metrics update
+                try:
+                    await db.rollback()
+                except Exception:
+                    pass
+                # Continue without metrics update rather than failing
 
         return bond_view
 
