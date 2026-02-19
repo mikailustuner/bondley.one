@@ -24,7 +24,7 @@ export default function LoginPage() {
 
     try {
       const data = await api.auth.login(email, password);
-      setAuth(data.access_token, data.user);
+      setAuth(data.access_token, data.refresh_token, data.user);
       router.push(data.user.role === "admin" ? "/admin" : "/dashboard");
     } catch (err: any) {
       setError(err.message || "Giris basarisiz");

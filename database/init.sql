@@ -160,6 +160,21 @@ CREATE TABLE IF NOT EXISTS user_metrics (
 CREATE INDEX IF NOT EXISTS idx_user_metrics_user ON user_metrics(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_metrics_date ON user_metrics(metric_date);
 
+-- refresh_tokens: Refresh token'ları saklamak için tablo
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id              SERIAL PRIMARY KEY,
+    user_id         INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash      VARCHAR(255) NOT NULL,
+    expires_at      TIMESTAMPTZ NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    revoked_at      TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_hash ON refresh_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires ON refresh_tokens(expires_at);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_active ON refresh_tokens(user_id, expires_at, revoked_at) WHERE revoked_at IS NULL;
+
 -- Seed: Default admin user (password: admin123 - bcrypt hashed)
 INSERT INTO users (email, password_hash, full_name, role)
 VALUES (

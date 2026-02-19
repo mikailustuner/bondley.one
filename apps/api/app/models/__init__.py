@@ -6,5 +6,6 @@ from app.models.user import User
 from app.models.audit_log import AuditLog
 from app.models.bond_view import BondView
 from app.models.user_metric import UserMetric
+from app.models.refresh_token import RefreshToken
 
-__all__ = ["Bond", "MarketData", "Calculation", "TLREFRate", "User", "AuditLog", "BondView", "UserMetric"]
+__all__ = ["Bond", "MarketData", "Calculation", "TLREFRate", "User", "AuditLog", "BondView", "UserMetric", "RefreshToken"]

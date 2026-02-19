@@ -1,20 +1,88 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
-type FetchOptions = RequestInit & { token?: string };
+type FetchOptions = RequestInit & { token?: string; skipRefresh?: boolean };
+
+// Track refresh attempts to prevent infinite loops
+let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  // If already refreshing, wait for the existing promise
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const { getRefreshToken, setAuth, clearAuth } = await import("./auth");
+      const refreshToken = getRefreshToken();
+
+      if (!refreshToken) {
+        clearAuth();
+        return null;
+      }
+
+      const response = await fetch(`${API_BASE}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+
+      if (!response.ok) {
+        clearAuth();
+        return null;
+      }
+
+      const data = await response.json();
+      setAuth(data.access_token, data.refresh_token, data.user);
+      return data.access_token;
+    } catch (error) {
+      const { clearAuth } = await import("./auth");
+      clearAuth();
+      return null;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
 
 async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
-  const { token, headers: customHeaders, ...rest } = options;
+  const { token, headers: customHeaders, skipRefresh = false, ...rest } = options;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...((customHeaders as Record<string, string>) || {}),
   };
 
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+  let currentToken = token;
+
+  if (currentToken) {
+    headers["Authorization"] = `Bearer ${currentToken}`;
   }
 
-  const res = await fetch(`${API_BASE}${endpoint}`, { headers, ...rest });
+  let res = await fetch(`${API_BASE}${endpoint}`, { headers, ...rest });
+
+  // Handle 401 Unauthorized - try to refresh token
+  if (res.status === 401 && !skipRefresh && endpoint !== "/auth/refresh" && endpoint !== "/auth/login" && endpoint !== "/auth/signup") {
+    const newToken = await refreshAccessToken();
+
+    if (newToken) {
+      // Retry the original request with new token
+      headers["Authorization"] = `Bearer ${newToken}`;
+      res = await fetch(`${API_BASE}${endpoint}`, { headers, ...rest });
+    } else {
+      // Refresh failed, redirect to login
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
+      const body = await res.json().catch(() => ({ detail: "Unauthorized" }));
+      throw new Error(body.detail || "Unauthorized");
+    }
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: res.statusText }));
@@ -160,9 +228,10 @@ export interface BondStats {
 export const api = {
   auth: {
     login: (email: string, password: string) =>
-      apiFetch<{ access_token: string; user: any }>("/auth/login", {
+      apiFetch<{ access_token: string; refresh_token: string; user: any }>("/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
+        skipRefresh: true,
       }),
     signup: (data: {
       email: string;
@@ -171,9 +240,27 @@ export const api = {
       company: string;
       location: string;
     }) =>
-      apiFetch<{ access_token: string; user: any }>("/auth/signup", {
+      apiFetch<{ access_token: string; refresh_token: string; user: any }>("/auth/signup", {
         method: "POST",
         body: JSON.stringify(data),
+        skipRefresh: true,
+      }),
+    refresh: (refreshToken: string) =>
+      apiFetch<{ access_token: string; refresh_token: string; user: any }>("/auth/refresh", {
+        method: "POST",
+        body: JSON.stringify({ refresh_token: refreshToken }),
+        skipRefresh: true,
+      }),
+    logout: (token: string, refreshToken: string) =>
+      apiFetch<{ message: string }>("/auth/logout", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      }),
+    logoutAll: (token: string) =>
+      apiFetch<{ message: string }>("/auth/logout-all", {
+        method: "POST",
+        token,
       }),
     me: (token: string) => apiFetch<any>("/auth/me", { token }),
     updateProfile: (token: string, data: { full_name?: string; company?: string; location?: string }) =>

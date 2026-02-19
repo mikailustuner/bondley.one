@@ -8,6 +8,7 @@ Sheet 0: "Borclanma Araclari" — 33 sutun, ~2100+ aktif tahvil
 
 import io
 import logging
+import re
 import zipfile
 import tempfile
 import shutil
@@ -23,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.models.bond import Bond
+from app.models.market_data import MarketData
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -103,18 +105,26 @@ class BondFetcher:
         self.db = db
 
     async def fetch_and_sync(self) -> dict:
-        """Download tbliste.zip, parse XLS, upsert bonds, mark removed as inactive."""
+        """Download tbliste.zip, parse XLS, upsert bonds and market data, mark removed as inactive."""
         logger.info("Fetching bond list from BIST...")
         try:
             content = await self._download(self.URL)
-            xls_bytes = self._extract_xls(content)
-            records = self._parse_xls(xls_bytes)
-            upserted = await self._upsert_bonds(records)
-            deactivated = await self._deactivate_missing(records)
+            xls_bytes, trade_date = self._extract_xls(content)
+            bond_records, market_data_records = self._parse_xls(xls_bytes)
+            upserted = await self._upsert_bonds(bond_records)
+            deactivated = await self._deactivate_missing(bond_records)
+            
+            # Upsert market data if trade_date is available
+            market_data_upserted = 0
+            if trade_date and market_data_records:
+                market_data_upserted = await self._upsert_market_data(market_data_records, trade_date)
+            
             return {
                 "status": "success",
                 "bonds_upserted": upserted,
                 "bonds_deactivated": deactivated,
+                "market_data_upserted": market_data_upserted,
+                "trade_date": trade_date.isoformat() if trade_date else None,
             }
         except Exception as e:
             logger.error(f"Bond list fetch failed: {e}")
@@ -127,19 +137,34 @@ class BondFetcher:
             logger.info(f"Downloaded {len(response.content)} bytes from {url}")
             return response.content
 
-    def _extract_xls(self, content: bytes) -> bytes:
+    def _extract_xls(self, content: bytes) -> tuple[bytes, date | None]:
+        """Extract XLS from ZIP and parse date from filename."""
         with zipfile.ZipFile(io.BytesIO(content)) as zf:
             xls_files = [f for f in zf.namelist() if f.lower().endswith(".xls")]
             if not xls_files:
                 raise ValueError(f"ZIP'te XLS bulunamadi: {zf.namelist()}")
             xls_name = xls_files[0]
             logger.info(f"Extracting {xls_name} from ZIP")
-            return zf.read(xls_name)
+            
+            # Parse date from filename: tbliste_YYYYMMDD.xls
+            trade_date = None
+            try:
+                match = re.search(r'(\d{8})', xls_name)
+                if match:
+                    date_str = match.group(1)
+                    trade_date = date(int(date_str[:4]), int(date_str[4:6]), int(date_str[6:8]))
+                    logger.info(f"Parsed trade date from filename: {trade_date}")
+            except Exception as e:
+                logger.warning(f"Could not parse date from filename {xls_name}: {e}")
+            
+            return zf.read(xls_name), trade_date
 
-    def _parse_xls(self, xls_bytes: bytes) -> list[dict]:
+    def _parse_xls(self, xls_bytes: bytes) -> tuple[list[dict], list[dict]]:
+        """Parse XLS and return both bond records and market data records."""
         wb = xlrd.open_workbook(file_contents=xls_bytes)
         sh = wb.sheet_by_index(0)
-        records: list[dict] = []
+        bond_records: list[dict] = []
+        market_data_records: list[dict] = []
 
         for row_idx in range(1, sh.nrows):
             isin = self._cell_str(sh, row_idx, COL_ISIN)
@@ -149,6 +174,12 @@ class BondFetcher:
             days_to_maturity = self._cell_int(sh, row_idx, COL_DAYS_TO_MATURITY)
             if days_to_maturity is not None and days_to_maturity <= 0:
                 continue
+
+            # Parse clean_price from text field
+            clean_price_text = self._cell_str(sh, row_idx, COL_CLEAN_PRICE) or None
+            clean_price_decimal = None
+            if clean_price_text:
+                clean_price_decimal = self._parse_clean_price_text(clean_price_text)
 
             rec = {
                 "isin_code": isin,
@@ -173,7 +204,7 @@ class BondFetcher:
                 "first_issue_price": self._cell_decimal(sh, row_idx, COL_FIRST_ISSUE_PRICE),
                 "quotation_method": self._cell_str(sh, row_idx, COL_QUOTATION_METHOD) or None,
                 "accrued_interest_text": self._cell_str(sh, row_idx, COL_ACCRUED_INTEREST) or None,
-                "clean_price_text": self._cell_str(sh, row_idx, COL_CLEAN_PRICE) or None,
+                "clean_price_text": clean_price_text,
                 "dirty_price_formula": self._cell_str(sh, row_idx, COL_DIRTY_PRICE) or None,
                 "settlement_price_formula": self._cell_str(sh, row_idx, COL_SETTLEMENT_PRICE) or None,
                 "yield_formula": self._cell_str(sh, row_idx, COL_YIELD) or None,
@@ -184,10 +215,18 @@ class BondFetcher:
                 "security_type_detail": self._cell_str(sh, row_idx, COL_SECURITY_TYPE_DETAIL) or None,
                 "is_active": True,
             }
-            records.append(rec)
+            bond_records.append(rec)
+            
+            # Store market data record if clean_price is available
+            if clean_price_decimal is not None:
+                market_data_records.append({
+                    "isin_code": isin,
+                    "clean_price": clean_price_decimal,
+                })
 
-        logger.info(f"Parsed {len(records)} active bonds from XLS")
-        return records
+        logger.info(f"Parsed {len(bond_records)} active bonds from XLS")
+        logger.info(f"Found {len(market_data_records)} bonds with clean_price data")
+        return bond_records, market_data_records
 
     async def _upsert_bonds(self, records: list[dict]) -> int:
         if not records:
@@ -232,6 +271,52 @@ class BondFetcher:
             logger.info(f"Deactivated {len(missing)} bonds no longer in BIST list")
 
         return len(missing)
+
+    async def _upsert_market_data(self, market_data_records: list[dict], trade_date: date) -> int:
+        """Upsert market data records for the given trade date."""
+        if not market_data_records:
+            return 0
+
+        # Get bond IDs for ISIN codes
+        isin_to_id = {}
+        isins = {r["isin_code"] for r in market_data_records}
+        result = await self.db.execute(
+            select(Bond.id, Bond.isin_code).where(Bond.isin_code.in_(isins))
+        )
+        for row in result.all():
+            isin_to_id[row.isin_code] = row.id
+
+        # Prepare market data records with bond_id
+        md_records = []
+        for rec in market_data_records:
+            bond_id = isin_to_id.get(rec["isin_code"])
+            if bond_id is None:
+                logger.warning(f"Bond not found for ISIN: {rec['isin_code']}")
+                continue
+            md_records.append({
+                "bond_id": bond_id,
+                "trade_date": trade_date,
+                "clean_price": rec["clean_price"],
+            })
+
+        if not md_records:
+            return 0
+
+        # Upsert in batches
+        count = 0
+        for i in range(0, len(md_records), 200):
+            batch = md_records[i: i + 200]
+            stmt = pg_insert(MarketData).values(batch)
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["bond_id", "trade_date"],
+                set_={"clean_price": stmt.excluded.clean_price},
+            )
+            await self.db.execute(stmt)
+            count += len(batch)
+
+        await self.db.commit()
+        logger.info(f"Upserted {count} market data records for trade_date {trade_date}")
+        return count
 
     # --- Cell parsing helpers ---
 
@@ -319,4 +404,30 @@ class BondFetcher:
         try:
             return Decimal(cleaned)
         except (InvalidOperation, ValueError):
+            return None
+
+    @staticmethod
+    def _parse_clean_price_text(price_text: str) -> Decimal | None:
+        """Parse clean_price from text field (may contain formatting, commas, etc.)."""
+        if not price_text:
+            return None
+        
+        # Remove common formatting characters
+        cleaned = str(price_text).replace(",", ".").replace(" ", "").strip()
+        
+        # Remove currency symbols, parentheses, etc.
+        cleaned = re.sub(r'[^\d.]', '', cleaned)
+        
+        if not cleaned or cleaned == "-" or cleaned == ".":
+            return None
+        
+        try:
+            price = Decimal(cleaned)
+            # Sanity check: clean price should be reasonable (between 0 and 1000)
+            if price < 0 or price > 1000:
+                logger.warning(f"Clean price out of range: {price} (from '{price_text}')")
+                return None
+            return price
+        except (InvalidOperation, ValueError) as e:
+            logger.warning(f"Could not parse clean_price '{price_text}': {e}")
             return None

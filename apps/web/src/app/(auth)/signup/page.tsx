@@ -113,7 +113,7 @@ export default function SignupPage() {
         company: string;
         location: string;
       });
-      setAuth(data.access_token, data.user);
+      setAuth(data.access_token, data.refresh_token, data.user);
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Kayit basarisiz");

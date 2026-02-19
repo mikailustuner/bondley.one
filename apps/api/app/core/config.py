@@ -43,7 +43,9 @@ class Settings(BaseSettings):
 
     JWT_SECRET_KEY: str = "your-super-secret-key-change-in-production"
     JWT_ALGORITHM: str = "HS256"
-    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60  # 1 hour
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 30  # 30 days
+    JWT_REFRESH_SECRET_KEY: str = "your-refresh-secret-key-change-in-production"  # Optional: separate secret for refresh tokens
 
     BIST_TLREF_DAILY_URL: str = "https://borsaistanbul.com/datum/bisttlrefendeksi.csv"
     BIST_TLREF_HISTORICAL_URL: str = "https://borsaistanbul.com/datum/BISTTLREFENDEKSI_D.zip"

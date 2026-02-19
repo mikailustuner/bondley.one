@@ -42,8 +42,14 @@ class UserResponse(BaseModel):
 
 class TokenResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+class RefreshTokenRequest(BaseModel):
+    """Refresh token ile yeni access token almak için"""
+    refresh_token: str
 
 
 class UserUpdate(BaseModel):

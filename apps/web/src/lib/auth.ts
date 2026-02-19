@@ -1,6 +1,7 @@
 "use client";
 
 const TOKEN_KEY = "fincalc_token";
+const REFRESH_TOKEN_KEY = "fincalc_refresh_token";
 const USER_KEY = "fincalc_user";
 
 export function getToken(): string | null {
@@ -19,13 +20,20 @@ export function getUser(): any | null {
   }
 }
 
-export function setAuth(token: string, user: any): void {
+export function setAuth(token: string, refreshToken: string, user: any): void {
   localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
+export function getRefreshToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
 }
 
 export function clearAuth(): void {
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
 }
 

@@ -3,7 +3,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import hash_password, verify_password, create_access_token
+from app.core.security import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    create_refresh_token,
+    verify_refresh_token,
+    revoke_refresh_token,
+    revoke_all_user_tokens,
+)
 from app.models.user import User
 from app.schemas.user import (
     UserCreate,
@@ -14,6 +22,7 @@ from app.schemas.user import (
     UserUpdate,
     PasswordChange,
     EmailChange,
+    RefreshTokenRequest,
 )
 from app.api.deps import get_current_user, get_admin_user
 
@@ -31,8 +40,15 @@ async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
 
-    token = create_access_token(data={"sub": str(user.id), "role": user.role})
-    return TokenResponse(access_token=token, user=UserResponse.model_validate(user))
+    access_token = create_access_token(data={"sub": str(user.id), "role": user.role})
+    refresh_token = await create_refresh_token(user.id, db)
+    await db.commit()
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        user=UserResponse.model_validate(user),
+    )
 
 
 @router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
@@ -56,8 +72,15 @@ async def public_signup(data: PublicRegister, db: AsyncSession = Depends(get_db)
     await db.flush()
     await db.refresh(user)
 
-    token = create_access_token(data={"sub": str(user.id), "role": user.role})
-    return TokenResponse(access_token=token, user=UserResponse.model_validate(user))
+    access_token = create_access_token(data={"sub": str(user.id), "role": user.role})
+    refresh_token = await create_refresh_token(user.id, db)
+    await db.commit()
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        user=UserResponse.model_validate(user),
+    )
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -161,6 +184,73 @@ async def change_email(
     await db.refresh(user)
 
     return UserResponse.model_validate(user)
+
+
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh_token(data: RefreshTokenRequest, db: AsyncSession = Depends(get_db)):
+    """Refresh token ile yeni access token al"""
+    refresh_token_obj = await verify_refresh_token(data.refresh_token, db)
+
+    if refresh_token_obj is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+        )
+
+    # Get user
+    result = await db.execute(select(User).where(User.id == refresh_token_obj.user_id))
+    user = result.scalar_one_or_none()
+
+    if user is None or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or inactive",
+        )
+
+    # Create new access token
+    access_token = create_access_token(data={"sub": str(user.id), "role": user.role})
+
+    # Optionally create a new refresh token (token rotation - more secure)
+    # For now, we'll reuse the same refresh token
+    # new_refresh_token = await create_refresh_token(user.id, db)
+    # await revoke_refresh_token(data.refresh_token, db)
+
+    await db.commit()
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=data.refresh_token,  # Return same token (or new_refresh_token if rotating)
+        user=UserResponse.model_validate(user),
+    )
+
+
+@router.post("/logout", status_code=status.HTTP_200_OK)
+async def logout(
+    data: RefreshTokenRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Logout - revoke refresh token"""
+    success = await revoke_refresh_token(data.refresh_token, db)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid refresh token",
+        )
+
+    await db.commit()
+    return {"message": "Successfully logged out"}
+
+
+@router.post("/logout-all", status_code=status.HTTP_200_OK)
+async def logout_all(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Logout from all devices - revoke all refresh tokens for user"""
+    count = await revoke_all_user_tokens(user.id, db)
+    await db.commit()
+    return {"message": f"Logged out from {count} device(s)"}
 
 
 @router.get("/permissions")

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api-client";
-import { getToken, getUser, setAuth } from "@/lib/auth";
+import { getToken, getRefreshToken, getUser, setAuth } from "@/lib/auth";
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
@@ -50,7 +50,8 @@ export default function SettingsPage() {
 
     try {
       const updated = await api.auth.updateProfile(token, profileData);
-      setAuth(token, updated);
+      const refreshToken = getRefreshToken() || "";
+      setAuth(token, refreshToken, updated);
       setSuccess("Profil başarıyla güncellendi");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Profil güncellenemedi");
@@ -107,7 +108,8 @@ export default function SettingsPage() {
 
     try {
       const updated = await api.auth.changeEmail(token, emailData);
-      setAuth(token, updated);
+      const refreshToken = getRefreshToken() || "";
+      setAuth(token, refreshToken, updated);
       setSuccess("E-posta başarıyla değiştirildi");
     } catch (e) {
       setError(e instanceof Error ? e.message : "E-posta değiştirilemedi");
