@@ -38,12 +38,18 @@ class TLREFFetcher:
         self.db = db
 
     async def fetch_daily(self) -> dict:
+        """Gunluk endeks verisini cek, upsert et ve ardından gunluk oranları (bir onceki gun vs bugun) hesapla."""
         logger.info("Fetching daily TLREF index...")
         try:
             content = await self._download(self.DAILY_URL)
             records = self._parse_daily_csv(content)
             count = await self._upsert_records(records)
-            return {"status": "success", "records": count}
+            rate_count = await self._compute_daily_rates()
+            return {
+                "status": "success",
+                "records": count,
+                "rates_computed": rate_count,
+            }
         except Exception as e:
             logger.error(f"Daily TLREF fetch failed: {e}")
             return {"status": "error", "error": str(e)}
@@ -181,7 +187,11 @@ class TLREFFetcher:
         return count
 
     async def _compute_daily_rates(self) -> int:
-        """Ardisik endeks degerlerinden gunluk oranları hesapla ve DB'ye yaz."""
+        """
+        Ardisik endeks degerlerinden gunluk oranlari hesapla ve DB'ye yaz.
+        Formul: rate_date = D olan satir icin daily_rate = (D gunu endeks - D-1 gunu endeks) / D-1 gunu endeks.
+        Yani bir onceki gun ile o gunun endeksi kullanilir; sonuc o gunun (curr) satirina yazilir.
+        """
         result = await self.db.execute(
             select(TLREFRate).order_by(TLREFRate.rate_date.asc())
         )
@@ -191,8 +201,8 @@ class TLREFFetcher:
 
         updated = 0
         for i in range(1, len(all_rates)):
-            prev = all_rates[i - 1]
-            curr = all_rates[i]
+            prev = all_rates[i - 1]   # bir onceki gun
+            curr = all_rates[i]      # o gun
             prev_val = Decimal(str(prev.index_value)) if prev.index_value is not None else None
             curr_val = Decimal(str(curr.index_value)) if curr.index_value is not None else None
             if prev_val is not None and curr_val is not None and prev_val > 0:
