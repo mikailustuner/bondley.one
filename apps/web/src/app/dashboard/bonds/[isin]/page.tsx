@@ -57,7 +57,7 @@ export default function BondDetailPage({
     }
     const token = getToken();
     if (!token) {
-      setError("Giris yapmaniz gerekiyor");
+      setError("Giriş yapmanız gerekiyor");
       setLoading(false);
       return;
     }
@@ -76,6 +76,13 @@ export default function BondDetailPage({
     // Run when isin or selectedDate changes; bond used only to distinguish initial vs date-change load
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isin, selectedDate]);
+
+  useEffect(() => {
+    document.title = `${isin} — Bondley`;
+    return () => {
+      document.title = "Bondley";
+    };
+  }, [isin]);
 
   useEffect(() => {
     if (!isin) return;
@@ -103,18 +110,18 @@ export default function BondDetailPage({
       />
     );
   if (loading)
-    return <div className="py-12 text-center text-muted-foreground text-sm">Yukleniyor...</div>;
+    return <div className="py-12 text-center text-muted-foreground text-sm">Yükleniyor...</div>;
   if (error)
     return (
       <EmptyState
         variant="error"
-        title={error === "Giris yapmaniz gerekiyor" ? "Giris gerekli" : "Hata"}
+        title={error === "Giriş yapmanız gerekiyor" ? "Giriş gerekli" : "Hata"}
         description={error}
         icon={<AlertCircle className="h-7 w-7" />}
         action={
-          error === "Giris yapmaniz gerekiyor"
-            ? { label: "Giris yap", href: "/login" }
-            : { label: "Listeye don", href: "/dashboard/bonds" }
+          error === "Giriş yapmanız gerekiyor"
+            ? { label: "Giriş yap", href: "/login" }
+            : { label: "Listeye dön", href: "/dashboard/bonds" }
         }
       />
     );
@@ -122,9 +129,9 @@ export default function BondDetailPage({
     return (
       <EmptyState
         title="Tahvil bulunamadi"
-        description="Belirtilen ISIN ile bir tahvil kaydi bulunamadi."
+        description="Belirtilen ISIN ile bir tahvil kaydı bulunamadı."
         icon={<FileQuestion className="h-7 w-7" />}
-        action={{ label: "Listeye don", href: "/dashboard/bonds" }}
+        action={{ label: "Listeye dön", href: "/dashboard/bonds" }}
       />
     );
 
@@ -140,7 +147,7 @@ export default function BondDetailPage({
     },
     {
       label: "VADEYE KALAN",
-      value: bond.days_to_maturity != null ? `${bond.days_to_maturity} gun` : "—",
+      value: bond.days_to_maturity != null ? `${bond.days_to_maturity} gün` : "—",
     },
     {
       label: "KUPON ORANI",
@@ -150,32 +157,32 @@ export default function BondDetailPage({
 
   const generalInfo = [
     ["ISIN Kodu", bond.isin_code],
-    ["Ihracçi", bond.issuer],
-    ["Ihrac Turu", bond.issuance_type],
+    ["İhraççı", bond.issuer],
+    ["İhraç Türü", bond.issuance_type],
     ["Getiri Turu", bond.yield_type],
     ["MK Turu", bond.security_type],
     ["Kupon Sikligi", bond.coupon_frequency],
     ["Para Birimi", bond.currency],
     ["Grup Kodu", bond.group_code],
     ["Detay Tipi", bond.security_type_detail],
-    ["Gun Sayim", bond.day_count_convention],
-    ["Emir Giris Yontemi", bond.quotation_method],
+    ["Gün Sayım", bond.day_count_convention],
+    ["Emir Giriş Yöntemi", bond.quotation_method],
   ];
 
   const dateInfo = [
-    ["Ilk Ihrac Tarihi", formatDate(bond.first_issue_date)],
-    ["Itfa Tarihi", formatDate(bond.maturity_date)],
-    ["Son Ihrac Tarihi", bond.last_issue_date_text || "—"],
+    ["İlk İhraç Tarihi", formatDate(bond.first_issue_date)],
+    ["İtfa Tarihi", formatDate(bond.maturity_date)],
+    ["Son İhraç Tarihi", bond.last_issue_date_text || "—"],
     ["Sonraki Kupon Tarihi", formatDate(bond.next_coupon_date)],
-    ["Vadeye Kalan Gun", bond.days_to_maturity != null ? `${bond.days_to_maturity}` : "—"],
+    ["Vadeye Kalan Gün", bond.days_to_maturity != null ? `${bond.days_to_maturity}` : "—"],
   ];
 
   const financialInfo = [
-    ["Ilk Ihrac Fiyati", formatDecimal(bond.first_issue_price, 3)],
-    ["Son Ihrac Fiyati", formatDecimal(bond.last_issue_price, 3)],
-    ["Ilk Ihrac Getirisi %", bond.first_issue_yield != null ? formatPercent(bond.first_issue_yield) : "—"],
-    ["Son Ihrac Getirisi %", bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"],
-    ["Sonraki Kupon Orani %", formatPercentFromDecimal(bond.next_coupon_rate, 4)],
+    ["İlk İhraç Fiyatı", formatDecimal(bond.first_issue_price, 3)],
+    ["Son İhraç Fiyatı", formatDecimal(bond.last_issue_price, 3)],
+    ["İlk İhraç Getirisi %", bond.first_issue_yield != null ? formatPercent(bond.first_issue_yield) : "—"],
+    ["Son İhraç Getirisi %", bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"],
+    ["Sonraki Kupon Oranı %", formatPercentFromDecimal(bond.next_coupon_rate, 4)],
     ["Spread %", formatPercentFromDecimal(bond.spread, 4)],
     [
       "Toplam Ihrac Tutari",
@@ -222,7 +229,7 @@ export default function BondDetailPage({
               <Link href={`/dashboard/bonds/${prevIsin}`}>
                 <Button variant="outline" size="sm" className="gap-1">
                   <ChevronLeft className="h-4 w-4" />
-                  Onceki
+                  Önceki
                 </Button>
               </Link>
             ) : (
@@ -272,7 +279,7 @@ export default function BondDetailPage({
               onClick={() => setSelectedDate(todayISO())}
               className="text-data-sm"
             >
-              Bugun
+              Bugün
             </Button>
             <Button
               variant="outline"
@@ -280,7 +287,7 @@ export default function BondDetailPage({
               onClick={() => setSelectedDate(lastBusinessDayISO())}
               className="text-data-sm"
             >
-              Son is gunu
+              Son iş günü
             </Button>
             <Button
               variant="outline"
@@ -288,7 +295,7 @@ export default function BondDetailPage({
               onClick={() => setSelectedDate(weekAgoISO())}
               className="text-data-sm"
             >
-              1 hafta once
+              1 hafta önce
             </Button>
             <Button
               variant="outline"
@@ -296,14 +303,14 @@ export default function BondDetailPage({
               onClick={() => setSelectedDate(monthAgoISO())}
               className="text-data-sm"
             >
-              1 ay once
+              1 ay önce
             </Button>
           </div>
         </div>
         {!bond.calculated_metrics && !metricsLoading && (
           <span className="text-label text-muted-foreground flex items-center gap-1">
             <AlertCircle className="h-4 w-4" />
-            Bu tarih icin piyasa verisi yok
+            Bu tarih için piyasa verisi yok
           </span>
         )}
         {metricsLoading && (
@@ -316,7 +323,7 @@ export default function BondDetailPage({
           <CardHeader>
             <CardDescription>HESAPLANAN METRIKLER</CardDescription>
             <CardTitle className="mt-1">
-              Kirli Fiyat, Oran Degisimi, Getiri ve Risk — {formatDate(selectedDate)} tarihi icin
+              Kirli Fiyat, Oran Değişimi, Getiri ve Risk — {formatDate(selectedDate)} tarihi için
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -428,20 +435,20 @@ export default function BondDetailPage({
             <CardTitle>Hesaplanan Metrikler</CardTitle>
             <CardDescription>
               {selectedDate === todayISO()
-                ? "Bugun icin"
-                : `${formatDate(selectedDate)} tarihi icin`}{" "}
-              piyasa verisi bulunamadi
+                ? "Bugün için"
+                : `${formatDate(selectedDate)} tarihi için`}{" "}
+              piyasa verisi bulunamadı
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="p-4 bg-muted/50 border border-border rounded-xl text-center">
               <p className="text-sm text-muted-foreground">
                 {selectedDate === todayISO()
-                  ? "Bugun icin piyasa verisi henuz yuklenmemis veya mevcut degil."
-                  : `${formatDate(selectedDate)} tarihi icin piyasa verisi bulunmamaktadir.`}
+                  ? "Bugün için piyasa verisi henüz yüklenmemiş veya mevcut değil."
+                  : `${formatDate(selectedDate)} tarihi için piyasa verisi bulunmamaktadır.`}
               </p>
               <p className="text-xs text-muted-foreground mt-2">
-                Lutfen baska bir tarih secin veya veri yukleme islemini bekleyin.
+                Lütfen başka bir tarih seçin veya veri yükleme işlemini bekleyin.
               </p>
             </div>
           </CardContent>
@@ -490,7 +497,7 @@ export default function BondDetailPage({
         <Card>
           <CardHeader>
             <CardDescription>TARIH BILGILERI</CardDescription>
-            <CardTitle className="mt-1">Ihrac ve Vade</CardTitle>
+            <CardTitle className="mt-1">İhraç ve Vade</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-0">

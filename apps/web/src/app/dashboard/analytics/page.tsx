@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TlrefIndexChart } from "@/components/charts/tlref-index-chart";
@@ -8,12 +9,18 @@ import { useTlrefHistory } from "@/hooks/use-tlref-history";
 import { formatDecimal, formatPercent } from "@/lib/utils";
 
 export default function AnalyticsPage() {
+  useEffect(() => {
+    document.title = "Analiz — Bondley";
+    return () => {
+      document.title = "Bondley";
+    };
+  }, []);
   const { history, indexData, rateData, bondStats, loading } = useTlrefHistory();
 
   if (loading) {
     return (
       <div className="py-12 text-center text-muted-foreground text-sm">
-        Analiz verileri yukleniyor...
+        Analiz verileri yükleniyor...
       </div>
     );
   }
@@ -46,7 +53,7 @@ export default function AnalyticsPage() {
       <div className="animate-fade-up">
         <h1 className="font-display text-display-md text-foreground">Analiz</h1>
         <p className="text-data-sm text-muted-foreground mt-1">
-          BIST TLREF Endeks & Tahvil Dagilim Analizi
+          BIST TLREF Endeks & Tahvil Dağılım Analizi
         </p>
       </div>
 
@@ -63,7 +70,7 @@ export default function AnalyticsPage() {
           <div className="font-mono-data text-stat text-foreground">
             {avgDailyRatePct != null ? formatPercent(avgDailyRatePct) : "—"}
           </div>
-          <div className="text-label text-muted-foreground/60 mt-1">Son 30 gun</div>
+          <div className="text-label text-muted-foreground/60 mt-1">Son 30 gün</div>
         </div>
         <div className="bg-card p-5 grain">
           <div className="text-label text-muted-foreground mb-2">EN DUSUK</div>
@@ -85,10 +92,10 @@ export default function AnalyticsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardDescription>BIST TLREF ENDEKSI</CardDescription>
-              <CardTitle className="mt-1">Tarihsel Endeks Grafigi</CardTitle>
+              <CardDescription>BIST TLREF ENDEKSİ</CardDescription>
+              <CardTitle className="mt-1">Tarihsel Endeks Grafiği</CardTitle>
             </div>
-            <Badge variant="outline">{history.length} GUN</Badge>
+            <Badge variant="outline">{history.length} GÜN</Badge>
           </div>
         </CardHeader>
         <CardContent>
@@ -100,8 +107,8 @@ export default function AnalyticsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardDescription>GUNLUK ORAN DEGISIMI</CardDescription>
-              <CardTitle className="mt-1">Gunluk TLREF Orani (%)</CardTitle>
+              <CardDescription>GÜNLÜK ORAN DEĞİŞİMİ</CardDescription>
+              <CardTitle className="mt-1">Günlük TLREF Oranı (%)</CardTitle>
             </div>
             <Badge variant="outline">SON 90 GUN</Badge>
           </div>
@@ -115,15 +122,15 @@ export default function AnalyticsPage() {
         <>
           <div className="animate-fade-up-delay-2">
             <h2 className="font-display text-display-sm text-foreground mb-4">
-              Tahvil Dagilim Analizi
+              Tahvil Dağılım Analizi
             </h2>
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2 animate-fade-up-delay-2">
             <Card>
               <CardHeader>
-                <CardDescription>MK TURUNE GORE</CardDescription>
-                <CardTitle className="mt-1">Menkul Kiymet Turu Dagilimi</CardTitle>
+                <CardDescription>MK TÜRÜNE GÖRE</CardDescription>
+                <CardTitle className="mt-1">Menkul Kıymet Türü Dağılımı</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-0">
@@ -163,8 +170,8 @@ export default function AnalyticsPage() {
 
             <Card>
               <CardHeader>
-                <CardDescription>GETIRI TURUNE GORE</CardDescription>
-                <CardTitle className="mt-1">Getiri Turu Dagilimi</CardTitle>
+                <CardDescription>GETİRİ TÜRÜNE GÖRE</CardDescription>
+                <CardTitle className="mt-1">Getiri Türü Dağılımı</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-0">
@@ -205,8 +212,8 @@ export default function AnalyticsPage() {
 
           <Card className="animate-fade-up-delay-2">
             <CardHeader>
-              <CardDescription>PARA BIRIMINE GORE</CardDescription>
-              <CardTitle className="mt-1">Doviz Dagilimi</CardTitle>
+              <CardDescription>PARA BİRİMİNE GÖRE</CardDescription>
+              <CardTitle className="mt-1">Döviz Dağılımı</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-px md:grid-cols-4 bg-border/30 rounded-lg overflow-hidden">

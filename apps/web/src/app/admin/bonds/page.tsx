@@ -48,13 +48,13 @@ export default function AdminBondsPage() {
     try {
       const result = await api.bonds.sync(token);
       if (result.status === "success") {
-        setSyncMsg(`${result.bonds_upserted} tahvil guncellendi, ${result.bonds_deactivated} deaktive edildi.`);
+        setSyncMsg(`${result.bonds_upserted} tahvil güncellendi, ${result.bonds_deactivated} deaktive edildi.`);
         fetchBonds();
       } else {
         setSyncMsg(`Hata: ${(result as any).error || "Bilinmeyen"}`);
       }
     } catch (e) {
-      setSyncMsg(e instanceof Error ? e.message : "Sync basarisiz");
+      setSyncMsg(e instanceof Error ? e.message : "Sync başarısız");
     } finally {
       setSyncing(false);
     }
@@ -72,13 +72,13 @@ export default function AdminBondsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between animate-fade-up">
         <div>
-          <h1 className="font-display text-display-md text-foreground">Tahvil Yonetimi</h1>
+          <h1 className="font-display text-display-md text-foreground">Tahvil Yönetimi</h1>
           <p className="text-data-sm text-muted-foreground mt-1">
-            BIST borclanma araclari — sadece listeleme ve sync
+            BIST borçlanma araçları — sadece listeleme ve sync
           </p>
         </div>
         <Button onClick={handleSync} disabled={syncing}>
-          {syncing ? "Guncelleniyor…" : "Tahvil Listesi Guncelle"}
+          {syncing ? "Güncelleniyor…" : "Tahvil Listesi Güncelle"}
         </Button>
       </div>
 
@@ -88,7 +88,7 @@ export default function AdminBondsPage() {
 
       <div className="w-64 animate-fade-up">
         <Input
-          placeholder="ISIN veya ihracciyla ara..."
+          placeholder="ISIN veya ihraççıyla ara..."
           className="font-mono-data"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -100,7 +100,7 @@ export default function AdminBondsPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardDescription>VERITABANI</CardDescription>
-              <CardTitle className="mt-1">Kayitli Tahviller</CardTitle>
+              <CardTitle className="mt-1">Kayıtlı Tahviller</CardTitle>
             </div>
             {!loading && (
               <span className="text-label text-muted-foreground">
@@ -124,6 +124,7 @@ export default function AdminBondsPage() {
                       (h) => (
                         <th
                           key={h}
+                          scope="col"
                           className="pb-3 text-label text-muted-foreground font-normal text-left"
                         >
                           {h}

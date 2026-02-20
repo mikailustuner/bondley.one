@@ -44,7 +44,7 @@ export default function AdminUsersPage() {
       const data = await api.auth.usersList(token);
       setUsers(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Kullanicilar yuklenemedi");
+      setError(e instanceof Error ? e.message : "Kullanıcılar yüklenemedi");
     } finally {
       setLoading(false);
     }
@@ -58,8 +58,8 @@ export default function AdminUsersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between animate-fade-up">
         <div>
-          <h1 className="font-display text-display-md text-foreground">Kullanici Yonetimi</h1>
-          <p className="text-data-sm text-muted-foreground mt-1">Kullanici hesaplarini yonetin</p>
+          <h1 className="font-display text-display-md text-foreground">Kullanıcı Yönetimi</h1>
+          <p className="text-data-sm text-muted-foreground mt-1">Kullanıcı hesaplarını yönetin</p>
         </div>
         <Button onClick={() => setShowCreateModal(true)}>Yeni Kullanici</Button>
       </div>
@@ -69,7 +69,7 @@ export default function AdminUsersPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardDescription>HESAPLAR</CardDescription>
-              <CardTitle className="mt-1">Kayitli Kullanicilar</CardTitle>
+              <CardTitle className="mt-1">Kayıtlı Kullanıcılar</CardTitle>
             </div>
             <span className="text-label text-muted-foreground">{users.length} KAYIT</span>
           </div>
@@ -86,6 +86,7 @@ export default function AdminUsersPage() {
                     {["ID", "E-POSTA", "AD SOYAD", "SIRKET", "ROL", "DURUM", "İŞLEMLER"].map((h, i) => (
                       <th
                         key={h}
+                        scope="col"
                         className={`pb-3 text-label text-muted-foreground font-normal ${i === 5 ? "text-right" : "text-left"}`}
                       >
                         {h}

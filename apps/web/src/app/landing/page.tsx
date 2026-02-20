@@ -46,9 +46,6 @@ export default function LandingPage() {
               <span className="font-display font-semibold text-sm tracking-tight text-foreground">
                 Bondley
               </span>
-              <span className="text-label text-muted-foreground hidden sm:inline ml-2">
-                v1.0
-              </span>
             </Link>
           </div>
           <div className="flex items-center gap-3">
@@ -74,11 +71,11 @@ export default function LandingPage() {
                 <ThemeToggle />
                 <Link href="/signup">
                   <Button variant="outline" size="sm">
-                    Kayit Ol
+                    Kayıt Ol
                   </Button>
                 </Link>
                 <Link href="/login">
-                  <Button size="sm">Giris Yap</Button>
+                  <Button size="sm">Giriş Yap</Button>
                 </Link>
               </>
             )}
@@ -96,25 +93,25 @@ export default function LandingPage() {
               </div>
 
               <h1 className="font-display text-display-xl text-foreground">
-                BIST Borclanma Araclari
+                Tahvil Değerleme ve Analiz
                 <br />
-                <span className="text-primary">Takip Terminali</span>
+                <span className="text-primary">Platformu</span>
               </h1>
             </div>
 
             <p className="text-lg text-muted-foreground leading-relaxed max-w-xl animate-fade-up-delay-1 font-body">
-              Borsa Istanbul BIST TLREF Endeks degerleri ve 2000+ borclanma aracini gercek zamanli
-              takip edin. Tahvil listesi, tarihsel veriler, gunluk oranlar ve istatistiksel analiz
+              Borsa İstanbul BIST TLREF Endeks değerleri ve 2000+ borçlanma aracını gerçek zamanlı
+              takip edin. Tahvil listesi, tarihsel veriler, günlük oranlar ve istatistiksel analiz
               tek bir terminalde.
             </p>
 
             <div className="flex items-center gap-4 pt-2 animate-fade-up-delay-2">
               <Link href="/signup">
-                <Button size="lg">Ucretsiz Baslat</Button>
+                <Button size="lg">Ücretsiz Başlat</Button>
               </Link>
               <Link href="/login">
                 <Button size="lg" variant="outline">
-                  Giris Yap
+                  Giriş Yap
                 </Button>
               </Link>
             </div>
@@ -185,17 +182,17 @@ export default function LandingPage() {
             {
               number: "2.100+",
               label: "BORCLANMA ARACI",
-              desc: "Devlet tahvili, hazine bonosu, ozel sektor tahvili, kira sertifikasi ve daha fazlasi BIST'ten otomatik cekilir.",
+              desc: "Devlet tahvili, hazine bonosu, özel sektör tahvili, kira sertifikası ve daha fazlası BIST'ten otomatik çekilir.",
             },
             {
               number: "1.679+",
               label: "TLREF KAYIT",
-              desc: "Haziran 2019'dan bu yana tum BIST TLREF Endeks degerleri otomatik olarak cekilir ve saklanir.",
+              desc: "Haziran 2019'dan bu yana tüm BIST TLREF Endeks değerleri otomatik olarak çekilir ve saklanır.",
             },
             {
               number: "18:30",
               label: "OTOMATIK GUNCELLEME",
-              desc: "Her is gunu Borsa Istanbul'dan gunluk TLREF endeks degeri ve tahvil listesi otomatik cekilir.",
+              desc: "Her iş günü Borsa İstanbul'dan günlük TLREF endeks değeri ve tahvil listesi otomatik çekilir.",
             },
           ].map((item) => (
             <div key={item.label} className="bg-card p-8 grain">
@@ -210,9 +207,22 @@ export default function LandingPage() {
       </section>
 
       <footer className="border-t border-border/50 py-6">
-        <div className="container mx-auto flex items-center justify-between">
-          <span className="text-label text-muted-foreground">&copy; 2026 Bondley</span>
-          <span className="text-label text-muted-foreground">ISTANBUL, TURKIYE</span>
+        <div className="container mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <span className="text-label text-muted-foreground">&copy; 2026 Bondley</span>
+            <div className="flex items-center gap-4 text-label text-muted-foreground">
+              <Link href="/gizlilik" className="hover:text-primary transition-colors">
+                Gizlilik Politikası
+              </Link>
+              <Link href="/kullanim-sartlari" className="hover:text-primary transition-colors">
+                Kullanım Şartları
+              </Link>
+              <Link href="/iletisim" className="hover:text-primary transition-colors">
+                İletişim
+              </Link>
+            </div>
+            <span className="text-label text-muted-foreground">İstanbul, Türkiye</span>
+          </div>
         </div>
       </footer>
     </div>

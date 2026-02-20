@@ -29,28 +29,28 @@ const FIELDS: FormField[] = [
     key: "full_name",
     label: "AD SOYAD",
     type: "text",
-    placeholder: "Ahmet Yilmaz",
+    placeholder: "Ad Soyad",
     autoComplete: "name",
   },
   {
     key: "email",
     label: "KURUMSAL E-POSTA",
     type: "email",
-    placeholder: "ahmet@sirket.com",
+    placeholder: "ornek@sirket.com",
     autoComplete: "email",
   },
   {
     key: "company",
     label: "SIRKET / KURUM ADI",
     type: "text",
-    placeholder: "ABC Yatirim A.S.",
+    placeholder: "Şirket veya kurum adı",
     autoComplete: "organization",
   },
   {
     key: "location",
     label: "KONUM",
     type: "text",
-    placeholder: "Istanbul, Turkiye",
+    placeholder: "İstanbul, Türkiye",
     autoComplete: "address-level1",
   },
   {
@@ -64,7 +64,7 @@ const FIELDS: FormField[] = [
     key: "password_confirm",
     label: "SIFRE TEKRAR",
     type: "password",
-    placeholder: "Sifrenizi tekrar giriniz",
+    placeholder: "Şifrenizi tekrar girin",
     autoComplete: "new-password",
   },
 ];
@@ -93,12 +93,12 @@ export default function SignupPage() {
     setError("");
 
     if (form.password !== form.password_confirm) {
-      setError("Sifreler eslesmiyor");
+      setError("Şifreler eşleşmiyor");
       return;
     }
 
     if (form.password.length < 8) {
-      setError("Sifre en az 8 karakter olmali");
+      setError("Şifre en az 8 karakter olmalı");
       return;
     }
 
@@ -116,7 +116,7 @@ export default function SignupPage() {
       setAuth(data.access_token, data.refresh_token, data.user);
       router.push("/dashboard");
     } catch (err: any) {
-      setError(err.message || "Kayit basarisiz");
+      setError(err.message || "Kayıt başarısız");
     } finally {
       setLoading(false);
     }
@@ -179,7 +179,7 @@ export default function SignupPage() {
               )}
 
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Hesap olusturuluyor..." : "Kayit Ol"}
+                {loading ? "Hesap oluşturuluyor..." : "Kayıt Ol"}
               </Button>
             </form>
 
@@ -190,7 +190,7 @@ export default function SignupPage() {
                   href="/login"
                   className="text-primary hover:text-primary/80 font-medium transition-colors"
                 >
-                  Giris Yap
+                  Giriş Yap
                 </Link>
               </p>
             </div>

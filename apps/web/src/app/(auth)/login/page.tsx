@@ -27,7 +27,7 @@ export default function LoginPage() {
       setAuth(data.access_token, data.refresh_token, data.user);
       router.push(data.user.role === "admin" ? "/admin" : "/dashboard");
     } catch (err: any) {
-      setError(err.message || "Giris basarisiz");
+      setError(err.message || "Giriş başarısız");
     } finally {
       setLoading(false);
     }
@@ -56,7 +56,7 @@ export default function LoginPage() {
         <Card className="amber-glow-border">
           <CardHeader className="pb-4">
             <CardDescription>KIMLIK DOGRULAMA</CardDescription>
-            <CardTitle className="mt-1">Giris Yap</CardTitle>
+            <CardTitle className="mt-1">Giriş Yap</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -64,7 +64,7 @@ export default function LoginPage() {
                 <label className="text-label text-muted-foreground">E-POSTA</label>
                 <Input
                   type="email"
-                  placeholder="admin@fincalc.com"
+                  placeholder="ornek@sirket.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -87,7 +87,7 @@ export default function LoginPage() {
                 </div>
               )}
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Dogrulanıyor..." : "Giris Yap"}
+                {loading ? "Doğrulanıyor..." : "Giriş Yap"}
               </Button>
             </form>
 
@@ -98,7 +98,7 @@ export default function LoginPage() {
                   href="/signup"
                   className="text-primary hover:text-primary/80 font-medium transition-colors"
                 >
-                  Kayit Ol
+                  Kayıt Ol
                 </Link>
               </p>
             </div>

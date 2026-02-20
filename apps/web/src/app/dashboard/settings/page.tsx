@@ -8,6 +8,12 @@ import { api } from "@/lib/api-client";
 import { getToken, getRefreshToken, getUser, setAuth } from "@/lib/auth";
 
 export default function SettingsPage() {
+  useEffect(() => {
+    document.title = "Hesap Ayarları — Bondley";
+    return () => {
+      document.title = "Bondley";
+    };
+  }, []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);

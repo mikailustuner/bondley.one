@@ -33,10 +33,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               {[
                 { href: "/admin", label: "Genel" },
                 { href: "/admin/bonds", label: "Tahviller" },
-                { href: "/admin/users", label: "Kullanicilar" },
+                { href: "/admin/users", label: "Kullanıcılar" },
                 { href: "/admin/logs", label: "Loglar" },
                 { href: "/admin/metrics", label: "Metrikler" },
-                { href: "/admin/import", label: "Veri Aktarimi" },
+                { href: "/admin/import", label: "Veri Aktarımı" },
               ].map((item) => (
                 <Link
                   key={item.href}

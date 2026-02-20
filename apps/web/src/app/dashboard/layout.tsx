@@ -7,7 +7,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Genel Bakis" },
+  { href: "/dashboard", label: "Genel Bakış" },
   { href: "/dashboard/bonds", label: "Tahviller" },
   { href: "/dashboard/analytics", label: "Analiz" },
 ];

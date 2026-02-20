@@ -8,6 +8,12 @@ import { getToken } from "@/lib/auth";
 import { formatDecimal, formatDate } from "@/lib/utils";
 
 export default function AdminPage() {
+  useEffect(() => {
+    document.title = "Yönetim Paneli — Bondley";
+    return () => {
+      document.title = "Bondley";
+    };
+  }, []);
   const [syncing, setSyncing] = useState(false);
   const [syncingBonds, setSyncingBonds] = useState(false);
   const [syncingAll, setSyncingAll] = useState(false);
@@ -50,7 +56,7 @@ export default function AdminPage() {
     api.admin
       .stats(token)
       .then(setStats)
-      .catch((e) => setStatsError(e instanceof Error ? e.message : "Istatistik yuklenemedi"));
+      .catch((e) => setStatsError(e instanceof Error ? e.message : "İstatistik yüklenemedi"));
     api.tlref
       .latest(token)
       .then((res) => {
@@ -67,7 +73,7 @@ export default function AdminPage() {
   async function handleTlrefSync() {
     const token = getToken();
     if (!token) {
-      setSyncMessage({ type: "error", text: "Oturum acik degil." });
+      setSyncMessage({ type: "error", text: "Oturum açık değil." });
       return;
     }
     setSyncing(true);
@@ -77,20 +83,20 @@ export default function AdminPage() {
       const h = result.historical ?? {};
       const d = result.daily ?? {};
       const parts: string[] = [];
-      if (h.index_records) parts.push(`${h.index_records} tarihsel endeks kaydi`);
-      if (h.rates_computed) parts.push(`${h.rates_computed} gunluk oran hesaplandi`);
-      if (d.records) parts.push(`${d.records} gunluk kayit`);
+      if (h.index_records) parts.push(`${h.index_records} tarihsel endeks kaydı`);
+      if (h.rates_computed) parts.push(`${h.rates_computed} günlük oran hesaplandı`);
+      if (d.records) parts.push(`${d.records} günlük kayıt`);
       if (h.status === "error") parts.push(`Tarihsel hata: ${h.error}`);
-      if (d.status === "error") parts.push(`Gunluk hata: ${d.error}`);
+      if (d.status === "error") parts.push(`Günlük hata: ${d.error}`);
       setSyncMessage({
         type: h.status === "error" && d.status === "error" ? "error" : "success",
-        text: parts.length ? parts.join(" | ") : "TLREF sync tamamlandi.",
+        text: parts.length ? parts.join(" | ") : "TLREF sync tamamlandı.",
       });
       refreshStats();
     } catch (e) {
       setSyncMessage({
         type: "error",
-        text: e instanceof Error ? e.message : "TLREF sync basarisiz.",
+        text: e instanceof Error ? e.message : "TLREF sync başarısız.",
       });
     } finally {
       setSyncing(false);
@@ -100,7 +106,7 @@ export default function AdminPage() {
   async function handleBondSync() {
     const token = getToken();
     if (!token) {
-      setSyncMessage({ type: "error", text: "Oturum acik degil." });
+      setSyncMessage({ type: "error", text: "Oturum açık değil." });
       return;
     }
     setSyncingBonds(true);
@@ -110,7 +116,7 @@ export default function AdminPage() {
       if (result.status === "success") {
         setSyncMessage({
           type: "success",
-          text: `${result.bonds_upserted} tahvil guncellendi, ${result.bonds_deactivated} deaktive edildi.`,
+          text: `${result.bonds_upserted} tahvil güncellendi, ${result.bonds_deactivated} deaktive edildi.`,
         });
       } else {
         setSyncMessage({
@@ -122,7 +128,7 @@ export default function AdminPage() {
     } catch (e) {
       setSyncMessage({
         type: "error",
-        text: e instanceof Error ? e.message : "Tahvil sync basarisiz.",
+        text: e instanceof Error ? e.message : "Tahvil sync başarısız.",
       });
     } finally {
       setSyncingBonds(false);
@@ -132,7 +138,7 @@ export default function AdminPage() {
   async function handleSyncAll() {
     const token = getToken();
     if (!token) {
-      setSyncMessage({ type: "error", text: "Oturum acik degil." });
+      setSyncMessage({ type: "error", text: "Oturum açık değil." });
       return;
     }
     setSyncingAll(true);
@@ -144,20 +150,20 @@ export default function AdminPage() {
       const d = result.tlref_daily ?? {};
       const b = result.bonds ?? {};
       if (h.index_records) parts.push(`TLREF: ${h.index_records} tarihsel`);
-      if (d.records) parts.push(`${d.records} gunluk`);
-      if (b.bonds_upserted) parts.push(`Tahvil: ${b.bonds_upserted} guncellendi`);
+      if (d.records) parts.push(`${d.records} günlük`);
+      if (b.bonds_upserted) parts.push(`Tahvil: ${b.bonds_upserted} güncellendi`);
       if (b.bonds_deactivated) parts.push(`${b.bonds_deactivated} deaktive`);
       if (h.status === "error") parts.push(`TLREF hata: ${h.error}`);
       if (b.status === "error") parts.push(`Tahvil hata: ${b.error}`);
       setSyncMessage({
         type: parts.some((p) => p.includes("hata")) ? "error" : "success",
-        text: parts.length ? parts.join(" | ") : "Tum veriler guncellendi.",
+        text: parts.length ? parts.join(" | ") : "Tüm veriler güncellendi.",
       });
       refreshStats();
     } catch (e) {
       setSyncMessage({
         type: "error",
-        text: e instanceof Error ? e.message : "Sync basarisiz.",
+        text: e instanceof Error ? e.message : "Sync başarısız.",
       });
     } finally {
       setSyncingAll(false);
@@ -169,9 +175,9 @@ export default function AdminPage() {
   return (
     <div className="space-y-6">
       <div className="animate-fade-up">
-        <h1 className="font-display text-display-md text-foreground">Yonetim Paneli</h1>
+        <h1 className="font-display text-display-md text-foreground">Yönetim Paneli</h1>
         <p className="text-data-sm text-muted-foreground mt-1">
-          Sistem yonetimi ve veri operasyonlari
+          Sistem yönetimi ve veri operasyonları
         </p>
       </div>
 
@@ -200,7 +206,7 @@ export default function AdminPage() {
               <div className="font-mono-data text-stat text-foreground">
                 {formatDecimal(stats.users_count, 0)}
               </div>
-              <div className="text-label text-muted-foreground/60 mt-1">Kayitli hesap</div>
+              <div className="text-label text-muted-foreground/60 mt-1">Kayıtlı hesap</div>
             </div>
           </>
         )}
@@ -219,7 +225,7 @@ export default function AdminPage() {
         <Card>
           <CardHeader>
             <CardDescription>OPERASYONLAR</CardDescription>
-            <CardTitle className="mt-1">Veri Guncelleme</CardTitle>
+            <CardTitle className="mt-1">Veri Güncelleme</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <Button
@@ -229,7 +235,7 @@ export default function AdminPage() {
               disabled={anyLoading}
             >
               <span>
-                {syncingAll ? "Tum veriler guncelleniyor…" : "Tum Verileri Guncelle (TLREF + Tahvil)"}
+                {syncingAll ? "Tüm veriler güncelleniyor…" : "Tüm Verileri Güncelle (TLREF + Tahvil)"}
               </span>
               <span className="text-muted-foreground/40 group-hover:text-primary transition-colors">
                 &rarr;
@@ -243,7 +249,7 @@ export default function AdminPage() {
                 onClick={handleTlrefSync}
                 disabled={anyLoading}
               >
-                <span>{syncing ? "Guncelleniyor…" : "TLREF Endeks"}</span>
+                <span>{syncing ? "Güncelleniyor…" : "TLREF Endeks"}</span>
               </Button>
               <Button
                 variant="outline"
@@ -251,7 +257,7 @@ export default function AdminPage() {
                 onClick={handleBondSync}
                 disabled={anyLoading}
               >
-                <span>{syncingBonds ? "Guncelleniyor…" : "Tahvil Listesi"}</span>
+                <span>{syncingBonds ? "Güncelleniyor…" : "Tahvil Listesi"}</span>
               </Button>
             </div>
 
@@ -268,7 +274,7 @@ export default function AdminPage() {
         <Card>
           <CardHeader>
             <CardDescription>SISTEM DURUMU</CardDescription>
-            <CardTitle className="mt-1">Genel Bakis</CardTitle>
+            <CardTitle className="mt-1">Genel Bakış</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-0">
@@ -279,7 +285,7 @@ export default function AdminPage() {
                 </span>
               </div>
               <div className="flex justify-between items-center py-2.5 border-b border-border/30">
-                <span className="text-data-sm text-muted-foreground">Son Endeks Degeri</span>
+                <span className="text-data-sm text-muted-foreground">Son Endeks Değeri</span>
                 <span className="font-mono-data text-label text-primary">
                   {formatDecimal(tlrefLatest?.index_value, 5)}
                 </span>
@@ -291,19 +297,19 @@ export default function AdminPage() {
                 </span>
               </div>
               <div className="flex justify-between items-center py-2.5 border-b border-border/30">
-                <span className="text-data-sm text-muted-foreground">Toplam TLREF Kaydi</span>
+                <span className="text-data-sm text-muted-foreground">Toplam TLREF Kaydı</span>
                 <span className="font-mono-data text-label text-foreground">
                   {formatDecimal(stats?.tlref_count, 0)}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2.5 border-b border-border/30">
-                <span className="text-data-sm text-muted-foreground">Kullanici Sayisi</span>
+                <span className="text-data-sm text-muted-foreground">Kullanıcı Sayısı</span>
                 <span className="font-mono-data text-label text-foreground">
                   {formatDecimal(stats?.users_count, 0)}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2.5">
-                <span className="text-data-sm text-muted-foreground">Otomatik Guncelleme</span>
+                <span className="text-data-sm text-muted-foreground">Otomatik Güncelleme</span>
                 <span className="font-mono-data text-label text-positive">
                   TLREF 18:30 / TAHVIL 19:00
                 </span>

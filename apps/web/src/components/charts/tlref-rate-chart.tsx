@@ -56,7 +56,7 @@ export function TlrefRateChart({ data }: Props) {
             fontFamily: "var(--font-jetbrains-mono)",
             color: "hsl(40, 10%, 92%)",
           }}
-          formatter={(value: number) => [`%${value.toFixed(5)}`, "Gunluk Oran"]}
+          formatter={(value: number) => [`%${value.toFixed(5)}`, "Günlük Oran"]}
           labelStyle={{ color: "hsl(220, 10%, 52%)", fontSize: "10px", marginBottom: "4px" }}
         />
         <Bar dataKey="rate" radius={[2, 2, 0, 0]} maxBarSize={6}>

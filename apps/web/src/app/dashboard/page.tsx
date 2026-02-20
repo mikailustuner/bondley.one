@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,12 @@ import { useTlrefHistory } from "@/hooks/use-tlref-history";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
 
 export default function DashboardPage() {
+  useEffect(() => {
+    document.title = "Dashboard — Bondley";
+    return () => {
+      document.title = "Bondley";
+    };
+  }, []);
   const { history, indexData, rateData, stats, bondStats, loading, error } = useTlrefHistory();
 
   const STATS = stats
@@ -22,7 +29,7 @@ export default function DashboardPage() {
         {
           label: "GUNLUK ORAN",
           value: formatPercentFromDecimal(stats.latest_daily_rate, 4),
-          sub: "Son is gunu",
+          sub: "Son iş günü",
         },
         {
           label: "YILLIK ORAN",
@@ -33,7 +40,7 @@ export default function DashboardPage() {
           label: "AKTIF TAHVIL",
           value: bondStats ? formatDecimal(bondStats.total_bonds, 0) : "—",
           sub: bondStats?.avg_days_to_maturity
-            ? `Ort. vade: ${Math.round(bondStats.avg_days_to_maturity)} gun`
+            ? `Ort. vade: ${Math.round(bondStats.avg_days_to_maturity)} gün`
             : "",
           link: "/dashboard/bonds",
         },
@@ -51,7 +58,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="font-display text-display-md text-foreground">Dashboard</h1>
           <p className="text-data-sm text-muted-foreground mt-1">
-            BIST TLREF Endeks & Borclanma Araclari Terminali
+            BIST TLREF Endeks & Borçlanma Araçları Terminali
           </p>
         </div>
         <div className="flex items-center gap-2 text-label text-muted-foreground">
@@ -127,10 +134,10 @@ export default function DashboardPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardDescription>BIST TLREF ENDEKSI</CardDescription>
-                <CardTitle className="mt-1">Tarihsel Endeks Degeri</CardTitle>
+                <CardDescription>BIST TLREF ENDEKSİ</CardDescription>
+                <CardTitle className="mt-1">Tarihsel Endeks Değeri</CardTitle>
               </div>
-              <Badge variant="outline">{history.length} GUN</Badge>
+              <Badge variant="outline">{history.length} GÜN</Badge>
             </div>
           </CardHeader>
           <CardContent>
@@ -144,8 +151,8 @@ export default function DashboardPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardDescription>GUNLUK ORAN DEGISIMI</CardDescription>
-                <CardTitle className="mt-1">Gunluk TLREF Orani (%)</CardTitle>
+                <CardDescription>GÜNLÜK ORAN DEĞİŞİMİ</CardDescription>
+                <CardTitle className="mt-1">Günlük TLREF Oranı (%)</CardTitle>
               </div>
               <Badge variant="outline">HESAPLANAN</Badge>
             </div>
@@ -161,8 +168,8 @@ export default function DashboardPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardDescription>SON VERILER</CardDescription>
-                <CardTitle className="mt-1">TLREF Endeks Kayitlari</CardTitle>
+                <CardDescription>SON VERİLER</CardDescription>
+                <CardTitle className="mt-1">TLREF Endeks Kayıtları</CardTitle>
               </div>
               <span className="text-label text-muted-foreground">{history.length} KAYIT</span>
             </div>
@@ -172,13 +179,13 @@ export default function DashboardPage() {
               <table className="w-full">
                 <thead className="sticky top-0 bg-card">
                   <tr className="border-b border-border">
-                    <th className="pb-3 text-left text-label text-muted-foreground font-normal">
+                    <th scope="col" className="pb-3 text-left text-label text-muted-foreground font-normal">
                       TARIH
                     </th>
-                    <th className="pb-3 text-right text-label text-muted-foreground font-normal">
+                    <th scope="col" className="pb-3 text-right text-label text-muted-foreground font-normal">
                       ENDEKS
                     </th>
-                    <th className="pb-3 text-right text-label text-muted-foreground font-normal">
+                    <th scope="col" className="pb-3 text-right text-label text-muted-foreground font-normal">
                       GUNLUK ORAN
                     </th>
                   </tr>

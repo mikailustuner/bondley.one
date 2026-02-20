@@ -197,21 +197,8 @@ export function UserMenu() {
               )}
               role="menuitem"
             >
-              <User className="h-4 w-4 text-muted-foreground transition-colors duration-150 group-hover:text-foreground" />
-              <span>Profil</span>
-            </Link>
-            <Link
-              href="/dashboard/settings"
-              onClick={() => setIsOpen(false)}
-              className={cn(
-                "flex items-center gap-3 px-4 py-2 text-sm text-foreground",
-                "hover:bg-secondary transition-colors duration-150 cursor-pointer",
-                "active:bg-secondary/80"
-              )}
-              role="menuitem"
-            >
               <Settings className="h-4 w-4 text-muted-foreground transition-colors duration-150 group-hover:text-foreground" />
-              <span>Ayarlar</span>
+              <span>Hesap ve Ayarlar</span>
             </Link>
           </div>
 

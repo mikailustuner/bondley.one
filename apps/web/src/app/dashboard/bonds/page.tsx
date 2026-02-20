@@ -19,6 +19,12 @@ const CURRENCY_COLORS: Record<string, string> = {
 };
 
 export default function BondsListPage() {
+  useEffect(() => {
+    document.title = "Tahviller — Bondley";
+    return () => {
+      document.title = "Bondley";
+    };
+  }, []);
   const [bonds, setBonds] = useState<BondListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<BondStats | null>(null);
@@ -31,7 +37,7 @@ export default function BondsListPage() {
   useEffect(() => {
     const token = getToken();
     if (!token) {
-      setError("Giris yapmaniz gerekiyor");
+      setError("Giriş yapmanız gerekiyor");
       setLoading(false);
       return;
     }
@@ -88,7 +94,7 @@ export default function BondsListPage() {
         <div>
           <h1 className="font-display text-display-md text-foreground">Tahviller</h1>
           <p className="text-data-sm text-muted-foreground mt-1">
-            BIST Borclanma Araclari — {formatDecimal(total, 0)} aktif kayit
+            BIST Borçlanma Araçları — {formatDecimal(total, 0)} aktif kayıt
           </p>
         </div>
       </div>
@@ -117,10 +123,10 @@ export default function BondsListPage() {
             <div className="text-label text-muted-foreground mb-2">ORT. VADE</div>
             <div className="font-mono-data text-stat text-foreground">
               {stats.avg_days_to_maturity != null
-                ? `${Math.round(stats.avg_days_to_maturity)} gun`
+                ? `${Math.round(stats.avg_days_to_maturity)} gün`
                 : "—"}
             </div>
-            <div className="text-label text-muted-foreground/60 mt-1">Kalan gun</div>
+            <div className="text-label text-muted-foreground/60 mt-1">Kalan gün</div>
           </div>
           <div className="bg-card p-5 grain">
             <div className="text-label text-muted-foreground mb-2">PARA BIRIMI</div>
@@ -140,7 +146,7 @@ export default function BondsListPage() {
             <div className="font-mono-data text-stat text-foreground">
               {Object.keys(stats.by_security_type).length}
             </div>
-            <div className="text-label text-muted-foreground/60 mt-1">Farkli tur</div>
+            <div className="text-label text-muted-foreground/60 mt-1">Farklı tür</div>
           </div>
         </div>
       )}
@@ -148,7 +154,7 @@ export default function BondsListPage() {
       <div className="flex flex-wrap gap-3 animate-fade-up-delay-1">
         <div className="flex-1 min-w-[200px]">
           <Input
-            placeholder="ISIN veya ihracciyla ara..."
+            placeholder="ISIN veya ihraççıyla ara..."
             className="font-mono-data"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -159,7 +165,7 @@ export default function BondsListPage() {
           value={currencyFilter}
           onChange={(e) => setCurrencyFilter(e.target.value)}
         >
-          <option value="">Tum Para Birimleri</option>
+          <option value="">Tüm Para Birimleri</option>
           {currencies.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
@@ -169,7 +175,7 @@ export default function BondsListPage() {
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
         >
-          <option value="">Tum MK Turleri</option>
+          <option value="">Tüm MK Türleri</option>
           {securityTypes.map((t) => (
             <option key={t} value={t}>
               {t.length > 40 ? t.substring(0, 40) + "…" : t}
@@ -199,28 +205,28 @@ export default function BondsListPage() {
               <table className="w-full">
                 <thead className="sticky top-0 bg-card z-10">
                   <tr className="border-b border-border">
-                    <th className="pb-3 text-left text-label text-muted-foreground font-normal">
+                    <th scope="col" className="pb-3 text-left text-label text-muted-foreground font-normal">
                       ISIN
                     </th>
-                    <th className="pb-3 text-left text-label text-muted-foreground font-normal">
+                    <th scope="col" className="pb-3 text-left text-label text-muted-foreground font-normal">
                       IHRACÇI
                     </th>
-                    <th className="pb-3 text-left text-label text-muted-foreground font-normal">
+                    <th scope="col" className="pb-3 text-left text-label text-muted-foreground font-normal">
                       TUR
                     </th>
-                    <th className="pb-3 text-left text-label text-muted-foreground font-normal">
+                    <th scope="col" className="pb-3 text-left text-label text-muted-foreground font-normal">
                       GETIRI TURU
                     </th>
-                    <th className="pb-3 text-center text-label text-muted-foreground font-normal">
+                    <th scope="col" className="pb-3 text-center text-label text-muted-foreground font-normal">
                       DOVIZ
                     </th>
-                    <th className="pb-3 text-right text-label text-muted-foreground font-normal">
+                    <th scope="col" className="pb-3 text-right text-label text-muted-foreground font-normal">
                       VADE
                     </th>
-                    <th className="pb-3 text-right text-label text-muted-foreground font-normal">
+                    <th scope="col" className="pb-3 text-right text-label text-muted-foreground font-normal">
                       SON FIYAT
                     </th>
-                    <th className="pb-3 text-right text-label text-muted-foreground font-normal">
+                    <th scope="col" className="pb-3 text-right text-label text-muted-foreground font-normal">
                       GETIRI %
                     </th>
                   </tr>
@@ -258,13 +264,13 @@ export default function BondsListPage() {
             <EmptyState
               title={
                 search || currencyFilter || typeFilter
-                  ? "Filtreyle eslesen tahvil yok"
-                  : "Henuz tahvil yok"
+                  ? "Filtreyle eşleşen tahvil yok"
+                  : "Henüz tahvil yok"
               }
               description={
                 search || currencyFilter || typeFilter
-                  ? "Arama veya filtreleri degistirerek tekrar deneyin."
-                  : "Admin panelden tahvil listesini guncelleyebilirsiniz."
+                  ? "Arama veya filtreleri değiştirerek tekrar deneyin."
+                  : "Admin panelden tahvil listesini güncelleyebilirsiniz."
               }
               icon={<Inbox className="h-7 w-7" />}
               action={
@@ -318,7 +324,7 @@ export default function BondsListPage() {
                       <span>
                         Vade:{" "}
                         {bond.days_to_maturity != null
-                          ? `${bond.days_to_maturity} gun`
+                          ? `${bond.days_to_maturity} gün`
                           : formatDate(bond.maturity_date)}
                       </span>
                       <span className="text-foreground font-mono-data">
@@ -335,28 +341,28 @@ export default function BondsListPage() {
               <table className="w-full">
                 <thead className="sticky top-0 bg-card z-10">
                   <tr className="border-b border-border">
-                    <th className="pb-3 text-left text-label text-muted-foreground font-normal">
+                    <th scope="col" className="pb-3 text-left text-label text-muted-foreground font-normal">
                       ISIN
                     </th>
-                    <th className="pb-3 text-left text-label text-muted-foreground font-normal">
+                    <th scope="col" className="pb-3 text-left text-label text-muted-foreground font-normal">
                       IHRACÇI
                     </th>
-                    <th className="pb-3 text-left text-label text-muted-foreground font-normal">
+                    <th scope="col" className="pb-3 text-left text-label text-muted-foreground font-normal">
                       TUR
                     </th>
-                    <th className="pb-3 text-left text-label text-muted-foreground font-normal">
+                    <th scope="col" className="pb-3 text-left text-label text-muted-foreground font-normal">
                       GETIRI TURU
                     </th>
-                    <th className="pb-3 text-center text-label text-muted-foreground font-normal">
+                    <th scope="col" className="pb-3 text-center text-label text-muted-foreground font-normal">
                       DOVIZ
                     </th>
-                    <th className="pb-3 text-right text-label text-muted-foreground font-normal">
+                    <th scope="col" className="pb-3 text-right text-label text-muted-foreground font-normal">
                       VADE
                     </th>
-                    <th className="pb-3 text-right text-label text-muted-foreground font-normal">
+                    <th scope="col" className="pb-3 text-right text-label text-muted-foreground font-normal">
                       SON FIYAT
                     </th>
-                    <th className="pb-3 text-right text-label text-muted-foreground font-normal">
+                    <th scope="col" className="pb-3 text-right text-label text-muted-foreground font-normal">
                       GETIRI %
                     </th>
                   </tr>

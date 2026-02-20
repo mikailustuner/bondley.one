@@ -115,7 +115,7 @@ export default function AdminMetricsPage() {
                 <thead>
                   <tr className="border-b border-border">
                     {["ISIN", "İhraççı", "Görüntülenme", "Benzersiz Kullanıcı"].map((h) => (
-                      <th key={h} className="pb-3 text-label text-muted-foreground font-normal text-left">
+                      <th key={h} scope="col" className="pb-3 text-label text-muted-foreground font-normal text-left">
                         {h}
                       </th>
                     ))}
@@ -152,7 +152,7 @@ export default function AdminMetricsPage() {
                 <thead>
                   <tr className="border-b border-border">
                     {["User ID", "Tahvil Görüntüleme", "API Çağrıları", "Hesaplamalar"].map((h) => (
-                      <th key={h} className="pb-3 text-label text-muted-foreground font-normal text-left">
+                      <th key={h} scope="col" className="pb-3 text-label text-muted-foreground font-normal text-left">
                         {h}
                       </th>
                     ))}

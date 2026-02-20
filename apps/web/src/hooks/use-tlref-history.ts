@@ -24,7 +24,7 @@ export function useTlrefHistory(opts?: { withStats?: boolean; withBondStats?: bo
   useEffect(() => {
     const token = getToken();
     if (!token) {
-      setError("Giris yapmaniz gerekiyor");
+      setError("Giriş yapmanız gerekiyor");
       setLoading(false);
       return;
     }

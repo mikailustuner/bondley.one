@@ -156,7 +156,7 @@ export default function AdminLogsPage() {
                   <thead>
                     <tr className="border-b border-border">
                       {["ID", "TARİH", "ACTION", "USER", "RESOURCE", "METHOD", "PATH", "STATUS"].map((h) => (
-                        <th key={h} className="pb-3 text-label text-muted-foreground font-normal text-left">
+                        <th key={h} scope="col" className="pb-3 text-label text-muted-foreground font-normal text-left">
                           {h}
                         </th>
                       ))}

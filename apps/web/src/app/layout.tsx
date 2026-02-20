@@ -22,11 +22,22 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Bondley — Turk Devlet Tahvil Analiz Platformu",
-  description: "TRT ve TRB kodlu Turk Devlet Tahvilleri icin degerleme, fiyat takibi ve analiz platformu",
+  title: "Bondley – Tahvil Değerleme ve Analiz Platformu",
+  description: "Tahvil değerleme, fiyat takibi ve analiz platformu. Piyasa verileri, endeks takibi ve kurumsal raporlama.",
   icons: {
     icon: "/logo.png",
     apple: "/logo.png",
+  },
+  openGraph: {
+    title: "Bondley – Tahvil Değerleme ve Analiz Platformu",
+    description: "Tahvil değerleme, fiyat takibi ve analiz platformu. Piyasa verileri, endeks takibi ve kurumsal raporlama.",
+    type: "website",
+    locale: "tr_TR",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Bondley – Tahvil Değerleme ve Analiz Platformu",
+    description: "Tahvil değerleme, fiyat takibi ve analiz platformu. Piyasa verileri, endeks takibi ve kurumsal raporlama.",
   },
 };
 
