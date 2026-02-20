@@ -134,6 +134,7 @@ services:
       start_period: 30s
     networks:
       - backend
+      - frontend
 
   celery-beat:
     build:
@@ -164,6 +165,7 @@ services:
       start_period: 30s
     networks:
       - backend
+      - frontend
 
   web:
     build:
