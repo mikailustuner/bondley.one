@@ -189,6 +189,12 @@ async def get_bond(
             clean_price_used = float(md_row[0])
         else:
             clean_price_used = float(stored_calc.dirty_price - stored_calc.accrued_interest)
+        # Oran degisimi (gunluk TLREF %) calculations'da saklanmaz; her zaman tlref_rates'tan alinir
+        rate_change_pct = None
+        metrics_svc = BondMetricsService(db)
+        latest_daily = await metrics_svc.get_latest_daily_rate()
+        if latest_daily is not None:
+            rate_change_pct = float(latest_daily * 100)
         base.calculated_metrics = BondCalculatedMetrics(
             annual_reference_rate=None,
             annual_coupon_rate=None,
@@ -196,7 +202,7 @@ async def get_bond(
             accrued_interest=float(stored_calc.accrued_interest),
             dirty_price=float(stored_calc.dirty_price),
             clean_price_used=clean_price_used,
-            rate_change_today_pct=None,
+            rate_change_today_pct=rate_change_pct,
             yield_to_maturity=float(stored_calc.yield_to_maturity),
             spread=float(stored_calc.spread) if stored_calc.spread is not None else None,
             modified_duration=float(stored_calc.modified_duration) if stored_calc.modified_duration is not None else None,
