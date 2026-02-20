@@ -55,7 +55,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
+        <div className="hidden md:block">
           <h1 className="font-display text-display-md text-foreground">Dashboard</h1>
           <p className="text-data-sm text-muted-foreground mt-1">
             BIST TLREF Endeks & Borçlanma Araçları Terminali
