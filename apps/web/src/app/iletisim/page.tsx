@@ -32,10 +32,10 @@ export default function IletisimPage() {
               <p className="text-sm text-foreground">
                 <strong>E-posta:</strong>{" "}
                 <a
-                  href="mailto:destek@bondley.com"
+                  href="mailto:support@bondley.io"
                   className="text-primary hover:text-primary/80 transition-colors"
                 >
-                  destek@bondley.com
+                  support@bondley.io
                 </a>
               </p>
             </div>
