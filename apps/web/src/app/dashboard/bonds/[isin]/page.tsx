@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
-import { FileQuestion, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { FileQuestion, AlertCircle, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { api, BondDetail } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
@@ -56,6 +56,12 @@ export default function BondDetailPage({
     shock_bp: number;
   } | null>(null);
   const [scenarioLoading, setScenarioLoading] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteToggling, setFavoriteToggling] = useState(false);
+
+  useEffect(() => {
+    if (bond) setIsFavorite(!!bond.is_favorite);
+  }, [bond]);
 
   useEffect(() => {
     if (!isin) {
@@ -259,6 +265,36 @@ export default function BondDetailPage({
           <Badge variant="default">{bond.currency}</Badge>
           {!bond.is_active && <Badge variant="destructive">PASIF</Badge>}
           <div className="ml-auto flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1"
+              onClick={() => {
+                const token = getToken();
+                if (!token || favoriteToggling) return;
+                setFavoriteToggling(true);
+                if (isFavorite) {
+                  api.bonds
+                    .removeFavorite(token, bond.isin_code)
+                    .then(() => setIsFavorite(false))
+                    .catch(() => {})
+                    .finally(() => setFavoriteToggling(false));
+                } else {
+                  api.bonds
+                    .addFavorite(token, bond.isin_code)
+                    .then(() => setIsFavorite(true))
+                    .catch(() => {})
+                    .finally(() => setFavoriteToggling(false));
+                }
+              }}
+              disabled={favoriteToggling}
+              aria-label={isFavorite ? "Favorilerden çıkar" : "Favorilere ekle"}
+            >
+              <Star
+                className={`h-4 w-4 ${isFavorite ? "fill-primary text-primary" : "text-muted-foreground"}`}
+              />
+              {isFavorite ? "Favorilerden çıkar" : "Favorilere ekle"}
+            </Button>
             {prevIsin ? (
               <Link href={`/dashboard/bonds/${prevIsin}`}>
                 <Button variant="outline" size="sm" className="gap-1">

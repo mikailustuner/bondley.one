@@ -182,7 +182,7 @@ class BondMetricsService:
             )
         )
         row = result.scalar_one_or_none()
-        return row[0] if row else None
+        return row if row is not None else None
 
     async def compute_metrics(
         self,

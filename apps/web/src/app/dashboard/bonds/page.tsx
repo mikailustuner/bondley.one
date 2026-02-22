@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
-import { AlertCircle, Inbox } from "lucide-react";
+import { AlertCircle, Inbox, Star } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { api, BondListItem, BondStats } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
@@ -33,6 +34,8 @@ export default function BondsListPage() {
   const [search, setSearch] = useState("");
   const [currencyFilter, setCurrencyFilter] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<string>("");
+  const [favoriteIsins, setFavoriteIsins] = useState<Set<string>>(new Set());
+  const [favoriteToggling, setFavoriteToggling] = useState<string | null>(null);
 
   useEffect(() => {
     const token = getToken();
@@ -45,15 +48,39 @@ export default function BondsListPage() {
     Promise.all([
       api.bonds.list(token, { active_only: true, limit: 3000 }),
       api.bonds.stats(token),
+      api.bonds.favoritesList(token),
     ])
-      .then(([listRes, statsRes]) => {
+      .then(([listRes, statsRes, favRes]) => {
         setBonds(listRes.items || []);
         setTotal(listRes.total ?? 0);
         setStats(statsRes);
+        setFavoriteIsins(new Set((favRes.items || []).map((b) => b.isin_code)));
       })
       .catch((e) => setError(e?.message || "Veri yuklenemedi"))
       .finally(() => setLoading(false));
   }, []);
+
+  const toggleFavorite = (e: React.MouseEvent, isinCode: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const token = getToken();
+    if (!token || favoriteToggling) return;
+    const isFavorite = favoriteIsins.has(isinCode);
+    setFavoriteToggling(isinCode);
+    if (isFavorite) {
+      api.bonds
+        .removeFavorite(token, isinCode)
+        .then(() => setFavoriteIsins((prev) => { const s = new Set(prev); s.delete(isinCode); return s; }))
+        .catch(() => {})
+        .finally(() => setFavoriteToggling(null));
+    } else {
+      api.bonds
+        .addFavorite(token, isinCode)
+        .then(() => setFavoriteIsins((prev) => new Set(prev).add(isinCode)))
+        .catch(() => {})
+        .finally(() => setFavoriteToggling(null));
+    }
+  };
 
   const filtered = useMemo(() => {
     let result = bonds;
@@ -205,6 +232,7 @@ export default function BondsListPage() {
               <table className="w-full">
                 <thead className="sticky top-0 bg-card z-10">
                   <tr className="border-b border-border">
+                    <th scope="col" className="w-10 pb-3" />
                     <th scope="col" className="pb-3 text-left text-label text-muted-foreground font-normal">
                       ISIN
                     </th>
@@ -237,6 +265,7 @@ export default function BondsListPage() {
                       key={i}
                       className="border-b border-border/30 last:border-0"
                     >
+                      <td className="py-3 w-10 text-center"><Skeleton className="h-5 w-5 mx-auto" /></td>
                       <td className="py-3"><Skeleton className="h-5 w-28" /></td>
                       <td className="py-3"><Skeleton className="h-5 w-40" /></td>
                       <td className="py-3"><Skeleton className="h-5 w-24" /></td>
@@ -310,12 +339,26 @@ export default function BondsListPage() {
                       <span className="font-mono-data text-data-sm font-medium text-primary">
                         {bond.isin_code}
                       </span>
-                      <Badge
-                        variant={(CURRENCY_COLORS[bond.currency] as any) || "outline"}
-                        className="shrink-0"
-                      >
-                        {bond.currency}
-                      </Badge>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0"
+                          onClick={(e) => toggleFavorite(e, bond.isin_code)}
+                          disabled={favoriteToggling === bond.isin_code}
+                          aria-label={favoriteIsins.has(bond.isin_code) ? "Favorilerden çıkar" : "Favorilere ekle"}
+                        >
+                          <Star
+                            className={`h-4 w-4 ${favoriteIsins.has(bond.isin_code) ? "fill-primary text-primary" : "text-muted-foreground"}`}
+                          />
+                        </Button>
+                        <Badge
+                          variant={(CURRENCY_COLORS[bond.currency] as any) || "outline"}
+                          className="shrink-0"
+                        >
+                          {bond.currency}
+                        </Badge>
+                      </div>
                     </div>
                     <p className="text-data-sm text-muted-foreground truncate mt-1">
                       {bond.issuer || "—"}
@@ -341,6 +384,9 @@ export default function BondsListPage() {
               <table className="w-full">
                 <thead className="sticky top-0 bg-card z-10">
                   <tr className="border-b border-border">
+                    <th scope="col" className="w-10 pb-3 text-center text-label text-muted-foreground font-normal">
+                      <span className="sr-only">Favori</span>
+                    </th>
                     <th scope="col" className="pb-3 text-left text-label text-muted-foreground font-normal">
                       ISIN
                     </th>
@@ -373,6 +419,20 @@ export default function BondsListPage() {
                       key={bond.isin_code}
                       className="border-b border-border/30 last:border-0 hover:bg-secondary/30 transition-colors group"
                     >
+                      <td className="py-3 text-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => toggleFavorite(e, bond.isin_code)}
+                          disabled={favoriteToggling === bond.isin_code}
+                          aria-label={favoriteIsins.has(bond.isin_code) ? "Favorilerden çıkar" : "Favorilere ekle"}
+                        >
+                          <Star
+                            className={`h-4 w-4 ${favoriteIsins.has(bond.isin_code) ? "fill-primary text-primary" : "text-muted-foreground"}`}
+                          />
+                        </Button>
+                      </td>
                       <td className="py-3">
                         <Link
                           href={`/dashboard/bonds/${bond.isin_code}`}

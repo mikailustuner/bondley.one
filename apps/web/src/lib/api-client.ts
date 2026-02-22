@@ -210,6 +210,7 @@ export interface BondDetail {
   created_at: string;
   updated_at: string;
   calculated_metrics?: BondCalculatedMetrics | null;
+  is_favorite?: boolean;
 }
 
 export interface BondListResponse {
@@ -483,6 +484,19 @@ export const api = {
       }>(`/bonds/${encodeURIComponent(isin)}/scenario?${query}`, { token });
     },
     stats: (token: string) => apiFetch<BondStats>("/bonds/stats", { token }),
+    favoritesList: (token: string) =>
+      apiFetch<{ items: BondListItem[] }>("/bonds/favorites", { token }),
+    addFavorite: (token: string, isinCode: string) =>
+      apiFetch<{ status: string }>("/bonds/favorites", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ isin_code: isinCode }),
+      }),
+    removeFavorite: (token: string, isinCode: string) =>
+      apiFetch<void>(`/bonds/favorites/${encodeURIComponent(isinCode)}`, {
+        method: "DELETE",
+        token,
+      }),
     sync: (token: string) =>
       apiFetch<{ status: string; bonds_upserted?: number; bonds_deactivated?: number }>(
         "/bonds/sync",

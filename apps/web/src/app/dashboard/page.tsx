@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,15 +8,29 @@ import { TlrefIndexChart } from "@/components/charts/tlref-index-chart";
 import { TlrefRateChart } from "@/components/charts/tlref-rate-chart";
 import { useTlrefHistory } from "@/hooks/use-tlref-history";
 import { useUsageSummary } from "@/hooks/use-usage-summary";
+import { api, BondListItem } from "@/lib/api-client";
+import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
 
 export default function DashboardPage() {
+  const [favoriteBonds, setFavoriteBonds] = useState<BondListItem[]>([]);
+
   useEffect(() => {
     document.title = "Dashboard — Bondley";
     return () => {
       document.title = "Bondley";
     };
   }, []);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+    api.bonds
+      .favoritesList(token)
+      .then((res) => setFavoriteBonds(res.items || []))
+      .catch(() => setFavoriteBonds([]));
+  }, []);
+
   const { history, indexData, rateData, stats, bondStats, loading, error } = useTlrefHistory();
   const { summary: usageSummary } = useUsageSummary();
 
@@ -138,6 +152,30 @@ export default function DashboardPage() {
             ) : (
               <p className="text-data-sm text-muted-foreground">Bu dönemde henüz tahvil incelemesi yok.</p>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {favoriteBonds.length > 0 && (
+        <Card className="animate-fade-up-delay-1">
+          <CardHeader>
+            <CardDescription>FAVORİ TAHVİLLERİM</CardDescription>
+            <CardTitle className="mt-1">Favori tahvillerinize hızlı erişim</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-wrap gap-2">
+              {favoriteBonds.map((b) => (
+                <li key={b.isin_code}>
+                  <Link
+                    href={`/dashboard/bonds/${encodeURIComponent(b.isin_code)}`}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-secondary/50 px-2.5 py-1 text-data-sm text-foreground hover:bg-secondary transition-colors"
+                  >
+                    <span className="font-mono">{b.isin_code}</span>
+                    {b.issuer && <span className="text-muted-foreground truncate max-w-[120px]">{b.issuer}</span>}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </CardContent>
         </Card>
       )}

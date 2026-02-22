@@ -284,6 +284,24 @@ async def _migrate_new_tables(conn):
         await conn.execute(text("CREATE INDEX idx_user_alerts_active ON user_alerts(is_active)"))
         logger.info("[startup] user_alerts tablosu olusturuldu.")
 
+    # user_favorite_bonds table
+    table_check = await conn.execute(text(
+        "SELECT 1 FROM information_schema.tables "
+        "WHERE table_schema = 'public' AND table_name = 'user_favorite_bonds'"
+    ))
+    if table_check.scalar_one_or_none() is None:
+        await conn.execute(text("""
+            CREATE TABLE user_favorite_bonds (
+                id SERIAL PRIMARY KEY,
+                user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                bond_id INT NOT NULL REFERENCES bonds(id) ON DELETE CASCADE,
+                UNIQUE(user_id, bond_id)
+            )
+        """))
+        await conn.execute(text("CREATE INDEX idx_user_favorite_bonds_user ON user_favorite_bonds(user_id)"))
+        await conn.execute(text("CREATE INDEX idx_user_favorite_bonds_bond ON user_favorite_bonds(bond_id)"))
+        logger.info("[startup] user_favorite_bonds tablosu olusturuldu.")
+
 
 async def ensure_admin_user():
     """Create initial admin user only if none exists. Never overwrite existing admin password or role."""

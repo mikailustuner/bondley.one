@@ -68,6 +68,15 @@ class BondListResponse(BaseModel):
     total: int
 
 
+class FavoriteListResponse(BaseModel):
+    """Kullanıcının favori tahvil listesi."""
+    items: list[BondListItem]
+
+
+class AddFavoriteRequest(BaseModel):
+    isin_code: str
+
+
 class BondCalculatedMetrics(BaseModel):
     """Tahvil detayinda gosterilen hesaplanan metrikler (TLREF, kirli fiyat, YTM, vb.)."""
 
@@ -94,6 +103,7 @@ class BondDetailWithMetrics(BondResponse):
     """Tahvil detay + hesaplanan metrikler (GET /bonds/{isin})."""
 
     calculated_metrics: BondCalculatedMetrics | None = None
+    is_favorite: bool = False
 
 
 class BondScenarioResponse(BaseModel):

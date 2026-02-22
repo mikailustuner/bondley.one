@@ -12,6 +12,7 @@ from app.models.bond import Bond
 from app.models.calculation import Calculation
 from app.models.market_data import MarketData
 from app.models.user import User
+from app.models.user_favorite_bond import UserFavoriteBond
 from app.schemas.bond import (
     BondResponse,
     BondListResponse,
@@ -20,6 +21,8 @@ from app.schemas.bond import (
     BondDetailWithMetrics,
     BondCalculatedMetrics,
     BondScenarioResponse,
+    FavoriteListResponse,
+    AddFavoriteRequest,
 )
 from app.api.deps import get_current_user, get_admin_user
 from app.services.bond_fetcher import BondFetcher
@@ -125,6 +128,71 @@ async def get_bond_stats(
         by_yield_type=by_yield_type,
         avg_days_to_maturity=round(float(avg_dtm), 1) if avg_dtm else None,
     )
+
+
+@router.get("/favorites", response_model=FavoriteListResponse)
+async def list_favorites(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Kullanıcının favori tahvil listesi (BondListItem[])."""
+    q = (
+        select(Bond)
+        .join(UserFavoriteBond, UserFavoriteBond.bond_id == Bond.id)
+        .where(UserFavoriteBond.user_id == user.id)
+        .order_by(Bond.maturity_date.asc().nullslast())
+    )
+    result = await db.execute(q)
+    bonds = result.unique().scalars().all()
+    return FavoriteListResponse(items=[BondListItem.model_validate(b) for b in bonds])
+
+
+@router.post("/favorites", status_code=status.HTTP_200_OK)
+async def add_favorite(
+    body: AddFavoriteRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Favorilere tahvil ekler. Zaten ekliyse 200 döner."""
+    result = await db.execute(select(Bond).where(Bond.isin_code == body.isin_code))
+    bond = result.scalar_one_or_none()
+    if not bond:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tahvil bulunamadi")
+    existing = await db.execute(
+        select(UserFavoriteBond).where(
+            UserFavoriteBond.user_id == user.id,
+            UserFavoriteBond.bond_id == bond.id,
+        )
+    )
+    if existing.scalar_one_or_none() is not None:
+        return {"status": "already_favorite"}
+    fav = UserFavoriteBond(user_id=user.id, bond_id=bond.id)
+    db.add(fav)
+    await db.commit()
+    return {"status": "added"}
+
+
+@router.delete("/favorites/{isin_code}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_favorite(
+    isin_code: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Favorilerden tahvil çıkarır."""
+    result = await db.execute(select(Bond).where(Bond.isin_code == isin_code))
+    bond = result.scalar_one_or_none()
+    if not bond:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tahvil bulunamadi")
+    del_result = await db.execute(
+        select(UserFavoriteBond).where(
+            UserFavoriteBond.user_id == user.id,
+            UserFavoriteBond.bond_id == bond.id,
+        )
+    )
+    fav = del_result.scalar_one_or_none()
+    if fav is not None:
+        await db.delete(fav)
+        await db.commit()
 
 
 @router.get("/{isin_code}/scenario", response_model=BondScenarioResponse)
@@ -277,6 +345,14 @@ async def get_bond(
         except Exception as e:
             logger.warning(f"Metrics calculation failed for {isin_code} on {calc_date}: {e}")
             base.calculated_metrics = None
+    # Favori mi?
+    fav_check = await db.execute(
+        select(UserFavoriteBond).where(
+            UserFavoriteBond.user_id == user.id,
+            UserFavoriteBond.bond_id == bond_id,
+        )
+    )
+    base.is_favorite = fav_check.scalar_one_or_none() is not None
     return base
 
 
