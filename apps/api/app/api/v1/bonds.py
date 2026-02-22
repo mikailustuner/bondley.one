@@ -333,6 +333,13 @@ async def get_bond(
             return_to_date_pct=None,
             return_to_date_used_fallback_price=False,
         )
+        # Bugüne kadar getiri: DB'de saklanmaz, anlık hesapla ve ekle
+        rtd_pct, rtd_fallback = metrics_svc.compute_return_to_date_only(
+            bond, calc_date, clean_price_used
+        )
+        if rtd_pct is not None:
+            base.calculated_metrics.return_to_date_pct = rtd_pct
+            base.calculated_metrics.return_to_date_used_fallback_price = rtd_fallback
     else:
         try:
             metrics_svc = BondMetricsService(db)

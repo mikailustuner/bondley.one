@@ -55,6 +55,11 @@ export default function BondDetailPage({
     price_change_pct: number;
     shock_bp: number;
   } | null>(null);
+  const [baseScenarioMetrics, setBaseScenarioMetrics] = useState<{
+    current_ytm: number;
+    current_dirty_price: number;
+    modified_duration: number | null;
+  } | null>(null);
   const [scenarioLoading, setScenarioLoading] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteToggling, setFavoriteToggling] = useState(false);
@@ -118,6 +123,7 @@ export default function BondDetailPage({
   useEffect(() => {
     if (!bond?.calculated_metrics || !isin) {
       setScenarioResult(null);
+      setBaseScenarioMetrics(null);
       return;
     }
     const token = getToken();
@@ -126,14 +132,19 @@ export default function BondDetailPage({
       setScenarioLoading(true);
       api.bonds
         .scenario(token, isin, { settlement_date: selectedDate, tlref_shock_bp: scenarioShockBp })
-        .then((r) =>
+        .then((r) => {
           setScenarioResult({
             shock_bp: r.shock_bp,
             new_ytm_approx: r.new_ytm_approx,
             new_dirty_price_approx: r.new_dirty_price_approx,
             price_change_pct: r.price_change_pct,
-          })
-        )
+          });
+          setBaseScenarioMetrics({
+            current_ytm: r.current_ytm,
+            current_dirty_price: r.current_dirty_price,
+            modified_duration: r.modified_duration ?? null,
+          });
+        })
         .catch(() => setScenarioResult(null))
         .finally(() => setScenarioLoading(false));
     }, 300);
@@ -532,6 +543,42 @@ export default function BondDetailPage({
                 onChange={(e) => setScenarioShockBp(Number(e.target.value))}
                 className="w-full h-2 rounded-lg appearance-none bg-muted accent-primary"
               />
+              {baseScenarioMetrics && (
+                <p className="text-data-sm text-muted-foreground mt-2 py-1.5 px-2 rounded-md bg-muted/50 border border-border/50">
+                  <span className="font-medium text-foreground">Anlık önizleme:</span>{" "}
+                  Tahmini kirli fiyat{" "}
+                  <span className="font-mono-data text-foreground">
+                    {formatDecimal(
+                      baseScenarioMetrics.current_dirty_price *
+                        (1 -
+                          (baseScenarioMetrics.modified_duration ?? 0) *
+                            (scenarioShockBp / 10000)),
+                      4,
+                      4
+                    )}
+                  </span>
+                  , değişim{" "}
+                  <span
+                    className={
+                      (baseScenarioMetrics.modified_duration ?? 0) * scenarioShockBp <= 0
+                        ? "text-negative"
+                        : "text-positive"
+                    }
+                  >
+                    {formatPercent(
+                      -((baseScenarioMetrics.modified_duration ?? 0) * (scenarioShockBp / 10000)) * 100
+                    )}
+                  </span>
+                  {" · "}
+                  YTM{" "}
+                  <span className="font-mono-data text-foreground">
+                    {formatPercentFromDecimal(
+                      baseScenarioMetrics.current_ytm + scenarioShockBp / 10000,
+                      4
+                    )}
+                  </span>
+                </p>
+              )}
               <div className="flex justify-between text-xs text-muted-foreground mt-1">
                 <span>-100 bp</span>
                 <span>0</span>
