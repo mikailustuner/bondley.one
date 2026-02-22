@@ -266,13 +266,13 @@ export default function BondDetailPage({
               </Link>
             </li>
             <li className="text-muted-foreground/40" aria-hidden>/</li>
-            <li aria-current="page" className="font-mono-data text-foreground">
+            <li aria-current="page" className="font-bond-nums text-foreground">
               {bond.isin_code}
             </li>
           </ol>
         </nav>
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="font-mono-data text-display-md text-foreground">{bond.isin_code}</h1>
+          <h1 className="font-bond-nums text-display-md text-foreground">{bond.isin_code}</h1>
           <Badge variant="default">{bond.currency}</Badge>
           {!bond.is_active && <Badge variant="destructive">PASIF</Badge>}
           <div className="ml-auto flex items-center gap-1">
@@ -351,7 +351,7 @@ export default function BondDetailPage({
             value={selectedDate}
             max={todayISO()}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="rounded-md border border-border bg-card px-3 py-2 font-mono-data text-data-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            className="rounded-md border border-border bg-card px-3 py-2 font-bond-nums text-data-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
           />
           <div className="flex flex-wrap gap-1">
             <Button
@@ -411,19 +411,19 @@ export default function BondDetailPage({
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-lg border border-border/50 bg-card p-4">
                 <div className="text-label text-muted-foreground mb-1">Kirli Fiyat</div>
-                <div className="font-mono-data text-stat text-primary">
+                <div className="font-bond-nums text-stat text-primary">
                   {formatDecimal(bond.calculated_metrics.dirty_price, 8, 8)}
                 </div>
               </div>
               <div className="rounded-lg border border-border/50 bg-card p-4">
                 <div className="text-label text-muted-foreground mb-1">Birikmis Faiz</div>
-                <div className="font-mono-data text-stat">
+                <div className="font-bond-nums text-stat">
                   {formatDecimal(bond.calculated_metrics.accrued_interest, 8, 8)}
                 </div>
               </div>
               <div className="rounded-lg border border-border/50 bg-card p-4">
                 <div className="text-label text-muted-foreground mb-1">Oran Degisimi (Gunluk TLREF %)</div>
-                <div className="font-mono-data text-stat">
+                <div className="font-bond-nums text-stat">
                   {bond.calculated_metrics.rate_change_today_pct != null
                     ? formatPercent(bond.calculated_metrics.rate_change_today_pct)
                     : "—"}
@@ -431,12 +431,12 @@ export default function BondDetailPage({
               </div>
               <div className="rounded-lg border border-border/50 bg-card p-4">
                 <div className="text-label text-muted-foreground mb-1">Temiz Fiyat (Kullanilan)</div>
-                <div className="font-mono-data text-stat">{formatDecimal(bond.calculated_metrics.clean_price_used, 8, 8)}</div>
+                <div className="font-bond-nums text-stat">{formatDecimal(bond.calculated_metrics.clean_price_used, 8, 8)}</div>
               </div>
               {bond.calculated_metrics.annual_reference_rate != null && (
                 <div className="rounded-lg border border-border/50 bg-card p-4">
                   <div className="text-label text-muted-foreground mb-1">Yillik Gosterge Faiz Orani</div>
-                  <div className="font-mono-data text-stat">
+                  <div className="font-bond-nums text-stat">
                     {formatPercentFromDecimal(bond.calculated_metrics.annual_reference_rate, 4)}
                   </div>
                 </div>
@@ -444,7 +444,7 @@ export default function BondDetailPage({
               {bond.calculated_metrics.annual_coupon_rate != null && (
                 <div className="rounded-lg border border-border/50 bg-card p-4">
                   <div className="text-label text-muted-foreground mb-1">Yillik Kupon Faiz Orani</div>
-                  <div className="font-mono-data text-stat">
+                  <div className="font-bond-nums text-stat">
                     {formatPercentFromDecimal(bond.calculated_metrics.annual_coupon_rate, 4)}
                   </div>
                 </div>
@@ -452,7 +452,7 @@ export default function BondDetailPage({
               {bond.calculated_metrics.periodic_coupon_rate != null && (
                 <div className="rounded-lg border border-border/50 bg-card p-4">
                   <div className="text-label text-muted-foreground mb-1">Donemsel Kupon Faiz Orani</div>
-                  <div className="font-mono-data text-stat">
+                  <div className="font-bond-nums text-stat">
                     {formatPercentFromDecimal(bond.calculated_metrics.periodic_coupon_rate, 4)}
                   </div>
                 </div>
@@ -460,7 +460,7 @@ export default function BondDetailPage({
               {bond.calculated_metrics.yield_to_maturity != null && (
                 <div className="rounded-lg border border-border/50 bg-card p-4">
                   <div className="text-label text-muted-foreground mb-1">Vadeye Kadar Getiri (YTM)</div>
-                  <div className="font-mono-data text-stat">
+                  <div className="font-bond-nums text-stat">
                     {formatPercentFromDecimal(bond.calculated_metrics.yield_to_maturity, 4)}
                   </div>
                 </div>
@@ -468,7 +468,7 @@ export default function BondDetailPage({
               {bond.calculated_metrics.return_to_date_pct != null && (
                 <div className="rounded-lg border border-border/50 bg-card p-4">
                   <div className="text-label text-muted-foreground mb-1">Bugüne Kadar Getiri</div>
-                  <div className="font-mono-data text-stat">
+                  <div className="font-bond-nums text-stat">
                     {formatPercent(bond.calculated_metrics.return_to_date_pct)}
                   </div>
                   {bond.calculated_metrics.return_to_date_used_fallback_price && (
@@ -481,7 +481,7 @@ export default function BondDetailPage({
               {bond.calculated_metrics.spread != null && (
                 <div className="rounded-lg border border-border/50 bg-card p-4">
                   <div className="text-label text-muted-foreground mb-1">Spread</div>
-                  <div className="font-mono-data text-stat">
+                  <div className="font-bond-nums text-stat">
                     {formatPercentFromDecimal(bond.calculated_metrics.spread, 4)}
                   </div>
                 </div>
@@ -489,7 +489,7 @@ export default function BondDetailPage({
               {bond.calculated_metrics.modified_duration != null && (
                 <div className="rounded-lg border border-border/50 bg-card p-4">
                   <div className="text-label text-muted-foreground mb-1">Modifiye Durasyon</div>
-                  <div className="font-mono-data text-stat">
+                  <div className="font-bond-nums text-stat">
                     {formatDecimal(bond.calculated_metrics.modified_duration, 4)}
                   </div>
                 </div>
@@ -497,7 +497,7 @@ export default function BondDetailPage({
               {bond.calculated_metrics.macaulay_duration != null && (
                 <div className="rounded-lg border border-border/50 bg-card p-4">
                   <div className="text-label text-muted-foreground mb-1">Macaulay Durasyon</div>
-                  <div className="font-mono-data text-stat">
+                  <div className="font-bond-nums text-stat">
                     {formatDecimal(bond.calculated_metrics.macaulay_duration, 4)}
                   </div>
                 </div>
@@ -505,7 +505,7 @@ export default function BondDetailPage({
               {bond.calculated_metrics.convexity != null && (
                 <div className="rounded-lg border border-border/50 bg-card p-4">
                   <div className="text-label text-muted-foreground mb-1">Konveksite</div>
-                  <div className="font-mono-data text-stat">
+                  <div className="font-bond-nums text-stat">
                     {formatDecimal(bond.calculated_metrics.convexity, 4)}
                   </div>
                 </div>
@@ -513,7 +513,7 @@ export default function BondDetailPage({
               {bond.calculated_metrics.coupon_payment_amount != null && (
                 <div className="rounded-lg border border-border/50 bg-card p-4">
                   <div className="text-label text-muted-foreground mb-1">Kupon Odeme Tutari</div>
-                  <div className="font-mono-data text-stat">
+                  <div className="font-bond-nums text-stat">
                     {formatDecimal(bond.calculated_metrics.coupon_payment_amount, 4)}
                   </div>
                 </div>
@@ -547,7 +547,7 @@ export default function BondDetailPage({
                 <p className="text-data-sm text-muted-foreground mt-2 py-1.5 px-2 rounded-md bg-muted/50 border border-border/50">
                   <span className="font-medium text-foreground">Anlık önizleme:</span>{" "}
                   Tahmini kirli fiyat{" "}
-                  <span className="font-mono-data text-foreground">
+                  <span className="font-bond-nums text-foreground">
                     {formatDecimal(
                       baseScenarioMetrics.current_dirty_price *
                         (1 -
@@ -571,7 +571,7 @@ export default function BondDetailPage({
                   </span>
                   {" · "}
                   YTM{" "}
-                  <span className="font-mono-data text-foreground">
+                  <span className="font-bond-nums text-foreground">
                     {formatPercentFromDecimal(
                       baseScenarioMetrics.current_ytm + scenarioShockBp / 10000,
                       4
@@ -644,7 +644,7 @@ export default function BondDetailPage({
           >
             <div className="text-label text-muted-foreground mb-2">{m.label}</div>
             <div
-              className={`font-mono-data text-stat ${m.highlight ? "text-primary" : "text-foreground"}`}
+              className={`font-bond-nums text-stat ${m.highlight ? "text-primary" : "text-foreground"}`}
             >
               {m.value}
             </div>
@@ -666,7 +666,7 @@ export default function BondDetailPage({
                   className="flex justify-between items-center py-2.5 border-b border-border/30 last:border-0"
                 >
                   <span className="text-data-sm text-muted-foreground">{label}</span>
-                  <span className="font-mono-data text-data-sm text-foreground text-right max-w-[60%]">
+                  <span className="font-bond-nums text-data-sm text-foreground text-right max-w-[60%]">
                     {value ?? "—"}
                   </span>
                 </div>
@@ -688,7 +688,7 @@ export default function BondDetailPage({
                   className="flex justify-between items-center py-2.5 border-b border-border/30 last:border-0"
                 >
                   <span className="text-data-sm text-muted-foreground">{label}</span>
-                  <span className="font-mono-data text-data-sm text-foreground">{value}</span>
+                  <span className="font-bond-nums text-data-sm text-foreground">{value}</span>
                 </div>
               ))}
             </div>
@@ -710,7 +710,7 @@ export default function BondDetailPage({
                   className="flex justify-between items-center py-2.5 border-b border-border/30 last:border-0"
                 >
                   <span className="text-data-sm text-muted-foreground">{label}</span>
-                  <span className="font-mono-data text-data-sm text-foreground">{value}</span>
+                  <span className="font-bond-nums text-data-sm text-foreground">{value}</span>
                 </div>
               ))}
             </div>
@@ -730,7 +730,7 @@ export default function BondDetailPage({
                   className="flex justify-between items-center py-2.5 border-b border-border/30 last:border-0"
                 >
                   <span className="text-data-sm text-muted-foreground">{label}</span>
-                  <span className="font-mono-data text-data-sm text-foreground text-right max-w-[60%]">
+                  <span className="font-bond-nums text-data-sm text-foreground text-right max-w-[60%]">
                     {value ?? "—"}
                   </span>
                 </div>
