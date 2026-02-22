@@ -475,7 +475,14 @@ export default function BondDetailPage({
               )}
               {bond.calculated_metrics.return_to_date_pct != null && (
                 <div className="rounded-lg border border-border/50 bg-card p-4">
-                  <div className="text-label text-muted-foreground mb-1">Bugüne Kadar Getiri</div>
+                  <div className="text-label text-muted-foreground mb-1">
+                    Başlangıçtan seçilen tarihe getiri
+                    {selectedDate && (
+                      <span className="block font-normal text-muted-foreground/80 mt-0.5">
+                        İlk ihraç → {formatDate(selectedDate)}
+                      </span>
+                    )}
+                  </div>
                   <div className="font-bond-nums text-stat">
                     {formatPercent(bond.calculated_metrics.return_to_date_pct)}
                   </div>
