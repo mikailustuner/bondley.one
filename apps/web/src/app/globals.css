@@ -131,9 +131,9 @@
     letter-spacing: -0.02em;
   }
 
-  /* Tahvil detay sayfasındaki sayılar için daha net, okunaklı font (IBM Plex Mono) */
+  /* Tahvil detay sayfasındaki sayılar için daha net font (IBM Plex Mono) */
   .font-bond-nums {
-    font-family: var(--font-bond-nums), ui-monospace, monospace;
+    font-family: var(--font-bond-nums, "IBM Plex Mono"), "IBM Plex Mono", ui-monospace, monospace !important;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.02em;
     font-feature-settings: "tnum";

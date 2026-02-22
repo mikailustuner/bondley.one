@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { IBM_Plex_Mono } from "next/font/google";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
@@ -10,6 +11,13 @@ import { FileQuestion, AlertCircle, ChevronLeft, ChevronRight, Star } from "luci
 import { api, BondDetail } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
+
+const bondNumsFont = IBM_Plex_Mono({
+  subsets: ["latin"],
+  variable: "--font-bond-nums",
+  weight: ["400", "500", "600"],
+  display: "swap",
+});
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -253,7 +261,7 @@ export default function BondDetailPage({
   ];
 
   return (
-    <div className="space-y-6">
+    <div className={`${bondNumsFont.variable} space-y-6`}>
       <div className="animate-fade-up">
         <nav aria-label="Breadcrumb" className="mb-2">
           <ol className="flex flex-wrap items-center gap-2 text-data-sm">
