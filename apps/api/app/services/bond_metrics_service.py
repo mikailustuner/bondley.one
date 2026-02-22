@@ -109,6 +109,19 @@ def periodic_coupon_rate(annual_coupon: Decimal | None, period_days: int) -> Dec
     )
 
 
+def _coupon_rate_to_decimal(rate: Decimal | None) -> Decimal:
+    """
+    Kupon oranini kupon tutari formulu icin ondaliga cevirir.
+    Veritabaninda yuzde (2.7958) veya ondalik (0.027958) saklanabiliyor; |rate| > 1 ise yuzde kabul edilir.
+    """
+    if rate is None:
+        return Decimal("0")
+    r = Decimal(str(rate))
+    if abs(r) > 1:
+        return r / Decimal("100")
+    return r
+
+
 def bond_to_calculator_inputs(bond: Bond) -> tuple[date, date, Decimal, int] | None:
     """
     Bond -> (issue_date, maturity_date, coupon_rate, coupon_frequency_int).
@@ -119,7 +132,7 @@ def bond_to_calculator_inputs(bond: Bond) -> tuple[date, date, Decimal, int] | N
     if not issue_date or not maturity_date:
         return None
     period_days, freq = parse_coupon_frequency(bond.coupon_frequency)
-    coupon_rate = bond.next_coupon_rate if bond.next_coupon_rate is not None else Decimal("0")
+    coupon_rate = _coupon_rate_to_decimal(bond.next_coupon_rate)
     return (issue_date, maturity_date, coupon_rate, freq)
 
 
@@ -244,7 +257,7 @@ class BondMetricsService:
                         / Decimal(str(days_in_period))
                     )
                 elif bond.next_coupon_rate is not None:
-                    coupon_payment = FACE_VALUE * bond.next_coupon_rate / Decimal(str(freq_per_year))
+                    coupon_payment = FACE_VALUE * _coupon_rate_to_decimal(bond.next_coupon_rate) / Decimal(str(freq_per_year))
                     accrued_interest = (
                         coupon_payment
                         * Decimal(str(days_passed))
@@ -294,7 +307,7 @@ class BondMetricsService:
                 ytm = calc.yield_to_maturity(clean_price, settlement_date)
                 if bond.next_coupon_rate is not None:
                     coupon_payment_amount = (
-                        FACE_VALUE * bond.next_coupon_rate / Decimal(str(coupon_frequency_int))
+                        FACE_VALUE * _coupon_rate_to_decimal(bond.next_coupon_rate) / Decimal(str(coupon_frequency_int))
                     ).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
                 tlref_yield = await self._get_tlref_annual_yield(settlement_date)
                 if tlref_yield is not None:
@@ -320,7 +333,7 @@ class BondMetricsService:
             else:
                 coupon_pay = (
                     FACE_VALUE
-                    * (bond.next_coupon_rate or Decimal("0"))
+                    * _coupon_rate_to_decimal(bond.next_coupon_rate)
                     / Decimal(str(freq_per_year))
                 )
             n_coupons = 0
@@ -380,7 +393,7 @@ class BondMetricsService:
         return_to_date_used_fallback_price = bond.last_issue_price is None
         coupon_pay = (
             FACE_VALUE
-            * (bond.next_coupon_rate or Decimal("0"))
+            * _coupon_rate_to_decimal(bond.next_coupon_rate)
             / Decimal(str(freq_per_year))
         )
         n_coupons = 0
