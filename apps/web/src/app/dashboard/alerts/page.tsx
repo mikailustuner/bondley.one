@@ -305,7 +305,7 @@ export default function AlertsPage() {
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{typeLabel(a.type)}</span>
                     {!a.is_active && <Badge variant="secondary">Pasif</Badge>}
-                    {(a.parameters as Record<string, unknown>)?.isin && (
+                    {Boolean((a.parameters as Record<string, unknown>)?.isin) && (
                       <Link
                         href={`/dashboard/bonds/${(a.parameters as Record<string, string>).isin}`}
                         className="text-data-sm text-primary hover:underline"
