@@ -194,7 +194,7 @@ class BondFetcher:
                 "maturity_date": self._cell_date(sh, wb, row_idx, COL_MATURITY_DATE),
                 "days_to_maturity": days_to_maturity,
                 "total_issue_amount": self._cell_decimal(sh, row_idx, COL_TOTAL_AMOUNT),
-                "last_issue_date_text": self._cell_str(sh, row_idx, COL_LAST_ISSUE_DATE) or None,
+                "last_issue_date_text": self._cell_date_or_formatted_str(sh, wb, row_idx, COL_LAST_ISSUE_DATE),
                 "last_issue_price": self._cell_decimal(sh, row_idx, COL_LAST_ISSUE_PRICE),
                 "last_issue_yield": self._parse_yield_str(sh, row_idx, COL_LAST_ISSUE_YIELD),
                 "first_issue_yield": self._parse_yield_str(sh, row_idx, COL_FIRST_ISSUE_YIELD),
@@ -359,6 +359,26 @@ class BondFetcher:
             return Decimal(cleaned)
         except (InvalidOperation, ValueError):
             return None
+
+    @staticmethod
+    def _cell_date_or_formatted_str(sh, wb, row: int, col: int) -> str | None:
+        """Read cell as date (including Excel serial); return DD.MM.YYYY string or raw text."""
+        d = BondFetcher._cell_date(sh, wb, row, col)
+        if d is not None:
+            return d.strftime("%d.%m.%Y")
+        raw = BondFetcher._cell_str(sh, row, col)
+        if not raw:
+            return None
+        # Excel serial stored as string (e.g. "45712")
+        if raw.isdigit():
+            try:
+                serial = int(raw)
+                if 30000 <= serial <= 50000:
+                    dt_tuple = xlrd.xldate_as_tuple(serial, wb.datemode)
+                    return date(dt_tuple[0], dt_tuple[1], dt_tuple[2]).strftime("%d.%m.%Y")
+            except Exception:
+                pass
+        return raw.strip() or None
 
     @staticmethod
     def _cell_date(sh, wb, row: int, col: int) -> date | None:

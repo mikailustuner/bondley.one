@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { FileQuestion, AlertCircle, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { api, BondDetail } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
-import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
+import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate, formatLastIssueDateText } from "@/lib/utils";
 
 const bondNumsFont = IBM_Plex_Mono({
   subsets: ["latin"],
@@ -231,7 +231,7 @@ export default function BondDetailPage({
   const dateInfo = [
     ["İlk İhraç Tarihi", formatDate(bond.first_issue_date)],
     ["İtfa Tarihi", formatDate(bond.maturity_date)],
-    ["Son İhraç Tarihi", bond.last_issue_date_text || "—"],
+    ["Son İhraç Tarihi", formatLastIssueDateText(bond.last_issue_date_text)],
     ["Sonraki Kupon Tarihi", formatDate(bond.next_coupon_date)],
     ["Vadeye Kalan Gün", bond.days_to_maturity != null ? `${bond.days_to_maturity}` : "—"],
   ];

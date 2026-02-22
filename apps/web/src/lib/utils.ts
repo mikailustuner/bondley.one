@@ -68,3 +68,20 @@ export function formatDate(dateStr: string | null | undefined): string {
     return "—";
   }
 }
+
+/** Format last_issue_date_text: if value is Excel serial (e.g. "45712"), convert to date; else show as-is. */
+export function formatLastIssueDateText(value: string | null | undefined): string {
+  if (value == null || value === "") return "—";
+  const trimmed = String(value).trim();
+  const serial = parseInt(trimmed, 10);
+  if (/^\d{4,6}$/.test(trimmed) && serial >= 30000 && serial <= 50000) {
+    const excelEpoch = new Date(1899, 11, 30);
+    excelEpoch.setDate(excelEpoch.getDate() + serial);
+    return excelEpoch.toLocaleDateString("tr-TR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  }
+  return trimmed;
+}
