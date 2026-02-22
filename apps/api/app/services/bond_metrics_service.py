@@ -305,6 +305,37 @@ class BondMetricsService:
             except Exception as e:
                 logger.warning("BondCalculator metrics failed for %s: %s", bond.isin_code, e)
 
+        # Bugüne kadar getiri: ihraçtan settlement'e, başlangıç fiyatı (last_issue_price veya 100) üzerinden
+        return_to_date_pct = None
+        return_to_date_used_fallback_price = False
+        if bond.first_issue_date and (settlement_date - bond.first_issue_date).days > 0:
+            start_price = (
+                Decimal(str(bond.last_issue_price))
+                if bond.last_issue_price is not None
+                else Decimal("100")
+            )
+            return_to_date_used_fallback_price = bond.last_issue_price is None
+            if coupon_payment_amount is not None:
+                coupon_pay = Decimal(str(coupon_payment_amount))
+            else:
+                coupon_pay = (
+                    FACE_VALUE
+                    * (bond.next_coupon_rate or Decimal("0"))
+                    / Decimal(str(freq_per_year))
+                )
+            n_coupons = 0
+            t = bond.first_issue_date
+            while t + timedelta(days=period_days) <= settlement_date and (
+                not bond.maturity_date or t < bond.maturity_date
+            ):
+                n_coupons += 1
+                t = t + timedelta(days=period_days)
+            coupons_received = coupon_pay * n_coupons
+            total_return = (coupons_received + (clean_price - start_price)) / start_price
+            return_to_date_pct = float(
+                (total_return * Decimal("100")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            )
+
         return {
             "annual_reference_rate": float(annual_ref) if annual_ref is not None else None,
             "annual_coupon_rate": float(annual_coupon) if annual_coupon is not None else None,
@@ -321,6 +352,8 @@ class BondMetricsService:
             "coupon_payment_amount": float(coupon_payment_amount) if coupon_payment_amount is not None else None,
             "period_days": period_days,
             "next_coupon_date": bond.next_coupon_date.isoformat() if bond.next_coupon_date else None,
+            "return_to_date_pct": return_to_date_pct,
+            "return_to_date_used_fallback_price": return_to_date_used_fallback_price,
         }
 
     async def _get_tlref_annual_yield(self, target_date: date) -> Decimal | None:

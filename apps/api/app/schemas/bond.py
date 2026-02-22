@@ -86,12 +86,26 @@ class BondCalculatedMetrics(BaseModel):
     coupon_payment_amount: float | None = None
     period_days: int | None = None
     next_coupon_date: str | None = None
+    return_to_date_pct: float | None = None
+    return_to_date_used_fallback_price: bool = False
 
 
 class BondDetailWithMetrics(BondResponse):
     """Tahvil detay + hesaplanan metrikler (GET /bonds/{isin})."""
 
     calculated_metrics: BondCalculatedMetrics | None = None
+
+
+class BondScenarioResponse(BaseModel):
+    """TLREF şoku senaryosu: mevcut YTM/fiyat + şok sonrası tahmini değerler."""
+
+    current_ytm: float
+    current_dirty_price: float
+    shock_bp: int
+    new_ytm_approx: float
+    new_dirty_price_approx: float
+    price_change_pct: float
+    modified_duration: float | None = None
 
 
 class BondStatsResponse(BaseModel):

@@ -19,6 +19,7 @@ from app.schemas.bond import (
     BondStatsResponse,
     BondDetailWithMetrics,
     BondCalculatedMetrics,
+    BondScenarioResponse,
 )
 from app.api.deps import get_current_user, get_admin_user
 from app.services.bond_fetcher import BondFetcher
@@ -126,6 +127,56 @@ async def get_bond_stats(
     )
 
 
+@router.get("/{isin_code}/scenario", response_model=BondScenarioResponse)
+async def get_bond_scenario(
+    isin_code: str,
+    settlement_date: date | None = Query(None, description="Hesaplama tarihi (varsayilan: bugun)"),
+    tlref_shock_bp: int = Query(0, description="TLREF baz puan sok (ornegin 50, -50)"),
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(get_current_user),
+):
+    """TLREF sok senaryosu: belirtilen bp kadar kaymada tahmini yeni YTM ve kirli fiyat."""
+    result = await db.execute(select(Bond).where(Bond.isin_code == isin_code))
+    bond = result.scalar_one_or_none()
+    if not bond:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tahvil bulunamadi")
+    calc_date = settlement_date or date.today()
+    metrics_svc = BondMetricsService(db)
+    metrics = await metrics_svc.compute_metrics(bond, calc_date)
+    if metrics is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"{calc_date} tarihi icin piyasa verisi yok",
+        )
+    current_ytm = metrics.get("yield_to_maturity")
+    current_dirty = metrics.get("dirty_price")
+    mod_dur = metrics.get("modified_duration")
+    if current_ytm is None or current_dirty is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="YTM veya kirli fiyat hesaplanamadi",
+        )
+    # Paralel kayma: new_ytm = current_ytm + (shock_bp / 10000)
+    shock_decimal = tlref_shock_bp / 10000.0
+    new_ytm_approx = current_ytm + shock_decimal
+    # Duration yaklasimi: delta_price_pct ≈ -modified_duration * shock_decimal
+    if mod_dur is not None and mod_dur != 0:
+        delta_price_pct = -mod_dur * shock_decimal
+    else:
+        delta_price_pct = 0.0
+    new_dirty_price_approx = current_dirty * (1.0 + delta_price_pct)
+    price_change_pct = (new_dirty_price_approx - current_dirty) / current_dirty * 100.0
+    return BondScenarioResponse(
+        current_ytm=current_ytm,
+        current_dirty_price=current_dirty,
+        shock_bp=tlref_shock_bp,
+        new_ytm_approx=new_ytm_approx,
+        new_dirty_price_approx=new_dirty_price_approx,
+        price_change_pct=price_change_pct,
+        modified_duration=mod_dur,
+    )
+
+
 @router.get("/{isin_code}", response_model=BondDetailWithMetrics)
 async def get_bond(
     isin_code: str,
@@ -211,6 +262,8 @@ async def get_bond(
             coupon_payment_amount=None,
             period_days=None,
             next_coupon_date=None,
+            return_to_date_pct=None,
+            return_to_date_used_fallback_price=False,
         )
     else:
         try:

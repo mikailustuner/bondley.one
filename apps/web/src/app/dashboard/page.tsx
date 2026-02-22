@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { TlrefIndexChart } from "@/components/charts/tlref-index-chart";
 import { TlrefRateChart } from "@/components/charts/tlref-rate-chart";
 import { useTlrefHistory } from "@/hooks/use-tlref-history";
+import { useUsageSummary } from "@/hooks/use-usage-summary";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
 
 export default function DashboardPage() {
@@ -17,6 +18,7 @@ export default function DashboardPage() {
     };
   }, []);
   const { history, indexData, rateData, stats, bondStats, loading, error } = useTlrefHistory();
+  const { summary: usageSummary } = useUsageSummary();
 
   const STATS = stats
     ? [
@@ -107,6 +109,38 @@ export default function DashboardPage() {
           );
         })}
       </div>
+
+      {usageSummary && (
+        <Card className="animate-fade-up-delay-1">
+          <CardHeader>
+            <CardDescription>KULLANIM ÖZETİ</CardDescription>
+            <CardTitle className="mt-1">Bu ay {usageSummary.this_month_bonds_viewed} tahvil incelediniz</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {usageSummary.most_viewed_bonds.length > 0 ? (
+              <>
+                <p className="text-label text-muted-foreground">En çok baktığınız tahviller:</p>
+                <ul className="flex flex-wrap gap-2">
+                  {usageSummary.most_viewed_bonds.map((b) => (
+                    <li key={b.isin_code}>
+                      <Link
+                        href={`/dashboard/bonds/${encodeURIComponent(b.isin_code)}`}
+                        className="inline-flex items-center gap-1.5 rounded-md bg-secondary/50 px-2.5 py-1 text-data-sm text-foreground hover:bg-secondary transition-colors"
+                      >
+                        <span className="font-mono">{b.isin_code}</span>
+                        {b.issuer && <span className="text-muted-foreground truncate max-w-[120px]">{b.issuer}</span>}
+                        <Badge variant="secondary" className="text-xs">{b.view_count}</Badge>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p className="text-data-sm text-muted-foreground">Bu dönemde henüz tahvil incelemesi yok.</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {bondStats && bondStats.total_bonds > 0 && (
         <div className="grid gap-px md:grid-cols-3 bg-border/30 rounded-lg overflow-hidden animate-fade-up-delay-1">

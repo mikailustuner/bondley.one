@@ -169,6 +169,8 @@ export interface BondCalculatedMetrics {
   coupon_payment_amount: number | null;
   period_days: number | null;
   next_coupon_date: string | null;
+  return_to_date_pct: number | null;
+  return_to_date_used_fallback_price?: boolean;
 }
 
 export interface BondDetail {
@@ -462,6 +464,24 @@ export const api = {
       const qs = query.toString();
       return apiFetch<BondDetail>(`/bonds/${isin}${qs ? `?${qs}` : ""}`, { token });
     },
+    scenario: (
+      token: string,
+      isin: string,
+      params: { settlement_date?: string; tlref_shock_bp: number }
+    ) => {
+      const query = new URLSearchParams();
+      if (params.settlement_date) query.set("settlement_date", params.settlement_date);
+      query.set("tlref_shock_bp", String(params.tlref_shock_bp));
+      return apiFetch<{
+        current_ytm: number;
+        current_dirty_price: number;
+        shock_bp: number;
+        new_ytm_approx: number;
+        new_dirty_price_approx: number;
+        price_change_pct: number;
+        modified_duration: number | null;
+      }>(`/bonds/${encodeURIComponent(isin)}/scenario?${query}`, { token });
+    },
     stats: (token: string) => apiFetch<BondStats>("/bonds/stats", { token }),
     sync: (token: string) =>
       apiFetch<{ status: string; bonds_upserted?: number; bonds_deactivated?: number }>(
@@ -500,5 +520,48 @@ export const api = {
         }>;
       }>(`/metrics/my-stats?${query}`, { token });
     },
+    summary: (token: string, params?: { start_date?: string; end_date?: string }) => {
+      const query = new URLSearchParams();
+      if (params?.start_date) query.set("start_date", params.start_date);
+      if (params?.end_date) query.set("end_date", params.end_date);
+      return apiFetch<{
+        this_month_bonds_viewed: number;
+        most_viewed_bonds: Array<{ isin_code: string; issuer: string; view_count: number }>;
+        total_views_this_month: number;
+        start_date: string;
+        end_date: string;
+      }>(`/metrics/summary${query.toString() ? `?${query}` : ""}`, { token });
+    },
+  },
+
+  alerts: {
+    list: (token: string) => apiFetch<AlertRecord[]>("/alerts/", { token }),
+    triggered: (token: string) => apiFetch<AlertRecord[]>("/alerts/triggered", { token }),
+    create: (token: string, body: { type: string; parameters: Record<string, unknown> }) =>
+      apiFetch<AlertRecord>("/alerts/", { method: "POST", token, body: JSON.stringify(body) }),
+    update: (
+      token: string,
+      id: number,
+      body: { type?: string; parameters?: Record<string, unknown>; is_active?: boolean }
+    ) =>
+      apiFetch<AlertRecord>(`/alerts/${id}`, {
+        method: "PATCH",
+        token,
+        body: JSON.stringify(body),
+      }),
+    delete: (token: string, id: number) =>
+      apiFetch<void>(`/alerts/${id}`, { method: "DELETE", token }),
   },
 };
+
+export interface AlertRecord {
+  id: number;
+  user_id: number;
+  type: string;
+  parameters: Record<string, unknown>;
+  is_active: boolean;
+  last_triggered_at: string | null;
+  triggered_value_snapshot: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}

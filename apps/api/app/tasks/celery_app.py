@@ -9,7 +9,7 @@ celery_app = Celery(
     "fincalc",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
-    include=["app.tasks.data_tasks"],
+    include=["app.tasks.data_tasks", "app.tasks.alerts_tasks"],
 )
 
 celery_app.conf.update(
@@ -32,6 +32,11 @@ celery_app.conf.beat_schedule = {
     "fetch-bond-list": {
         "task": "app.tasks.data_tasks.fetch_bond_list",
         "schedule": crontab(hour=19, minute=0, day_of_week="1-5"),
+        "options": {"queue": "default"},
+    },
+    "check-user-alerts": {
+        "task": "app.tasks.alerts_tasks.check_user_alerts",
+        "schedule": crontab(minute="*/15"),
         "options": {"queue": "default"},
     },
 }

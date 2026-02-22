@@ -9,6 +9,7 @@ import { UserMenu } from "@/components/user-menu";
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Genel Bakış" },
   { href: "/dashboard/bonds", label: "Tahviller" },
+  { href: "/dashboard/alerts", label: "Uyarılar" },
   { href: "/dashboard/analytics", label: "Analiz" },
 ];
 

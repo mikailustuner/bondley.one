@@ -48,6 +48,14 @@ export default function BondDetailPage({
   const [selectedDate, setSelectedDate] = useState<string>(() => todayISO());
   const [prevIsin, setPrevIsin] = useState<string | null>(null);
   const [nextIsin, setNextIsin] = useState<string | null>(null);
+  const [scenarioShockBp, setScenarioShockBp] = useState(0);
+  const [scenarioResult, setScenarioResult] = useState<{
+    new_ytm_approx: number;
+    new_dirty_price_approx: number;
+    price_change_pct: number;
+    shock_bp: number;
+  } | null>(null);
+  const [scenarioLoading, setScenarioLoading] = useState(false);
 
   useEffect(() => {
     if (!isin) {
@@ -99,6 +107,32 @@ export default function BondDetailPage({
       setNextIsin(null);
     }
   }, [isin]);
+
+  // Senaryo: TLREF şoku — debounced fetch
+  useEffect(() => {
+    if (!bond?.calculated_metrics || !isin) {
+      setScenarioResult(null);
+      return;
+    }
+    const token = getToken();
+    if (!token) return;
+    const t = setTimeout(() => {
+      setScenarioLoading(true);
+      api.bonds
+        .scenario(token, isin, { settlement_date: selectedDate, tlref_shock_bp: scenarioShockBp })
+        .then((r) =>
+          setScenarioResult({
+            shock_bp: r.shock_bp,
+            new_ytm_approx: r.new_ytm_approx,
+            new_dirty_price_approx: r.new_dirty_price_approx,
+            price_change_pct: r.price_change_pct,
+          })
+        )
+        .catch(() => setScenarioResult(null))
+        .finally(() => setScenarioLoading(false));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [bond?.calculated_metrics, isin, selectedDate, scenarioShockBp]);
 
   if (!isin)
     return (
@@ -384,6 +418,19 @@ export default function BondDetailPage({
                   </div>
                 </div>
               )}
+              {bond.calculated_metrics.return_to_date_pct != null && (
+                <div className="rounded-lg border border-border/50 bg-card p-4">
+                  <div className="text-label text-muted-foreground mb-1">Bugüne Kadar Getiri</div>
+                  <div className="font-mono-data text-stat">
+                    {formatPercent(bond.calculated_metrics.return_to_date_pct)}
+                  </div>
+                  {bond.calculated_metrics.return_to_date_used_fallback_price && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Veri bulunamadığı için 100 olarak kabul edilmiştir.
+                    </p>
+                  )}
+                </div>
+              )}
               {bond.calculated_metrics.spread != null && (
                 <div className="rounded-lg border border-border/50 bg-card p-4">
                   <div className="text-label text-muted-foreground mb-1">Spread</div>
@@ -425,6 +472,57 @@ export default function BondDetailPage({
                 </div>
               )}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {bond.calculated_metrics && !metricsLoading && (
+        <Card className="animate-fade-up">
+          <CardHeader>
+            <CardDescription>SENARYO</CardDescription>
+            <CardTitle className="mt-1">TLREF değişimi</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-label text-muted-foreground block mb-2">
+                TLREF şoku (baz puan): {scenarioShockBp > 0 ? "+" : ""}{scenarioShockBp} bp
+              </label>
+              <input
+                type="range"
+                min={-100}
+                max={100}
+                step={5}
+                value={scenarioShockBp}
+                onChange={(e) => setScenarioShockBp(Number(e.target.value))}
+                className="w-full h-2 rounded-lg appearance-none bg-muted accent-primary"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                <span>-100 bp</span>
+                <span>0</span>
+                <span>+100 bp</span>
+              </div>
+            </div>
+            {scenarioLoading && (
+              <p className="text-data-sm text-muted-foreground">Hesaplanıyor...</p>
+            )}
+            {!scenarioLoading && scenarioResult && (
+              <div className="rounded-lg border border-border/50 bg-muted/30 p-4">
+                <p className="text-data-sm text-foreground">
+                  TLREF {scenarioResult.shock_bp > 0 ? "+" : ""}{scenarioResult.shock_bp} bp → Tahmini
+                  kirli fiyat: {formatDecimal(scenarioResult.new_dirty_price_approx, 4, 4)}, değişim:{" "}
+                  <span
+                    className={
+                      scenarioResult.price_change_pct >= 0 ? "text-positive" : "text-negative"
+                    }
+                  >
+                    {formatPercent(scenarioResult.price_change_pct)}
+                  </span>
+                </p>
+                <p className="text-label text-muted-foreground mt-1">
+                  Tahmini YTM: {formatPercentFromDecimal(scenarioResult.new_ytm_approx, 4)}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

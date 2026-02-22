@@ -261,6 +261,29 @@ async def _migrate_new_tables(conn):
         await conn.execute(text("CREATE INDEX idx_user_metrics_date ON user_metrics(metric_date)"))
         logger.info("[startup] user_metrics tablosu olusturuldu.")
 
+    # user_alerts table
+    table_check = await conn.execute(text(
+        "SELECT 1 FROM information_schema.tables "
+        "WHERE table_schema = 'public' AND table_name = 'user_alerts'"
+    ))
+    if table_check.scalar_one_or_none() is None:
+        await conn.execute(text("""
+            CREATE TABLE user_alerts (
+                id SERIAL PRIMARY KEY,
+                user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                type VARCHAR(50) NOT NULL,
+                parameters JSONB NOT NULL DEFAULT '{}',
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                last_triggered_at TIMESTAMPTZ,
+                triggered_value_snapshot JSONB,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+        """))
+        await conn.execute(text("CREATE INDEX idx_user_alerts_user ON user_alerts(user_id)"))
+        await conn.execute(text("CREATE INDEX idx_user_alerts_active ON user_alerts(is_active)"))
+        logger.info("[startup] user_alerts tablosu olusturuldu.")
+
 
 async def ensure_admin_user():
     """Create initial admin user only if none exists. Never overwrite existing admin password or role."""

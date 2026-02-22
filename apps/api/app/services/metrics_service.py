@@ -218,6 +218,73 @@ class MetricsService:
         return stats
 
     @staticmethod
+    async def get_personal_summary(
+        db: AsyncSession,
+        user_id: int,
+        start_date: date,
+        end_date: date,
+        most_viewed_limit: int = 5,
+    ) -> dict[str, Any]:
+        """Get personal usage summary: distinct bonds viewed in period and top most viewed bonds."""
+        # Distinct bond count for this user in date range
+        distinct_query = select(func.count(func.distinct(BondView.bond_id))).where(
+            and_(
+                BondView.user_id == user_id,
+                func.date(BondView.viewed_at) >= start_date,
+                func.date(BondView.viewed_at) <= end_date,
+            )
+        )
+        this_month_bonds_viewed = (await db.execute(distinct_query)).scalar() or 0
+
+        # Total views in period (optional)
+        total_query = select(func.count(BondView.id)).where(
+            and_(
+                BondView.user_id == user_id,
+                func.date(BondView.viewed_at) >= start_date,
+                func.date(BondView.viewed_at) <= end_date,
+            )
+        )
+        total_views_this_month = (await db.execute(total_query)).scalar() or 0
+
+        # Top N most viewed bonds for this user in period
+        top_query = (
+            select(
+                BondView.bond_id,
+                Bond.isin_code,
+                Bond.issuer,
+                func.count(BondView.id).label("view_count"),
+            )
+            .join(Bond, BondView.bond_id == Bond.id)
+            .where(
+                and_(
+                    BondView.user_id == user_id,
+                    func.date(BondView.viewed_at) >= start_date,
+                    func.date(BondView.viewed_at) <= end_date,
+                )
+            )
+            .group_by(BondView.bond_id, Bond.isin_code, Bond.issuer)
+            .order_by(desc("view_count"))
+            .limit(most_viewed_limit)
+        )
+        top_result = await db.execute(top_query)
+        most_viewed_bonds = [
+            {
+                "isin_code": row.isin_code,
+                "issuer": row.issuer or "",
+                "view_count": row.view_count,
+            }
+            for row in top_result.all()
+        ]
+
+        return {
+            "this_month_bonds_viewed": this_month_bonds_viewed,
+            "most_viewed_bonds": most_viewed_bonds,
+            "total_views_this_month": total_views_this_month,
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+        }
+
+    @staticmethod
     async def get_metrics_overview(
         db: AsyncSession,
         days: int = 30,
