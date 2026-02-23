@@ -27,9 +27,11 @@ export default function BondsListPage() {
     };
   }, []);
   const [bonds, setBonds] = useState<BondListItem[]>([]);
+  const [recentBonds, setRecentBonds] = useState<BondListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<BondStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fullListLoading, setFullListLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [currencyFilter, setCurrencyFilter] = useState<string>("");
@@ -45,19 +47,36 @@ export default function BondsListPage() {
       return;
     }
 
+    // Faz 1: Son güncellenen 10 ihraç + stats + favoriler (hızlı)
     Promise.all([
-      api.bonds.list(token, { active_only: true, limit: 3000 }),
+      api.bonds.list(token, { active_only: true, limit: 10, order_by: "updated_at_desc" }),
       api.bonds.stats(token),
       api.bonds.favoritesList(token),
     ])
-      .then(([listRes, statsRes, favRes]) => {
-        setBonds(listRes.items || []);
-        setTotal(listRes.total ?? 0);
+      .then(([recentRes, statsRes, favRes]) => {
+        setRecentBonds(recentRes.items || []);
+        setTotal(recentRes.total ?? 0);
         setStats(statsRes);
         setFavoriteIsins(new Set((favRes.items || []).map((b) => b.isin_code)));
+        setLoading(false);
+
+        // Faz 2: Tam liste arka planda yüklenir
+        setFullListLoading(true);
+        api.bonds
+          .list(token, { active_only: true, limit: 3000 })
+          .then((fullRes) => {
+            setBonds(fullRes.items || []);
+            setTotal(fullRes.total ?? 0);
+          })
+          .catch(() => {
+            // Faz 2 başarısız olursa recent bonds ile devam et
+          })
+          .finally(() => setFullListLoading(false));
       })
-      .catch((e) => setError(e?.message || "Veri yuklenemedi"))
-      .finally(() => setLoading(false));
+      .catch((e) => {
+        setError(e?.message || "Veri yuklenemedi");
+        setLoading(false);
+      });
   }, []);
 
   const toggleFavorite = (e: React.MouseEvent, isinCode: string) => {
@@ -82,8 +101,10 @@ export default function BondsListPage() {
     }
   };
 
+  const activeBonds = bonds.length > 0 ? bonds : recentBonds;
+
   const filtered = useMemo(() => {
-    let result = bonds;
+    let result = activeBonds;
     if (search.trim()) {
       const q = search.toUpperCase();
       result = result.filter(
@@ -99,21 +120,21 @@ export default function BondsListPage() {
       result = result.filter((b) => b.security_type && b.security_type.includes(typeFilter));
     }
     return result;
-  }, [bonds, search, currencyFilter, typeFilter]);
+  }, [activeBonds, search, currencyFilter, typeFilter]);
 
   const securityTypes = useMemo(() => {
     const types = new Set<string>();
-    bonds.forEach((b) => {
+    activeBonds.forEach((b) => {
       if (b.security_type) types.add(b.security_type);
     });
     return Array.from(types).sort();
-  }, [bonds]);
+  }, [activeBonds]);
 
   const currencies = useMemo(() => {
     const curs = new Set<string>();
-    bonds.forEach((b) => curs.add(b.currency));
+    activeBonds.forEach((b) => curs.add(b.currency));
     return Array.from(curs).sort();
-  }, [bonds]);
+  }, [activeBonds]);
 
   return (
     <div className="space-y-6">
@@ -178,6 +199,48 @@ export default function BondsListPage() {
         </div>
       )}
 
+      {!loading && recentBonds.length > 0 && (
+        <Card className="animate-fade-up-delay-1">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardDescription>SON GÜNCELLENEN</CardDescription>
+                <CardTitle className="mt-1">Son Güncellenen İhraçlar</CardTitle>
+              </div>
+              {fullListLoading && (
+                <span className="text-label text-muted-foreground animate-pulse">
+                  Tam liste yükleniyor…
+                </span>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {recentBonds.map((b) => (
+                <Link
+                  key={b.isin_code}
+                  href={`/dashboard/bonds/${encodeURIComponent(b.isin_code)}`}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-secondary/50 px-2.5 py-1.5 text-data-sm text-foreground hover:bg-secondary transition-colors"
+                >
+                  <span className="font-mono-data font-medium">{b.isin_code}</span>
+                  {b.issuer && (
+                    <span className="text-muted-foreground truncate max-w-[120px]">{b.issuer}</span>
+                  )}
+                  <Badge variant={(CURRENCY_COLORS[b.currency] as any) || "outline"} className="text-xs">
+                    {b.currency}
+                  </Badge>
+                  {b.last_issue_yield != null && (
+                    <span className="font-mono-data text-primary text-xs">
+                      {formatPercent(b.last_issue_yield)}
+                    </span>
+                  )}
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex flex-wrap gap-3 animate-fade-up-delay-1">
         <div className="flex-1 min-w-[200px]">
           <Input
@@ -219,10 +282,12 @@ export default function BondsListPage() {
               <CardTitle className="mt-1">Borçlanma Araçları Listesi</CardTitle>
             </div>
             <span className="text-label text-muted-foreground">
-              {search || currencyFilter || typeFilter
-                ? `${filtered.length} / `
-                : ""}
-              {total} KAYIT
+              {fullListLoading
+                ? `${total} kayıt yükleniyor…`
+                : search || currencyFilter || typeFilter
+                  ? `${filtered.length} / ${total} KAYIT`
+                  : `${total} KAYIT`
+              }
             </span>
           </div>
         </CardHeader>

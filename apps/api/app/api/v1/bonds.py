@@ -91,6 +91,8 @@ async def list_bonds(
         order_clause = Bond.days_to_maturity.asc().nullslast()
     elif order_by == "last_issue_yield_desc":
         order_clause = Bond.last_issue_yield.desc().nullslast()
+    elif order_by == "updated_at_desc":
+        order_clause = Bond.updated_at.desc().nullslast()
     else:
         order_clause = Bond.maturity_date.asc().nullslast()
 

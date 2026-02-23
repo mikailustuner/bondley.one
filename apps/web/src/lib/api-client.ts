@@ -490,7 +490,7 @@ export const api = {
         currency?: string;
         security_type?: string;
         yield_type?: string;
-        order_by?: "maturity_date_asc" | "days_to_maturity_asc" | "last_issue_yield_desc";
+        order_by?: "maturity_date_asc" | "days_to_maturity_asc" | "last_issue_yield_desc" | "updated_at_desc";
         max_days_to_maturity?: number;
       },
     ) => {
