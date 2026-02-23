@@ -2,7 +2,6 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { IBM_Plex_Mono } from "next/font/google";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
@@ -12,12 +11,6 @@ import { api, BondDetail } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate, formatLastIssueDateText } from "@/lib/utils";
 
-const bondNumsFont = IBM_Plex_Mono({
-  subsets: ["latin"],
-  variable: "--font-bond-nums",
-  weight: ["400", "500", "600"],
-  display: "swap",
-});
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -261,7 +254,7 @@ export default function BondDetailPage({
   ];
 
   return (
-    <div className={`${bondNumsFont.variable} space-y-6`}>
+    <div className="space-y-6">
       <div className="animate-fade-up">
         <nav aria-label="Breadcrumb" className="mb-2">
           <ol className="flex flex-wrap items-center gap-2 text-data-sm">
@@ -296,13 +289,13 @@ export default function BondDetailPage({
                   api.bonds
                     .removeFavorite(token, bond.isin_code)
                     .then(() => setIsFavorite(false))
-                    .catch(() => {})
+                    .catch(() => { })
                     .finally(() => setFavoriteToggling(false));
                 } else {
                   api.bonds
                     .addFavorite(token, bond.isin_code)
                     .then(() => setIsFavorite(true))
-                    .catch(() => {})
+                    .catch(() => { })
                     .finally(() => setFavoriteToggling(false));
                 }
               }}
@@ -565,9 +558,9 @@ export default function BondDetailPage({
                   <span className="font-bond-nums text-foreground">
                     {formatDecimal(
                       baseScenarioMetrics.current_dirty_price *
-                        (1 -
-                          (baseScenarioMetrics.modified_duration ?? 0) *
-                            (scenarioShockBp / 10000)),
+                      (1 -
+                        (baseScenarioMetrics.modified_duration ?? 0) *
+                        (scenarioShockBp / 10000)),
                       4,
                       4
                     )}
