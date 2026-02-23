@@ -33,6 +33,8 @@ export default function SettingsPage() {
   const [mfaEnabled, setMfaEnabled] = useState<boolean | null>(null);
   const [mfaSetupStep, setMfaSetupStep] = useState<"idle" | "qr" | "confirm" | "backup">("idle");
   const [mfaSetupSecret, setMfaSetupSecret] = useState<string | null>(null);
+  const [mfaQrUri, setMfaQrUri] = useState<string | null>(null);
+  const [mfaQrDataUrl, setMfaQrDataUrl] = useState<string | null>(null);
   const [mfaConfirmCode, setMfaConfirmCode] = useState("");
   const [mfaBackupCodes, setMfaBackupCodes] = useState<string[] | null>(null);
   const [mfaDisablePassword, setMfaDisablePassword] = useState("");
@@ -143,9 +145,17 @@ export default function SettingsPage() {
     setLoading(true);
     setError(null);
     setMfaSetupStep("idle");
+    setMfaQrUri(null);
+    setMfaQrDataUrl(null);
     try {
       const res = await api.auth.mfaSetup(token);
       setMfaSetupSecret(res.secret);
+      setMfaQrUri(res.qr_uri);
+      if (res.qr_uri) {
+        const QRCode = (await import("qrcode")).default;
+        const dataUrl = await QRCode.toDataURL(res.qr_uri, { width: 200, margin: 2 });
+        setMfaQrDataUrl(dataUrl);
+      }
       setMfaSetupStep("qr");
     } catch (e) {
       setError(e instanceof Error ? e.message : "2FA kurulumu başlatılamadı");
@@ -331,7 +341,7 @@ export default function SettingsPage() {
               <pre className="text-xs font-mono break-all bg-background/50 p-2 rounded">
                 {mfaBackupCodes.join(" ")}
               </pre>
-              <Button type="button" onClick={() => { setMfaSetupStep("idle"); setMfaBackupCodes(null); setMfaSetupSecret(null); }}>
+              <Button type="button" onClick={() => { setMfaSetupStep("idle"); setMfaBackupCodes(null); setMfaSetupSecret(null); setMfaQrUri(null); setMfaQrDataUrl(null); }}>
                 Tamam
               </Button>
             </div>
@@ -339,8 +349,14 @@ export default function SettingsPage() {
           {mfaSetupStep === "qr" && mfaSetupSecret && (
             <form onSubmit={handleMfaConfirm} className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Authenticator uygulamanıza (Google Authenticator, Authy vb.) bu secret ile hesap ekleyin veya QR kodu tarayın.
+                Authenticator uygulamanıza (Google Authenticator, Authy vb.) QR kodu tarayın veya secret ile manuel ekleyin.
               </p>
+              {mfaQrDataUrl && (
+                <div className="flex justify-center p-4 bg-white rounded-lg border border-border inline-block">
+                  <img src={mfaQrDataUrl} alt="2FA QR kodu" width={200} height={200} className="rounded" />
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">Manuel giriş için secret:</p>
               <p className="text-xs font-mono break-all bg-muted/50 p-2 rounded">{mfaSetupSecret}</p>
               <div>
                 <label className="block text-sm font-medium mb-1">Doğrulama kodu (6 hane)</label>
@@ -358,7 +374,7 @@ export default function SettingsPage() {
                 <Button type="submit" disabled={loading || mfaConfirmCode.length !== 6}>
                   {loading ? "Doğrulanıyor..." : "Etkinleştir"}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => { setMfaSetupStep("idle"); setMfaSetupSecret(null); setMfaConfirmCode(""); }}>
+                <Button type="button" variant="outline" onClick={() => { setMfaSetupStep("idle"); setMfaSetupSecret(null); setMfaQrUri(null); setMfaQrDataUrl(null); setMfaConfirmCode(""); }}>
                   İptal
                 </Button>
               </div>
