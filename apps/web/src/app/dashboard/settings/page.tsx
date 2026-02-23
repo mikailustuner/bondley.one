@@ -30,6 +30,12 @@ export default function SettingsPage() {
   const [emailData, setEmailData] = useState({
     new_email: "",
   });
+  const [mfaEnabled, setMfaEnabled] = useState<boolean | null>(null);
+  const [mfaSetupStep, setMfaSetupStep] = useState<"idle" | "qr" | "confirm" | "backup">("idle");
+  const [mfaSetupSecret, setMfaSetupSecret] = useState<string | null>(null);
+  const [mfaConfirmCode, setMfaConfirmCode] = useState("");
+  const [mfaBackupCodes, setMfaBackupCodes] = useState<string[] | null>(null);
+  const [mfaDisablePassword, setMfaDisablePassword] = useState("");
 
   useEffect(() => {
     const user = getUser();
@@ -42,7 +48,14 @@ export default function SettingsPage() {
       setEmailData({
         new_email: user.email || "",
       });
+      setMfaEnabled(!!user.mfa_enabled);
     }
+  }, []);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+    api.auth.me(token).then((user) => setMfaEnabled(user.mfa_enabled)).catch(() => {});
   }, []);
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
@@ -119,6 +132,61 @@ export default function SettingsPage() {
       setSuccess("E-posta başarıyla değiştirildi");
     } catch (e) {
       setError(e instanceof Error ? e.message : "E-posta değiştirilemedi");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMfaSetupStart = async () => {
+    const token = getToken();
+    if (!token) return;
+    setLoading(true);
+    setError(null);
+    setMfaSetupStep("idle");
+    try {
+      const res = await api.auth.mfaSetup(token);
+      setMfaSetupSecret(res.secret);
+      setMfaSetupStep("qr");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "2FA kurulumu başlatılamadı");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMfaConfirm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = getToken();
+    if (!token || mfaConfirmCode.length !== 6) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.auth.mfaConfirm(token, mfaConfirmCode);
+      setMfaBackupCodes(res.backup_codes);
+      setMfaSetupStep("backup");
+      setMfaEnabled(true);
+      setMfaConfirmCode("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Kod geçersiz");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMfaDisable = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = getToken();
+    if (!token) return;
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      await api.auth.mfaDisable(token, mfaDisablePassword);
+      setMfaEnabled(false);
+      setMfaDisablePassword("");
+      setSuccess("İki adımlı doğrulama kapatıldı");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Şifre yanlış veya işlem başarısız");
     } finally {
       setLoading(false);
     }
@@ -244,6 +312,80 @@ export default function SettingsPage() {
               {loading ? "Değiştiriliyor..." : "E-postayı Değiştir"}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      {/* Two-Factor Authentication */}
+      <Card className="animate-fade-up-delay-4">
+        <CardHeader>
+          <CardDescription>GÜVENLİK</CardDescription>
+          <CardTitle className="mt-1">İki Adımlı Doğrulama (2FA)</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Durum: {mfaEnabled === null ? "..." : mfaEnabled ? "Açık" : "Kapalı"}
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {mfaSetupStep === "backup" && mfaBackupCodes && (
+            <div className="p-4 rounded-md border border-amber-500/30 bg-amber-500/5 space-y-2">
+              <p className="text-sm font-medium">Yedek kodlarınızı güvenli bir yere kaydedin. Bu kodlar tekrar gösterilmez.</p>
+              <pre className="text-xs font-mono break-all bg-background/50 p-2 rounded">
+                {mfaBackupCodes.join(" ")}
+              </pre>
+              <Button type="button" onClick={() => { setMfaSetupStep("idle"); setMfaBackupCodes(null); setMfaSetupSecret(null); }}>
+                Tamam
+              </Button>
+            </div>
+          )}
+          {mfaSetupStep === "qr" && mfaSetupSecret && (
+            <form onSubmit={handleMfaConfirm} className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Authenticator uygulamanıza (Google Authenticator, Authy vb.) bu secret ile hesap ekleyin veya QR kodu tarayın.
+              </p>
+              <p className="text-xs font-mono break-all bg-muted/50 p-2 rounded">{mfaSetupSecret}</p>
+              <div>
+                <label className="block text-sm font-medium mb-1">Doğrulama kodu (6 hane)</label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={mfaConfirmCode}
+                  onChange={(e) => setMfaConfirmCode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="000000"
+                  className="font-mono w-32"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" disabled={loading || mfaConfirmCode.length !== 6}>
+                  {loading ? "Doğrulanıyor..." : "Etkinleştir"}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => { setMfaSetupStep("idle"); setMfaSetupSecret(null); setMfaConfirmCode(""); }}>
+                  İptal
+                </Button>
+              </div>
+            </form>
+          )}
+          {mfaSetupStep === "idle" && !mfaBackupCodes && (
+            <>
+              {!mfaEnabled ? (
+                <Button onClick={handleMfaSetupStart} disabled={loading}>
+                  {loading ? "Hazırlanıyor..." : "İki Adımlı Doğrulamayı Etkinleştir"}
+                </Button>
+              ) : (
+                <form onSubmit={handleMfaDisable} className="space-y-4">
+                  <p className="text-sm text-muted-foreground">2FA'yı kapatmak için mevcut şifrenizi girin.</p>
+                  <Input
+                    type="password"
+                    placeholder="Mevcut şifre"
+                    value={mfaDisablePassword}
+                    onChange={(e) => setMfaDisablePassword(e.target.value)}
+                  />
+                  <Button type="submit" disabled={loading || !mfaDisablePassword}>
+                    {loading ? "Kapatılıyor..." : "İki Adımlı Doğrulamayı Kapat"}
+                  </Button>
+                </form>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

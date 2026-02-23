@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase
 
 from app.core.config import get_settings
+from app.core.base import Base
 
 settings = get_settings()
 
@@ -19,10 +19,6 @@ async_session_factory = async_sessionmaker(
 )
 
 
-class Base(DeclarativeBase):
-    pass
-
-
 async def get_db() -> AsyncSession:
     async with async_session_factory() as session:
         try:
@@ -33,3 +29,6 @@ async def get_db() -> AsyncSession:
             raise
         finally:
             await session.close()
+
+
+__all__ = ["Base", "engine", "async_session_factory", "get_db"]

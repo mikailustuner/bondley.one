@@ -12,6 +12,9 @@ alembic
 # Auth
 python-jose[cryptography]
 bcrypt
+slowapi
+pyotp
+cryptography
 
 # Data & Finance
 numpy

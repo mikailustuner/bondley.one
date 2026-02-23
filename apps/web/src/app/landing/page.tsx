@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
+import { UserPlus, Search, BarChart3, List, LineChart, Star, Bell, Calculator, TrendingUp, Shield, RefreshCw, Lock } from "lucide-react";
 import { getUser } from "@/lib/auth";
 import { api, PublicSummary } from "@/lib/api-client";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
@@ -132,6 +133,20 @@ export default function LandingPage() {
                   </span>
                 </div>
 
+                {summary?.tlref_index_change_pct != null && (
+                  <div className="flex justify-between items-baseline border-b border-border/50 pb-3">
+                    <span className="text-label text-muted-foreground">DÜNE GÖRE</span>
+                    <span
+                      className={`font-mono-data text-data-sm ${
+                        summary.tlref_index_change_pct >= 0 ? "text-positive" : "text-negative"
+                      }`}
+                    >
+                      {summary.tlref_index_change_pct >= 0 ? "+" : ""}
+                      {summary.tlref_index_change_pct}%
+                    </span>
+                  </div>
+                )}
+
                 <div className="flex justify-between items-baseline border-b border-border/50 pb-3">
                   <span className="text-label text-muted-foreground">GUNLUK ORAN</span>
                   <span className="font-mono-data text-data-sm text-positive">
@@ -174,6 +189,42 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section className="container mx-auto py-16">
+        <h2 className="font-display text-display-sm text-foreground mb-10 text-center">Nasıl çalışır?</h2>
+        <div className="grid md:grid-cols-3 gap-8">
+          <div className="flex flex-col items-center text-center">
+            <div className="rounded-full border border-primary/30 bg-primary/5 p-4 mb-4">
+              <UserPlus className="h-6 w-6 text-primary" />
+            </div>
+            <span className="text-label text-muted-foreground mb-2">1. Adım</span>
+            <h3 className="font-display font-semibold text-foreground mb-2">Kayıt ol veya giriş yap</h3>
+            <p className="text-sm text-muted-foreground font-body max-w-xs">
+              Ücretsiz hesap oluşturun veya mevcut hesabınızla giriş yapın.
+            </p>
+          </div>
+          <div className="flex flex-col items-center text-center">
+            <div className="rounded-full border border-primary/30 bg-primary/5 p-4 mb-4">
+              <Search className="h-6 w-6 text-primary" />
+            </div>
+            <span className="text-label text-muted-foreground mb-2">2. Adım</span>
+            <h3 className="font-display font-semibold text-foreground mb-2">Tahvil seç veya ara</h3>
+            <p className="text-sm text-muted-foreground font-body max-w-xs">
+              ISIN veya ihraççıya göre arayın, liste veya grafiklerden tahvil seçin.
+            </p>
+          </div>
+          <div className="flex flex-col items-center text-center">
+            <div className="rounded-full border border-primary/30 bg-primary/5 p-4 mb-4">
+              <BarChart3 className="h-6 w-6 text-primary" />
+            </div>
+            <span className="text-label text-muted-foreground mb-2">3. Adım</span>
+            <h3 className="font-display font-semibold text-foreground mb-2">Getiri ve risk analizini incele</h3>
+            <p className="text-sm text-muted-foreground font-body max-w-xs">
+              Vadeye getiri, spread, süre ve senaryo analizlerini tek ekranda görün.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <div className="data-strip" />
 
       <section className="container mx-auto py-20">
@@ -203,6 +254,45 @@ export default function LandingPage() {
               </p>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="container mx-auto py-20">
+        <h2 className="font-display text-display-sm text-foreground mb-10 text-center">Özellikler</h2>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[
+            { icon: List, title: "Tahvil listesi", desc: "BIST borçlanma araçlarını para birimi, vade ve getiriye göre filtreleyin." },
+            { icon: LineChart, title: "TLREF grafikleri", desc: "Tarihsel endeks değeri ve günlük oran grafikleri." },
+            { icon: Star, title: "Favoriler", desc: "Sık kullandığınız tahvilleri favorilere ekleyin, hızlı erişin." },
+            { icon: Bell, title: "Alarmlar", desc: "Getiri veya vadeye kalan gün koşuluna göre e-posta uyarıları." },
+            { icon: Calculator, title: "Getiri hesaplama", desc: "Vadeye getiri, spread, süre ve kupon hesaplamaları." },
+            { icon: TrendingUp, title: "Piyasa verisi", desc: "Temiz fiyat, kirli fiyat ve günlük TLREF ile güncel veriler." },
+          ].map((item) => (
+            <div key={item.title} className="rounded-lg border border-border bg-card p-6 grain">
+              <item.icon className="h-8 w-8 text-primary mb-3" />
+              <h3 className="font-display font-semibold text-foreground mb-2">{item.title}</h3>
+              <p className="text-sm text-muted-foreground font-body">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="container mx-auto py-12">
+        <div className="rounded-lg border border-border/50 bg-card/50 py-8 px-6 grain">
+          <div className="flex flex-wrap justify-center gap-x-12 gap-y-6">
+            <div className="flex items-center gap-3">
+              <Shield className="h-5 w-5 text-primary shrink-0" />
+              <span className="text-data-sm text-muted-foreground">BIST'ten resmî veri</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <RefreshCw className="h-5 w-5 text-primary shrink-0" />
+              <span className="text-data-sm text-muted-foreground">Veriler her iş günü güncellenir</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Lock className="h-5 w-5 text-primary shrink-0" />
+              <span className="text-data-sm text-muted-foreground">Hesap güvenliği</span>
+            </div>
+          </div>
         </div>
       </section>
 

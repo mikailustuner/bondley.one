@@ -124,3 +124,4 @@ class BondStatsResponse(BaseModel):
     by_currency: dict[str, int]
     by_yield_type: dict[str, int]
     avg_days_to_maturity: float | None = None
+    by_maturity_bucket: dict[str, int] = {}

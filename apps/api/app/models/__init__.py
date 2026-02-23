@@ -9,5 +9,6 @@ from app.models.user_metric import UserMetric
 from app.models.refresh_token import RefreshToken
 from app.models.user_alert import UserAlert
 from app.models.user_favorite_bond import UserFavoriteBond
+from app.models.user_mfa_backup_code import UserMfaBackupCode
 
-__all__ = ["Bond", "MarketData", "Calculation", "TLREFRate", "User", "AuditLog", "BondView", "UserMetric", "RefreshToken", "UserAlert", "UserFavoriteBond"]
+__all__ = ["Bond", "MarketData", "Calculation", "TLREFRate", "User", "AuditLog", "BondView", "UserMetric", "RefreshToken", "UserAlert", "UserFavoriteBond", "UserMfaBackupCode"]

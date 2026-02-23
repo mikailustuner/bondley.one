@@ -67,7 +67,7 @@ async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promis
   let res = await fetch(`${API_BASE}${endpoint}`, { headers, ...rest });
 
   // Handle 401 Unauthorized - try to refresh token
-  if (res.status === 401 && !skipRefresh && endpoint !== "/auth/refresh" && endpoint !== "/auth/login" && endpoint !== "/auth/signup") {
+  if (res.status === 401 && !skipRefresh && endpoint !== "/auth/refresh" && endpoint !== "/auth/login" && endpoint !== "/auth/signup" && endpoint !== "/auth/mfa/verify") {
     const newToken = await refreshAccessToken();
 
     if (newToken) {
@@ -127,6 +127,7 @@ export interface PublicSummary {
   tlref_date: string | null;
   tlref_daily_rate: number | null;
   tlref_annualized_rate: number | null;
+  tlref_index_change_pct: number | null;
   total_tlref_records: number;
   total_bonds: number;
 }
@@ -224,14 +225,33 @@ export interface BondStats {
   by_currency: Record<string, number>;
   by_yield_type: Record<string, number>;
   avg_days_to_maturity: number | null;
+  by_maturity_bucket?: { short: number; medium: number; long: number };
 }
+
+// --- Auth / User types (including MFA) ---
+
+export interface UserMe {
+  id: number;
+  email: string;
+  full_name: string | null;
+  company: string | null;
+  location: string | null;
+  role: string;
+  is_active: boolean;
+  mfa_enabled: boolean;
+  created_at: string;
+}
+
+export type LoginResponse =
+  | { access_token: string; refresh_token: string; user: UserMe }
+  | { mfa_required: true; mfa_token: string; user: UserMe };
 
 // --- API ---
 
 export const api = {
   auth: {
     login: (email: string, password: string) =>
-      apiFetch<{ access_token: string; refresh_token: string; user: any }>("/auth/login", {
+      apiFetch<LoginResponse>("/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
         skipRefresh: true,
@@ -265,7 +285,30 @@ export const api = {
         method: "POST",
         token,
       }),
-    me: (token: string) => apiFetch<any>("/auth/me", { token }),
+    me: (token: string) => apiFetch<UserMe>("/auth/me", { token }),
+    mfaSetup: (token: string) =>
+      apiFetch<{ secret: string; qr_uri: string }>("/auth/mfa/setup", {
+        method: "POST",
+        token,
+      }),
+    mfaConfirm: (token: string, code: string) =>
+      apiFetch<{ backup_codes: string[]; message: string }>("/auth/mfa/confirm", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ code }),
+      }),
+    mfaVerify: (mfaToken: string, code: string) =>
+      apiFetch<{ access_token: string; refresh_token: string; user: UserMe }>("/auth/mfa/verify", {
+        method: "POST",
+        body: JSON.stringify({ mfa_token: mfaToken, code }),
+        skipRefresh: true,
+      }),
+    mfaDisable: (token: string, password: string) =>
+      apiFetch<{ message: string }>("/auth/mfa/disable", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ password }),
+      }),
     updateProfile: (token: string, data: { full_name?: string; company?: string; location?: string }) =>
       apiFetch<any>("/auth/me", {
         method: "PUT",
@@ -447,6 +490,8 @@ export const api = {
         currency?: string;
         security_type?: string;
         yield_type?: string;
+        order_by?: "maturity_date_asc" | "days_to_maturity_asc" | "last_issue_yield_desc";
+        max_days_to_maturity?: number;
       },
     ) => {
       const query = new URLSearchParams();
@@ -457,6 +502,9 @@ export const api = {
       if (params?.currency) query.set("currency", params.currency);
       if (params?.security_type) query.set("security_type", params.security_type);
       if (params?.yield_type) query.set("yield_type", params.yield_type);
+      if (params?.order_by) query.set("order_by", params.order_by);
+      if (params?.max_days_to_maturity != null)
+        query.set("max_days_to_maturity", String(params.max_days_to_maturity));
       return apiFetch<BondListResponse>(`/bonds/?${query}`, { token });
     },
     get: (token: string, isin: string, params?: { settlement_date?: string }) => {

@@ -51,6 +51,16 @@ async def get_public_summary(db: AsyncSession = Depends(get_db)):
     )
     first = first_result.scalar_one_or_none()
 
+    prev_result = await db.execute(
+        select(TLREFRate).order_by(TLREFRate.rate_date.desc()).offset(1).limit(1)
+    )
+    prev = prev_result.scalar_one_or_none()
+
+    tlref_index_change_pct = None
+    if latest and prev and prev.index_value and float(prev.index_value) > 0:
+        change = (float(latest.index_value) - float(prev.index_value)) / float(prev.index_value) * 100
+        tlref_index_change_pct = round(change, 2)
+
     total_tlref = (await db.execute(select(func.count(TLREFRate.id)))).scalar() or 0
     total_bonds = (
         await db.execute(select(func.count(Bond.id)).where(Bond.is_active == True))
@@ -68,6 +78,7 @@ async def get_public_summary(db: AsyncSession = Depends(get_db)):
         "tlref_date": latest.rate_date.isoformat() if latest else None,
         "tlref_daily_rate": float(latest.daily_rate * 100) if latest and latest.daily_rate else None,
         "tlref_annualized_rate": annualized_rate,
+        "tlref_index_change_pct": tlref_index_change_pct,
         "total_tlref_records": total_tlref,
         "total_bonds": total_bonds,
     }

@@ -37,6 +37,7 @@ class UserResponse(BaseModel):
     location: str | None
     role: str
     is_active: bool
+    mfa_enabled: bool = False
     created_at: datetime
 
 
@@ -44,6 +45,13 @@ class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+    user: UserResponse
+
+
+class TokenResponseMfaRequired(BaseModel):
+    """Login when 2FA is enabled: client must call POST /auth/mfa/verify with mfa_token and code."""
+    mfa_required: bool = True
+    mfa_token: str
     user: UserResponse
 
 
@@ -68,3 +76,30 @@ class PasswordChange(BaseModel):
 class EmailChange(BaseModel):
     """E-posta degistirme"""
     new_email: EmailStr
+
+
+# --- MFA schemas ---
+
+
+class MfaSetupResponse(BaseModel):
+    """One-time response: secret and QR URI for authenticator app."""
+    secret: str
+    qr_uri: str
+
+
+class MfaConfirmRequest(BaseModel):
+    code: str = Field(min_length=6, max_length=6)
+
+
+class MfaConfirmResponse(BaseModel):
+    backup_codes: list[str]
+    message: str = "2FA etkinlestirildi. Yedek kodlari guvenli bir yere kaydedin."
+
+
+class MfaVerifyRequest(BaseModel):
+    mfa_token: str
+    code: str = Field(min_length=6, max_length=8)
+
+
+class MfaDisableRequest(BaseModel):
+    password: str

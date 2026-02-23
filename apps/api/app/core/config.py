@@ -47,11 +47,19 @@ class Settings(BaseSettings):
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 30  # 30 days
     JWT_REFRESH_SECRET_KEY: str = "your-refresh-secret-key-change-in-production"  # Optional: separate secret for refresh tokens
 
+    # MFA: 32-byte key for encrypting TOTP secrets (base64 or hex). Must not be derived from JWT secret.
+    MFA_ENCRYPTION_KEY: str = ""
+
     BIST_TLREF_DAILY_URL: str = "https://borsaistanbul.com/datum/bisttlrefendeksi.csv"
     BIST_TLREF_HISTORICAL_URL: str = "https://borsaistanbul.com/datum/BISTTLREFENDEKSI_D.zip"
     BIST_BOND_LIST_URL: str = "https://borsaistanbul.com/datum/tbliste.zip"
 
     CORS_ORIGINS: str = "http://localhost:3000,http://landing.localhost:3000,http://dashboard.localhost:3000,http://admin.localhost:3000"
+
+    # Rate limiting (login/signup brute-force protection)
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_LOGIN_PER_MINUTE: int = 5
+    RATE_LIMIT_SIGNUP_PER_HOUR: int = 3
 
     # Admin seed: only used when creating the initial admin user (not when one already exists)
     ADMIN_EMAIL: str = "admin@fincalc.com"

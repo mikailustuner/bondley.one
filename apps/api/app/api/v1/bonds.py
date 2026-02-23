@@ -41,6 +41,11 @@ async def list_bonds(
     currency: str | None = Query(None, description="Para birimi filtresi"),
     security_type: str | None = Query(None, description="MK turu filtresi"),
     yield_type: str | None = Query(None, description="Getiri turu filtresi"),
+    order_by: str | None = Query(
+        "maturity_date_asc",
+        description="maturity_date_asc | days_to_maturity_asc | last_issue_yield_desc",
+    ),
+    max_days_to_maturity: int | None = Query(None, description="Maksimum vadeye kalan gun (dahil)"),
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
@@ -72,9 +77,26 @@ async def list_bonds(
         query = query.where(Bond.yield_type.ilike(f"%{yield_type}%"))
         count_query = count_query.where(Bond.yield_type.ilike(f"%{yield_type}%"))
 
+    if max_days_to_maturity is not None:
+        query = query.where(
+            Bond.days_to_maturity.isnot(None),
+            Bond.days_to_maturity <= max_days_to_maturity,
+        )
+        count_query = count_query.where(
+            Bond.days_to_maturity.isnot(None),
+            Bond.days_to_maturity <= max_days_to_maturity,
+        )
+
+    if order_by == "days_to_maturity_asc":
+        order_clause = Bond.days_to_maturity.asc().nullslast()
+    elif order_by == "last_issue_yield_desc":
+        order_clause = Bond.last_issue_yield.desc().nullslast()
+    else:
+        order_clause = Bond.maturity_date.asc().nullslast()
+
     total = (await db.execute(count_query)).scalar() or 0
     result = await db.execute(
-        query.order_by(Bond.maturity_date.asc().nullslast()).offset(skip).limit(limit)
+        query.order_by(order_clause).offset(skip).limit(limit)
     )
     bonds = result.scalars().all()
 
@@ -121,12 +143,40 @@ async def get_bond_stats(
         )
     ).scalar()
 
+    base = Bond.is_active == True
+    short = (
+        await db.execute(
+            select(func.count(Bond.id)).where(
+                base, Bond.days_to_maturity.isnot(None), Bond.days_to_maturity < 365
+            )
+        )
+    ).scalar() or 0
+    medium = (
+        await db.execute(
+            select(func.count(Bond.id)).where(
+                base,
+                Bond.days_to_maturity.isnot(None),
+                Bond.days_to_maturity >= 365,
+                Bond.days_to_maturity <= 1825,
+            )
+        )
+    ).scalar() or 0
+    long_count = (
+        await db.execute(
+            select(func.count(Bond.id)).where(
+                base, Bond.days_to_maturity.isnot(None), Bond.days_to_maturity > 1825
+            )
+        )
+    ).scalar() or 0
+    by_maturity_bucket = {"short": short, "medium": medium, "long": long_count}
+
     return BondStatsResponse(
         total_bonds=total,
         by_security_type=by_security_type,
         by_currency=by_currency,
         by_yield_type=by_yield_type,
         avg_days_to_maturity=round(float(avg_dtm), 1) if avg_dtm else None,
+        by_maturity_bucket=by_maturity_bucket,
     )
 
 

@@ -22,6 +22,8 @@ export default function DashboardPage() {
   const [quickSearchLoading, setQuickSearchLoading] = useState(false);
   const [quickSearchOpen, setQuickSearchOpen] = useState(false);
   const quickSearchRef = useRef<HTMLDivElement>(null);
+  const [soonMaturing, setSoonMaturing] = useState<BondListItem[]>([]);
+  const [highYield, setHighYield] = useState<BondListItem[]>([]);
 
   useEffect(() => {
     document.title = "Dashboard — Bondley";
@@ -72,6 +74,20 @@ export default function DashboardPage() {
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+    Promise.all([
+      api.bonds.list(token, { limit: 5, order_by: "days_to_maturity_asc", max_days_to_maturity: 90, active_only: true }),
+      api.bonds.list(token, { limit: 5, order_by: "last_issue_yield_desc", active_only: true }),
+    ])
+      .then(([soonRes, yieldRes]) => {
+        setSoonMaturing(soonRes.items || []);
+        setHighYield(yieldRes.items || []);
+      })
+      .catch(() => {});
   }, []);
 
   const { history, indexData, rateData, stats, bondStats, loading, error } = useTlrefHistory();
@@ -187,6 +203,12 @@ export default function DashboardPage() {
         </Card>
       )}
 
+      {stats?.latest_date && (
+        <p className="text-label text-muted-foreground/80 animate-fade-up">
+          Son veri: {formatDate(stats.latest_date)}
+        </p>
+      )}
+
       <div className="grid gap-px md:grid-cols-4 bg-border/30 rounded-lg overflow-hidden animate-fade-up">
         {STATS.map((stat) => {
           const inner = (
@@ -211,6 +233,117 @@ export default function DashboardPage() {
           );
         })}
       </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-fade-up">
+        <Link
+          href="/dashboard/bonds"
+          className="rounded-lg border border-border bg-card p-4 grain hover:bg-secondary/30 transition-colors text-left"
+        >
+          <div className="text-label text-muted-foreground mb-1">Tahviller</div>
+          <div className="text-data-sm font-medium text-foreground">Tahvil listesi ve arama</div>
+        </Link>
+        <Link
+          href="/dashboard/alerts"
+          className="rounded-lg border border-border bg-card p-4 grain hover:bg-secondary/30 transition-colors text-left"
+        >
+          <div className="text-label text-muted-foreground mb-1">Uyarılar</div>
+          <div className="text-data-sm font-medium text-foreground">Fiyat ve vade uyarıları</div>
+        </Link>
+        <Link
+          href="/dashboard/analytics"
+          className="rounded-lg border border-border bg-card p-4 grain hover:bg-secondary/30 transition-colors text-left"
+        >
+          <div className="text-label text-muted-foreground mb-1">Analiz</div>
+          <div className="text-data-sm font-medium text-foreground">Piyasa dağılımları</div>
+        </Link>
+        <a
+          href="#tlref-charts"
+          className="rounded-lg border border-border bg-card p-4 grain hover:bg-secondary/30 transition-colors text-left"
+        >
+          <div className="text-label text-muted-foreground mb-1">TLREF</div>
+          <div className="text-data-sm font-medium text-foreground">Endeks ve oran grafikleri</div>
+        </a>
+      </div>
+
+      {bondStats?.by_maturity_bucket && (bondStats.by_maturity_bucket.short + bondStats.by_maturity_bucket.medium + bondStats.by_maturity_bucket.long) > 0 && (
+        <div className="grid gap-px md:grid-cols-3 bg-border/30 rounded-lg overflow-hidden animate-fade-up">
+          <div className="bg-card p-4 grain">
+            <div className="text-label text-muted-foreground mb-1">Kısa vade (&lt;1 yıl)</div>
+            <div className="font-mono-data text-lg text-foreground">
+              {formatDecimal(bondStats.by_maturity_bucket.short, 0)}
+            </div>
+          </div>
+          <div className="bg-card p-4 grain">
+            <div className="text-label text-muted-foreground mb-1">Orta (1–5 yıl)</div>
+            <div className="font-mono-data text-lg text-foreground">
+              {formatDecimal(bondStats.by_maturity_bucket.medium, 0)}
+            </div>
+          </div>
+          <div className="bg-card p-4 grain">
+            <div className="text-label text-muted-foreground mb-1">Uzun (5 yıl+)</div>
+            <div className="font-mono-data text-lg text-foreground">
+              {formatDecimal(bondStats.by_maturity_bucket.long, 0)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(soonMaturing.length > 0 || highYield.length > 0) && (
+        <div className="grid gap-6 md:grid-cols-2 animate-fade-up">
+          {soonMaturing.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardDescription>VADESİ YAKLAŞAN</CardDescription>
+                <CardTitle className="mt-1">90 gün içinde vadesi dolan tahviller</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {soonMaturing.map((b) => (
+                    <li key={b.isin_code}>
+                      <Link
+                        href={`/dashboard/bonds/${encodeURIComponent(b.isin_code)}`}
+                        className="flex items-center justify-between rounded-md py-1.5 px-2 hover:bg-secondary/50 transition-colors text-data-sm"
+                      >
+                        <span className="font-mono font-medium text-foreground">{b.isin_code}</span>
+                        <span className="text-muted-foreground truncate max-w-[140px]">{b.issuer ?? "—"}</span>
+                        <span className="font-mono-data text-muted-foreground shrink-0">
+                          {b.days_to_maturity != null ? `${b.days_to_maturity} gün` : "—"}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+          {highYield.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardDescription>YÜKSEK GETİRİLİ</CardDescription>
+                <CardTitle className="mt-1">Son ihraç getirisi yüksek tahviller</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {highYield.map((b) => (
+                    <li key={b.isin_code}>
+                      <Link
+                        href={`/dashboard/bonds/${encodeURIComponent(b.isin_code)}`}
+                        className="flex items-center justify-between rounded-md py-1.5 px-2 hover:bg-secondary/50 transition-colors text-data-sm"
+                      >
+                        <span className="font-mono font-medium text-foreground">{b.isin_code}</span>
+                        <span className="text-muted-foreground truncate max-w-[140px]">{b.issuer ?? "—"}</span>
+                        <span className="font-mono-data text-primary shrink-0">
+                          {b.last_issue_yield != null ? formatPercent(b.last_issue_yield) : "—"}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {usageSummary && (
         <Card className="animate-fade-up-delay-1">
@@ -289,7 +422,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-1 animate-fade-up-delay-1">
+      <div id="tlref-charts" className="grid gap-6 lg:grid-cols-1 animate-fade-up-delay-1">
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">

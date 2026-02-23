@@ -4,6 +4,8 @@ import secrets
 from typing import TYPE_CHECKING
 
 import bcrypt
+import pyotp
+from cryptography.fernet import Fernet, InvalidToken
 from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -14,6 +16,60 @@ if TYPE_CHECKING:
     from app.models.refresh_token import RefreshToken
 
 settings = get_settings()
+
+# --- MFA: TOTP secret encryption (do not derive from JWT secret) ---
+
+
+def _get_fernet() -> Fernet | None:
+    key = (settings.MFA_ENCRYPTION_KEY or "").strip()
+    if not key:
+        return None
+    try:
+        return Fernet(key.encode("utf-8") if isinstance(key, str) else key)
+    except Exception:
+        return None
+
+
+def encrypt_mfa_secret(plain: str) -> str | None:
+    f = _get_fernet()
+    if f is None:
+        return None
+    try:
+        return f.encrypt(plain.encode("utf-8")).decode("utf-8")
+    except Exception:
+        return None
+
+
+def decrypt_mfa_secret(encrypted: str) -> str | None:
+    f = _get_fernet()
+    if f is None:
+        return None
+    try:
+        return f.decrypt(encrypted.encode("utf-8")).decode("utf-8")
+    except (InvalidToken, Exception):
+        return None
+
+
+def verify_totp(secret: str, code: str) -> bool:
+    if not secret or not code or len(code) != 6:
+        return False
+    try:
+        totp = pyotp.TOTP(secret)
+        return totp.verify(code, valid_window=1)
+    except Exception:
+        return False
+
+
+def generate_totp_secret() -> str:
+    return pyotp.random_base32()
+
+
+def get_totp_uri(secret: str, email: str, issuer: str = "FinCalc") -> str:
+    return pyotp.totp.TOTP(secret).provisioning_uri(name=email, issuer_name=issuer)
+
+
+def hash_backup_code(code: str) -> str:
+    return hashlib.sha256(code.encode("utf-8")).hexdigest()
 
 # bcrypt max 72 bytes; UTF-8 ile kesiyoruz (passlib kullanmiyoruz, uyumluluk hatasi onlendi)
 BCRYPT_MAX_PASSWORD_BYTES = 72

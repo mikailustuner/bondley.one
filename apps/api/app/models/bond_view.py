@@ -3,7 +3,7 @@ from datetime import date, datetime
 from sqlalchemy import String, Integer, Date, DateTime, ForeignKey, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.core.base import Base
 
 
 class BondView(Base):

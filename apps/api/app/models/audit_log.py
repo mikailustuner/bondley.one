@@ -4,7 +4,7 @@ from typing import Any
 from sqlalchemy import String, Integer, Text, DateTime, ForeignKey, JSON, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.core.base import Base
 
 
 class AuditLog(Base):
