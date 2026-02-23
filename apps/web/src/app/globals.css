@@ -67,7 +67,7 @@
     --secondary-foreground: 40 10% 82%;
 
     --muted: 225 15% 14%;
-    --muted-foreground: 220 10% 52%;
+    --muted-foreground: 220 10% 65%;
 
     --accent: 160 84% 39%;
     --accent-foreground: 225 20% 8%;
@@ -137,6 +137,10 @@
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.02em;
     font-feature-settings: "tnum";
+  }
+
+  .dark .font-bond-nums {
+    font-weight: 500;
   }
 
   .font-body {

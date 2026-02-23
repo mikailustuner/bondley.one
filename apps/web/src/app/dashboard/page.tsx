@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -87,7 +88,7 @@ export default function DashboardPage() {
         setSoonMaturing(soonRes.items || []);
         setHighYield(yieldRes.items || []);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const { history, indexData, rateData, stats, bondStats, loading, error } = useTlrefHistory();
@@ -95,56 +96,57 @@ export default function DashboardPage() {
 
   const STATS = stats
     ? [
-        {
-          label: "TLREF ENDEKS",
-          value: formatDecimal(stats.latest_index, 2),
-          sub: stats.latest_date ? formatDate(stats.latest_date) : "",
-          highlight: true,
-        },
-        {
-          label: "GUNLUK ORAN",
-          value: formatPercentFromDecimal(stats.latest_daily_rate, 4),
-          sub: "Son iş günü",
-        },
-        {
-          label: "YILLIK ORAN",
-          value: stats.annualized_rate_pct != null ? formatPercent(stats.annualized_rate_pct) : "—",
-          sub: "Bilesik yillik",
-        },
-        {
-          label: "AKTIF TAHVIL",
-          value: bondStats ? formatDecimal(bondStats.total_bonds, 0) : "—",
-          sub: bondStats?.avg_days_to_maturity
-            ? `Ort. vade: ${Math.round(bondStats.avg_days_to_maturity)} gün`
-            : "",
-          link: "/dashboard/bonds",
-        },
-      ]
+      {
+        label: "TLREF ENDEKS",
+        value: formatDecimal(stats.latest_index, 2),
+        sub: stats.latest_date ? formatDate(stats.latest_date) : "",
+        highlight: true,
+      },
+      {
+        label: "GUNLUK ORAN",
+        value: formatPercentFromDecimal(stats.latest_daily_rate, 4),
+        sub: "Son iş günü",
+      },
+      {
+        label: "YILLIK ORAN",
+        value: stats.annualized_rate_pct != null ? formatPercent(stats.annualized_rate_pct) : "—",
+        sub: "Bilesik yillik",
+      },
+      {
+        label: "AKTİF MK",
+        value: bondStats ? formatDecimal(bondStats.total_bonds, 0) : "—",
+        sub: bondStats?.avg_days_to_maturity
+          ? `Ort. vade: ${Math.round(bondStats.avg_days_to_maturity)} gün`
+          : "",
+        link: "/dashboard/bonds",
+      },
+    ]
     : [
-        { label: "TLREF ENDEKS", value: "—", sub: "", highlight: true },
-        { label: "GUNLUK ORAN", value: "—", sub: "" },
-        { label: "YILLIK ORAN", value: "—", sub: "" },
-        { label: "AKTIF TAHVIL", value: "—", sub: "" },
-      ];
+      { label: "TLREF ENDEKS", value: "—", sub: "", highlight: true },
+      { label: "GUNLUK ORAN", value: "—", sub: "" },
+      { label: "YILLIK ORAN", value: "—", sub: "" },
+      { label: "AKTİF MK", value: "—", sub: "" },
+    ];
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="hidden md:block">
+        <div className="hidden md:block shrink-0">
           <h1 className="font-display text-display-md text-foreground">Dashboard</h1>
           <p className="text-data-sm text-muted-foreground mt-1">
             BIST TLREF Endeks & Borçlanma Araçları Terminali
           </p>
         </div>
-        <div ref={quickSearchRef} className="relative w-full sm:max-w-[280px] sm:shrink-0">
+        <div ref={quickSearchRef} className="relative flex-1 max-w-[480px] mx-auto">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             type="search"
             placeholder="ISIN veya ihraççı ara..."
             value={quickSearchQuery}
             onChange={(e) => setQuickSearchQuery(e.target.value)}
             onFocus={() => quickSearchResults.length > 0 && setQuickSearchOpen(true)}
-            className="font-mono-data text-data-sm"
-            aria-label="Tahvil ara"
+            className="font-mono-data text-data-sm pl-10 border-primary/30 bg-card hover:border-primary/50 transition-colors"
+            aria-label="Borçlanma aracı ara"
             autoComplete="off"
           />
           {quickSearchOpen && (
@@ -204,7 +206,7 @@ export default function DashboardPage() {
       )}
 
       {stats?.latest_date && (
-        <p className="text-label text-muted-foreground/80 animate-fade-up">
+        <p className="text-label text-muted-foreground animate-fade-up">
           Son veri: {formatDate(stats.latest_date)}
         </p>
       )}
@@ -221,7 +223,7 @@ export default function DashboardPage() {
               >
                 {stat.value}
               </div>
-              <div className="text-label text-muted-foreground/60 mt-1">{stat.sub}</div>
+              <div className="text-label text-muted-foreground mt-1">{stat.sub}</div>
             </div>
           );
           return (stat as any).link ? (
@@ -239,8 +241,8 @@ export default function DashboardPage() {
           href="/dashboard/bonds"
           className="rounded-lg border border-border bg-card p-4 grain hover:bg-secondary/30 transition-colors text-left"
         >
-          <div className="text-label text-muted-foreground mb-1">Tahviller</div>
-          <div className="text-data-sm font-medium text-foreground">Tahvil listesi ve arama</div>
+          <div className="text-label text-muted-foreground mb-1">Borçlanma Araçları</div>
+          <div className="text-data-sm font-medium text-foreground">Borçlanma araçları listesi</div>
         </Link>
         <Link
           href="/dashboard/alerts"
@@ -294,7 +296,7 @@ export default function DashboardPage() {
             <Card>
               <CardHeader>
                 <CardDescription>VADESİ YAKLAŞAN</CardDescription>
-                <CardTitle className="mt-1">90 gün içinde vadesi dolan tahviller</CardTitle>
+                <CardTitle className="mt-1">90 gün içinde vadesi dolan borçlanma araçları</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
@@ -320,7 +322,7 @@ export default function DashboardPage() {
             <Card>
               <CardHeader>
                 <CardDescription>YÜKSEK GETİRİLİ</CardDescription>
-                <CardTitle className="mt-1">Son ihraç getirisi yüksek tahviller</CardTitle>
+                <CardTitle className="mt-1">Son ihraç getirisi yüksek borçlanma araçları</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
@@ -349,12 +351,12 @@ export default function DashboardPage() {
         <Card className="animate-fade-up-delay-1">
           <CardHeader>
             <CardDescription>KULLANIM ÖZETİ</CardDescription>
-            <CardTitle className="mt-1">Bu ay {usageSummary.this_month_bonds_viewed} tahvil incelediniz</CardTitle>
+            <CardTitle className="mt-1">Bu ay {usageSummary.this_month_bonds_viewed} borçlanma aracı incelediniz</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {usageSummary.most_viewed_bonds.length > 0 ? (
               <>
-                <p className="text-label text-muted-foreground">En çok baktığınız tahviller:</p>
+                <p className="text-label text-muted-foreground">En çok baktığınız borçlanma araçları:</p>
                 <ul className="flex flex-wrap gap-2">
                   {usageSummary.most_viewed_bonds.map((b) => (
                     <li key={b.isin_code}>
@@ -371,7 +373,7 @@ export default function DashboardPage() {
                 </ul>
               </>
             ) : (
-              <p className="text-data-sm text-muted-foreground">Bu dönemde henüz tahvil incelemesi yok.</p>
+              <p className="text-data-sm text-muted-foreground">Bu dönemde henüz inceleme yok.</p>
             )}
           </CardContent>
         </Card>
@@ -380,8 +382,8 @@ export default function DashboardPage() {
       {favoriteBonds.length > 0 && (
         <Card className="animate-fade-up-delay-1">
           <CardHeader>
-            <CardDescription>FAVORİ TAHVİLLERİM</CardDescription>
-            <CardTitle className="mt-1">Favori tahvillerinize hızlı erişim</CardTitle>
+            <CardDescription>FAVORİLERİM</CardDescription>
+            <CardTitle className="mt-1">Favori borçlanma araçlarınıza hızlı erişim</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="flex flex-wrap gap-2">
@@ -410,7 +412,7 @@ export default function DashboardPage() {
               <div key={currency} className="bg-card p-4 grain">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-label text-muted-foreground mb-1">{currency} TAHVIL</div>
+                    <div className="text-label text-muted-foreground mb-1">{currency} MK</div>
                     <div className="font-mono-data text-lg text-foreground">
                       {formatDecimal(count, 0)}
                     </div>

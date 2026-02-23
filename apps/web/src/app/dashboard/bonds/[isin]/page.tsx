@@ -78,7 +78,7 @@ export default function BondDetailPage({
 
   useEffect(() => {
     if (!isin) {
-      setError("Tahvil kodu belirtilmedi");
+      setError("Menkul k�ymet kodu belirtilmedi");
       setLoading(false);
       return;
     }
@@ -95,7 +95,7 @@ export default function BondDetailPage({
     api.bonds
       .get(token, isin, { settlement_date: selectedDate })
       .then(setBond)
-      .catch((e) => setError(e?.message || "Tahvil bulunamadi"))
+      .catch((e) => setError(e?.message || "Bor�lanma arac� bulunamad�"))
       .finally(() => {
         setLoading(false);
         setMetricsLoading(false);
@@ -163,7 +163,7 @@ export default function BondDetailPage({
     return (
       <EmptyState
         variant="error"
-        title="Tahvil kodu belirtilmedi"
+        title="Menkul k�ymet kodu belirtilmedi"
         icon={<AlertCircle className="h-7 w-7" />}
         action={{ label: "Listeye don", href: "/dashboard/bonds" }}
       />
@@ -187,7 +187,7 @@ export default function BondDetailPage({
   if (!bond)
     return (
       <EmptyState
-        title="Tahvil bulunamadi"
+        title="Bor�lanma arac� bulunamad�"
         description="Belirtilen ISIN ile bir tahvil kaydı bulunamadı."
         icon={<FileQuestion className="h-7 w-7" />}
         action={{ label: "Listeye dön", href: "/dashboard/bonds" }}
@@ -671,7 +671,7 @@ export default function BondDetailPage({
         <Card>
           <CardHeader>
             <CardDescription>GENEL BILGILER</CardDescription>
-            <CardTitle className="mt-1">Tahvil Detaylari</CardTitle>
+            <CardTitle className="mt-1">Genel Detaylar</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-0">

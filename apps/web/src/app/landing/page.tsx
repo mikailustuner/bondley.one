@@ -102,7 +102,7 @@ export default function LandingPage() {
 
             <p className="text-lg text-muted-foreground leading-relaxed max-w-xl animate-fade-up-delay-1 font-body">
               Borsa İstanbul BIST TLREF Endeks değerleri ve 2000+ borçlanma aracını gerçek zamanlı
-              takip edin. Tahvil listesi, tarihsel veriler, günlük oranlar ve istatistiksel analiz
+              takip edin. Bor�lanma ara�lar� listesi, tarihsel veriler, günlük oranlar ve istatistiksel analiz
               tek bir terminalde.
             </p>
 
@@ -243,7 +243,7 @@ export default function LandingPage() {
             {
               number: "18:30",
               label: "OTOMATIK GUNCELLEME",
-              desc: "Her iş günü Borsa İstanbul'dan günlük TLREF endeks değeri ve tahvil listesi otomatik çekilir.",
+              desc: "Her iş günü Borsa İstanbul'dan günlük TLREF endeks değeri ve Bor�lanma ara�lar� listesi otomatik çekilir.",
             },
           ].map((item) => (
             <div key={item.label} className="bg-card p-8 grain">
@@ -261,9 +261,9 @@ export default function LandingPage() {
         <h2 className="font-display text-display-sm text-foreground mb-10 text-center">Özellikler</h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
-            { icon: List, title: "Tahvil listesi", desc: "BIST borçlanma araçlarını para birimi, vade ve getiriye göre filtreleyin." },
+            { icon: List, title: "Bor�lanma ara�lar� listesi", desc: "BIST borçlanma araçlarını para birimi, vade ve getiriye göre filtreleyin." },
             { icon: LineChart, title: "TLREF grafikleri", desc: "Tarihsel endeks değeri ve günlük oran grafikleri." },
-            { icon: Star, title: "Favoriler", desc: "Sık kullandığınız tahvilleri favorilere ekleyin, hızlı erişin." },
+            { icon: Star, title: "Favoriler", desc: "Sık kullandığınız bor�lanma ara�lar�n� favorilere ekleyin, hızlı erişin." },
             { icon: Bell, title: "Alarmlar", desc: "Getiri veya vadeye kalan gün koşuluna göre e-posta uyarıları." },
             { icon: Calculator, title: "Getiri hesaplama", desc: "Vadeye getiri, spread, süre ve kupon hesaplamaları." },
             { icon: TrendingUp, title: "Piyasa verisi", desc: "Temiz fiyat, kirli fiyat ve günlük TLREF ile güncel veriler." },

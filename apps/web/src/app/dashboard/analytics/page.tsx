@@ -37,8 +37,8 @@ export default function AnalyticsPage() {
   const totalReturnPct =
     history.length >= 2
       ? ((history[history.length - 1].index_value - history[0].index_value) /
-          history[0].index_value) *
-        100
+        history[0].index_value) *
+      100
       : null;
 
   const sortedSecTypes = bondStats
@@ -53,7 +53,7 @@ export default function AnalyticsPage() {
       <div className="animate-fade-up">
         <h1 className="font-display text-display-md text-foreground">Analiz</h1>
         <p className="text-data-sm text-muted-foreground mt-1">
-          BIST TLREF Endeks & Tahvil Dağılım Analizi
+          BIST TLREF Endeks & Borçlanma Araçları Dağılım Analizi
         </p>
       </div>
 
@@ -63,28 +63,28 @@ export default function AnalyticsPage() {
           <div className="font-mono-data text-stat text-positive">
             {totalReturnPct != null ? formatPercent(totalReturnPct) : "—"}
           </div>
-          <div className="text-label text-muted-foreground/60 mt-1">Kumulatif</div>
+          <div className="text-label text-muted-foreground mt-1">Kumulatif</div>
         </div>
         <div className="bg-card p-5 grain">
           <div className="text-label text-muted-foreground mb-2">ORT. GUNLUK</div>
           <div className="font-mono-data text-stat text-foreground">
             {avgDailyRatePct != null ? formatPercent(avgDailyRatePct) : "—"}
           </div>
-          <div className="text-label text-muted-foreground/60 mt-1">Son 30 gün</div>
+          <div className="text-label text-muted-foreground mt-1">Son 30 gün</div>
         </div>
         <div className="bg-card p-5 grain">
           <div className="text-label text-muted-foreground mb-2">EN DUSUK</div>
           <div className="font-mono-data text-stat text-foreground">
             {minIndex != null ? formatDecimal(minIndex, 2) : "—"}
           </div>
-          <div className="text-label text-muted-foreground/60 mt-1">Endeks</div>
+          <div className="text-label text-muted-foreground mt-1">Endeks</div>
         </div>
         <div className="bg-card p-5 grain">
           <div className="text-label text-muted-foreground mb-2">EN YUKSEK</div>
           <div className="font-mono-data text-stat text-foreground">
             {maxIndex != null ? formatDecimal(maxIndex, 2) : "—"}
           </div>
-          <div className="text-label text-muted-foreground/60 mt-1">Endeks</div>
+          <div className="text-label text-muted-foreground mt-1">Endeks</div>
         </div>
       </div>
 
@@ -122,7 +122,7 @@ export default function AnalyticsPage() {
         <>
           <div className="animate-fade-up-delay-2">
             <h2 className="font-display text-display-sm text-foreground mb-4">
-              Tahvil Dağılım Analizi
+              Borçlanma Araçları Dağılım Analizi
             </h2>
           </div>
 
@@ -225,7 +225,7 @@ export default function AnalyticsPage() {
                       <div className="font-mono-data text-lg text-foreground">
                         {formatDecimal(count, 0)}
                       </div>
-                      <div className="text-label text-muted-foreground/60">
+                      <div className="text-label text-muted-foreground">
                         {bondStats.total_bonds > 0
                           ? formatPercent((count / bondStats.total_bonds) * 100)
                           : "—"}

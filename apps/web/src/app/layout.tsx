@@ -23,22 +23,22 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Bondley – Tahvil Değerleme ve Analiz Platformu",
-  description: "Tahvil değerleme, fiyat takibi ve analiz platformu. Piyasa verileri, endeks takibi ve kurumsal raporlama.",
+  title: "Bondley – Borçlanma Araçları Değerleme ve Analiz Platformu",
+  description: "Borçlanma araçları değerleme, fiyat takibi ve analiz platformu. Tahvil, bono, kira sertifikası, VDMK. Piyasa verileri, endeks takibi ve kurumsal raporlama.",
   icons: {
     icon: "/logo.png",
     apple: "/logo.png",
   },
   openGraph: {
-    title: "Bondley – Tahvil Değerleme ve Analiz Platformu",
-    description: "Tahvil değerleme, fiyat takibi ve analiz platformu. Piyasa verileri, endeks takibi ve kurumsal raporlama.",
+    title: "Bondley – Borçlanma Araçları Değerleme ve Analiz Platformu",
+    description: "Borçlanma araçları değerleme, fiyat takibi ve analiz platformu. Tahvil, bono, kira sertifikası, VDMK. Piyasa verileri, endeks takibi ve kurumsal raporlama.",
     type: "website",
     locale: "tr_TR",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Bondley – Tahvil Değerleme ve Analiz Platformu",
-    description: "Tahvil değerleme, fiyat takibi ve analiz platformu. Piyasa verileri, endeks takibi ve kurumsal raporlama.",
+    title: "Bondley – Borçlanma Araçları Değerleme ve Analiz Platformu",
+    description: "Borçlanma araçları değerleme, fiyat takibi ve analiz platformu. Tahvil, bono, kira sertifikası, VDMK. Piyasa verileri, endeks takibi ve kurumsal raporlama.",
   },
 };
 

@@ -75,7 +75,7 @@ export default function LoginPage() {
             />
           </div>
           <h1 className="font-display text-display-md text-foreground">Bondley</h1>
-          <p className="text-label text-muted-foreground mt-2">TAHVIL ANALIZ PLATFORMU</p>
+          <p className="text-label text-muted-foreground mt-2">BOR�LANMA ARA�LARI ANAL�Z PLATFORMU</p>
         </div>
 
         <Card className="amber-glow-border">

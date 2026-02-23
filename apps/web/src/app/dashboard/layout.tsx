@@ -8,7 +8,7 @@ import { UserMenu } from "@/components/user-menu";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Genel Bakış" },
-  { href: "/dashboard/bonds", label: "Tahviller" },
+  { href: "/dashboard/bonds", label: "Borçlanma Araçları" },
   { href: "/dashboard/alerts", label: "Uyarılar" },
   { href: "/dashboard/analytics", label: "Analiz" },
 ];
@@ -45,11 +45,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`px-3 py-1.5 rounded-sm text-data-sm transition-colors ${
-                      isActive
+                    className={`px-3 py-1.5 rounded-sm text-data-sm transition-colors ${isActive
                         ? "bg-primary/10 text-primary font-medium"
                         : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                    }`}
+                      }`}
                   >
                     {item.label}
                   </Link>

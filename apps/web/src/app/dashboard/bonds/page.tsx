@@ -21,7 +21,7 @@ const CURRENCY_COLORS: Record<string, string> = {
 
 export default function BondsListPage() {
   useEffect(() => {
-    document.title = "Tahviller — Bondley";
+    document.title = "Borçlanma Araçları — Bondley";
     return () => {
       document.title = "Bondley";
     };
@@ -71,13 +71,13 @@ export default function BondsListPage() {
       api.bonds
         .removeFavorite(token, isinCode)
         .then(() => setFavoriteIsins((prev) => { const s = new Set(prev); s.delete(isinCode); return s; }))
-        .catch(() => {})
+        .catch(() => { })
         .finally(() => setFavoriteToggling(null));
     } else {
       api.bonds
         .addFavorite(token, isinCode)
         .then(() => setFavoriteIsins((prev) => new Set(prev).add(isinCode)))
-        .catch(() => {})
+        .catch(() => { })
         .finally(() => setFavoriteToggling(null));
     }
   };
@@ -119,9 +119,9 @@ export default function BondsListPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between animate-fade-up">
         <div>
-          <h1 className="font-display text-display-md text-foreground">Tahviller</h1>
+          <h1 className="font-display text-display-md text-foreground">Borçlanma Araçları</h1>
           <p className="text-data-sm text-muted-foreground mt-1">
-            BIST Borçlanma Araçları — {formatDecimal(total, 0)} aktif kayıt
+            Tahvil, Bono, Kira Sertifikası, VDMK ve türevleri — {formatDecimal(total, 0)} aktif kayıt
           </p>
         </div>
       </div>
@@ -140,11 +140,11 @@ export default function BondsListPage() {
       {stats && !loading && (
         <div className="grid gap-px md:grid-cols-4 bg-border/30 rounded-lg overflow-hidden animate-fade-up">
           <div className="bg-card p-5 grain">
-            <div className="text-label text-muted-foreground mb-2">TOPLAM TAHVIL</div>
+            <div className="text-label text-muted-foreground mb-2">TOPLAM MK</div>
             <div className="font-mono-data text-stat text-primary">
               {formatDecimal(stats.total_bonds, 0)}
             </div>
-            <div className="text-label text-muted-foreground/60 mt-1">Aktif kayit</div>
+            <div className="text-label text-muted-foreground mt-1">Aktif kayit</div>
           </div>
           <div className="bg-card p-5 grain">
             <div className="text-label text-muted-foreground mb-2">ORT. VADE</div>
@@ -153,14 +153,14 @@ export default function BondsListPage() {
                 ? `${Math.round(stats.avg_days_to_maturity)} gün`
                 : "—"}
             </div>
-            <div className="text-label text-muted-foreground/60 mt-1">Kalan gün</div>
+            <div className="text-label text-muted-foreground mt-1">Kalan gün</div>
           </div>
           <div className="bg-card p-5 grain">
             <div className="text-label text-muted-foreground mb-2">PARA BIRIMI</div>
             <div className="font-mono-data text-stat text-foreground">
               {Object.keys(stats.by_currency).length}
             </div>
-            <div className="text-label text-muted-foreground/60 mt-1">
+            <div className="text-label text-muted-foreground mt-1">
               {Object.entries(stats.by_currency)
                 .sort(([, a], [, b]) => b - a)
                 .slice(0, 3)
@@ -173,7 +173,7 @@ export default function BondsListPage() {
             <div className="font-mono-data text-stat text-foreground">
               {Object.keys(stats.by_security_type).length}
             </div>
-            <div className="text-label text-muted-foreground/60 mt-1">Farklı tür</div>
+            <div className="text-label text-muted-foreground mt-1">Farklı tür</div>
           </div>
         </div>
       )}
@@ -216,7 +216,7 @@ export default function BondsListPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardDescription>BORCLANMA ARACLARI</CardDescription>
-              <CardTitle className="mt-1">Tahvil Listesi</CardTitle>
+              <CardTitle className="mt-1">Borçlanma Araçları Listesi</CardTitle>
             </div>
             <span className="text-label text-muted-foreground">
               {search || currencyFilter || typeFilter
@@ -293,25 +293,25 @@ export default function BondsListPage() {
             <EmptyState
               title={
                 search || currencyFilter || typeFilter
-                  ? "Filtreyle eşleşen tahvil yok"
-                  : "Henüz tahvil yok"
+                  ? "Filtreyle eşleşen bor�lanma arac� yok"
+                  : "Henüz bor�lanma arac� yok"
               }
               description={
                 search || currencyFilter || typeFilter
                   ? "Arama veya filtreleri değiştirerek tekrar deneyin."
-                  : "Admin panelden tahvil listesini güncelleyebilirsiniz."
+                  : "Admin panelden bor�lanma ara�lar� listesini güncelleyebilirsiniz."
               }
               icon={<Inbox className="h-7 w-7" />}
               action={
                 search || currencyFilter || typeFilter
                   ? {
-                      label: "Filtreleri temizle",
-                      onClick: () => {
-                        setSearch("");
-                        setCurrencyFilter("");
-                        setTypeFilter("");
-                      },
-                    }
+                    label: "Filtreleri temizle",
+                    onClick: () => {
+                      setSearch("");
+                      setCurrencyFilter("");
+                      setTypeFilter("");
+                    },
+                  }
                   : undefined
               }
             />
@@ -381,130 +381,130 @@ export default function BondsListPage() {
                 ))}
               </div>
               <div className="hidden md:block overflow-x-auto max-h-[600px] overflow-y-auto">
-              <table className="w-full">
-                <thead className="sticky top-0 bg-card z-10">
-                  <tr className="border-b border-border">
-                    <th scope="col" className="w-10 pb-3 text-center text-label text-muted-foreground font-normal">
-                      <span className="sr-only">Favori</span>
-                    </th>
-                    <th scope="col" className="pb-3 text-left text-label text-muted-foreground font-normal">
-                      ISIN
-                    </th>
-                    <th scope="col" className="pb-3 text-left text-label text-muted-foreground font-normal">
-                      IHRACÇI
-                    </th>
-                    <th scope="col" className="pb-3 text-left text-label text-muted-foreground font-normal">
-                      TUR
-                    </th>
-                    <th scope="col" className="pb-3 text-left text-label text-muted-foreground font-normal">
-                      GETIRI TURU
-                    </th>
-                    <th scope="col" className="pb-3 text-center text-label text-muted-foreground font-normal">
-                      DOVIZ
-                    </th>
-                    <th scope="col" className="pb-3 text-right text-label text-muted-foreground font-normal">
-                      VADE
-                    </th>
-                    <th scope="col" className="pb-3 text-right text-label text-muted-foreground font-normal">
-                      SON FIYAT
-                    </th>
-                    <th scope="col" className="pb-3 text-right text-label text-muted-foreground font-normal">
-                      GETIRI %
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((bond) => (
-                    <tr
-                      key={bond.isin_code}
-                      className="border-b border-border/30 last:border-0 hover:bg-secondary/30 transition-colors group"
-                    >
-                      <td className="py-3 text-center">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => toggleFavorite(e, bond.isin_code)}
-                          disabled={favoriteToggling === bond.isin_code}
-                          aria-label={favoriteIsins.has(bond.isin_code) ? "Favorilerden çıkar" : "Favorilere ekle"}
-                        >
-                          <Star
-                            className={`h-4 w-4 ${favoriteIsins.has(bond.isin_code) ? "fill-primary text-primary" : "text-muted-foreground"}`}
-                          />
-                        </Button>
-                      </td>
-                      <td className="py-3">
-                        <Link
-                          href={`/dashboard/bonds/${bond.isin_code}`}
-                          className="font-mono-data text-data-sm text-foreground group-hover:text-primary transition-colors"
-                          onClick={() => {
-                            try {
-                              sessionStorage.setItem(
-                                "bondley_bonds_isins",
-                                JSON.stringify(filtered.map((b) => b.isin_code))
-                              );
-                            } catch {
-                              // ignore
-                            }
-                          }}
-                        >
-                          {bond.isin_code}
-                        </Link>
-                      </td>
-                      <td className="py-3 text-data-sm text-muted-foreground max-w-[200px] truncate">
-                        {bond.issuer
-                          ? bond.issuer.length > 35
-                            ? bond.issuer.substring(0, 35) + "…"
-                            : bond.issuer
-                          : "—"}
-                      </td>
-                      <td className="py-3">
-                        {bond.security_type ? (
-                          <span className="text-data-sm text-muted-foreground">
-                            {bond.security_type.split("/")[0].trim().length > 25
-                              ? bond.security_type.split("/")[0].trim().substring(0, 25) + "…"
-                              : bond.security_type.split("/")[0].trim()}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="py-3">
-                        {bond.yield_type ? (
-                          <span className="text-data-sm text-muted-foreground">
-                            {bond.yield_type.split("/")[0].trim().length > 20
-                              ? bond.yield_type.split("/")[0].trim().substring(0, 20) + "…"
-                              : bond.yield_type.split("/")[0].trim()}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="py-3 text-center">
-                        <Badge
-                          variant={
-                            (CURRENCY_COLORS[bond.currency] as any) || "outline"
-                          }
-                        >
-                          {bond.currency}
-                        </Badge>
-                      </td>
-                      <td className="py-3 text-right font-mono-data text-data-sm text-muted-foreground">
-                        {bond.days_to_maturity != null
-                          ? `${bond.days_to_maturity} gün`
-                          : formatDate(bond.maturity_date)}
-                      </td>
-                      <td className="py-3 text-right font-mono-data text-data-sm text-foreground">
-                        {formatDecimal(bond.last_issue_price, 3)}
-                      </td>
-                      <td className="py-3 text-right font-mono-data text-data-sm text-positive">
-                        {bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"}
-                      </td>
+                <table className="w-full">
+                  <thead className="sticky top-0 bg-card z-10">
+                    <tr className="border-b border-border">
+                      <th scope="col" className="w-10 pb-3 text-center text-label text-muted-foreground font-normal">
+                        <span className="sr-only">Favori</span>
+                      </th>
+                      <th scope="col" className="pb-3 text-left text-label text-muted-foreground font-normal">
+                        ISIN
+                      </th>
+                      <th scope="col" className="pb-3 text-left text-label text-muted-foreground font-normal">
+                        IHRACÇI
+                      </th>
+                      <th scope="col" className="pb-3 text-left text-label text-muted-foreground font-normal">
+                        TUR
+                      </th>
+                      <th scope="col" className="pb-3 text-left text-label text-muted-foreground font-normal">
+                        GETIRI TURU
+                      </th>
+                      <th scope="col" className="pb-3 text-center text-label text-muted-foreground font-normal">
+                        DOVIZ
+                      </th>
+                      <th scope="col" className="pb-3 text-right text-label text-muted-foreground font-normal">
+                        VADE
+                      </th>
+                      <th scope="col" className="pb-3 text-right text-label text-muted-foreground font-normal">
+                        SON FIYAT
+                      </th>
+                      <th scope="col" className="pb-3 text-right text-label text-muted-foreground font-normal">
+                        GETIRI %
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filtered.map((bond) => (
+                      <tr
+                        key={bond.isin_code}
+                        className="border-b border-border/30 last:border-0 hover:bg-secondary/30 transition-colors group"
+                      >
+                        <td className="py-3 text-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => toggleFavorite(e, bond.isin_code)}
+                            disabled={favoriteToggling === bond.isin_code}
+                            aria-label={favoriteIsins.has(bond.isin_code) ? "Favorilerden çıkar" : "Favorilere ekle"}
+                          >
+                            <Star
+                              className={`h-4 w-4 ${favoriteIsins.has(bond.isin_code) ? "fill-primary text-primary" : "text-muted-foreground"}`}
+                            />
+                          </Button>
+                        </td>
+                        <td className="py-3">
+                          <Link
+                            href={`/dashboard/bonds/${bond.isin_code}`}
+                            className="font-mono-data text-data-sm text-foreground group-hover:text-primary transition-colors"
+                            onClick={() => {
+                              try {
+                                sessionStorage.setItem(
+                                  "bondley_bonds_isins",
+                                  JSON.stringify(filtered.map((b) => b.isin_code))
+                                );
+                              } catch {
+                                // ignore
+                              }
+                            }}
+                          >
+                            {bond.isin_code}
+                          </Link>
+                        </td>
+                        <td className="py-3 text-data-sm text-muted-foreground max-w-[200px] truncate">
+                          {bond.issuer
+                            ? bond.issuer.length > 35
+                              ? bond.issuer.substring(0, 35) + "…"
+                              : bond.issuer
+                            : "—"}
+                        </td>
+                        <td className="py-3">
+                          {bond.security_type ? (
+                            <span className="text-data-sm text-muted-foreground">
+                              {bond.security_type.split("/")[0].trim().length > 25
+                                ? bond.security_type.split("/")[0].trim().substring(0, 25) + "…"
+                                : bond.security_type.split("/")[0].trim()}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="py-3">
+                          {bond.yield_type ? (
+                            <span className="text-data-sm text-muted-foreground">
+                              {bond.yield_type.split("/")[0].trim().length > 20
+                                ? bond.yield_type.split("/")[0].trim().substring(0, 20) + "…"
+                                : bond.yield_type.split("/")[0].trim()}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="py-3 text-center">
+                          <Badge
+                            variant={
+                              (CURRENCY_COLORS[bond.currency] as any) || "outline"
+                            }
+                          >
+                            {bond.currency}
+                          </Badge>
+                        </td>
+                        <td className="py-3 text-right font-mono-data text-data-sm text-muted-foreground">
+                          {bond.days_to_maturity != null
+                            ? `${bond.days_to_maturity} gün`
+                            : formatDate(bond.maturity_date)}
+                        </td>
+                        <td className="py-3 text-right font-mono-data text-data-sm text-foreground">
+                          {formatDecimal(bond.last_issue_price, 3)}
+                        </td>
+                        <td className="py-3 text-right font-mono-data text-data-sm text-positive">
+                          {bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </>
           )}
         </CardContent>
