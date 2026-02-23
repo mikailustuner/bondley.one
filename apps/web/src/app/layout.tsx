@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, JetBrains_Mono, DM_Sans } from "next/font/google";
+import { Space_Grotesk, JetBrains_Mono, DM_Sans, IBM_Plex_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { InitialLoader } from "@/components/initial-loader";
 import "./globals.css";
@@ -19,6 +19,13 @@ const jetbrainsMono = JetBrains_Mono({
 const dmSans = DM_Sans({
   subsets: ["latin"],
   variable: "--font-dm-sans",
+  display: "swap",
+});
+
+const ibmPlexMono = IBM_Plex_Mono({
+  weight: ["400", "500", "600"],
+  subsets: ["latin"],
+  variable: "--font-ibm-plex-mono",
   display: "swap",
 });
 
@@ -46,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="tr"
-      className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} ${dmSans.variable}`}
+      className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} ${dmSans.variable} ${ibmPlexMono.variable}`}
       suppressHydrationWarning
     >
       <body className="font-body antialiased">
