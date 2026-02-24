@@ -172,6 +172,8 @@ export interface BondCalculatedMetrics {
   next_coupon_date: string | null;
   return_to_date_pct: number | null;
   return_to_date_used_fallback_price?: boolean;
+  used_fallback_market_data?: boolean;
+  market_data_date?: string | null;
 }
 
 export interface BondDetail {

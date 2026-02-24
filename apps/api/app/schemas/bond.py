@@ -97,6 +97,8 @@ class BondCalculatedMetrics(BaseModel):
     next_coupon_date: str | None = None
     return_to_date_pct: float | None = None
     return_to_date_used_fallback_price: bool = False
+    used_fallback_market_data: bool = False
+    market_data_date: str | None = None
 
 
 class BondDetailWithMetrics(BondResponse):

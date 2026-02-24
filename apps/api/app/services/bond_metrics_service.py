@@ -186,16 +186,33 @@ class BondMetricsService:
         row = result.scalar_one_or_none()
         return row.daily_rate if row else None
 
-    async def get_clean_price(self, bond_id: int, settlement_date: date) -> Decimal | None:
-        """Settlement tarihi icin market_data.clean_price; yoksa None."""
+    async def get_clean_price(self, bond_id: int, settlement_date: date) -> tuple[Decimal | None, date | None]:
+        """Settlement tarihi icin market_data.clean_price; yoksa en son mevcut veriyi kullanir.
+        Returns (clean_price, actual_data_date). actual_data_date settlement_date'ten farkliysa fallback kullanildi demektir."""
+        # Oncelik: tam tarih eslesmesi
         result = await self.db.execute(
-            select(MarketData.clean_price).where(
+            select(MarketData.clean_price, MarketData.trade_date).where(
                 MarketData.bond_id == bond_id,
                 MarketData.trade_date == settlement_date,
             )
         )
-        row = result.scalar_one_or_none()
-        return row if row is not None else None
+        row = result.one_or_none()
+        if row is not None and row[0] is not None:
+            return Decimal(str(row[0])), row[1]
+
+        # Fallback: en son mevcut market data (settlement_date'e en yakin onceki)
+        fallback_result = await self.db.execute(
+            select(MarketData.clean_price, MarketData.trade_date).where(
+                MarketData.bond_id == bond_id,
+                MarketData.trade_date < settlement_date,
+                MarketData.clean_price.isnot(None),
+            ).order_by(MarketData.trade_date.desc()).limit(1)
+        )
+        fallback_row = fallback_result.one_or_none()
+        if fallback_row is not None and fallback_row[0] is not None:
+            return Decimal(str(fallback_row[0])), fallback_row[1]
+
+        return None, None
 
     async def compute_metrics(
         self,
@@ -217,14 +234,18 @@ class BondMetricsService:
             settlement_date,
         )
 
-        # Belirli tarih icin market data kontrolu - yoksa None dondur
+        # Belirli tarih icin market data kontrolu - yoksa fallback kullan
         clean_price = clean_price_override
+        market_data_date = settlement_date
+        used_fallback_market_data = False
         if clean_price is None:
-            clean_price = await self.get_clean_price(bond.id, settlement_date)
+            clean_price, market_data_date = await self.get_clean_price(bond.id, settlement_date)
             if clean_price is None:
-                # Belirli tarih icin veri yok - None dondur (varsayilan deger kullanma)
-                logger.warning(f"No market data for bond {bond.isin_code} on date {settlement_date}")
+                logger.warning(f"No market data for bond {bond.isin_code} on date {settlement_date} (no fallback available)")
                 return None
+            if market_data_date != settlement_date:
+                used_fallback_market_data = True
+                logger.info(f"Using fallback market data for {bond.isin_code}: requested {settlement_date}, using {market_data_date}")
 
         clean_price = Decimal(str(clean_price))
 
@@ -367,6 +388,8 @@ class BondMetricsService:
             "next_coupon_date": bond.next_coupon_date.isoformat() if bond.next_coupon_date else None,
             "return_to_date_pct": return_to_date_pct,
             "return_to_date_used_fallback_price": return_to_date_used_fallback_price,
+            "used_fallback_market_data": used_fallback_market_data,
+            "market_data_date": market_data_date.isoformat() if market_data_date else None,
         }
 
     def compute_return_to_date_only(

@@ -644,6 +644,15 @@ export default function BondDetailPage({
         </Card>
       )}
 
+      {bond.calculated_metrics?.used_fallback_market_data && bond.calculated_metrics?.market_data_date && (
+        <div className="p-3 rounded-md border border-amber-500/20 bg-amber-500/5 text-data-sm text-muted-foreground animate-fade-up">
+          <span className="font-medium text-amber-600 dark:text-amber-400">Not:</span>{" "}
+          Seçilen tarih için piyasa verisi henüz mevcut değil.{" "}
+          <span className="font-mono-data">{formatDate(bond.calculated_metrics.market_data_date)}</span>{" "}
+          tarihli en güncel veri kullanılmaktadır.
+        </div>
+      )}
+
       <div className="grid gap-px md:grid-cols-4 bg-border/30 rounded-lg overflow-hidden animate-fade-up">
         {topMetrics.map((m) => (
           <div
