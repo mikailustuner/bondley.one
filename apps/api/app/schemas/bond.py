@@ -106,6 +106,10 @@ class BondDetailWithMetrics(BondResponse):
 
     calculated_metrics: BondCalculatedMetrics | None = None
     is_favorite: bool = False
+    kap_data: dict | None = None
+    kap_disclosures: list[dict] | None = None
+    data_conflicts: list[dict] | None = None
+    data_sources: list[dict] | None = None
 
 
 class BondScenarioResponse(BaseModel):

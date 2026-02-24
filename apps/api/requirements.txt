@@ -22,6 +22,7 @@ numpy-financial
 pandas
 openpyxl
 xlrd
+lxml
 
 # Task Queue
 celery[redis]

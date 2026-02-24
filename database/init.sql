@@ -184,4 +184,91 @@ VALUES (
     'admin'
 ) ON CONFLICT (email) DO NOTHING;
 
+-- kap_companies: CSV'deki sirket-KAP ID eslemesi
+CREATE TABLE IF NOT EXISTS kap_companies (
+    id                  SERIAL PRIMARY KEY,
+    sirket_adi          VARCHAR(255) NOT NULL,
+    kap_id              VARCHAR(100) UNIQUE NOT NULL,
+    stock_code          VARCHAR(20),
+    api_url             TEXT,
+    last_fetched_at     TIMESTAMPTZ,
+    created_at          TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_kap_companies_kap_id ON kap_companies(kap_id);
+
+-- kap_disclosures: Her bir KAP bildirimi
+CREATE TABLE IF NOT EXISTS kap_disclosures (
+    id                  SERIAL PRIMARY KEY,
+    kap_company_id      INTEGER NOT NULL REFERENCES kap_companies(id) ON DELETE CASCADE,
+    disclosure_index    INTEGER UNIQUE NOT NULL,
+    disclosure_id       VARCHAR(100),
+    title               TEXT,
+    summary             TEXT,
+    publish_date        TIMESTAMPTZ,
+    isin_code           VARCHAR(30),
+    disclosure_class    VARCHAR(20),
+    disclosure_type     VARCHAR(20),
+    disclosure_category VARCHAR(20),
+    company_title       VARCHAR(255),
+    stock_code          VARCHAR(20),
+    related_stocks      VARCHAR(100),
+    is_changed          VARCHAR(50),
+    is_late             BOOLEAN,
+    attachment_count    INTEGER DEFAULT 0,
+    has_multi_language  VARCHAR(5),
+    period              VARCHAR(10),
+    year                VARCHAR(10),
+    disclosure_url      TEXT,
+    fetch_date          DATE,
+    created_at          TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_kap_disclosures_isin ON kap_disclosures(isin_code);
+CREATE INDEX IF NOT EXISTS idx_kap_disclosures_publish ON kap_disclosures(publish_date);
+CREATE INDEX IF NOT EXISTS idx_kap_disclosures_company ON kap_disclosures(kap_company_id);
+CREATE INDEX IF NOT EXISTS idx_kap_disclosures_fetch ON kap_disclosures(fetch_date);
+
+-- kap_disclosure_details: Excel export'tan parse edilen detaylar
+CREATE TABLE IF NOT EXISTS kap_disclosure_details (
+    id                          SERIAL PRIMARY KEY,
+    disclosure_id               INTEGER UNIQUE NOT NULL REFERENCES kap_disclosures(id) ON DELETE CASCADE,
+    isin_code                   VARCHAR(30),
+    instrument_type             VARCHAR(50),
+    maturity_date               DATE,
+    maturity_days               INTEGER,
+    nominal_value               NUMERIC(22,3),
+    issue_price                 NUMERIC(18,6),
+    interest_rate_type          VARCHAR(50),
+    floating_rate_reference     VARCHAR(50),
+    additional_return_pct       NUMERIC(12,6),
+    coupon_number               INTEGER,
+    coupon_frequency            VARCHAR(50),
+    currency                    VARCHAR(10),
+    payment_type                VARCHAR(50),
+    sale_type                   VARCHAR(100),
+    starting_date_sale          DATE,
+    ending_date_sale            DATE,
+    maturity_starting_date      DATE,
+    traded_in_exchange          BOOLEAN,
+    intermediary_brokerage      VARCHAR(255),
+    issue_limit                 NUMERIC(22,3),
+    issue_limit_security_type   VARCHAR(100),
+    issue_limit_currency        VARCHAR(10),
+    issuer_has_rating           BOOLEAN,
+    issuer_rating_company       VARCHAR(100),
+    issuer_rating_note          VARCHAR(20),
+    issuer_rating_date          DATE,
+    issuer_rating_investment_grade BOOLEAN,
+    instrument_has_rating       BOOLEAN,
+    originator_has_rating       BOOLEAN,
+    coupon_payments_json        JSONB,
+    additional_explanation      TEXT,
+    board_decision_date         DATE,
+    subject_of_notification     VARCHAR(100),
+    raw_data_json               JSONB,
+    fetched_at                  TIMESTAMPTZ DEFAULT NOW(),
+    created_at                  TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_kap_details_isin ON kap_disclosure_details(isin_code);
+CREATE INDEX IF NOT EXISTS idx_kap_details_disclosure ON kap_disclosure_details(disclosure_id);
+
 COMMIT;

@@ -770,6 +770,253 @@ export default function BondDetailPage({
           </CardContent>
         </Card>
       )}
+
+      {/* ─── Veri Uyuşmazlıkları ─── */}
+      {bond.data_conflicts && bond.data_conflicts.length > 0 && (
+        <Card className="animate-fade-up-delay-2 border-amber-500/30 bg-amber-500/5">
+          <CardHeader>
+            <CardDescription>VERİ UYUŞMAZLIKLARI</CardDescription>
+            <CardTitle className="mt-1">tbliste vs KAP Farklılıkları</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-data-sm">
+                <thead>
+                  <tr className="border-b border-border/50">
+                    <th className="text-left py-2 text-muted-foreground font-medium">Alan</th>
+                    <th className="text-left py-2 text-muted-foreground font-medium">BIST tbliste</th>
+                    <th className="text-left py-2 text-muted-foreground font-medium">KAP</th>
+                    <th className="text-left py-2 text-muted-foreground font-medium">Kullanılan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bond.data_conflicts.map((c: any, idx: number) => (
+                    <tr key={idx} className="border-b border-border/20">
+                      <td className="py-2 text-foreground font-medium">{c.field}</td>
+                      <td className={`py-2 font-bond-nums ${c.resolved_source === 'tbliste' ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
+                        {c.tbliste_value}
+                      </td>
+                      <td className={`py-2 font-bond-nums ${c.resolved_source === 'kap' ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
+                        {c.kap_value}
+                      </td>
+                      <td className="py-2">
+                        <Badge variant={c.resolved_source === 'kap' ? 'default' : 'secondary'}>
+                          {c.resolved_source === 'kap' ? 'KAP (güncel)' : 'tbliste (güncel)'}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ─── KAP Bildirim Verileri ─── */}
+      {bond.kap_data && (
+        <Card className="animate-fade-up-delay-2">
+          <CardHeader>
+            <CardDescription>KAP BİLDİRİM VERİLERİ</CardDescription>
+            <CardTitle className="mt-1">
+              İhraç Detayları
+              {bond.kap_data.disclosure_url && (
+                <a
+                  href={bond.kap_data.disclosure_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-3 text-data-sm font-normal text-primary hover:underline"
+                >
+                  KAP Bildirimi →
+                </a>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* İhraç Bilgileri */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="space-y-0">
+                <h4 className="text-label text-muted-foreground mb-3">ARAÇ BİLGİLERİ</h4>
+                {[
+                  ["ISIN Kodu", bond.kap_data.isin_code],
+                  ["Araç Tipi", bond.kap_data.instrument_type],
+                  ["İtfa Tarihi", bond.kap_data.maturity_date ? formatDate(bond.kap_data.maturity_date) : null],
+                  ["Vade (Gün)", bond.kap_data.maturity_days],
+                  ["Nominal Değer", bond.kap_data.nominal_value ? `${Number(bond.kap_data.nominal_value).toLocaleString('tr-TR')} ${bond.kap_data.currency || 'TRY'}` : null],
+                  ["İhraç Fiyatı", bond.kap_data.issue_price],
+                  ["Faiz Tipi", bond.kap_data.interest_rate_type],
+                  ["Değişken Faiz Ref.", bond.kap_data.floating_rate_reference],
+                  ["Ek Getiri (%)", bond.kap_data.additional_return_pct],
+                  ["Kupon Sayısı", bond.kap_data.coupon_number],
+                  ["Kupon Sıklığı", bond.kap_data.coupon_frequency],
+                  ["Ödeme Tipi", bond.kap_data.payment_type],
+                ].map(([label, value]) => (
+                  <div
+                    key={label as string}
+                    className="flex justify-between items-center py-2 border-b border-border/30 last:border-0"
+                  >
+                    <span className="text-data-sm text-muted-foreground">{label}</span>
+                    <span className="font-bond-nums text-data-sm text-foreground">{value ?? "—"}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-0">
+                <h4 className="text-label text-muted-foreground mb-3">SATIŞ VE DERECELENDIRME</h4>
+                {[
+                  ["Satış Tipi", bond.kap_data.sale_type],
+                  ["Satış Başlangıç", bond.kap_data.starting_date_sale ? formatDate(bond.kap_data.starting_date_sale) : null],
+                  ["Satış Bitiş", bond.kap_data.ending_date_sale ? formatDate(bond.kap_data.ending_date_sale) : null],
+                  ["Borsada İşlem", bond.kap_data.traded_in_exchange === true ? "Evet" : bond.kap_data.traded_in_exchange === false ? "Hayır" : null],
+                  ["Aracı Kurum", bond.kap_data.intermediary_brokerage],
+                  ["İhraç Tavanı", bond.kap_data.issue_limit ? `${Number(bond.kap_data.issue_limit).toLocaleString('tr-TR')} TRY` : null],
+                  ["Rating Kuruluşu", bond.kap_data.issuer_rating_company],
+                  ["Rating Notu", bond.kap_data.issuer_rating_note],
+                  ["Rating Tarihi", bond.kap_data.issuer_rating_date ? formatDate(bond.kap_data.issuer_rating_date) : null],
+                  ["Yatırım Yapılabilir", bond.kap_data.issuer_rating_investment_grade === true ? "Evet" : bond.kap_data.issuer_rating_investment_grade === false ? "Hayır" : null],
+                ].map(([label, value]) => (
+                  <div
+                    key={label as string}
+                    className="flex justify-between items-center py-2 border-b border-border/30 last:border-0"
+                  >
+                    <span className="text-data-sm text-muted-foreground">{label}</span>
+                    <span className="font-bond-nums text-data-sm text-foreground text-right max-w-[60%]">{value ?? "—"}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Kupon Ödeme Planı */}
+            {bond.kap_data.coupon_payments && bond.kap_data.coupon_payments.length > 0 && (
+              <div>
+                <h4 className="text-label text-muted-foreground mb-3">KUPON ÖDEME PLANI</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-data-sm">
+                    <thead>
+                      <tr className="border-b border-border/50">
+                        <th className="text-left py-2 text-muted-foreground font-medium">Kupon</th>
+                        <th className="text-left py-2 text-muted-foreground font-medium">Ödeme Tarihi</th>
+                        <th className="text-right py-2 text-muted-foreground font-medium">Dönemsel %</th>
+                        <th className="text-right py-2 text-muted-foreground font-medium">Yıllık Basit %</th>
+                        <th className="text-right py-2 text-muted-foreground font-medium">Yıllık Bileşik %</th>
+                        <th className="text-right py-2 text-muted-foreground font-medium">Ödeme Tutarı</th>
+                        <th className="text-center py-2 text-muted-foreground font-medium">Ödendi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bond.kap_data.coupon_payments.map((cp: any, idx: number) => (
+                        <tr key={idx} className="border-b border-border/20">
+                          <td className="py-2 font-bond-nums text-foreground font-medium">
+                            {cp.coupon_number === "principal" ? "Anapara" : `#${cp.coupon_number}`}
+                          </td>
+                          <td className="py-2 font-bond-nums text-foreground">{cp.payment_date || "—"}</td>
+                          <td className="py-2 font-bond-nums text-foreground text-right">
+                            {cp.periodic_rate ? `%${(Number(cp.periodic_rate) / 10000).toFixed(4)}` : "—"}
+                          </td>
+                          <td className="py-2 font-bond-nums text-foreground text-right">
+                            {cp.yearly_simple_rate ? `%${(Number(cp.yearly_simple_rate) / 10000).toFixed(4)}` : "—"}
+                          </td>
+                          <td className="py-2 font-bond-nums text-foreground text-right">
+                            {cp.yearly_compound_rate ? `%${(Number(cp.yearly_compound_rate) / 10000).toFixed(4)}` : "—"}
+                          </td>
+                          <td className="py-2 font-bond-nums text-foreground text-right">
+                            {cp.payment_amount ? Number(cp.payment_amount.replace(/\./g, '').replace(',', '.')).toLocaleString('tr-TR') : "—"}
+                          </td>
+                          <td className="py-2 text-center">
+                            {cp.was_payment_made === "Yes" ? (
+                              <Badge variant="default" className="text-xs">Evet</Badge>
+                            ) : cp.was_payment_made === "No" ? (
+                              <Badge variant="secondary" className="text-xs">Hayır</Badge>
+                            ) : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Ek Açıklama */}
+            {bond.kap_data.additional_explanation && (
+              <div>
+                <h4 className="text-label text-muted-foreground mb-2">EK AÇIKLAMA</h4>
+                <p className="text-data-sm text-muted-foreground bg-muted/50 rounded-md p-3 border border-border/30">
+                  {bond.kap_data.additional_explanation}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ─── KAP Bildirimleri Listesi ─── */}
+      {bond.kap_disclosures && bond.kap_disclosures.length > 0 && (
+        <Card className="animate-fade-up-delay-2">
+          <CardHeader>
+            <CardDescription>KAP BİLDİRİMLERİ</CardDescription>
+            <CardTitle className="mt-1">Bu ISIN ile İlgili Tüm Bildirimler ({bond.kap_disclosures.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-0">
+              {bond.kap_disclosures.slice(0, 10).map((d: any, idx: number) => (
+                <div
+                  key={idx}
+                  className="flex items-start justify-between py-3 border-b border-border/30 last:border-0 gap-4"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-data-sm text-foreground truncate">{d.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {d.publish_date ? formatDate(d.publish_date.split('T')[0]) : '—'}
+                      {d.is_changed && <Badge variant="secondary" className="ml-2 text-xs">{d.is_changed}</Badge>}
+                    </p>
+                  </div>
+                  {d.disclosure_url && (
+                    <a
+                      href={d.disclosure_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-data-sm text-primary hover:underline whitespace-nowrap"
+                    >
+                      Görüntüle →
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ─── Veri Kaynakları ─── */}
+      {bond.data_sources && bond.data_sources.length > 0 && (
+        <div className="animate-fade-up-delay-2 rounded-lg border border-border/50 bg-muted/30 p-4">
+          <h4 className="text-label text-muted-foreground mb-3">VERİ KAYNAKLARI</h4>
+          <div className="flex flex-wrap gap-4">
+            {bond.data_sources.map((ds: any, idx: number) => (
+              <div key={idx} className="flex items-center gap-2 text-data-sm">
+                <div className={`w-2 h-2 rounded-full ${ds.source === 'kap' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
+                <span className="text-foreground font-medium">{ds.label}</span>
+                {ds.updated_at && (
+                  <span className="text-muted-foreground">
+                    — {formatDate(ds.updated_at.split('T')[0])}
+                  </span>
+                )}
+                {ds.disclosure_url && (
+                  <a
+                    href={ds.disclosure_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    ↗
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

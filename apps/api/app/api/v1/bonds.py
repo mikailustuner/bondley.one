@@ -412,6 +412,31 @@ async def get_bond(
         )
     )
     base.is_favorite = fav_check.scalar_one_or_none() is not None
+
+    # KAP veri entegrasyonu
+    try:
+        from app.services.kap_data_resolver import (
+            get_kap_data_for_isin,
+            get_all_kap_disclosures_for_isin,
+            resolve_data_conflicts,
+        )
+        kap_data = await get_kap_data_for_isin(db, isin_code)
+        if kap_data:
+            base.kap_data = kap_data
+            base.kap_disclosures = await get_all_kap_disclosures_for_isin(db, isin_code)
+            conflict_result = await resolve_data_conflicts(db, bond)
+            base.data_conflicts = conflict_result.get("conflicts")
+            base.data_sources = conflict_result.get("data_sources")
+        else:
+            # Sadece tbliste kaynagi
+            base.data_sources = [{
+                "source": "tbliste",
+                "label": "BIST tbliste.zip",
+                "updated_at": bond.updated_at.isoformat() if bond.updated_at else None,
+            }]
+    except Exception as e:
+        logger.warning(f"KAP data integration failed for {isin_code}: {e}")
+
     return base
 
 

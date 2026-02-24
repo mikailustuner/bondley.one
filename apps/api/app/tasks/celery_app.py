@@ -9,7 +9,7 @@ celery_app = Celery(
     "fincalc",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
-    include=["app.tasks.data_tasks", "app.tasks.alerts_tasks"],
+    include=["app.tasks.data_tasks", "app.tasks.alerts_tasks", "app.tasks.kap_tasks"],
 )
 
 celery_app.conf.update(
@@ -37,6 +37,11 @@ celery_app.conf.beat_schedule = {
     "check-user-alerts": {
         "task": "app.tasks.alerts_tasks.check_user_alerts",
         "schedule": crontab(minute="*/15"),
+        "options": {"queue": "default"},
+    },
+    "fetch-kap-disclosures": {
+        "task": "app.tasks.kap_tasks.fetch_kap_disclosures",
+        "schedule": crontab(hour=16, minute=15),
         "options": {"queue": "default"},
     },
 }

@@ -54,6 +54,7 @@ services:
         condition: service_healthy
     volumes:
       - ./apps/api:/app
+      - ./sirket_kap_idleri.csv:/data/sirket_kap_idleri.csv:ro
 
   celery-worker:
     build:
@@ -76,6 +77,7 @@ services:
         condition: service_healthy
     volumes:
       - ./apps/api:/app
+      - ./sirket_kap_idleri.csv:/data/sirket_kap_idleri.csv:ro
 
   celery-beat:
     build:
@@ -98,6 +100,7 @@ services:
         condition: service_healthy
     volumes:
       - ./apps/api:/app
+      - ./sirket_kap_idleri.csv:/data/sirket_kap_idleri.csv:ro
 
   web:
     build:

@@ -214,6 +214,14 @@ export interface BondDetail {
   updated_at: string;
   calculated_metrics?: BondCalculatedMetrics | null;
   is_favorite?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  kap_data?: Record<string, any> | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  kap_disclosures?: Record<string, any>[] | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data_conflicts?: Record<string, any>[] | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data_sources?: Record<string, any>[] | null;
 }
 
 export interface BondListResponse {
