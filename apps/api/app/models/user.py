@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, Boolean, DateTime, CheckConstraint, func
+from sqlalchemy import String, Boolean, DateTime, Integer, Text, CheckConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.base import Base
@@ -21,6 +21,14 @@ class User(Base):
     full_name: Mapped[str | None] = mapped_column(String(255))
     company: Mapped[str | None] = mapped_column(String(255))
     location: Mapped[str | None] = mapped_column(String(255))
+
+    # Onboarding fields
+    department: Mapped[str | None] = mapped_column(String(255))
+    job_title: Mapped[str | None] = mapped_column(String(255))
+    usage_purpose: Mapped[str | None] = mapped_column(Text)
+    estimated_daily_views: Mapped[int | None] = mapped_column(Integer)
+    profile_completed: Mapped[bool] = mapped_column(Boolean, default=False)
+
     role: Mapped[str] = mapped_column(String(20), default="free_user")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

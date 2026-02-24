@@ -26,6 +26,7 @@ from app.schemas.user import (
     TokenResponse,
     TokenResponseMfaRequired,
     PublicRegister,
+    OnboardingComplete,
     UserUpdate,
     PasswordChange,
     EmailChange,
@@ -177,6 +178,22 @@ async def update_profile(
     await db.refresh(user)
     return UserResponse.model_validate(user)
 
+
+@router.post("/onboarding", response_model=UserResponse)
+async def complete_onboarding(
+    data: OnboardingComplete,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Kayit sonrasi profil tamamlama."""
+    user.department = data.department
+    user.job_title = data.job_title
+    user.usage_purpose = data.usage_purpose
+    user.estimated_daily_views = data.estimated_daily_views
+    user.profile_completed = True
+    await db.commit()
+    await db.refresh(user)
+    return UserResponse.model_validate(user)
 
 @router.post("/change-password", status_code=status.HTTP_200_OK)
 async def change_password(

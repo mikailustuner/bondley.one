@@ -22,6 +22,14 @@ class PublicRegister(BaseModel):
     location: str = Field(min_length=2, max_length=255)
 
 
+class OnboardingComplete(BaseModel):
+    """Kayit sonrasi profil tamamlama"""
+    department: str = Field(min_length=2, max_length=255)
+    job_title: str = Field(min_length=2, max_length=255)
+    usage_purpose: str = Field(min_length=5, max_length=500)
+    estimated_daily_views: int = Field(ge=1, le=10000)
+
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
@@ -35,6 +43,11 @@ class UserResponse(BaseModel):
     full_name: str | None
     company: str | None
     location: str | None
+    department: str | None = None
+    job_title: str | None = None
+    usage_purpose: str | None = None
+    estimated_daily_views: int | None = None
+    profile_completed: bool = False
     role: str
     is_active: bool
     mfa_enabled: bool = False

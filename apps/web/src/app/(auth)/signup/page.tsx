@@ -114,7 +114,7 @@ export default function SignupPage() {
         location: string;
       });
       setAuth(data.access_token, data.refresh_token, data.user);
-      router.push("/dashboard");
+      router.push("/onboarding");
     } catch (err: any) {
       setError(err.message || "Kayıt başarısız");
     } finally {

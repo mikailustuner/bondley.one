@@ -236,6 +236,11 @@ export interface UserMe {
   full_name: string | null;
   company: string | null;
   location: string | null;
+  department: string | null;
+  job_title: string | null;
+  usage_purpose: string | null;
+  estimated_daily_views: number | null;
+  profile_completed: boolean;
   role: string;
   is_active: boolean;
   mfa_enabled: boolean;
@@ -312,6 +317,17 @@ export const api = {
     updateProfile: (token: string, data: { full_name?: string; company?: string; location?: string }) =>
       apiFetch<any>("/auth/me", {
         method: "PUT",
+        token,
+        body: JSON.stringify(data),
+      }),
+    onboarding: (token: string, data: {
+      department: string;
+      job_title: string;
+      usage_purpose: string;
+      estimated_daily_views: number;
+    }) =>
+      apiFetch<UserMe>("/auth/onboarding", {
+        method: "POST",
         token,
         body: JSON.stringify(data),
       }),
