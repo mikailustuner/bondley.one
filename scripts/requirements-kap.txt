@@ -1,0 +1,2 @@
+# Sadece KAP şirket ID scraper için (kap_company_id_scraper.py)
+selenium>=4.0.0

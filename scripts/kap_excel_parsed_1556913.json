@@ -1,0 +1,636 @@
+{
+  "disclosure_index": 1556913,
+  "table_count": 10,
+  "key_value_pairs": {
+    "Summary Info": "Final Coupon Payment and Redemption of the T-Bill with the ISIN code of TRFEFES22617",
+    "Update Notification Flag": "Yes",
+    "Correction Notification Flag": "No",
+    "Postponed Notification Flag": "No",
+    "Subject of Notification": "Redemption",
+    "Board Decision Date": "17.09.2024",
+    "Currency Unit": "TRY",
+    "Limit": "7.000.000.000",
+    "Issue Limit Security Type": "Debt Securities",
+    "Sale Type": "Sale To Qualified Investor",
+    "Domestic / Oversea": "Domestic",
+    "Capital Market Board Approval Date": "14.11.2024",
+    "Type": "Bill",
+    "Maturity Date": "16.02.2026",
+    "Maturity (Day)": "364",
+    "The country where the issue takes place": "Türkiye",
+    "Title Of Intermediary Brokerage House": "GARANTİ YATIRIM MENKUL KIYMETLER A.Ş.",
+    "Central Securities Depository": "Merkezi Kayıt Kuruluşu A.Ş.",
+    "Starting Date of Sale": "14.02.2025",
+    "Ending Date of Sale": "17.02.2025",
+    "Nominal Value of Capital Market Instrument Sold": "1.800.000.000",
+    "Maturity Starting Date": "17.02.2025",
+    "Issue Price": "1",
+    "Interest Rate Type": "Floating Rate",
+    "The Period That Rate Will Be Used": "T-1",
+    "Floating Rate Reference": "TLREF",
+    "Additional Return (%)": "1",
+    "Traded in the Stock Exchange": "Yes",
+    "Payment Type": "TL Payment",
+    "ISIN Code": "TRFEFES22617",
+    "Coupon Number": "Payment Date | Record Date | Payment Date | Interest Rate - Periodic (%) | Interest Rate - Yearly Simple (%) | Interest Rate - Yearly Compound (%) | Payment Amount | Exchange Rate | Was The Payment Made?",
+    "Coupon Payment Frequency": "Quarterly",
+    "1": "20.05.2025 | 16.05.2025 | 20.05.2025 | 125916 | 499559 | 600827 | 226.648.800 | Yes",
+    "2": "18.08.2025 | 15.08.2025 | 18.08.2025 | 122385 | 49634 | 597177 | 220.293.000 | Yes",
+    "3": "17.11.2025 | 14.11.2025 | 17.11.2025 | 109027 | 437307 | 514476 | 196.248.600 | Yes",
+    "4": "16.02.2026 | 13.02.2026 | 16.02.2026 | 101645 | 407696 | 474445 | 182.961.000 | Yes",
+    "Principal/Maturity Date Payment Amount": "16.02.2026 | 13.02.2026 | 16.02.2026 | 1.800.000.000 | Yes",
+    "Does the issuer have a rating note?": "Yes",
+    "Rating Company": "Rating Note | Rating Date | Is it Investment Grade?",
+    "Fitch Ratings": "AAA | 13.01.2025 | Yes",
+    "Does the capital market instrument have a rating note?": "No",
+    "Does the originator have a rating note?": "No"
+  },
+  "tables_detail": [
+    {
+      "table_index": 0,
+      "shape": [
+        65,
+        10
+      ],
+      "records": [
+        {
+          "col_0": "Summary Info  Final Coupon Payment and Redemption of the T-Bill with the ISIN code of TRFEFES22617  Update Notification Flag  Yes  Correction Notification Flag  No  Postponed Notification Flag  No  Subject of Notification  Redemption"
+        },
+        {
+          "col_0": "Summary Info",
+          "col_1": "Final Coupon Payment and Redemption of the T-Bill with the ISIN code of TRFEFES22617"
+        },
+        {
+          "col_0": "Update Notification Flag",
+          "col_1": "Yes"
+        },
+        {
+          "col_0": "Correction Notification Flag",
+          "col_1": "No"
+        },
+        {
+          "col_0": "Postponed Notification Flag",
+          "col_1": "No"
+        },
+        {
+          "col_0": "Subject of Notification",
+          "col_1": "Redemption"
+        },
+        {
+          "col_0": "Board Decision Date  17.09.2024"
+        },
+        {
+          "col_0": "Board Decision Date",
+          "col_1": "17.09.2024"
+        },
+        {
+          "col_0": "Related Issue Limit Info"
+        },
+        {
+          "col_0": "Currency Unit  TRY  Limit  7.000.000.000  Issue Limit Security Type  Debt Securities  Sale Type  Private Placement-Sale To Qualified Investor  Domestic / Oversea  Domestic  Capital Market Board Approval Date  14.11.2024"
+        },
+        {
+          "col_0": "Currency Unit",
+          "col_1": "TRY"
+        },
+        {
+          "col_0": "Limit",
+          "col_1": "7.000.000.000"
+        },
+        {
+          "col_0": "Issue Limit Security Type",
+          "col_1": "Debt Securities"
+        },
+        {
+          "col_0": "Sale Type",
+          "col_1": "Private Placement-Sale To Qualified Investor"
+        },
+        {
+          "col_0": "Domestic / Oversea",
+          "col_1": "Domestic"
+        },
+        {
+          "col_0": "Capital Market Board Approval Date",
+          "col_1": "14.11.2024"
+        },
+        {
+          "col_0": "Capital Market Instrument To Be Issued Info"
+        },
+        {
+          "col_0": "Type  Bill  Maturity Date  16.02.2026  Maturity (Day)  364  Sale Type  Sale To Qualified Investor  The country where the issue takes place  Türkiye  Title Of Intermediary Brokerage House  GARANTİ YATIRIM MENKUL KIYMETLER A.Ş.  Central Securities Depository  Merkezi Kayıt Kuruluşu A.Ş.  Starting Date of Sale  14.02.2025  Ending Date of Sale  17.02.2025  Nominal Value of Capital Market Instrument Sold  1.800.000.000  Maturity Starting Date  17.02.2025  Issue Price  1  Interest Rate Type  Floating Rate  The Period That Rate Will Be Used  T-1  Floating Rate Reference  TLREF  Additional Return (%)  1  Traded in the Stock Exchange  Yes  Payment Type  TL Payment  ISIN Code  TRFEFES22617  Coupon Number  4  Currency Unit  TRY  Coupon Payment Frequency  Quarterly"
+        },
+        {
+          "col_0": "Type",
+          "col_1": "Bill"
+        },
+        {
+          "col_0": "Maturity Date",
+          "col_1": "16.02.2026"
+        },
+        {
+          "col_0": "Maturity (Day)",
+          "col_1": "364"
+        },
+        {
+          "col_0": "Sale Type",
+          "col_1": "Sale To Qualified Investor"
+        },
+        {
+          "col_0": "The country where the issue takes place",
+          "col_1": "Türkiye"
+        },
+        {
+          "col_0": "Title Of Intermediary Brokerage House",
+          "col_1": "GARANTİ YATIRIM MENKUL KIYMETLER A.Ş."
+        },
+        {
+          "col_0": "Central Securities Depository",
+          "col_1": "Merkezi Kayıt Kuruluşu A.Ş."
+        },
+        {
+          "col_0": "Starting Date of Sale",
+          "col_1": "14.02.2025"
+        },
+        {
+          "col_0": "Ending Date of Sale",
+          "col_1": "17.02.2025"
+        },
+        {
+          "col_0": "Nominal Value of Capital Market Instrument Sold",
+          "col_1": "1.800.000.000"
+        },
+        {
+          "col_0": "Maturity Starting Date",
+          "col_1": "17.02.2025"
+        },
+        {
+          "col_0": "Issue Price",
+          "col_1": "1"
+        },
+        {
+          "col_0": "Interest Rate Type",
+          "col_1": "Floating Rate"
+        },
+        {
+          "col_0": "The Period That Rate Will Be Used",
+          "col_1": "T-1"
+        },
+        {
+          "col_0": "Floating Rate Reference",
+          "col_1": "TLREF"
+        },
+        {
+          "col_0": "Additional Return (%)",
+          "col_1": "1"
+        },
+        {
+          "col_0": "Traded in the Stock Exchange",
+          "col_1": "Yes"
+        },
+        {
+          "col_0": "Payment Type",
+          "col_1": "TL Payment"
+        },
+        {
+          "col_0": "ISIN Code",
+          "col_1": "TRFEFES22617"
+        },
+        {
+          "col_0": "Coupon Number",
+          "col_1": "4"
+        },
+        {
+          "col_0": "Currency Unit",
+          "col_1": "TRY"
+        },
+        {
+          "col_0": "Coupon Payment Frequency",
+          "col_1": "Quarterly"
+        },
+        {
+          "col_0": "Redemption Plan of Capital Market Instrument Sold"
+        },
+        {
+          "col_0": "Coupon Number  Payment Date  Record Date  Payment Date  Interest Rate - Periodic (%)  Interest Rate - Yearly Simple (%)  Interest Rate - Yearly Compound (%)  Payment Amount  Exchange Rate  Was The Payment Made?  1  20.05.2025  16.05.2025  20.05.2025  12,5916  49,9559  60,0827  226.648.800  Yes  2  18.08.2025  15.08.2025  18.08.2025  12,2385  49,634  59,7177  220.293.000  Yes  3  17.11.2025  14.11.2025  17.11.2025  10,9027  43,7307  51,4476  196.248.600  Yes  4  16.02.2026  13.02.2026  16.02.2026  10,1645  40,7696  47,4445  182.961.000  Yes  Principal/Maturity Date Payment Amount  16.02.2026  13.02.2026  16.02.2026  1.800.000.000  Yes"
+        },
+        {
+          "col_0": "Coupon Number",
+          "col_1": "Payment Date",
+          "col_2": "Record Date",
+          "col_3": "Payment Date",
+          "col_4": "Interest Rate - Periodic (%)",
+          "col_5": "Interest Rate - Yearly Simple (%)",
+          "col_6": "Interest Rate - Yearly Compound (%)",
+          "col_7": "Payment Amount",
+          "col_8": "Exchange Rate",
+          "col_9": "Was The Payment Made?"
+        },
+        {
+          "col_0": "1",
+          "col_1": "20.05.2025",
+          "col_2": "16.05.2025",
+          "col_3": "20.05.2025",
+          "col_4": "125916",
+          "col_5": "499559",
+          "col_6": "600827",
+          "col_7": "226.648.800",
+          "col_9": "Yes"
+        },
+        {
+          "col_0": "2",
+          "col_1": "18.08.2025",
+          "col_2": "15.08.2025",
+          "col_3": "18.08.2025",
+          "col_4": "122385",
+          "col_5": "49634",
+          "col_6": "597177",
+          "col_7": "220.293.000",
+          "col_9": "Yes"
+        },
+        {
+          "col_0": "3",
+          "col_1": "17.11.2025",
+          "col_2": "14.11.2025",
+          "col_3": "17.11.2025",
+          "col_4": "109027",
+          "col_5": "437307",
+          "col_6": "514476",
+          "col_7": "196.248.600",
+          "col_9": "Yes"
+        },
+        {
+          "col_0": "4",
+          "col_1": "16.02.2026",
+          "col_2": "13.02.2026",
+          "col_3": "16.02.2026",
+          "col_4": "101645",
+          "col_5": "407696",
+          "col_6": "474445",
+          "col_7": "182.961.000",
+          "col_9": "Yes"
+        },
+        {
+          "col_0": "Principal/Maturity Date Payment Amount",
+          "col_1": "16.02.2026",
+          "col_2": "13.02.2026",
+          "col_3": "16.02.2026",
+          "col_7": "1.800.000.000",
+          "col_9": "Yes"
+        },
+        {
+          "col_0": "Rating"
+        },
+        {
+          "col_0": "Does the issuer have a rating note?  Yes"
+        },
+        {
+          "col_0": "Does the issuer have a rating note?",
+          "col_1": "Yes"
+        },
+        {
+          "col_0": "Issuer Rating Note"
+        },
+        {
+          "col_0": "Rating Company  Rating Note  Rating Date  Is it Investment Grade?  Fitch Ratings  AAA  13.01.2025  Yes"
+        },
+        {
+          "col_0": "Rating Company",
+          "col_1": "Rating Note",
+          "col_2": "Rating Date",
+          "col_3": "Is it Investment Grade?"
+        },
+        {
+          "col_0": "Fitch Ratings",
+          "col_1": "AAA",
+          "col_2": "13.01.2025",
+          "col_3": "Yes"
+        },
+        {
+          "col_0": "Does the capital market instrument have a rating note?  No"
+        },
+        {
+          "col_0": "Does the capital market instrument have a rating note?",
+          "col_1": "No"
+        },
+        {
+          "col_0": "Does the originator have a rating note?  No"
+        },
+        {
+          "col_0": "Does the originator have a rating note?",
+          "col_1": "No"
+        },
+        {
+          "col_0": "Additional Explanations"
+        },
+        {
+          "col_0": "The redemption and final coupon payment of the financing bond with a nominal value of TL 1,800,000,000 issued on 17.02.2025 with a 364-day maturity, payments with floating interest with ISIN code TRFEFES22617 was completed as of today."
+        }
+      ]
+    },
+    {
+      "table_index": 1,
+      "shape": [
+        5,
+        2
+      ],
+      "records": [
+        {
+          "col_0": "Summary Info",
+          "col_1": "Final Coupon Payment and Redemption of the T-Bill with the ISIN code of TRFEFES22617"
+        },
+        {
+          "col_0": "Update Notification Flag",
+          "col_1": "Yes"
+        },
+        {
+          "col_0": "Correction Notification Flag",
+          "col_1": "No"
+        },
+        {
+          "col_0": "Postponed Notification Flag",
+          "col_1": "No"
+        },
+        {
+          "col_0": "Subject of Notification",
+          "col_1": "Redemption"
+        }
+      ]
+    },
+    {
+      "table_index": 2,
+      "shape": [
+        1,
+        2
+      ],
+      "records": [
+        {
+          "col_0": "Board Decision Date",
+          "col_1": "17.09.2024"
+        }
+      ]
+    },
+    {
+      "table_index": 3,
+      "shape": [
+        6,
+        2
+      ],
+      "records": [
+        {
+          "col_0": "Currency Unit",
+          "col_1": "TRY"
+        },
+        {
+          "col_0": "Limit",
+          "col_1": "7.000.000.000"
+        },
+        {
+          "col_0": "Issue Limit Security Type",
+          "col_1": "Debt Securities"
+        },
+        {
+          "col_0": "Sale Type",
+          "col_1": "Private Placement-Sale To Qualified Investor"
+        },
+        {
+          "col_0": "Domestic / Oversea",
+          "col_1": "Domestic"
+        },
+        {
+          "col_0": "Capital Market Board Approval Date",
+          "col_1": "14.11.2024"
+        }
+      ]
+    },
+    {
+      "table_index": 4,
+      "shape": [
+        22,
+        2
+      ],
+      "records": [
+        {
+          "col_0": "Type",
+          "col_1": "Bill"
+        },
+        {
+          "col_0": "Maturity Date",
+          "col_1": "16.02.2026"
+        },
+        {
+          "col_0": "Maturity (Day)",
+          "col_1": "364"
+        },
+        {
+          "col_0": "Sale Type",
+          "col_1": "Sale To Qualified Investor"
+        },
+        {
+          "col_0": "The country where the issue takes place",
+          "col_1": "Türkiye"
+        },
+        {
+          "col_0": "Title Of Intermediary Brokerage House",
+          "col_1": "GARANTİ YATIRIM MENKUL KIYMETLER A.Ş."
+        },
+        {
+          "col_0": "Central Securities Depository",
+          "col_1": "Merkezi Kayıt Kuruluşu A.Ş."
+        },
+        {
+          "col_0": "Starting Date of Sale",
+          "col_1": "14.02.2025"
+        },
+        {
+          "col_0": "Ending Date of Sale",
+          "col_1": "17.02.2025"
+        },
+        {
+          "col_0": "Nominal Value of Capital Market Instrument Sold",
+          "col_1": "1.800.000.000"
+        },
+        {
+          "col_0": "Maturity Starting Date",
+          "col_1": "17.02.2025"
+        },
+        {
+          "col_0": "Issue Price",
+          "col_1": "1"
+        },
+        {
+          "col_0": "Interest Rate Type",
+          "col_1": "Floating Rate"
+        },
+        {
+          "col_0": "The Period That Rate Will Be Used",
+          "col_1": "T-1"
+        },
+        {
+          "col_0": "Floating Rate Reference",
+          "col_1": "TLREF"
+        },
+        {
+          "col_0": "Additional Return (%)",
+          "col_1": "1"
+        },
+        {
+          "col_0": "Traded in the Stock Exchange",
+          "col_1": "Yes"
+        },
+        {
+          "col_0": "Payment Type",
+          "col_1": "TL Payment"
+        },
+        {
+          "col_0": "ISIN Code",
+          "col_1": "TRFEFES22617"
+        },
+        {
+          "col_0": "Coupon Number",
+          "col_1": "4"
+        },
+        {
+          "col_0": "Currency Unit",
+          "col_1": "TRY"
+        },
+        {
+          "col_0": "Coupon Payment Frequency",
+          "col_1": "Quarterly"
+        }
+      ]
+    },
+    {
+      "table_index": 5,
+      "shape": [
+        6,
+        10
+      ],
+      "records": [
+        {
+          "col_0": "Coupon Number",
+          "col_1": "Payment Date",
+          "col_2": "Record Date",
+          "col_3": "Payment Date",
+          "col_4": "Interest Rate - Periodic (%)",
+          "col_5": "Interest Rate - Yearly Simple (%)",
+          "col_6": "Interest Rate - Yearly Compound (%)",
+          "col_7": "Payment Amount",
+          "col_8": "Exchange Rate",
+          "col_9": "Was The Payment Made?"
+        },
+        {
+          "col_0": "1",
+          "col_1": "20.05.2025",
+          "col_2": "16.05.2025",
+          "col_3": "20.05.2025",
+          "col_4": "125916",
+          "col_5": "499559",
+          "col_6": "600827",
+          "col_7": "226.648.800",
+          "col_9": "Yes"
+        },
+        {
+          "col_0": "2",
+          "col_1": "18.08.2025",
+          "col_2": "15.08.2025",
+          "col_3": "18.08.2025",
+          "col_4": "122385",
+          "col_5": "49634",
+          "col_6": "597177",
+          "col_7": "220.293.000",
+          "col_9": "Yes"
+        },
+        {
+          "col_0": "3",
+          "col_1": "17.11.2025",
+          "col_2": "14.11.2025",
+          "col_3": "17.11.2025",
+          "col_4": "109027",
+          "col_5": "437307",
+          "col_6": "514476",
+          "col_7": "196.248.600",
+          "col_9": "Yes"
+        },
+        {
+          "col_0": "4",
+          "col_1": "16.02.2026",
+          "col_2": "13.02.2026",
+          "col_3": "16.02.2026",
+          "col_4": "101645",
+          "col_5": "407696",
+          "col_6": "474445",
+          "col_7": "182.961.000",
+          "col_9": "Yes"
+        },
+        {
+          "col_0": "Principal/Maturity Date Payment Amount",
+          "col_1": "16.02.2026",
+          "col_2": "13.02.2026",
+          "col_3": "16.02.2026",
+          "col_7": "1.800.000.000",
+          "col_9": "Yes"
+        }
+      ]
+    },
+    {
+      "table_index": 6,
+      "shape": [
+        1,
+        2
+      ],
+      "records": [
+        {
+          "col_0": "Does the issuer have a rating note?",
+          "col_1": "Yes"
+        }
+      ]
+    },
+    {
+      "table_index": 7,
+      "shape": [
+        2,
+        4
+      ],
+      "records": [
+        {
+          "col_0": "Rating Company",
+          "col_1": "Rating Note",
+          "col_2": "Rating Date",
+          "col_3": "Is it Investment Grade?"
+        },
+        {
+          "col_0": "Fitch Ratings",
+          "col_1": "AAA",
+          "col_2": "13.01.2025",
+          "col_3": "Yes"
+        }
+      ]
+    },
+    {
+      "table_index": 8,
+      "shape": [
+        1,
+        2
+      ],
+      "records": [
+        {
+          "col_0": "Does the capital market instrument have a rating note?",
+          "col_1": "No"
+        }
+      ]
+    },
+    {
+      "table_index": 9,
+      "shape": [
+        1,
+        2
+      ],
+      "records": [
+        {
+          "col_0": "Does the originator have a rating note?",
+          "col_1": "No"
+        }
+      ]
+    }
+  ]
+}
