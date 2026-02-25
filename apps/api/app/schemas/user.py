@@ -50,6 +50,7 @@ class UserResponse(BaseModel):
     profile_completed: bool = False
     role: str
     is_active: bool
+    is_email_verified: bool = False
     mfa_enabled: bool = False
     created_at: datetime
 
@@ -89,6 +90,16 @@ class PasswordChange(BaseModel):
 class EmailChange(BaseModel):
     """E-posta degistirme"""
     new_email: EmailStr
+
+
+class EmailVerificationRequest(BaseModel):
+    """E-posta dogrulama token icerigi"""
+    token: str
+
+
+class ResendVerificationRequest(BaseModel):
+    """Doğrulama mailini yeniden gönderme isteği"""
+    email: EmailStr
 
 
 # --- MFA schemas ---

@@ -253,6 +253,7 @@ export interface UserMe {
   profile_completed: boolean;
   role: string;
   is_active: boolean;
+  is_email_verified: boolean;
   mfa_enabled: boolean;
   created_at: string;
 }
@@ -352,6 +353,18 @@ export const api = {
         method: "POST",
         token,
         body: JSON.stringify(data),
+      }),
+    verifyEmail: (token: string) =>
+      apiFetch<{ message: string }>("/auth/verify-email", {
+        method: "POST",
+        body: JSON.stringify({ token }),
+        skipRefresh: true,
+      }),
+    resendVerification: (email: string) =>
+      apiFetch<{ message: string }>("/auth/resend-verification", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+        skipRefresh: true,
       }),
     getPermissions: (token: string) =>
       apiFetch<{

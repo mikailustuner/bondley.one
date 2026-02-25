@@ -61,6 +61,13 @@ class Settings(BaseSettings):
     RATE_LIMIT_LOGIN_PER_MINUTE: int = 5
     RATE_LIMIT_SIGNUP_PER_HOUR: int = 3
 
+    # SMTP Settings for Email Verification
+    SMTP_HOST: str = "smtp.hostinger.com" # Default placeholder, user configures via .env
+    SMTP_PORT: int = 465 
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    FRONTEND_URL: str = "http://localhost:3000"
+
     # Admin seed: only used when creating the initial admin user (not when one already exists)
     ADMIN_EMAIL: str = "admin@fincalc.com"
     ADMIN_INIT_PASSWORD: str = ""

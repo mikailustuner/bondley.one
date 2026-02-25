@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi import Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +14,8 @@ from app.core.security import (
     revoke_refresh_token,
     revoke_all_user_tokens,
     decode_access_token,
+    create_email_verification_token,
+    decode_email_verification_token,
 )
 from datetime import timedelta
 
@@ -36,8 +38,11 @@ from app.schemas.user import (
     MfaConfirmResponse,
     MfaVerifyRequest,
     MfaDisableRequest,
+    EmailVerificationRequest,
+    ResendVerificationRequest,
 )
 from app.core.config import get_settings
+from app.core.email import send_verification_email
 from app.api.deps import get_current_user, get_admin_user
 
 settings = get_settings()
@@ -89,7 +94,12 @@ async def login(request: Request, data: UserLogin, db: AsyncSession = Depends(ge
 
 @router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit(signup_limit)
-async def public_signup(request: Request, data: PublicRegister, db: AsyncSession = Depends(get_db)):
+async def public_signup(
+    request: Request,
+    data: PublicRegister,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
     existing = await db.execute(select(User).where(User.email == data.email))
     if existing.scalar_one_or_none():
         raise HTTPException(
@@ -104,10 +114,16 @@ async def public_signup(request: Request, data: PublicRegister, db: AsyncSession
         company=data.company,
         location=data.location,
         role="free_user",
+        is_email_verified=False,
     )
     db.add(user)
     await db.flush()
     await db.refresh(user)
+
+    # Email verification task
+    verify_token = create_email_verification_token(user.email)
+    verify_url = f"{settings.FRONTEND_URL}/verify-email?token={verify_token}"
+    background_tasks.add_task(send_verification_email, user.email, verify_url)
 
     access_token = create_access_token(data={"sub": str(user.id), "role": user.role})
     refresh_token = await create_refresh_token(user.id, db)
@@ -123,6 +139,7 @@ async def public_signup(request: Request, data: PublicRegister, db: AsyncSession
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def admin_register(
     data: UserCreate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     _admin: User = Depends(get_admin_user),
 ):
@@ -137,10 +154,17 @@ async def admin_register(
         company=data.company,
         location=data.location,
         role=data.role,
+        is_email_verified=False,
     )
     db.add(user)
     await db.flush()
     await db.refresh(user)
+    
+    # Email verification task
+    verify_token = create_email_verification_token(user.email)
+    verify_url = f"{settings.FRONTEND_URL}/verify-email?token={verify_token}"
+    background_tasks.add_task(send_verification_email, user.email, verify_url)
+    
     return UserResponse.model_validate(user)
 
 
@@ -219,6 +243,7 @@ async def change_password(
 @router.post("/change-email", response_model=UserResponse)
 async def change_email(
     data: EmailChange,
+    background_tasks: BackgroundTasks,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -231,12 +256,71 @@ async def change_email(
             detail="Bu e-posta adresi zaten kullaniliyor"
         )
 
-    # Update email
+    # Update email and reset verification status
     user.email = data.new_email
+    user.is_email_verified = False
     await db.commit()
     await db.refresh(user)
 
+    # Email verification task
+    verify_token = create_email_verification_token(user.email)
+    verify_url = f"{settings.FRONTEND_URL}/verify-email?token={verify_token}"
+    background_tasks.add_task(send_verification_email, user.email, verify_url)
+
     return UserResponse.model_validate(user)
+
+@router.post("/verify-email", status_code=status.HTTP_200_OK)
+async def verify_email(
+    data: EmailVerificationRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """E-posta adresini doğrular"""
+    email = decode_email_verification_token(data.token)
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Geçersiz veya süresi dolmuş bağlantı"
+        )
+    
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Kullanıcı bulunamadı"
+        )
+        
+    if user.is_email_verified:
+        return {"message": "E-posta adresi zaten dorulanmış."}
+        
+    user.is_email_verified = True
+    await db.commit()
+    return {"message": "E-posta başarıyla doğrulandı."}
+
+@router.post("/resend-verification", status_code=status.HTTP_200_OK)
+async def resend_verification(
+    data: ResendVerificationRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    """Doğrulama mailini yeniden gönderir"""
+    result = await db.execute(select(User).where(User.email == data.email))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        # User not found -> Don't reveal information, return success
+        return {"message": "Eğer bu e-posta adresi sistemimizde kayıtlıysa doğrulama maili gönderilmiştir."}
+        
+    if user.is_email_verified:
+        return {"message": "E-posta adresi zaten doğrulanmış."}
+        
+    # Generate new token and send email
+    verify_token = create_email_verification_token(user.email)
+    verify_url = f"{settings.FRONTEND_URL}/verify-email?token={verify_token}"
+    background_tasks.add_task(send_verification_email, user.email, verify_url)
+    
+    return {"message": "Doğrulama maili gönderildi."}
 
 
 @router.post("/refresh", response_model=TokenResponse)

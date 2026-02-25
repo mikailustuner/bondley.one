@@ -39,3 +39,6 @@ python-dotenv
 # Utilities
 python-dateutil
 selenium
+
+# Email Sending
+aiosmtplib
