@@ -69,6 +69,7 @@ graph TB
         AuditLogsTable[(audit_logs<br/>Sistem Logları)]
         BondViewsTable[(bond_views<br/>Görüntülenme Kayıtları)]
         UserMetricsTable[(user_metrics<br/>Kullanıcı Metrikleri)]
+        SystemSettingsTable[(system_settings<br/>Sistem Ayarları)]
     end
     
     subgraph "Cache Layer - Redis"
@@ -226,6 +227,59 @@ sequenceDiagram
     
     AuditMiddleware->>AuditService: log_api_request()
     AuditService->>DB: INSERT audit_logs
+```
+
+---
+
+## 2.1. Email Verification & Resend Flow
+
+```mermaid
+sequenceDiagram
+    participant User as Kullanıcı
+    participant Frontend as Next.js Frontend
+    participant API as FastAPI API
+    participant AuthRouter as Auth Router
+    participant DB as PostgreSQL
+    participant EmailService as SMTP Service
+
+    Note over User,EmailService: Email Doğrulama İşlemi
+    
+    User->>Frontend: Verify sayfasında Token ile girer
+    Frontend->>API: POST /api/v1/auth/verify-email<br/>{token}
+    
+    API->>AuthRouter: decode_access_token(token)
+    AuthRouter->>DB: SELECT user WHERE id = token.sub
+    DB-->>AuthRouter: User object
+    
+    alt Token Geçersiz Veya User Yok
+        AuthRouter-->>API: 400 Bad Request
+        API-->>Frontend: "Gecersiz veya suresi dolmus token"
+    else User Bulundu
+        AuthRouter->>DB: UPDATE users SET is_email_verified = TRUE
+        AuthRouter->>DB: Commit transaction
+        AuthRouter-->>API: 200 OK + Message
+        API-->>Frontend: Başarı mesajı
+        Frontend-->>User: "E-postanız doğrulandı."
+    end
+    
+    Note over User,EmailService: Doğrulama Kodu Yeniden Gönderme
+    
+    User->>Frontend: Email girip "Tekrar Gönder"e basar
+    Frontend->>API: POST /api/v1/auth/resend-verification<br/>{email}
+    API->>AuthRouter: Route Request
+    
+    AuthRouter->>DB: SELECT user WHERE email = ?
+    DB-->>AuthRouter: User object
+    
+    alt User Bulunamadı veya Zaten Doğrulanmış
+        AuthRouter-->>API: 400 Bad Request
+    else Hedef User Uygun
+        AuthRouter->>AuthRouter: generate verification token
+        AuthRouter->>EmailService: send_verification_email(email, token)
+        EmailService-->>AuthRouter: OK
+        AuthRouter-->>API: 200 OK
+        API-->>Frontend: "E-posta gönderildi"
+    end
 ```
 
 ---
@@ -525,6 +579,7 @@ erDiagram
         string location
         string role
         boolean is_active
+        boolean is_email_verified
         timestamp created_at
         timestamp updated_at
     }
@@ -564,6 +619,50 @@ erDiagram
         jsonb details
         timestamp created_at
     }
+    
+    SYSTEM_SETTINGS {
+        int id PK
+        string key UK
+        string value
+        string description
+        timestamp updated_at
+    }
+```
+
+---
+
+## 6.1. Maintenance Mode Flow (Bakım Modu)
+
+```mermaid
+sequenceDiagram
+    participant User as Ziyaretçi / Kullanıcı
+    participant AdminUser as Admin
+    participant Frontend as Next.js Frontend
+    participant Middleware as Maintenance Guard
+    participant API as FastAPI API
+    participant DB as System Settings Database
+    
+    Note over AdminUser,DB: Maintenance Modunu Toggle Etme
+    AdminUser->>Frontend: Admin Panel -> Bakım Modu Switch Tıklar
+    Frontend->>API: POST /api/v1/admin/maintenance?is_active=true
+    API->>DB: UPSERT system_settings<br/>key='maintenance_mode' value='true'
+    DB-->>API: Success
+    API-->>Frontend: 200 OK + Durum Güncellendi
+    
+    Note over User,DB: Kullanıcı Sitede Gezinirken
+    User->>Frontend: Herhangi bir sayfayı açar
+    Frontend->>Middleware: State kontrolü yapar
+    Middleware->>API: GET /api/v1/system/maintenance
+    API->>DB: SELECT value FROM system_settings<br/>WHERE key='maintenance_mode'
+    DB-->>API: "true"
+    API-->>Middleware: { is_maintenance: true }
+    
+    alt Kullanıcı Admin İse
+        Middleware->>Frontend: İçeriği RENDER et + Kırmızı Uyarı Banner Göster
+    else Normal Kullanıcı İse
+        Middleware->>Frontend: Sadece /maintenance sayfasını RENDER et
+        Frontend-->>User: "Sistemde Bakım Var" mesajı gösterilir
+    end
 ```
 
 ---
