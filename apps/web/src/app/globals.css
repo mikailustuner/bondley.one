@@ -98,44 +98,49 @@
 
   .pro-mode {
     --background: 0 0% 0%;
-    --foreground: 0 0% 95%;
+    --foreground: 0 0% 85%;
+    /* Dimmed text for less eye strain */
 
-    --card: 0 0% 3%;
-    --card-foreground: 0 0% 95%;
+    --card: 0 0% 2%;
+    --card-foreground: 0 0% 85%;
 
-    --popover: 0 0% 3%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 0 0% 2%;
+    --popover-foreground: 0 0% 85%;
 
-    --primary: 80 100% 50%;
+    /* Terminal Amber to be easy on eyes */
+    --primary: 35 90% 55%;
     --primary-foreground: 0 0% 0%;
 
     --secondary: 0 0% 10%;
-    --secondary-foreground: 0 0% 80%;
+    --secondary-foreground: 0 0% 70%;
 
     --muted: 0 0% 8%;
-    --muted-foreground: 0 0% 50%;
+    --muted-foreground: 0 0% 45%;
 
-    --accent: 180 100% 50%;
+    --accent: 35 90% 55%;
     --accent-foreground: 0 0% 0%;
 
-    --destructive: 0 100% 50%;
+    --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --positive: 80 100% 50%;
-    --negative: 0 100% 50%;
+    --positive: 140 70% 45%;
+    /* Soft Green */
+    --negative: 0 70% 50%;
+    /* Soft Red */
 
-    --border: 0 0% 16%;
-    --input: 0 0% 12%;
-    --ring: 180 100% 50%;
+    --border: 0 0% 12%;
+    /* Subtle borders */
+    --input: 0 0% 10%;
+    --ring: 35 90% 55%;
 
     --radius: 0rem;
 
     --surface-glass: 0 0% 0% / 0.9;
-    --emerald-glow: 80 100% 50% / 0.15;
+    --emerald-glow: 35 90% 55% / 0.15;
     --grain-opacity: 0;
-    --selection-bg: 180 100% 50% / 0.3;
-    --selection-fg: 0 0% 100%;
-    --stat-bg-from: 0 0% 5%;
+    --selection-bg: 35 90% 55% / 0.2;
+    --selection-fg: 35 90% 55%;
+    --stat-bg-from: 0 0% 2%;
     --stat-bg-to: 0 0% 0%;
 
     --shadow-sm: none;

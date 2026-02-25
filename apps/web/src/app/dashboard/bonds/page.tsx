@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
-import { AlertCircle, Inbox, Star } from "lucide-react";
+import { AlertCircle, Inbox, Star, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api, BondListItem, BondStats } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
@@ -245,17 +245,18 @@ export default function BondsListPage() {
         </Card>
       )}
 
-      <div className={`flex flex-wrap gap-3 animate-fade-up-delay-1 ${isPro ? "font-mono text-xs" : ""}`}>
-        <div className="flex-1 min-w-[200px]">
+      <div className={`flex flex-wrap gap-3 animate-fade-up-delay-1 ${isPro ? "font-mono" : ""}`}>
+        <div className="flex-1 min-w-[200px] relative">
+          <Search className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 pointer-events-none ${isPro ? "text-primary/70" : "text-muted-foreground"}`} />
           <Input
             placeholder={isPro ? "> ISIN VEYA IHRACCI GIRIN..." : "ISIN veya ihraççıyla ara..."}
-            className={`font-mono-data ${isPro ? "rounded-none border-primary/50 focus-visible:ring-primary h-9 bg-black" : ""}`}
+            className={`font-mono-data text-base pl-12 h-12 border-primary/40 bg-card hover:border-primary/60 transition-colors focus-visible:ring-primary shadow-sm ${isPro ? "rounded-none bg-black text-primary border-primary/50 focus-visible:ring-1" : "rounded-xl border-border"}`}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <select
-          className={`border bg-card px-3 py-2 text-data-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary ${isPro ? "rounded-none border-primary/50 h-9 bg-black uppercase text-xs" : "rounded-md border-border"}`}
+          className={`border bg-card px-4 py-2 text-base text-foreground focus:outline-none focus:ring-1 focus:ring-primary hover:border-primary/60 transition-colors shadow-sm ${isPro ? "rounded-none border-primary/50 h-12 bg-black uppercase text-sm text-primary" : "rounded-xl border-border h-12"}`}
           value={currencyFilter}
           onChange={(e) => setCurrencyFilter(e.target.value)}
         >
@@ -265,7 +266,7 @@ export default function BondsListPage() {
           ))}
         </select>
         <select
-          className={`border bg-card px-3 py-2 text-data-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary max-w-[280px] ${isPro ? "rounded-none border-primary/50 h-9 bg-black uppercase text-xs" : "rounded-md border-border"}`}
+          className={`border bg-card px-4 py-2 text-base text-foreground focus:outline-none focus:ring-1 focus:ring-primary hover:border-primary/60 transition-colors shadow-sm max-w-[280px] ${isPro ? "rounded-none border-primary/50 h-12 bg-black uppercase text-sm text-primary" : "rounded-xl border-border h-12"}`}
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
         >

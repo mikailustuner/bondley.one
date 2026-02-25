@@ -14,6 +14,7 @@ import { useUsageSummary } from "@/hooks/use-usage-summary";
 import { api, BondListItem } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
+import { useProMode } from "@/components/pro-mode-provider";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -23,6 +24,7 @@ export default function DashboardPage() {
   const [quickSearchLoading, setQuickSearchLoading] = useState(false);
   const [quickSearchOpen, setQuickSearchOpen] = useState(false);
   const quickSearchRef = useRef<HTMLDivElement>(null);
+  const { isPro } = useProMode();
   const [soonMaturing, setSoonMaturing] = useState<BondListItem[]>([]);
   const [highYield, setHighYield] = useState<BondListItem[]>([]);
 
@@ -137,15 +139,15 @@ export default function DashboardPage() {
             BIST TLREF Endeks & Borçlanma Araçları Terminali
           </p>
         </div>
-        <div ref={quickSearchRef} className="relative flex-1 max-w-[480px] mx-auto">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <div ref={quickSearchRef} className="relative flex-1 max-w-[600px] mx-auto">
+          <Search className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 pointer-events-none ${isPro ? "text-primary/70" : "text-muted-foreground"}`} />
           <Input
             type="search"
-            placeholder="ISIN veya ihraççı ara..."
+            placeholder={isPro ? "> ISIN VEYA IHRACCI ARA..." : "ISIN veya ihraççı ara..."}
             value={quickSearchQuery}
             onChange={(e) => setQuickSearchQuery(e.target.value)}
             onFocus={() => quickSearchResults.length > 0 && setQuickSearchOpen(true)}
-            className="font-mono-data text-data-sm pl-10 border-primary/30 bg-card hover:border-primary/50 transition-colors"
+            className={`font-mono-data text-base pl-12 h-12 border-primary/40 bg-card hover:border-primary/60 transition-colors focus-visible:ring-primary shadow-sm ${isPro ? "rounded-none bg-black text-primary focus-visible:ring-1" : "rounded-xl"}`}
             aria-label="Borçlanma aracı ara"
             autoComplete="off"
           />
