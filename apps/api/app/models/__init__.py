@@ -11,9 +11,11 @@ from app.models.user_alert import UserAlert
 from app.models.user_favorite_bond import UserFavoriteBond
 from app.models.user_mfa_backup_code import UserMfaBackupCode
 from app.models.kap_disclosure import KapCompany, KapDisclosure, KapDisclosureDetail
+from app.models.system_setting import SystemSetting
 
 __all__ = [
     "Bond", "MarketData", "Calculation", "TLREFRate", "User", "AuditLog",
     "BondView", "UserMetric", "RefreshToken", "UserAlert", "UserFavoriteBond",
     "UserMfaBackupCode", "KapCompany", "KapDisclosure", "KapDisclosureDetail",
+    "SystemSetting",
 ]

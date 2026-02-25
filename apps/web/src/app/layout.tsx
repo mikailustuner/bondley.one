@@ -3,6 +3,7 @@ import { Space_Grotesk, JetBrains_Mono, DM_Sans } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ProModeProvider } from "@/components/pro-mode-provider";
 import { InitialLoader } from "@/components/initial-loader";
+import { MaintenanceGuard } from "@/components/maintenance-guard";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -55,7 +56,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
           <ProModeProvider>
             <InitialLoader />
-            {children}
+            <MaintenanceGuard>
+              {children}
+            </MaintenanceGuard>
           </ProModeProvider>
         </ThemeProvider>
       </body>

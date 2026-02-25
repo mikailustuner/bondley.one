@@ -430,6 +430,11 @@ export const api = {
         method: "PUT",
         token,
       }),
+    toggleMaintenance: (token: string, is_active: boolean) =>
+      apiFetch<{ message: string; maintenance_mode: boolean }>(`/admin/maintenance?is_active=${is_active}`, {
+        method: "POST",
+        token,
+      }),
     deleteUser: (token: string, userId: number) =>
       apiFetch<void>(`/admin/users/${userId}`, {
         method: "DELETE",
@@ -665,6 +670,10 @@ export const api = {
       }),
     delete: (token: string, id: number) =>
       apiFetch<void>(`/alerts/${id}`, { method: "DELETE", token }),
+  },
+
+  system: {
+    getMaintenanceStatus: () => apiFetch<{ is_maintenance: boolean }>("/system/maintenance"),
   },
 };
 

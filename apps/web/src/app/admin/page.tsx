@@ -3,7 +3,10 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api-client";
+import { toast } from "sonner";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatDate } from "@/lib/utils";
 
@@ -46,6 +49,8 @@ export default function AdminPage() {
     }>;
   } | null>(null);
   const [loadingHealth, setLoadingHealth] = useState(false);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [loadingMaintenance, setLoadingMaintenance] = useState(false);
 
   function refreshStats() {
     const token = getToken();
@@ -79,6 +84,18 @@ export default function AdminPage() {
     }
   }
 
+  async function loadMaintenanceStatus() {
+    try {
+      setLoadingMaintenance(true);
+      const res = await api.system.getMaintenanceStatus();
+      setMaintenanceMode(res.is_maintenance);
+    } catch (e) {
+      console.error("Maintenance status yuklenemedi", e);
+    } finally {
+      setLoadingMaintenance(false);
+    }
+  }
+
   useEffect(() => {
     const token = getToken();
     if (!token) return;
@@ -99,6 +116,7 @@ export default function AdminPage() {
       .catch(() => { });
 
     loadDataHealth();
+    loadMaintenanceStatus();
   }, []);
 
   async function handleTlrefSync() {
@@ -227,6 +245,26 @@ export default function AdminPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  }
+
+  async function handleToggleMaintenance(checked: boolean) {
+    const token = getToken();
+    if (!token) return;
+
+    setLoadingMaintenance(true);
+    try {
+      const res = await api.admin.toggleMaintenance(token, checked);
+      setMaintenanceMode(res.maintenance_mode);
+      toast.success(res.message);
+    } catch (error: any) {
+      toast.error("Bakım modu güncellenemedi", {
+        description: error.message || "Bir hata oluştu."
+      });
+      // Revert optimism
+      setMaintenanceMode(!checked);
+    } finally {
+      setLoadingMaintenance(false);
+    }
   }
 
   const anyLoading = syncing || syncingBonds || syncingAll;
@@ -366,6 +404,18 @@ export default function AdminPage() {
                 <span className="font-mono-data text-label text-foreground">
                   {formatDecimal(stats?.users_count, 0)}
                 </span>
+              </div>
+              <div className="flex justify-between items-center py-2.5 border-b border-border/30">
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="maintenance-mode" className="text-data-sm text-muted-foreground">Bakım Modu (Site Under Construction)</Label>
+                  <span className="text-xs text-muted-foreground/70">Ziyaretçilere bakımdayız sayfasını gösterir</span>
+                </div>
+                <Switch
+                  id="maintenance-mode"
+                  checked={maintenanceMode}
+                  onCheckedChange={handleToggleMaintenance}
+                  disabled={loadingMaintenance}
+                />
               </div>
               <div className="flex justify-between items-center py-2.5">
                 <span className="text-data-sm text-muted-foreground">Otomatik Güncelleme</span>

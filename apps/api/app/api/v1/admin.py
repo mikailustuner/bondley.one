@@ -439,3 +439,40 @@ async def get_metrics_overview(
     """Admin: Genel metrik ozeti."""
     overview = await MetricsService.get_metrics_overview(db=db, days=days)
     return overview
+
+
+@router.post("/maintenance", status_code=status.HTTP_200_OK)
+async def toggle_maintenance_mode(
+    is_active: bool = Query(..., description="Bakım modunu aç/kapat"),
+    admin: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin: Bakım modunu (Site Under Construction) açar veya kapatır."""
+    from app.models.system_setting import SystemSetting
+    
+    result = await db.execute(select(SystemSetting).where(SystemSetting.key == "maintenance_mode"))
+    setting = result.scalar_one_or_none()
+    
+    new_value = "true" if is_active else "false"
+    
+    if setting:
+        setting.value = new_value
+    else:
+        setting = SystemSetting(
+            key="maintenance_mode",
+            value=new_value,
+            description="Site bakım modu aktif/pasif durumu"
+        )
+        db.add(setting)
+        
+    await AuditService.log_admin_action(
+        db=db,
+        action="toggle_maintenance_mode",
+        admin_user_id=admin.id,
+        resource_type="system_setting",
+        resource_id="maintenance_mode",
+        details={"is_active": is_active},
+    )
+    
+    await db.commit()
+    return {"message": "Bakım modu güncellendi.", "maintenance_mode": is_active}
