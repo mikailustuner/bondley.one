@@ -127,6 +127,7 @@ async def resolve_data_conflicts(db: AsyncSession, bond: Bond) -> dict:
             "source": "tbliste",
             "label": "BIST tbliste.zip",
             "updated_at": bond.updated_at.isoformat() if bond.updated_at else None,
+            "disclosure_url": "https://borsaistanbul.com/datum/tbliste.zip"
         }
     ]
 

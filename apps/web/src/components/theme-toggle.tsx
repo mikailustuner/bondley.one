@@ -3,10 +3,12 @@
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useProMode } from "./pro-mode-provider";
 
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const { isPro } = useProMode();
 
   useEffect(() => setMounted(true), []);
 
@@ -19,13 +21,18 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <button
       onClick={() => setTheme(isDark ? "light" : "dark")}
+      disabled={isPro}
       className={cn(
         "relative h-8 w-8 rounded-sm border border-border bg-secondary/50 flex items-center justify-center",
-        "hover:bg-secondary hover:border-primary/20 transition-all duration-200",
+        isPro
+          ? "opacity-50 cursor-not-allowed"
+          : "hover:bg-secondary hover:border-primary/20",
+        "transition-all duration-200",
         "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         className
       )}
       aria-label={isDark ? "Acik temaya gec" : "Koyu temaya gec"}
+      title={isPro ? "Pro Mod acikken tema degistirilemez" : undefined}
     >
       <svg
         className={cn(

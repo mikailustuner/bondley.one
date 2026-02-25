@@ -10,7 +10,7 @@ import { FileQuestion, AlertCircle, ChevronLeft, ChevronRight, Star } from "luci
 import { api, BondDetail } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate, formatLastIssueDateText } from "@/lib/utils";
-
+import { useProMode } from "@/components/pro-mode-provider";
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -42,6 +42,7 @@ export default function BondDetailPage({
   params: Promise<{ isin: string }>;
 }) {
   const { isin } = use(params);
+  const { isPro } = useProMode();
   const [bond, setBond] = useState<BondDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [metricsLoading, setMetricsLoading] = useState(false);
@@ -273,8 +274,10 @@ export default function BondDetailPage({
           </ol>
         </nav>
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="font-bond-nums text-display-md text-foreground">{bond.isin_code}</h1>
-          <Badge variant="default">{bond.currency}</Badge>
+          <h1 className={`${isPro ? "text-primary text-2xl" : "text-display-md text-foreground"} font-bond-nums`}>
+            {isPro && <span className="mr-1 opacity-70">&gt;</span>}{bond.isin_code}
+          </h1>
+          <Badge variant={isPro ? "outline" : "default"} className={isPro ? "border-primary text-primary bg-primary/10 rounded-none ml-2" : ""}>{bond.currency}</Badge>
           {!bond.is_active && <Badge variant="destructive">PASIF</Badge>}
           <div className="ml-auto flex items-center gap-1">
             <Button
@@ -401,14 +404,14 @@ export default function BondDetailPage({
       </div>
 
       {bond.calculated_metrics && !metricsLoading && (
-        <Card className="animate-fade-up border-primary/30 bg-primary/5">
-          <CardHeader>
-            <CardDescription>HESAPLANAN METRIKLER</CardDescription>
-            <CardTitle className="mt-1">
-              Kirli Fiyat, Oran Değişimi, Getiri ve Risk — {formatDate(selectedDate)} tarihi için
+        <Card className={`animate-fade-up ${isPro ? "rounded-none border-primary/50 bg-[#001]" : "border-primary/30 bg-primary/5"}`}>
+          <CardHeader className={isPro ? "bg-primary/5 border-b border-primary/20 py-2 px-3" : ""}>
+            <CardDescription className={isPro ? "text-primary/70" : ""}>HESAPLANAN METRIKLER</CardDescription>
+            <CardTitle className={isPro ? "text-sm text-primary font-mono mt-0" : "mt-1"}>
+              {isPro ? "[KIRLI_FIYAT ORAN_DEGISIMI_GETIRI_RISK]" : "Kirli Fiyat, Oran Değişimi, Getiri ve Risk"} — {formatDate(selectedDate)} tarihi için
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className={isPro ? "p-3" : ""}>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-lg border border-border/50 bg-card p-4">
                 <div className="text-label text-muted-foreground mb-1">Kirli Fiyat</div>
@@ -532,12 +535,12 @@ export default function BondDetailPage({
       )}
 
       {bond.calculated_metrics && !metricsLoading && (
-        <Card className="animate-fade-up">
-          <CardHeader>
-            <CardDescription>SENARYO</CardDescription>
-            <CardTitle className="mt-1">TLREF değişimi</CardTitle>
+        <Card className={`animate-fade-up ${isPro ? "rounded-none border-primary/50" : ""}`}>
+          <CardHeader className={isPro ? "bg-primary/5 border-b border-primary/20 py-2 px-3" : ""}>
+            <CardDescription className={isPro ? "text-primary/70" : ""}>SENARYO</CardDescription>
+            <CardTitle className={isPro ? "text-sm text-primary font-mono mt-0" : "mt-1"}>{isPro ? "[TLREF_DEGISIMI]" : "TLREF değişimi"}</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className={`space-y-4 ${isPro ? "p-3" : ""}`}>
             <div>
               <label className="text-label text-muted-foreground block mb-2">
                 TLREF şoku (baz puan): {scenarioShockBp > 0 ? "+" : ""}{scenarioShockBp} bp
@@ -653,13 +656,13 @@ export default function BondDetailPage({
         </div>
       )}
 
-      <div className="grid gap-px md:grid-cols-4 bg-border/30 rounded-lg overflow-hidden animate-fade-up">
+      <div className={`grid gap-px md:grid-cols-4 bg-border/30 overflow-hidden animate-fade-up ${isPro ? "rounded-none border-t border-b border-primary/30" : "rounded-lg"}`}>
         {topMetrics.map((m) => (
           <div
             key={m.label}
-            className={`bg-card p-5 grain ${m.highlight ? "amber-glow-border" : ""}`}
+            className={`bg-card ${isPro ? "px-4 py-3 border-r border-primary/20 last:border-0" : "p-5 grain"} ${m.highlight && !isPro ? "amber-glow-border" : ""}`}
           >
-            <div className="text-label text-muted-foreground mb-2">{m.label}</div>
+            <div className={`text-label mb-2 ${isPro ? (m.highlight ? "text-primary font-bold" : "text-primary/70") : "text-muted-foreground"}`}>{m.label}</div>
             <div
               className={`font-bond-nums text-stat ${m.highlight ? "text-primary" : "text-foreground"}`}
             >
@@ -670,20 +673,20 @@ export default function BondDetailPage({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2 animate-fade-up-delay-1">
-        <Card>
-          <CardHeader>
-            <CardDescription>GENEL BILGILER</CardDescription>
-            <CardTitle className="mt-1">Genel Detaylar</CardTitle>
+        <Card className={isPro ? "rounded-none border-primary/50" : ""}>
+          <CardHeader className={isPro ? "bg-primary/5 border-b border-primary/20 py-2 px-3" : ""}>
+            {!isPro && <CardDescription>GENEL BILGILER</CardDescription>}
+            <CardTitle className={isPro ? "text-sm text-primary font-mono mt-0" : "mt-1"}>{isPro ? "[GENEL_DETAYLAR]" : "Genel Detaylar"}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-0">
+          <CardContent className={isPro ? "p-0" : ""}>
+            <div className={`space-y-0 ${isPro ? "font-mono" : ""}`}>
               {generalInfo.map(([label, value]) => (
                 <div
                   key={label}
-                  className="flex justify-between items-center py-2.5 border-b border-border/30 last:border-0"
+                  className={`flex justify-between items-center ${isPro ? "py-1 px-3" : "py-2.5"} border-b ${isPro ? "border-primary/10" : "border-border/30"} last:border-0`}
                 >
-                  <span className="text-data-sm text-muted-foreground">{label}</span>
-                  <span className="font-bond-nums text-data-sm text-foreground text-right max-w-[60%]">
+                  <span className={`text-data-sm ${isPro ? "text-primary/70 text-xs" : "text-muted-foreground"}`}>{label}</span>
+                  <span className={`font-bond-nums text-data-sm ${isPro ? "text-primary text-xs" : "text-foreground"} text-right max-w-[60%]`}>
                     {value ?? "—"}
                   </span>
                 </div>
@@ -692,20 +695,20 @@ export default function BondDetailPage({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardDescription>TARIH BILGILERI</CardDescription>
-            <CardTitle className="mt-1">İhraç ve Vade</CardTitle>
+        <Card className={isPro ? "rounded-none border-primary/50" : ""}>
+          <CardHeader className={isPro ? "bg-primary/5 border-b border-primary/20 py-2 px-3" : ""}>
+            {!isPro && <CardDescription>TARIH BILGILERI</CardDescription>}
+            <CardTitle className={isPro ? "text-sm text-primary font-mono mt-0" : "mt-1"}>{isPro ? "[IHRAC_VE_VADE]" : "İhraç ve Vade"}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-0">
+          <CardContent className={isPro ? "p-0" : ""}>
+            <div className={`space-y-0 ${isPro ? "font-mono" : ""}`}>
               {dateInfo.map(([label, value]) => (
                 <div
                   key={label}
-                  className="flex justify-between items-center py-2.5 border-b border-border/30 last:border-0"
+                  className={`flex justify-between items-center ${isPro ? "py-1.5 px-3" : "py-2.5"} border-b ${isPro ? "border-primary/10" : "border-border/30"} last:border-0`}
                 >
-                  <span className="text-data-sm text-muted-foreground">{label}</span>
-                  <span className="font-bond-nums text-data-sm text-foreground">{value}</span>
+                  <span className={`text-data-sm ${isPro ? "text-primary/70 text-xs" : "text-muted-foreground"}`}>{label}</span>
+                  <span className={`font-bond-nums text-data-sm ${isPro ? "text-primary text-xs" : "text-foreground"}`}>{value}</span>
                 </div>
               ))}
             </div>
@@ -714,40 +717,40 @@ export default function BondDetailPage({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2 animate-fade-up-delay-2">
-        <Card>
-          <CardHeader>
-            <CardDescription>FINANSAL VERILER</CardDescription>
-            <CardTitle className="mt-1">Fiyat ve Getiri</CardTitle>
+        <Card className={isPro ? "rounded-none border-primary/50" : ""}>
+          <CardHeader className={isPro ? "bg-primary/5 border-b border-primary/20 py-2 px-3" : ""}>
+            {!isPro && <CardDescription>FINANSAL VERILER</CardDescription>}
+            <CardTitle className={isPro ? "text-sm text-primary font-mono mt-0" : "mt-1"}>{isPro ? "[FIYAT_VE_GETIRI]" : "Fiyat ve Getiri"}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-0">
+          <CardContent className={isPro ? "p-0" : ""}>
+            <div className={`space-y-0 ${isPro ? "font-mono" : ""}`}>
               {financialInfo.map(([label, value]) => (
                 <div
                   key={label}
-                  className="flex justify-between items-center py-2.5 border-b border-border/30 last:border-0"
+                  className={`flex justify-between items-center ${isPro ? "py-1.5 px-3" : "py-2.5"} border-b ${isPro ? "border-primary/10" : "border-border/30"} last:border-0`}
                 >
-                  <span className="text-data-sm text-muted-foreground">{label}</span>
-                  <span className="font-bond-nums text-data-sm text-foreground">{value}</span>
+                  <span className={`text-data-sm ${isPro ? "text-primary/70 text-xs" : "text-muted-foreground"}`}>{label}</span>
+                  <span className={`font-bond-nums text-data-sm ${isPro ? "text-primary text-xs" : "text-foreground"}`}>{value}</span>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardDescription>HESAPLAMA YONTEMLERI</CardDescription>
-            <CardTitle className="mt-1">Formul ve Konvansiyon</CardTitle>
+        <Card className={isPro ? "rounded-none border-primary/50" : ""}>
+          <CardHeader className={isPro ? "bg-primary/5 border-b border-primary/20 py-2 px-3" : ""}>
+            {!isPro && <CardDescription>HESAPLAMA YONTEMLERI</CardDescription>}
+            <CardTitle className={isPro ? "text-sm text-primary font-mono mt-0" : "mt-1"}>{isPro ? "[FORMUL_VE_KONVANSİYON]" : "Formul ve Konvansiyon"}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-0">
+          <CardContent className={isPro ? "p-0" : ""}>
+            <div className={`space-y-0 ${isPro ? "font-mono" : ""}`}>
               {formulaInfo.map(([label, value]) => (
                 <div
                   key={label}
-                  className="flex justify-between items-center py-2.5 border-b border-border/30 last:border-0"
+                  className={`flex justify-between items-center ${isPro ? "py-1.5 px-3" : "py-2.5"} border-b ${isPro ? "border-primary/10" : "border-border/30"} last:border-0`}
                 >
-                  <span className="text-data-sm text-muted-foreground">{label}</span>
-                  <span className="font-bond-nums text-data-sm text-foreground text-right max-w-[60%]">
+                  <span className={`text-data-sm ${isPro ? "text-primary/70 text-xs" : "text-muted-foreground"}`}>{label}</span>
+                  <span className={`font-bond-nums text-data-sm ${isPro ? "text-primary text-xs" : "text-foreground"} text-right max-w-[60%]`}>
                     {value ?? "—"}
                   </span>
                 </div>
@@ -758,13 +761,13 @@ export default function BondDetailPage({
       </div>
 
       {bond.remarks && (
-        <Card className="animate-fade-up-delay-2">
-          <CardHeader>
-            <CardDescription>NOTLAR</CardDescription>
-            <CardTitle className="mt-1">Aciklamalar</CardTitle>
+        <Card className={`animate-fade-up-delay-2 ${isPro ? "rounded-none border-primary/50" : ""}`}>
+          <CardHeader className={isPro ? "bg-primary/5 border-b border-primary/20 py-2 px-3" : ""}>
+            <CardDescription className={isPro ? "text-primary/70" : ""}>NOTLAR</CardDescription>
+            <CardTitle className={isPro ? "text-sm text-primary font-mono mt-0" : "mt-1"}>{isPro ? "[ACIKLAMALAR]" : "Aciklamalar"}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-data-sm text-muted-foreground whitespace-pre-wrap">
+          <CardContent className={isPro ? "p-3" : ""}>
+            <p className={`whitespace-pre-wrap ${isPro ? "text-primary/80 text-xs font-mono" : "text-data-sm text-muted-foreground"}`}>
               {bond.remarks}
             </p>
           </CardContent>
@@ -773,12 +776,12 @@ export default function BondDetailPage({
 
       {/* ─── Veri Uyuşmazlıkları ─── */}
       {bond.data_conflicts && bond.data_conflicts.length > 0 && (
-        <Card className="animate-fade-up-delay-2 border-amber-500/30 bg-amber-500/5">
-          <CardHeader>
-            <CardDescription>VERİ UYUŞMAZLIKLARI</CardDescription>
-            <CardTitle className="mt-1">tbliste vs KAP Farklılıkları</CardTitle>
+        <Card className={`animate-fade-up-delay-2 ${isPro ? "rounded-none border-negative/50 bg-[#2b0000]" : "border-amber-500/30 bg-amber-500/5"}`}>
+          <CardHeader className={isPro ? "bg-negative/10 border-b border-negative/30 py-2 px-3" : ""}>
+            <CardDescription className={isPro ? "text-negative" : ""}>VERİ UYUŞMAZLIKLARI</CardDescription>
+            <CardTitle className={isPro ? "text-sm text-negative font-mono mt-0" : "mt-1"}>{isPro ? "[TBLISTE_VS_KAP_FARKLILIKLARI]" : "tbliste vs KAP Farklılıkları"}</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className={isPro ? "p-0" : ""}>
             <div className="overflow-x-auto">
               <table className="w-full text-data-sm">
                 <thead>
@@ -815,24 +818,24 @@ export default function BondDetailPage({
 
       {/* ─── KAP Bildirim Verileri ─── */}
       {bond.kap_data && (
-        <Card className="animate-fade-up-delay-2">
-          <CardHeader>
-            <CardDescription>KAP BİLDİRİM VERİLERİ</CardDescription>
-            <CardTitle className="mt-1">
-              İhraç Detayları
+        <Card className={`animate-fade-up-delay-2 ${isPro ? "rounded-none border-primary/50" : ""}`}>
+          <CardHeader className={isPro ? "bg-primary/5 border-b border-primary/20 py-2 px-3" : ""}>
+            <CardDescription className={isPro ? "text-primary/70" : ""}>KAP BİLDİRİM VERİLERİ</CardDescription>
+            <CardTitle className={isPro ? "text-sm text-primary font-mono mt-0" : "mt-1"}>
+              {isPro ? "[IHRAC_DETAYLARI]" : "İhraç Detayları"}
               {bond.kap_data.disclosure_url && (
                 <a
                   href={bond.kap_data.disclosure_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="ml-3 text-data-sm font-normal text-primary hover:underline"
+                  className={`ml-3 font-normal hover:underline ${isPro ? "text-xs text-primary/80" : "text-data-sm text-primary"}`}
                 >
                   KAP Bildirimi →
                 </a>
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className={`space-y-6 ${isPro ? "p-3 font-mono" : ""}`}>
             {/* İhraç Bilgileri */}
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="space-y-0">
@@ -952,13 +955,13 @@ export default function BondDetailPage({
 
       {/* ─── KAP Bildirimleri Listesi ─── */}
       {bond.kap_disclosures && bond.kap_disclosures.length > 0 && (
-        <Card className="animate-fade-up-delay-2">
-          <CardHeader>
-            <CardDescription>KAP BİLDİRİMLERİ</CardDescription>
-            <CardTitle className="mt-1">Bu ISIN ile İlgili Tüm Bildirimler ({bond.kap_disclosures.length})</CardTitle>
+        <Card className={`animate-fade-up-delay-2 ${isPro ? "rounded-none border-primary/50" : ""}`}>
+          <CardHeader className={isPro ? "bg-primary/5 border-b border-primary/20 py-2 px-3" : ""}>
+            <CardDescription className={isPro ? "text-primary/70" : ""}>KAP BİLDİRİMLERİ</CardDescription>
+            <CardTitle className={isPro ? "text-sm text-primary font-mono mt-0" : "mt-1"}>{isPro ? "[ISIN_ILGILI_TUM_BILDIRIMLER]" : "Bu ISIN ile İlgili Tüm Bildirimler"} ({bond.kap_disclosures.length})</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-0">
+          <CardContent className={isPro ? "p-0" : ""}>
+            <div className={`space-y-0 ${isPro ? "font-mono" : ""}`}>
               {bond.kap_disclosures.slice(0, 10).map((d: any, idx: number) => (
                 <div
                   key={idx}
@@ -1003,14 +1006,18 @@ export default function BondDetailPage({
                   </span>
                 )}
                 {ds.disclosure_url && (
-                  <a
-                    href={ds.disclosure_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline"
-                  >
-                    ↗
-                  </a>
+                  <div className="ml-2 flex items-center">
+                    <span className="text-muted-foreground mr-1 text-[11px]">(Kaynak:</span>
+                    <a
+                      href={ds.disclosure_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline font-mono text-[11px]"
+                    >
+                      {ds.source === 'kap' ? `KAP Bildirim` : `BİST tbliste`} ↗
+                    </a>
+                    <span className="text-muted-foreground ml-1 text-[11px]">)</span>
+                  </div>
                 )}
               </div>
             ))}

@@ -382,6 +382,19 @@ export const api = {
         "/admin/stats",
         { token },
       ),
+    getDataHealth: (token: string) =>
+      apiFetch<{
+        total_active_bonds: number;
+        total_issues: number;
+        bonds_with_issues: Array<{
+          isin_code: string;
+          issuer: string | null;
+          maturity_date: string | null;
+          issue_date: string | null;
+          tbliste_updated_at: string | null;
+          issues: string[];
+        }>;
+      }>("/admin/data-health", { token }),
     publicSummary: () => apiFetch<PublicSummary>("/admin/public-summary"),
     syncAll: (token: string) =>
       apiFetch<{ tlref_historical: any; tlref_daily: any; bonds: any }>("/admin/sync-all", {

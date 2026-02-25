@@ -38,6 +38,57 @@ async def get_admin_stats(
     }
 
 
+@router.get("/data-health")
+async def get_data_health(
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_admin_user),
+):
+    """Admin: Eksik KAP verisi veya guncel olmayan tbliste verisi olan aktif tahvilleri getir."""
+    from datetime import timedelta
+    from app.models.kap_disclosure import KapDisclosure
+    
+    today = datetime.utcnow()
+    two_days_ago = today - timedelta(days=2)
+    
+    # Aktif tahviller
+    bonds_result = await db.execute(select(Bond).where(Bond.is_active == True))
+    active_bonds = bonds_result.scalars().all()
+    
+    # KAP'taki tum isin'ler
+    kap_result = await db.execute(
+        select(KapDisclosure.isin_code).where(KapDisclosure.isin_code.isnot(None)).distinct()
+    )
+    kap_isins = {row[0] for row in kap_result}
+    
+    health_issues = []
+    
+    for bond in active_bonds:
+        issues = []
+        is_tbliste_outdated = bond.updated_at is None or bond.updated_at < two_days_ago
+        is_kap_missing = bond.isin_code not in kap_isins
+        
+        if is_tbliste_outdated:
+            issues.append("tbliste_outdated")
+        if is_kap_missing:
+            issues.append("kap_missing")
+            
+        if issues:
+            health_issues.append({
+                "isin_code": bond.isin_code,
+                "issuer": bond.issuer,
+                "maturity_date": bond.maturity_date.isoformat() if bond.maturity_date else None,
+                "issue_date": bond.issue_date.isoformat() if bond.issue_date else None,
+                "tbliste_updated_at": bond.updated_at.isoformat() if bond.updated_at else None,
+                "issues": issues,
+            })
+            
+    return {
+        "total_active_bonds": len(active_bonds),
+        "total_issues": len(health_issues),
+        "bonds_with_issues": health_issues
+    }
+
+
 @router.get("/public-summary")
 async def get_public_summary(db: AsyncSession = Depends(get_db)):
     """Auth gerektirmez: landing sayfasi icin ozet veri."""

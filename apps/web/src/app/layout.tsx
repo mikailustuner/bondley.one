@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, JetBrains_Mono, DM_Sans } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ProModeProvider } from "@/components/pro-mode-provider";
 import { InitialLoader } from "@/components/initial-loader";
 import "./globals.css";
 
@@ -52,8 +53,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body className="font-body antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
-          <InitialLoader />
-          {children}
+          <ProModeProvider>
+            <InitialLoader />
+            {children}
+          </ProModeProvider>
         </ThemeProvider>
       </body>
     </html>

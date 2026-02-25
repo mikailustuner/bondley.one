@@ -99,3 +99,68 @@ def fetch_bond_list(self):
     except Exception as exc:
         logger.error(f"Bond list fetch failed: {exc}")
         raise self.retry(exc=exc, countdown=60 * 5)
+
+
+@celery_app.task(name="app.tasks.data_tasks.populate_daily_market_data", bind=True, max_retries=3)
+def populate_daily_market_data(self):
+    """Bonds tablosundaki clean_price_text degerlerini parse edip bugunun market_data'sini olustur."""
+    logger.info("Task: Populating daily market data...")
+    from datetime import date
+    import sys
+    from pathlib import Path
+
+    # Scripts klasorundeki logic'i kullanmak icin path'e ekle
+    project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+    
+    try:
+        from scripts.populate_market_data import populate_market_data
+    except ImportError:
+        # Try with hyphenated name
+        import importlib.util
+        script_path = project_root / "scripts" / "populate-market-data.py"
+        spec = importlib.util.spec_from_file_location("populate_market_data", str(script_path))
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        populate_market_data = module.populate_market_data
+
+    try:
+        _run_async(populate_market_data(date.today(), dry_run=False, debug=False))
+        logger.info("Daily market data populated successfully")
+        return {"status": "success", "date": str(date.today())}
+    except Exception as exc:
+        logger.error(f"Daily market data population failed: {exc}")
+        raise self.retry(exc=exc, countdown=60 * 5)
+
+
+@celery_app.task(name="app.tasks.data_tasks.run_daily_calculations", bind=True, max_retries=3)
+def run_daily_calculations(self):
+    """Bugunun market_data'si olan tahviller icin hesaplamalari yap ve DB'ye yaz."""
+    logger.info("Task: Running daily calculations...")
+    from datetime import date
+    import sys
+    from pathlib import Path
+
+    project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+    
+    try:
+        from scripts.populate_calculations import populate_calculations
+    except ImportError:
+        # Try with hyphenated name
+        import importlib.util
+        script_path = project_root / "scripts" / "populate-calculations.py"
+        spec = importlib.util.spec_from_file_location("populate_calculations", str(script_path))
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        populate_calculations = module.populate_calculations
+
+    try:
+        _run_async(populate_calculations(date.today(), dry_run=False))
+        logger.info("Daily calculations completed successfully")
+        return {"status": "success", "date": str(date.today())}
+    except Exception as exc:
+        logger.error(f"Daily calculations failed: {exc}")
+        raise self.retry(exc=exc, countdown=60 * 5)

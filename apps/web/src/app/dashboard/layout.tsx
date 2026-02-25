@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ProModeToggle } from "@/components/pro-mode-toggle";
 import { UserMenu } from "@/components/user-menu";
 import { getUser } from "@/lib/auth";
 
@@ -77,10 +78,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 text-label text-muted-foreground">
+            <div className="hidden sm:flex items-center gap-2 text-label text-muted-foreground mr-1">
               <span className="h-1.5 w-1.5 rounded-full bg-positive live-indicator" />
               CANLI
             </div>
+            <ProModeToggle />
             <ThemeToggle />
             <UserMenu />
           </div>

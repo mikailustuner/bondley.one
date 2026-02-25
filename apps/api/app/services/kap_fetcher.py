@@ -503,10 +503,21 @@ def fetch_all_kap_data(db: Session, max_companies: int | None = None, fetch_deta
                 raw = fetch_company_disclosures(client, comp["api_url"])
                 parsed_list = [parse_disclosure_basic(item) for item in raw]
 
-                # 3. DB'ye kaydet
-                new_disclosures = save_disclosures(db, company_id, parsed_list)
+                # 3. DB'ye kaydet (Sadece son 3 gunlugu)
+                recent_disclosures = []
+                three_days_ago = date.today() - pd.Timedelta(days=3)
+                for item in parsed_list:
+                    pub_date = item.get("publish_date")
+                    if pub_date:
+                        if pub_date.date() >= three_days_ago:
+                            recent_disclosures.append(item)
+                    else:
+                        # Tarih yoksa (nadiren olur) guvenli kalmak icin ekle
+                        recent_disclosures.append(item)
+                
+                new_disclosures = save_disclosures(db, company_id, recent_disclosures)
                 total_new += len(new_disclosures)
-                logger.info(f"  {len(raw)} bildirim, {len(new_disclosures)} yeni")
+                logger.info(f"  {len(raw)} cikan, {len(recent_disclosures)} filtrelenen (3gun), {len(new_disclosures)} yeni")
 
                 # 4. Yeni bildirimler icin Excel detaylarini cek
                 if fetch_details and new_disclosures:

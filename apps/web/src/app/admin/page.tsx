@@ -33,10 +33,24 @@ export default function AdminPage() {
     daily_rate: number | null;
   } | null>(null);
 
+  const [dataHealth, setDataHealth] = useState<{
+    total_active_bonds: number;
+    total_issues: number;
+    bonds_with_issues: Array<{
+      isin_code: string;
+      issuer: string | null;
+      maturity_date: string | null;
+      issue_date: string | null;
+      tbliste_updated_at: string | null;
+      issues: string[];
+    }>;
+  } | null>(null);
+  const [loadingHealth, setLoadingHealth] = useState(false);
+
   function refreshStats() {
     const token = getToken();
     if (!token) return;
-    api.admin.stats(token).then(setStats).catch(() => {});
+    api.admin.stats(token).then(setStats).catch(() => { });
     api.tlref
       .latest(token)
       .then((res) => {
@@ -47,7 +61,22 @@ export default function AdminPage() {
             daily_rate: res.daily_rate,
           });
       })
-      .catch(() => {});
+      .catch(() => { });
+    loadDataHealth();
+  }
+
+  async function loadDataHealth() {
+    const token = getToken();
+    if (!token) return;
+    setLoadingHealth(true);
+    try {
+      const result = await api.admin.getDataHealth(token);
+      setDataHealth(result);
+    } catch (e) {
+      console.error("Data health yuklenemedi", e);
+    } finally {
+      setLoadingHealth(false);
+    }
   }
 
   useEffect(() => {
@@ -67,7 +96,9 @@ export default function AdminPage() {
             daily_rate: res.daily_rate,
           });
       })
-      .catch(() => {});
+      .catch(() => { });
+
+    loadDataHealth();
   }, []);
 
   async function handleTlrefSync() {
@@ -168,6 +199,34 @@ export default function AdminPage() {
     } finally {
       setSyncingAll(false);
     }
+  }
+
+  function exportDataHealthCSV() {
+    if (!dataHealth || dataHealth.bonds_with_issues.length === 0) return;
+
+    // Create CSV content
+    const headers = ["ISIN", "Sirket", "Sorunlar", "tbliste_Son_Guncelleme", "Itfa_Tarihi"];
+    const rows = dataHealth.bonds_with_issues.map(b => [
+      b.isin_code,
+      `"${(b.issuer || "").replace(/"/g, '""')}"`,
+      `"${b.issues.map(i => i === 'tbliste_outdated' ? 'tbliste guncellenmedi' : 'KAP verisi eksik').join(", ")}"`,
+      b.tbliste_updated_at ? formatDate(b.tbliste_updated_at.split('T')[0]) : "Yok",
+      b.maturity_date ? formatDate(b.maturity_date) : "Yok"
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(e => e.join(","))
+    ].join("\n");
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `eksik_verili_tahviller_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   const anyLoading = syncing || syncingBonds || syncingAll;
@@ -315,6 +374,58 @@ export default function AdminPage() {
                 </span>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Veri Sağlığı / Data Health Kartı */}
+      <div className="grid gap-6 md:grid-cols-1 animate-fade-up-delay-3">
+        <Card className={dataHealth && dataHealth.total_issues > 0 ? "border-amber-500/30" : ""}>
+          <CardHeader className="flex flex-row items-start justify-between">
+            <div>
+              <CardDescription>VERİ SAĞLIĞI & EKSİKLİKLER</CardDescription>
+              <CardTitle className="mt-1">KAP ve tbliste Veri Kontrolü</CardTitle>
+            </div>
+            {dataHealth && dataHealth.total_issues > 0 && (
+              <Button onClick={exportDataHealthCSV} variant="outline" size="sm" className="hidden sm:flex">
+                CSV Olarak İndir
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent>
+            {loadingHealth ? (
+              <div className="text-sm text-muted-foreground animate-pulse">Kontrol ediliyor...</div>
+            ) : dataHealth ? (
+              <div>
+                <div className="flex items-center justify-between py-3 border-b border-border/30">
+                  <span className="text-data-sm text-muted-foreground">Aktif Tahvil Sayısı</span>
+                  <span className="font-mono-data text-foreground text-sm">{dataHealth.total_active_bonds}</span>
+                </div>
+                <div className="flex items-center justify-between py-3 border-b border-border/30">
+                  <span className="text-data-sm text-muted-foreground">Sorunlu / Eksik Kayıt Sayısı</span>
+                  <span className={`font-mono-data text-sm font-medium ${dataHealth.total_issues > 0 ? 'text-amber-500' : 'text-positive'}`}>{dataHealth.total_issues}</span>
+                </div>
+
+                {dataHealth.total_issues > 0 && (
+                  <div className="mt-4">
+                    <p className="text-xs text-muted-foreground mb-3">Aşağıdaki tahvillerin ya hiç KAP verisi yok, ya da BİAŞ (tbliste) listesinde güncellenmemiş durumda.</p>
+                    <div className="sm:hidden mb-4">
+                      <Button onClick={exportDataHealthCSV} variant="outline" size="sm" className="w-full">
+                        Eksik Listesini İndir (CSV)
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {dataHealth.total_issues === 0 && (
+                  <div className="mt-4 p-4 rounded-md bg-positive/10 border border-positive/20 text-positive text-sm flex items-center gap-2">
+                    ✓ Tüm aktif tahvillerin KAP ve güncel tbliste verileri eksiksiz bulunuyor.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">Veri sağlığı durumu alınamadı.</div>
+            )}
           </CardContent>
         </Card>
       </div>
