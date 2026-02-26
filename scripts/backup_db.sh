@@ -14,7 +14,6 @@ BACKUP_DIR="/tmp/fincalc_backups"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 BACKUP_FILENAME="fincalc_db_${TIMESTAMP}.sql.gz"
 BACKUP_PATH="${BACKUP_DIR}/${BACKUP_FILENAME}"
-GCS_BUCKET="gs://${GCS_BACKUP_BUCKET:-fincalc-backups}/db-backups/"
 CONTAINER_NAME="fincalc-postgres"
 
 # Create local backup directory if it doesn't exist
@@ -33,20 +32,8 @@ fi
 
 echo "Database dumped successfully to $BACKUP_PATH"
 
-# 2. Upload to Google Cloud Storage
-echo "Uploading backup to $GCS_BUCKET..."
-if command -v gsutil &> /dev/null; then
-    gsutil cp "$BACKUP_PATH" "$GCS_BUCKET"
-    if [ $? -eq 0 ]; then
-        echo "Backup uploaded successfully to GCS."
-    else
-        echo "Error: Failed to upload backup to GCS."
-        exit 1
-    fi
-else
-    echo "Warning: gsutil not found. Skipping Google Cloud Storage upload."
-    echo "Please ensure Google Cloud SDK is installed and authorized."
-fi
+# (Optional) You can add your own custom sync logic here (e.g., rsync, scp, AWS CLI)
+# if you decide to push backups to another server in the future.
 
 # 3. Cleanup old local backups (keep last 7 days)
 echo "Cleaning up local backups older than 7 days..."
