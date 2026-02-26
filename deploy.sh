@@ -152,6 +152,17 @@ for svc in "${SERVICES[@]}"; do
     fi
 done
 
+# --- Step 4: Run Database Migrations (Alembic) ---
+log "Veritabani tablolari guncelleniyor (Alembic)..."
+# TTY olmadan calistirmak icin -T flag'i kullanilir veya docker exec -i
+if docker ps --format '{{.Names}}' | grep -q "fincalc-api"; then
+    log "Alembic migration (alembic upgrade head) baslatiliyor..."
+    docker exec -i fincalc-api alembic upgrade head
+    log "Veritabani migration'lari tamamlandi."
+else
+    warn "fincalc-api container'i calismiyor, migration atlandi!"
+fi
+
 echo ""
 log "============================================"
 log "  Deployment tamamlandi!"
