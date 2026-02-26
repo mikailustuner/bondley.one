@@ -843,6 +843,8 @@ export default function BondDetailPage({
                 {[
                   ["ISIN Kodu", bond.kap_data.isin_code],
                   ["Araç Tipi", bond.kap_data.instrument_type],
+                  ...(bond.kap_data.fund_user ? [["Fon Kullanıcısı", bond.kap_data.fund_user]] : []),
+                  ...(bond.kap_data.source_institution ? [["Kaynak Kuruluş", bond.kap_data.source_institution]] : []),
                   ["İtfa Tarihi", bond.kap_data.maturity_date ? formatDate(bond.kap_data.maturity_date) : null],
                   ["Vade (Gün)", bond.kap_data.maturity_days],
                   ["Nominal Değer", bond.kap_data.nominal_value ? `${Number(bond.kap_data.nominal_value).toLocaleString('tr-TR')} ${bond.kap_data.currency || 'TRY'}` : null],

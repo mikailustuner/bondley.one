@@ -10,6 +10,8 @@ class BondResponse(BaseModel):
     id: int
     isin_code: str
     issuer: str | None = None
+    fund_user: str | None = None
+    source_institution: str | None = None
     issuance_type: str | None = None
     yield_type: str | None = None
     security_type: str | None = None
@@ -51,6 +53,8 @@ class BondListItem(BaseModel):
     id: int
     isin_code: str
     issuer: str | None = None
+    fund_user: str | None = None
+    source_institution: str | None = None
     yield_type: str | None = None
     security_type: str | None = None
     currency: str = "TRY"

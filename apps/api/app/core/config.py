@@ -60,6 +60,11 @@ class Settings(BaseSettings):
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_LOGIN_PER_MINUTE: int = 5
     RATE_LIMIT_SIGNUP_PER_HOUR: int = 3
+    
+    # Sentry DSN configuration for error tracking
+    SENTRY_DSN: str = ""
+    RATE_LIMIT_LOGIN_PER_MINUTE: int = 5
+    RATE_LIMIT_SIGNUP_PER_HOUR: int = 3
 
     # SMTP Settings for Email Verification
     SMTP_HOST: str = "smtp.hostinger.com" # Default placeholder, user configures via .env

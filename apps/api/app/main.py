@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import select, text
 from slowapi.errors import RateLimitExceeded
+import sentry_sdk
 
 from app.core.config import get_settings
 from app.core.database import async_session_factory, engine, Base
@@ -69,6 +70,15 @@ async def _test_database_connection():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if settings.SENTRY_DSN:
+        sentry_sdk.init(
+            dsn=settings.SENTRY_DSN,
+            environment=settings.ENVIRONMENT,
+            traces_sample_rate=1.0,  # Catch everything during init
+            profiles_sample_rate=1.0,
+        )
+        logger.info("[startup] Sentry initialized.")
+        
     try:
         settings.validate_production_secrets()
     except ValueError as e:

@@ -39,6 +39,7 @@ python-dotenv
 # Utilities
 python-dateutil
 selenium
+sentry-sdk[fastapi]
 
 # Email Sending
 aiosmtplib

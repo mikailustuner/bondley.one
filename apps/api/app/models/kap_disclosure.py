@@ -77,6 +77,8 @@ class KapDisclosureDetail(Base):
         Integer, ForeignKey("kap_disclosures.id", ondelete="CASCADE"), unique=True, nullable=False, index=True
     )
     isin_code: Mapped[str | None] = mapped_column(String(30), index=True)
+    fund_user: Mapped[str | None] = mapped_column(String(255))  # Sukuk: Fon Kullanicisi
+    source_institution: Mapped[str | None] = mapped_column(String(255))  # Sukuk: Kaynak Kurulus
 
     # Arac bilgileri
     instrument_type: Mapped[str | None] = mapped_column(String(50))

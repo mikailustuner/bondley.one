@@ -165,3 +165,11 @@ log ""
 log "  Admin giris: .env icindeki ADMIN_EMAIL / ADMIN_INIT_PASSWORD ile giris yapin"
 log "  (ONEMLI: Ilk giriste admin sifresini degistirin; .env.production asla commit etmeyin)"
 log ""
+
+# --- Step 4: Setup Backup Cron Job ---
+log "Veritabani yedekleme (cron) ayarlaniyor..."
+CRON_JOB="0 3 * * * $(pwd)/scripts/backup_db.sh >> /var/log/fincalc_backup.log 2>&1"
+(crontab -l 2>/dev/null | grep -v "backup_db.sh"; echo "$CRON_JOB") | crontab -
+log "Yedekleme cron job'i basariyla eklendi (Her gece 03:00)."
+log ""
+

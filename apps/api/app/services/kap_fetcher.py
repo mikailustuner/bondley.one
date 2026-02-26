@@ -377,6 +377,8 @@ def build_detail_record(parsed: dict) -> dict:
     return {
         "isin_code": kv.get("ISIN Code") or kv.get("ISIN Kodu"),
         "instrument_type": kv.get("Type") or kv.get("Tür"),
+        "fund_user": kv.get("Fund User") or kv.get("Fon Kullanıcısı") or kv.get("Fon Kullanicisi"),
+        "source_institution": kv.get("Source Institution") or kv.get("Kaynak Kuruluş") or kv.get("Kaynak Kurulus"),
         "maturity_date": _safe_date(kv.get("Maturity Date") or kv.get("İtfa Tarihi")),
         "maturity_days": _safe_int(kv.get("Maturity (Day)") or kv.get("Vade (Gün)")),
         "nominal_value": _safe_decimal(

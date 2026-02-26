@@ -15,6 +15,8 @@ class Bond(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     isin_code: Mapped[str] = mapped_column(String(30), unique=True, nullable=False, index=True)
     issuer: Mapped[str | None] = mapped_column(String(255))
+    fund_user: Mapped[str | None] = mapped_column(String(255))  # Sukuk: Fon Kullanicisi
+    source_institution: Mapped[str | None] = mapped_column(String(255))  # Sukuk: Kaynak Kurulus
     issuance_type: Mapped[str | None] = mapped_column(String(100))
     yield_type: Mapped[str | None] = mapped_column(String(255))
     security_type: Mapped[str | None] = mapped_column(String(255))

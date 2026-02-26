@@ -47,6 +47,8 @@ async def get_kap_data_for_isin(db: AsyncSession, isin_code: str) -> dict | None
         "is_changed": disclosure.is_changed,
         # Detail fields
         "instrument_type": detail.instrument_type,
+        "fund_user": detail.fund_user,
+        "source_institution": detail.source_institution,
         "maturity_date": detail.maturity_date.isoformat() if detail.maturity_date else None,
         "maturity_days": detail.maturity_days,
         "nominal_value": str(detail.nominal_value) if detail.nominal_value else None,
