@@ -151,3 +151,9 @@ app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "service": "bondley-api"}
+
+
+@app.get("/sentry-debug")
+async def trigger_error():
+    division_by_zero = 1 / 0
+    return {"message": "Bu yazi asla gorunmeyecek"}
