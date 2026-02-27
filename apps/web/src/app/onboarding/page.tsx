@@ -41,9 +41,10 @@ const formSchema = z.object({
     usage_purpose: z.string().min(10, {
         message: "Lütfen platformu ne amaçla kullanacağınızı kısaca açıklayın (en az 10 karakter).",
     }),
-    estimated_daily_views: z.coerce.number()
-        .min(1, { message: "Günlük tahmini inceleme sayısı en az 1 olmalıdır." })
-        .max(10000, { message: "Geçerli bir sayı giriniz." }),
+    estimated_daily_views: z.string().refine((val) => {
+        const parsed = parseInt(val, 10);
+        return !isNaN(parsed) && parsed >= 1 && parsed <= 10000;
+    }, { message: "Günlük tahmini inceleme sayısı 1 ile 10000 arasında geçerli bir sayı olmalıdır." }),
 });
 
 export default function OnboardingPage() {
@@ -56,7 +57,7 @@ export default function OnboardingPage() {
             department: "",
             job_title: "",
             usage_purpose: "",
-            estimated_daily_views: 10,
+            estimated_daily_views: "10",
         },
     });
 
@@ -65,7 +66,13 @@ export default function OnboardingPage() {
         try {
             const token = getToken();
             if (!token) throw new Error("Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.");
-            const response = await api.auth.onboarding(token, values);
+
+            const payload = {
+                ...values,
+                estimated_daily_views: parseInt(values.estimated_daily_views, 10),
+            };
+
+            const response = await api.auth.onboarding(token, payload);
             // Update local storage user data to reflect profile_completed = true
             updateLocalUser(response);
 
