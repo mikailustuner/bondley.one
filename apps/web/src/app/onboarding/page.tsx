@@ -1,279 +1,270 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { Loader2, Building2, Briefcase, Target, Eye } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
+import {
+    Form,
+    FormControl,
+    FormDescription,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api-client";
-import { getToken, getUser, setAuth, getRefreshToken } from "@/lib/auth";
+import { toast } from "sonner";
+import { updateLocalUser } from "@/lib/auth";
+import Image from "next/image";
 
-const DEPARTMENTS = [
-    { group: "Bankacilik", items: ["Hazine", "Kurumsal Bankacilik", "Yatirim Bankaciligi", "Bireysel Bankacilik", "Sermaye Piyasalari"] },
-    { group: "Yatirim", items: ["Portfolyo Yonetimi", "Varlik Yonetimi", "Fon Yonetimi"] },
-    { group: "Risk & Uyum", items: ["Risk Yonetimi", "Uyum / Regulasyon", "Ic Kontrol", "Denetim"] },
-    { group: "Finans", items: ["Muhasebe / Finans", "Finansal Planlama ve Analiz (FP&A)", "Aktuarya"] },
-    { group: "Arastirma", items: ["Arastirma / Strateji", "Akademik / Arastirma"] },
-    { group: "Diger", items: ["Ust Yonetim", "IT / Teknoloji", "Bagimsiz Danismanlik", "Diger"] },
-];
-
-const JOB_TITLES = [
-    { group: "Ust Yonetim", items: ["Genel Mudur", "Genel Mudur Yardimcisi", "Yonetim Kurulu Uyesi"] },
-    { group: "Orta Yonetim", items: ["Direktor", "Bolum Muduru", "Birim Muduru", "Grup Muduru", "Sube Muduru"] },
-    { group: "Uzman", items: ["Basuzman", "Kidemli Uzman", "Uzman", "Analist", "Denetci"] },
-    { group: "Giris Seviye", items: ["Uzman Yardimcisi", "Asistan", "Stajyer"] },
-    { group: "Akademik", items: ["Profesor", "Docent", "Arastirma Gorevlisi", "Ogrenci"] },
-    { group: "Bagimsiz", items: ["Bagimsiz Danismani", "Serbest Yatirimci"] },
-];
-
-const DAILY_VIEWS = [
-    { value: 5, label: "1 – 10" },
-    { value: 25, label: "10 – 50" },
-    { value: 75, label: "50 – 100" },
-    { value: 250, label: "100 – 500" },
-    { value: 750, label: "500+" },
-];
+const formSchema = z.object({
+    department: z.string().min(2, {
+        message: "Departman ismi en az 2 karakter olmalıdır.",
+    }),
+    job_title: z.string().min(2, {
+        message: "Unvan en az 2 karakter olmalıdır.",
+    }),
+    usage_purpose: z.string().min(10, {
+        message: "Lütfen platformu ne amaçla kullanacağınızı kısaca açıklayın (en az 10 karakter).",
+    }),
+    estimated_daily_views: z.string().transform((val) => parseInt(val, 10)).pipe(
+        z.number().min(1, { message: "Günlük tahmini inceleme sayısı en az 1 olmalıdır." }).max(10000, { message: "Geçerli bir sayı giriniz." })
+    ),
+});
 
 export default function OnboardingPage() {
     const router = useRouter();
-    const [step, setStep] = useState(0);
-    const [department, setDepartment] = useState("");
-    const [jobTitle, setJobTitle] = useState("");
-    const [usagePurpose, setUsagePurpose] = useState("");
-    const [dailyViews, setDailyViews] = useState<number | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
 
-    useEffect(() => {
-        const user = getUser();
-        if (!user) {
-            router.push("/login");
-            return;
-        }
-        if (user.profile_completed) {
-            router.push("/dashboard");
-        }
-    }, [router]);
+    const form = useForm<z.infer<typeof formSchema>>({
+        resolver: zodResolver(formSchema),
+        defaultValues: {
+            department: "",
+            job_title: "",
+            usage_purpose: "",
+            estimated_daily_views: "10" as any, // initial string for input
+        },
+    });
 
-    const steps = [
-        { title: "Birim / Departman", subtitle: "Hangi birimde calisiyorsunuz?" },
-        { title: "Unvan", subtitle: "Mevcut gorev unvaniniz nedir?" },
-        { title: "Kullanim Amaci", subtitle: "Bondley'i hangi amacla kullanmayi planliyorsunuz?" },
-        { title: "Gunluk Kullanim", subtitle: "Tahmini gunluk goruntuyleme sayiniz" },
-    ];
-
-    const canNext = () => {
-        if (step === 0) return department.length > 0;
-        if (step === 1) return jobTitle.length > 0;
-        if (step === 2) return usagePurpose.length >= 5;
-        if (step === 3) return dailyViews !== null;
-        return false;
-    };
-
-    const handleSubmit = async () => {
-        const token = getToken();
-        if (!token || dailyViews === null) return;
-
-        setLoading(true);
-        setError("");
-
+    async function onSubmit(values: z.infer<typeof formSchema>) {
+        setIsLoading(true);
         try {
-            const updatedUser = await api.auth.onboarding(token, {
-                department,
-                job_title: jobTitle,
-                usage_purpose: usagePurpose,
-                estimated_daily_views: dailyViews,
+            const response = await api.auth.completeOnboarding(values);
+            // Update local storage user data to reflect profile_completed = true
+            updateLocalUser(response);
+
+            toast.success("Profiliniz başarıyla tamamlandı!", {
+                description: "Bondley platformuna hoş geldiniz.",
             });
-            const refreshToken = getRefreshToken() || "";
-            setAuth(token, refreshToken, updatedUser);
+
+            // Redirect to main dashboard
             router.push("/dashboard");
-        } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : "Bir hata olustu");
+            router.refresh();
+
+        } catch (error: any) {
+            toast.error("Bir hata oluştu", {
+                description: error.message || "Profil güncellenemedi, lütfen tekrar deneyin.",
+            });
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
-    };
+    }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-background grain px-4 py-12">
-            <div className="data-strip fixed top-0 left-0 right-0" />
+        <div className="min-h-screen grid lg:grid-cols-2 bg-background">
+            {/* Left Column - Form */}
+            <div className="flex flex-col justify-center px-8 sm:px-16 md:px-24 lg:px-32 relative z-10">
 
-            <div className="w-full max-w-lg animate-fade-up">
-                <div className="text-center mb-8">
-                    <div className="inline-flex h-10 w-10 items-center justify-center mb-4">
-                        <Image
-                            src="/logo.png"
-                            alt="Bondley Logo"
-                            width={40}
-                            height={40}
-                            className="h-10 w-10 object-contain"
-                            priority
-                        />
+                {/* Logo */}
+                <div className="absolute top-12 left-8 sm:left-16 md:left-24 lg:left-32 flex items-center gap-3">
+                    <div className="h-10 w-10 relative">
+                        <Image src="/logo.png" alt="Bondley" fill className="object-contain" />
                     </div>
-                    <h1 className="font-display text-display-md text-foreground">
-                        Profilinizi Tamamlayin
-                    </h1>
-                    <p className="text-data-sm text-muted-foreground mt-2">
-                        Size daha iyi hizmet verebilmemiz icin birka bilgiye ihtiyacimiz var
-                    </p>
+                    <span className="font-display font-semibold text-xl tracking-tight">
+                        Bondley
+                    </span>
                 </div>
 
-                {/* Progress Bar */}
-                <div className="flex gap-1.5 mb-6">
-                    {steps.map((_, i) => (
-                        <div
-                            key={i}
-                            className={`h-1 flex-1 rounded-full transition-colors ${i <= step ? "bg-primary" : "bg-muted"
-                                }`}
-                        />
-                    ))}
-                </div>
+                <div className="max-w-[440px] w-full mt-24 lg:mt-0">
+                    <div className="mb-10 animate-fade-in" style={{ animationDelay: "100ms" }}>
+                        <h1 className="text-3xl font-display font-medium tracking-tight mb-3">
+                            Hoş Geldiniz
+                        </h1>
+                        <p className="text-muted-foreground text-sm leading-relaxed">
+                            Deneyiminizi kişiselleştirmemiz ve size en uygun finansal araçları sunabilmemiz için birkaç kısa bilgiye ihtiyacımız var.
+                        </p>
+                    </div>
 
-                <Card className="emerald-glow-border">
-                    <CardHeader className="pb-4">
-                        <CardDescription>ADIM {step + 1} / {steps.length}</CardDescription>
-                        <CardTitle className="mt-1">{steps[step].title}</CardTitle>
-                        <p className="text-data-sm text-muted-foreground mt-1">{steps[step].subtitle}</p>
-                    </CardHeader>
-                    <CardContent>
-                        {/* Step 0: Department */}
-                        {step === 0 && (
-                            <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
-                                {DEPARTMENTS.map((group) => (
-                                    <div key={group.group}>
-                                        <p className="text-label text-muted-foreground mb-1.5">{group.group.toUpperCase()}</p>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {group.items.map((item) => (
-                                                <button
-                                                    key={item}
-                                                    type="button"
-                                                    onClick={() => setDepartment(item)}
-                                                    className={`px-3 py-1.5 rounded-md text-data-sm border transition-colors ${department === item
-                                                            ? "bg-primary text-primary-foreground border-primary"
-                                                            : "bg-card text-foreground border-border hover:border-primary/50"
-                                                        }`}
-                                                >
-                                                    {item}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                    <div className="animate-fade-in" style={{ animationDelay: "200ms" }}>
+                        <Form {...form}>
+                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                                <div className="grid gap-6">
+                                    {/* Department */}
+                                    <FormField
+                                        control={form.control}
+                                        name="department"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="flex items-center gap-2 text-data-sm text-muted-foreground">
+                                                    <Building2 className="h-3.5 w-3.5" />
+                                                    Departman
+                                                </FormLabel>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger className="h-11 bg-secondary/30">
+                                                            <SelectValue placeholder="Departmanınızı seçin" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        <SelectItem value="Hazine">Hazine (Treasury)</SelectItem>
+                                                        <SelectItem value="Portföy Yönetimi">Portföy Yönetimi</SelectItem>
+                                                        <SelectItem value="Risk Yönetimi">Risk Yönetimi</SelectItem>
+                                                        <SelectItem value="Araştırma / Strateji">Araştırma / Strateji</SelectItem>
+                                                        <SelectItem value="Kurumsal Finansman">Kurumsal Finansman</SelectItem>
+                                                        <SelectItem value="Bireysel Yatırımcı">Bireysel Yatırımcı</SelectItem>
+                                                        <SelectItem value="Diğer">Diğer</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
 
-                        {/* Step 1: Job Title */}
-                        {step === 1 && (
-                            <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
-                                {JOB_TITLES.map((group) => (
-                                    <div key={group.group}>
-                                        <p className="text-label text-muted-foreground mb-1.5">{group.group.toUpperCase()}</p>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {group.items.map((item) => (
-                                                <button
-                                                    key={item}
-                                                    type="button"
-                                                    onClick={() => setJobTitle(item)}
-                                                    className={`px-3 py-1.5 rounded-md text-data-sm border transition-colors ${jobTitle === item
-                                                            ? "bg-primary text-primary-foreground border-primary"
-                                                            : "bg-card text-foreground border-border hover:border-primary/50"
-                                                        }`}
-                                                >
-                                                    {item}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                                    {/* Job Title */}
+                                    <FormField
+                                        control={form.control}
+                                        name="job_title"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="flex items-center gap-2 text-data-sm text-muted-foreground">
+                                                    <Briefcase className="h-3.5 w-3.5" />
+                                                    Unvan / Pozisyon
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        placeholder="Örn: Portföy Yöneticisi, Analist..."
+                                                        className="h-11 bg-secondary/30"
+                                                        {...field}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
 
-                        {/* Step 2: Usage Purpose */}
-                        {step === 2 && (
-                            <div>
-                                <textarea
-                                    value={usagePurpose}
-                                    onChange={(e) => setUsagePurpose(e.target.value)}
-                                    placeholder="Bondley'i hangi amacla kullanmayi planliyorsunuz? (orn: Tahvil fiyatlama, risk analizi, portfoy takibi...)"
-                                    className="w-full h-32 px-3 py-2 rounded-md border border-border bg-card text-foreground text-data-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary resize-none"
-                                    maxLength={500}
-                                />
-                                <p className="text-label text-muted-foreground mt-1.5 text-right">
-                                    {usagePurpose.length} / 500
-                                </p>
-                            </div>
-                        )}
+                                    {/* Usage Purpose */}
+                                    <FormField
+                                        control={form.control}
+                                        name="usage_purpose"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="flex items-center gap-2 text-data-sm text-muted-foreground">
+                                                    <Target className="h-3.5 w-3.5" />
+                                                    Kullanım Amacı
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Textarea
+                                                        placeholder="Platformu ağırlıklı olarak hangi amaçla (fiyatlama, portföy takibi, raporlama vb.) kullanacaksınız?"
+                                                        className="min-h-[100px] bg-secondary/30 resize-none"
+                                                        {...field}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
 
-                        {/* Step 3: Daily Views */}
-                        {step === 3 && (
-                            <div className="space-y-2">
-                                {DAILY_VIEWS.map((option) => (
-                                    <button
-                                        key={option.value}
-                                        type="button"
-                                        onClick={() => setDailyViews(option.value)}
-                                        className={`w-full px-4 py-3 rounded-md text-left text-data-sm border transition-colors ${dailyViews === option.value
-                                                ? "bg-primary text-primary-foreground border-primary"
-                                                : "bg-card text-foreground border-border hover:border-primary/50"
-                                            }`}
+                                    {/* Estimated Daily Views */}
+                                    <FormField
+                                        control={form.control}
+                                        name="estimated_daily_views"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="flex items-center gap-2 text-data-sm text-muted-foreground">
+                                                    <Eye className="h-3.5 w-3.5" />
+                                                    Günlük Tahmini İşlem/İnceleme
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type="number"
+                                                        min="1"
+                                                        max="10000"
+                                                        className="h-11 bg-secondary/30"
+                                                        {...field}
+                                                    />
+                                                </FormControl>
+                                                <FormDescription className="text-xs">
+                                                    Günde ortalama kaç farklı borçlanma aracı inceleyeceğinizi tahmin ediyorsunuz?
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+
+                                <div className="pt-4">
+                                    <Button
+                                        type="submit"
+                                        className="w-full h-11"
+                                        disabled={isLoading}
                                     >
-                                        <span className="font-mono-data font-medium">{option.label}</span>
-                                        <span className="text-muted-foreground ml-2">goruntuyleme / gun</span>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
+                                        {isLoading ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                Kaydediliyor...
+                                            </>
+                                        ) : (
+                                            "Profilimi Tamamla ve Başla"
+                                        )}
+                                    </Button>
+                                </div>
+                            </form>
+                        </Form>
+                    </div>
+                </div>
+            </div>
 
-                        {error && (
-                            <div className="mt-4 p-3 rounded-md border border-destructive/30 bg-destructive/5 text-destructive text-data-sm">
-                                {error}
-                            </div>
-                        )}
+            {/* Right Column - Brand/Visual */}
+            <div className="hidden lg:flex relative bg-black flex-col items-center justify-center p-12 overflow-hidden">
+                {/* Background Effects */}
+                <div className="absolute inset-0 z-0">
+                    <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px]" />
+                    <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-[100px]" />
+                    <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]" opacity-20 />
+                </div>
 
-                        {/* Navigation */}
-                        <div className="flex gap-3 mt-6">
-                            {step > 0 && (
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => setStep(step - 1)}
-                                    className="flex-1"
-                                >
-                                    Geri
-                                </Button>
-                            )}
-                            {step < 3 ? (
-                                <Button
-                                    type="button"
-                                    onClick={() => setStep(step + 1)}
-                                    disabled={!canNext()}
-                                    className="flex-1"
-                                >
-                                    Devam
-                                </Button>
-                            ) : (
-                                <Button
-                                    type="button"
-                                    onClick={handleSubmit}
-                                    disabled={!canNext() || loading}
-                                    className="flex-1"
-                                >
-                                    {loading ? "Kaydediliyor..." : "Tamamla ve Basla"}
-                                </Button>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
+                <div className="relative z-10 max-w-lg text-center animate-fade-in" style={{ animationDelay: "300ms" }}>
+                    <div className="glass-panel p-8 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md mb-8">
+                        <h2 className="text-2xl font-display font-medium text-white mb-4">
+                            Kurumsal Borçlanma Araçları Platformu
+                        </h2>
+                        <p className="text-white/60 text-sm leading-relaxed">
+                            Tahvil, bono, kira sertifikası ve VDMK piyasalarındaki tüm gelişmeleri anlık takip edin. Yapay zeka destekli fiyatlama modelleri ve kurumsal arayüzler ile risklerinizi yönetin.
+                        </p>
+                    </div>
 
-                <p className="text-center text-label text-muted-foreground/50 mt-6">
-                    &copy; 2026 Bondley
-                </p>
+                    <div className="flex items-center justify-center gap-4 text-xs font-mono text-white/40 tracking-widest">
+                        <span>BIST</span>
+                        <span className="w-1 h-1 rounded-full bg-white/20" />
+                        <span>KAP</span>
+                        <span className="w-1 h-1 rounded-full bg-white/20" />
+                        <span>TLREF</span>
+                    </div>
+                </div>
             </div>
         </div>
     );

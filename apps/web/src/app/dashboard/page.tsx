@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { TlrefIndexChart } from "@/components/charts/tlref-index-chart";
 import { TlrefRateChart } from "@/components/charts/tlref-rate-chart";
+import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton-components";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useTlrefHistory } from "@/hooks/use-tlref-history";
 import { useUsageSummary } from "@/hooks/use-usage-summary";
 import { api, BondListItem } from "@/lib/api-client";
@@ -200,11 +202,22 @@ export default function DashboardPage() {
       )}
 
       {loading && (
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-muted-foreground text-sm">Veriler yukleniyor...</p>
-          </CardContent>
-        </Card>
+        <div className="space-y-6">
+          <div className="grid gap-px md:grid-cols-4 bg-border/30 rounded-lg overflow-hidden">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-4 w-[250px]" />
+            </CardHeader>
+            <CardContent>
+              <SkeletonTable columns={3} rows={5} />
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {stats?.latest_date && (

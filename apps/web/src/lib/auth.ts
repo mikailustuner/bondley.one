@@ -26,6 +26,14 @@ export function setAuth(token: string, refreshToken: string, user: any): void {
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
+export function updateLocalUser(userUpdates: any): void {
+  const currentUser = getUser();
+  if (currentUser) {
+    const updatedUser = { ...currentUser, ...userUpdates };
+    localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+  }
+}
+
 export function getRefreshToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(REFRESH_TOKEN_KEY);
@@ -60,17 +68,17 @@ export function isFreeUser(): boolean {
 export function hasRole(role: string): boolean {
   const user = getUser();
   if (!user) return false;
-  
+
   const roleHierarchy: Record<string, number> = {
     admin: 4,
     pro_user: 3,
     premium_user: 2,
     free_user: 1,
   };
-  
+
   const userLevel = roleHierarchy[user.role] || 0;
   const requiredLevel = roleHierarchy[role] || 999;
-  
+
   return userLevel >= requiredLevel;
 }
 
@@ -91,7 +99,7 @@ export function getUserPermissions(): {
       is_free_user: false,
     };
   }
-  
+
   return {
     role: user.role || "",
     is_admin: isAdmin(),
