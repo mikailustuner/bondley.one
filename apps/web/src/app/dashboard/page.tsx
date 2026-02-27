@@ -242,7 +242,7 @@ export default function DashboardPage() {
             </div>
           );
           return (stat as any).link ? (
-            <Link key={stat.label} href={(stat as any).link}>
+            <Link key={stat.label} href={(stat as any).link as any}>
               {inner}
             </Link>
           ) : (
