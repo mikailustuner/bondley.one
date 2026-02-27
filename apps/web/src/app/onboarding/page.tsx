@@ -28,7 +28,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
-import { updateLocalUser } from "@/lib/auth";
+import { updateLocalUser, getToken } from "@/lib/auth";
 import Image from "next/image";
 
 const formSchema = z.object({
@@ -41,9 +41,9 @@ const formSchema = z.object({
     usage_purpose: z.string().min(10, {
         message: "Lütfen platformu ne amaçla kullanacağınızı kısaca açıklayın (en az 10 karakter).",
     }),
-    estimated_daily_views: z.string().transform((val) => parseInt(val, 10)).pipe(
-        z.number().min(1, { message: "Günlük tahmini inceleme sayısı en az 1 olmalıdır." }).max(10000, { message: "Geçerli bir sayı giriniz." })
-    ),
+    estimated_daily_views: z.coerce.number()
+        .min(1, { message: "Günlük tahmini inceleme sayısı en az 1 olmalıdır." })
+        .max(10000, { message: "Geçerli bir sayı giriniz." }),
 });
 
 export default function OnboardingPage() {
@@ -56,14 +56,16 @@ export default function OnboardingPage() {
             department: "",
             job_title: "",
             usage_purpose: "",
-            estimated_daily_views: "10" as any, // initial string for input
+            estimated_daily_views: 10,
         },
     });
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
         try {
-            const response = await api.auth.completeOnboarding(values);
+            const token = getToken();
+            if (!token) throw new Error("Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.");
+            const response = await api.auth.onboarding(token, values);
             // Update local storage user data to reflect profile_completed = true
             updateLocalUser(response);
 
