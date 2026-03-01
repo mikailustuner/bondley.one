@@ -68,6 +68,16 @@ async def _test_database_connection():
         raise
 
 
+def _sentry_before_send(event, hint):
+    """Ensure no PII (passwords, tokens) is ever leaked to Sentry in request data."""
+    if "request" in event and "data" in event["request"]:
+        data = event["request"]["data"]
+        if isinstance(data, dict):
+            for key in ["password", "current_password", "new_password", "token", "access_token", "refresh_token"]:
+                if key in data:
+                    data[key] = "***MASKED***"
+    return event
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if settings.SENTRY_DSN:
@@ -76,6 +86,8 @@ async def lifespan(app: FastAPI):
             environment=settings.ENVIRONMENT,
             traces_sample_rate=1.0,  # Catch everything during init
             profiles_sample_rate=1.0,
+            before_send=_sentry_before_send,
+            send_default_pii=False,
         )
         logger.info("[startup] Sentry initialized.")
         
