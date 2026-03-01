@@ -1,5 +1,5 @@
-from datetime import datetime, date
-from typing import Any
+from datetime import datetime, date, timedelta, timezone
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy import select, func
@@ -10,6 +10,8 @@ from app.models.bond import Bond
 from app.models.tlref_rate import TLREFRate
 from app.models.user import User
 from app.models.audit_log import AuditLog
+from app.models.system_setting import SystemSetting
+from app.models.kap_disclosure import KapDisclosure
 from app.api.deps import get_admin_user
 from app.schemas.user import UserUpdate, UserResponse
 from app.services.bond_fetcher import BondFetcher
@@ -44,28 +46,43 @@ async def get_data_health(
     _admin: User = Depends(get_admin_user),
 ):
     """Admin: Eksik KAP verisi veya guncel olmayan tbliste verisi olan aktif tahvilleri getir."""
-    from datetime import timedelta, timezone
-    from app.models.kap_disclosure import KapDisclosure
     
     today = datetime.now(timezone.utc)
     two_days_ago = today - timedelta(days=2)
     
-    # Aktif tahviller
-    bonds_result = await db.execute(select(Bond).where(Bond.is_active == True))
-    active_bonds = bonds_result.scalars().all()
-    
-    # KAP'taki tum isin'ler
-    kap_result = await db.execute(
-        select(KapDisclosure.isin_code).where(KapDisclosure.isin_code.isnot(None)).distinct()
+    # Left Outer Join ile veritabanında sorgu atıyoruz
+    query = (
+        select(Bond, KapDisclosure.isin_code)
+        .outerjoin(KapDisclosure, Bond.isin_code == KapDisclosure.isin_code)
+        .where(Bond.is_active == True)
     )
-    kap_isins = {row[0] for row in kap_result}
+    
+    result = await db.execute(query)
+    rows = result.all()
     
     health_issues = []
+    total_active_bonds = 0
+    bond_kap_map = {}
     
-    for bond in active_bonds:
+    for bond, kap_isin in rows:
+        if bond.isin_code not in bond_kap_map:
+            bond_kap_map[bond.isin_code] = {"bond": bond, "has_kap": False}
+        if kap_isin:
+            bond_kap_map[bond.isin_code]["has_kap"] = True
+            
+    total_active_bonds = len(bond_kap_map)
+            
+    for isin, data in bond_kap_map.items():
+        bond = data["bond"]
+        has_kap = data["has_kap"]
+        
         issues = []
-        is_tbliste_outdated = bond.updated_at is None or bond.updated_at < two_days_ago
-        is_kap_missing = bond.isin_code not in kap_isins
+        updated_at = bond.updated_at
+        if updated_at and updated_at.tzinfo is None:
+            updated_at = updated_at.replace(tzinfo=timezone.utc)
+            
+        is_tbliste_outdated = updated_at is None or updated_at < two_days_ago
+        is_kap_missing = not has_kap
         
         if is_tbliste_outdated:
             issues.append("tbliste_outdated")
@@ -83,55 +100,9 @@ async def get_data_health(
             })
             
     return {
-        "total_active_bonds": len(active_bonds),
+        "total_active_bonds": total_active_bonds,
         "total_issues": len(health_issues),
         "bonds_with_issues": health_issues
-    }
-
-
-@router.get("/public-summary")
-async def get_public_summary(db: AsyncSession = Depends(get_db)):
-    """Auth gerektirmez: landing sayfasi icin ozet veri."""
-    latest_result = await db.execute(
-        select(TLREFRate).order_by(TLREFRate.rate_date.desc()).limit(1)
-    )
-    latest = latest_result.scalar_one_or_none()
-
-    first_result = await db.execute(
-        select(TLREFRate).order_by(TLREFRate.rate_date.asc()).limit(1)
-    )
-    first = first_result.scalar_one_or_none()
-
-    prev_result = await db.execute(
-        select(TLREFRate).order_by(TLREFRate.rate_date.desc()).offset(1).limit(1)
-    )
-    prev = prev_result.scalar_one_or_none()
-
-    tlref_index_change_pct = None
-    if latest and prev and prev.index_value and float(prev.index_value) > 0:
-        change = (float(latest.index_value) - float(prev.index_value)) / float(prev.index_value) * 100
-        tlref_index_change_pct = round(change, 2)
-
-    total_tlref = (await db.execute(select(func.count(TLREFRate.id)))).scalar() or 0
-    total_bonds = (
-        await db.execute(select(func.count(Bond.id)).where(Bond.is_active == True))
-    ).scalar() or 0
-
-    annualized_rate = None
-    if latest and first and first.index_value > 0:
-        days = (latest.rate_date - first.rate_date).days
-        if days > 0:
-            ratio = float(latest.index_value / first.index_value)
-            annualized_rate = round((ratio ** (365.0 / days) - 1) * 100, 2)
-
-    return {
-        "tlref_index": float(latest.index_value) if latest else None,
-        "tlref_date": latest.rate_date.isoformat() if latest else None,
-        "tlref_daily_rate": float(latest.daily_rate * 100) if latest and latest.daily_rate else None,
-        "tlref_annualized_rate": annualized_rate,
-        "tlref_index_change_pct": tlref_index_change_pct,
-        "total_tlref_records": total_tlref,
-        "total_bonds": total_bonds,
     }
 
 
@@ -170,12 +141,9 @@ async def update_user(
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kullanici bulunamadi")
 
-    if data.full_name is not None:
-        user.full_name = data.full_name
-    if data.company is not None:
-        user.company = data.company
-    if data.location is not None:
-        user.location = data.location
+    update_data = data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(user, key, value)
 
     await AuditService.log_admin_action(
         db=db,
@@ -194,17 +162,11 @@ async def update_user(
 @router.put("/users/{user_id}/role", response_model=UserResponse)
 async def update_user_role(
     user_id: int,
-    role: str = Query(..., description="Yeni rol: admin, premium_user, pro_user, free_user"),
+    role: Literal["admin", "premium_user", "pro_user", "free_user"] = Query(..., description="Yeni rol"),
     admin: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Admin: Kullanici rolunu degistirir."""
-    if role not in ("admin", "premium_user", "pro_user", "free_user"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Gecersiz rol. Gecerli roller: admin, premium_user, pro_user, free_user"
-        )
-
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
@@ -448,7 +410,6 @@ async def toggle_maintenance_mode(
     db: AsyncSession = Depends(get_db),
 ):
     """Admin: Bakım modunu (Site Under Construction) açar veya kapatır."""
-    from app.models.system_setting import SystemSetting
     
     result = await db.execute(select(SystemSetting).where(SystemSetting.key == "maintenance_mode"))
     setting = result.scalar_one_or_none()

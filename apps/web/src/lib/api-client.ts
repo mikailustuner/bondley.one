@@ -408,7 +408,7 @@ export const api = {
           issues: string[];
         }>;
       }>("/admin/data-health", { token }),
-    publicSummary: () => apiFetch<PublicSummary>("/admin/public-summary"),
+    publicSummary: () => apiFetch<PublicSummary>("/system/public-summary"),
     syncAll: (token: string) =>
       apiFetch<{ tlref_historical: any; tlref_daily: any; bonds: any }>("/admin/sync-all", {
         method: "POST",
