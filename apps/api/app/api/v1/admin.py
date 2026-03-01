@@ -77,7 +77,7 @@ async def get_data_health(
                 "isin_code": bond.isin_code,
                 "issuer": bond.issuer,
                 "maturity_date": bond.maturity_date.isoformat() if bond.maturity_date else None,
-                "issue_date": bond.issue_date.isoformat() if bond.issue_date else None,
+                "first_issue_date": bond.first_issue_date.isoformat() if bond.first_issue_date else None,
                 "tbliste_updated_at": bond.updated_at.isoformat() if bond.updated_at else None,
                 "issues": issues,
             })
