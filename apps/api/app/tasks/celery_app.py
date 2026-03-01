@@ -41,7 +41,7 @@ celery_app.conf.beat_schedule = {
     },
     "fetch-kap-disclosures": {
         "task": "app.tasks.kap_tasks.fetch_kap_disclosures",
-        "schedule": crontab(hour=16, minute=15),
+        "schedule": crontab(hour=16, minute=15, day_of_week="1-5"),
         "options": {"queue": "default"},
     },
     "populate-daily-market-data": {

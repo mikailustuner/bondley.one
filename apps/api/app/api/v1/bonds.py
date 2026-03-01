@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from datetime import date
+from datetime import date, timedelta
 import logging
 
 from app.core.database import get_db
@@ -261,6 +261,11 @@ async def get_bond_scenario(
     if not bond:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tahvil bulunamadi")
     calc_date = settlement_date or date.today()
+    # Hafta sonu ise Cuma gününe (getiri hesaplamalari icin) geri çek
+    if calc_date.weekday() == 5:  # Cumartesi
+        calc_date -= timedelta(days=1)
+    elif calc_date.weekday() == 6:  # Pazar
+        calc_date -= timedelta(days=2)
     metrics_svc = BondMetricsService(db)
     metrics = await metrics_svc.compute_metrics(bond, calc_date)
     if metrics is None:
@@ -315,6 +320,11 @@ async def get_bond(
     
     base = BondDetailWithMetrics.model_validate(bond)
     calc_date = settlement_date or date.today()
+    # Hafta sonu ise Cuma gününe (getiri hesaplamalari icin) geri çek
+    if calc_date.weekday() == 5:  # Cumartesi
+        calc_date -= timedelta(days=1)
+    elif calc_date.weekday() == 6:  # Pazar
+        calc_date -= timedelta(days=2)
 
     # Track bond view
     client_host = None
