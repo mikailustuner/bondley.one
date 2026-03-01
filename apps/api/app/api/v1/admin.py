@@ -44,10 +44,10 @@ async def get_data_health(
     _admin: User = Depends(get_admin_user),
 ):
     """Admin: Eksik KAP verisi veya guncel olmayan tbliste verisi olan aktif tahvilleri getir."""
-    from datetime import timedelta
+    from datetime import timedelta, timezone
     from app.models.kap_disclosure import KapDisclosure
     
-    today = datetime.utcnow()
+    today = datetime.now(timezone.utc)
     two_days_ago = today - timedelta(days=2)
     
     # Aktif tahviller
