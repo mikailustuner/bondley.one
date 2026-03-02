@@ -40,6 +40,7 @@ python-dotenv
 python-dateutil
 selenium
 sentry-sdk[fastapi]
+tzdata
 
 # Email Sending
 aiosmtplib

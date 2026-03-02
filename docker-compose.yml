@@ -47,6 +47,7 @@ services:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       REDIS_URL: redis://redis:6379/0
+      TZ: Europe/Istanbul
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,6 +71,7 @@ services:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       REDIS_URL: redis://redis:6379/0
+      TZ: Europe/Istanbul
     depends_on:
       postgres:
         condition: service_healthy
@@ -93,6 +95,7 @@ services:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       REDIS_URL: redis://redis:6379/0
+      TZ: Europe/Istanbul
     depends_on:
       postgres:
         condition: service_healthy
