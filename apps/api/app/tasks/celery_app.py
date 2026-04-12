@@ -24,34 +24,34 @@ celery_app.conf.update(
 )
 
 celery_app.conf.beat_schedule = {
+    "fetch-kap-disclosures": {
+        "task": "app.tasks.kap_tasks.fetch_kap_disclosures",
+        "schedule": crontab(hour=17, minute=0, day_of_week="1-5"),
+        "options": {"queue": "default"},
+    },
     "fetch-daily-tlref": {
         "task": "app.tasks.data_tasks.fetch_daily_tlref",
-        "schedule": crontab(hour=16, minute=30, day_of_week="1-5"),
+        "schedule": crontab(hour=17, minute=5, day_of_week="1-5"),
         "options": {"queue": "default"},
     },
     "fetch-bond-list": {
         "task": "app.tasks.data_tasks.fetch_bond_list",
-        "schedule": crontab(hour=16, minute=32, day_of_week="1-5"),
+        "schedule": crontab(hour=17, minute=10, day_of_week="1-5"),
+        "options": {"queue": "default"},
+    },
+    "populate-daily-market-data": {
+        "task": "app.tasks.data_tasks.populate_daily_market_data",
+        "schedule": crontab(hour=17, minute=15, day_of_week="1-5"),
+        "options": {"queue": "default"},
+    },
+    "run-daily-calculations": {
+        "task": "app.tasks.data_tasks.run_daily_calculations",
+        "schedule": crontab(hour=17, minute=20, day_of_week="1-5"),
         "options": {"queue": "default"},
     },
     "check-user-alerts": {
         "task": "app.tasks.alerts_tasks.check_user_alerts",
         "schedule": crontab(minute="*/15"),
-        "options": {"queue": "default"},
-    },
-    "fetch-kap-disclosures": {
-        "task": "app.tasks.kap_tasks.fetch_kap_disclosures",
-        "schedule": crontab(hour=16, minute=15, day_of_week="1-5"),
-        "options": {"queue": "default"},
-    },
-    "populate-daily-market-data": {
-        "task": "app.tasks.data_tasks.populate_daily_market_data",
-        "schedule": crontab(hour=16, minute=34, day_of_week="1-5"),
-        "options": {"queue": "default"},
-    },
-    "run-daily-calculations": {
-        "task": "app.tasks.data_tasks.run_daily_calculations",
-        "schedule": crontab(hour=16, minute=36, day_of_week="1-5"),
         "options": {"queue": "default"},
     },
 }

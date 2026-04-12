@@ -106,24 +106,7 @@ def populate_daily_market_data(self):
     """Bonds tablosundaki clean_price_text degerlerini parse edip bugunun market_data'sini olustur."""
     logger.info("Task: Populating daily market data...")
     from datetime import date
-    import sys
-    from pathlib import Path
-
-    # Scripts klasorundeki logic'i kullanmak icin path'e ekle
-    project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
-    if str(project_root) not in sys.path:
-        sys.path.insert(0, str(project_root))
-    
-    try:
-        from scripts.populate_market_data import populate_market_data
-    except ImportError:
-        # Try with hyphenated name
-        import importlib.util
-        script_path = project_root / "scripts" / "populate-market-data.py"
-        spec = importlib.util.spec_from_file_location("populate_market_data", str(script_path))
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        populate_market_data = module.populate_market_data
+    from app.services.market_data_populator import populate_market_data
 
     try:
         _run_async(populate_market_data(date.today(), dry_run=False, debug=False))
@@ -139,23 +122,7 @@ def run_daily_calculations(self):
     """Bugunun market_data'si olan tahviller icin hesaplamalari yap ve DB'ye yaz."""
     logger.info("Task: Running daily calculations...")
     from datetime import date
-    import sys
-    from pathlib import Path
-
-    project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
-    if str(project_root) not in sys.path:
-        sys.path.insert(0, str(project_root))
-    
-    try:
-        from scripts.populate_calculations import populate_calculations
-    except ImportError:
-        # Try with hyphenated name
-        import importlib.util
-        script_path = project_root / "scripts" / "populate-calculations.py"
-        spec = importlib.util.spec_from_file_location("populate_calculations", str(script_path))
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        populate_calculations = module.populate_calculations
+    from app.services.calculations_populator import populate_calculations
 
     try:
         _run_async(populate_calculations(date.today(), dry_run=False))
