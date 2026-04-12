@@ -3,17 +3,15 @@
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { useProMode } from "./pro-mode-provider";
 
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const { isPro } = useProMode();
 
   useEffect(() => setMounted(true), []);
 
   if (!mounted) {
-    return <div className={cn("h-8 w-8 rounded-sm", className)} />;
+    return <div className={cn("h-9 w-9 rounded-xl", className)} />;
   }
 
   const isDark = theme === "dark";
@@ -21,23 +19,19 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <button
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      disabled={isPro}
       className={cn(
-        "relative h-8 w-8 rounded-sm border border-border bg-secondary/50 flex items-center justify-center",
-        isPro
-          ? "opacity-50 cursor-not-allowed"
-          : "hover:bg-secondary hover:border-primary/20",
+        "relative h-9 w-9 rounded-xl border border-border bg-secondary/50 flex items-center justify-center",
+        "hover:bg-secondary hover:border-border",
         "transition-all duration-200",
-        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
         className
       )}
-      aria-label={isDark ? "Acik temaya gec" : "Koyu temaya gec"}
-      title={isPro ? "Pro Mod acikken tema degistirilemez" : undefined}
+      aria-label={isDark ? "Açık temaya geç" : "Koyu temaya geç"}
     >
       <svg
         className={cn(
-          "h-3.5 w-3.5 transition-all duration-300",
-          isDark ? "rotate-0 scale-100 text-primary" : "rotate-90 scale-0 text-primary"
+          "h-4 w-4 transition-all duration-300",
+          isDark ? "rotate-0 scale-100 text-foreground" : "rotate-90 scale-0 text-foreground"
         )}
         fill="none"
         viewBox="0 0 24 24"
@@ -53,8 +47,8 @@ export function ThemeToggle({ className }: { className?: string }) {
 
       <svg
         className={cn(
-          "absolute h-3.5 w-3.5 transition-all duration-300",
-          isDark ? "-rotate-90 scale-0 text-primary" : "rotate-0 scale-100 text-primary"
+          "absolute h-4 w-4 transition-all duration-300",
+          isDark ? "-rotate-90 scale-0 text-foreground" : "rotate-0 scale-100 text-foreground"
         )}
         fill="none"
         viewBox="0 0 24 24"

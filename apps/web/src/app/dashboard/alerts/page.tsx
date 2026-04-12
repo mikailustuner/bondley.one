@@ -141,22 +141,22 @@ export default function AlertsPage() {
 
   if (loading)
     return (
-      <div className="py-12 text-center text-muted-foreground text-sm">Yükleniyor...</div>
+      <div className="py-12 text-center text-muted-foreground text-[15px]">Yükleniyor...</div>
     );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="font-display text-display-md text-foreground">Uyarılarım</h1>
-        <p className="text-data-sm text-muted-foreground mt-1">
+        <h1 className="text-display-md text-foreground">Uyarılarım</h1>
+        <p className="text-[15px] text-muted-foreground mt-1.5">
           YTM, TLREF veya vadeye kalan güne göre özel uyarılar tanımlayın.
         </p>
       </div>
 
       {error && (
-        <Card className="border-destructive/30 bg-destructive/5">
+        <Card className="border-destructive/20 bg-destructive/5">
           <CardContent className="pt-6">
-            <p className="text-destructive text-sm">{error}</p>
+            <p className="text-destructive text-[15px]">{error}</p>
           </CardContent>
         </Card>
       )}
@@ -164,7 +164,7 @@ export default function AlertsPage() {
       {triggered.length > 0 && (
         <Card>
           <CardHeader>
-            <CardDescription>TETİKLENEN UYARILAR</CardDescription>
+            <CardDescription>Tetiklenen Uyarılar</CardDescription>
             <CardTitle className="mt-1 flex items-center gap-2">
               <Bell className="h-5 w-5" />
               Son tetiklenen uyarılar
@@ -175,17 +175,17 @@ export default function AlertsPage() {
               {triggered.map((a) => (
                 <li
                   key={a.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/50 bg-muted/30 p-3"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-secondary/30 p-4"
                 >
                   <div>
-                    <span className="font-medium text-foreground">{typeLabel(a.type)}</span>
+                    <span className="font-medium text-foreground text-[15px]">{typeLabel(a.type)}</span>
                     {a.parameters && typeof a.parameters === "object" && (
-                      <span className="text-data-sm text-muted-foreground ml-2">
+                      <span className="text-[13px] text-muted-foreground ml-2">
                         {JSON.stringify(a.parameters)}
                       </span>
                     )}
                     {a.last_triggered_at && (
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-[12px] text-muted-foreground mt-1">
                         Tetiklenme: {formatDate(a.last_triggered_at)}
                         {a.triggered_value_snapshot &&
                           ` — ${JSON.stringify(a.triggered_value_snapshot)}`}
@@ -206,7 +206,7 @@ export default function AlertsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardDescription>UYARILARIM</CardDescription>
+              <CardDescription>Uyarılarım</CardDescription>
               <CardTitle className="mt-1">Tüm uyarılar</CardTitle>
             </div>
             <Button onClick={openAdd} className="gap-2">
@@ -217,16 +217,16 @@ export default function AlertsPage() {
         </CardHeader>
         <CardContent>
           {formOpen && (
-            <div className="mb-6 rounded-lg border border-border bg-muted/20 p-4 space-y-4">
-              <h3 className="font-medium text-foreground">
+            <div className="mb-6 rounded-xl border border-border bg-secondary/20 p-5 space-y-4">
+              <h3 className="font-semibold text-[17px] text-foreground">
                 {editingId ? "Uyarıyı düzenle" : "Yeni uyarı"}
               </h3>
               <div>
-                <label className="text-label text-muted-foreground block mb-1">Tür</label>
+                <label className="block text-[15px] font-medium text-foreground mb-1.5">Tür</label>
                 <select
                   value={formType}
                   onChange={(e) => setFormType(e.target.value)}
-                  className="w-full rounded-md border border-border bg-card px-3 py-2 text-data-sm"
+                  className="w-full h-11 rounded-[10px] border border-border bg-card px-4 py-2.5 text-[15px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                 >
                   {ALERT_TYPES.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -237,11 +237,11 @@ export default function AlertsPage() {
               </div>
               {needIsin && (
                 <div>
-                  <label className="text-label text-muted-foreground block mb-1">Tahvil (ISIN)</label>
+                  <label className="block text-[15px] font-medium text-foreground mb-1.5">Tahvil (ISIN)</label>
                   <select
                     value={formIsin}
                     onChange={(e) => setFormIsin(e.target.value)}
-                    className="w-full rounded-md border border-border bg-card px-3 py-2 text-data-sm"
+                    className="w-full h-11 rounded-[10px] border border-border bg-card px-4 py-2.5 text-[15px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                   >
                     <option value="">Seçin</option>
                     {bonds.map((b) => (
@@ -254,7 +254,7 @@ export default function AlertsPage() {
               )}
               {needThreshold && (
                 <div>
-                  <label className="text-label text-muted-foreground block mb-1">
+                  <label className="block text-[15px] font-medium text-foreground mb-1.5">
                     Eşik {formType.includes("ytm") ? "(%)" : formType.includes("tlref") ? "(%, örn. 1)" : ""}
                   </label>
                   <input
@@ -262,25 +262,25 @@ export default function AlertsPage() {
                     step="0.01"
                     value={formThreshold}
                     onChange={(e) => setFormThreshold(e.target.value)}
-                    className="w-full rounded-md border border-border bg-card px-3 py-2 font-mono text-data-sm"
+                    className="w-full h-11 rounded-[10px] border border-border bg-card px-4 py-2.5 font-mono text-[15px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                     placeholder={formType.includes("tlref") ? "1" : "15"}
                   />
                 </div>
               )}
               {needDays && (
                 <div>
-                  <label className="text-label text-muted-foreground block mb-1">Vadeye kalan gün</label>
+                  <label className="block text-[15px] font-medium text-foreground mb-1.5">Vadeye kalan gün</label>
                   <input
                     type="number"
                     min="1"
                     value={formDays}
                     onChange={(e) => setFormDays(e.target.value)}
-                    className="w-full rounded-md border border-border bg-card px-3 py-2 font-mono text-data-sm"
+                    className="w-full h-11 rounded-[10px] border border-border bg-card px-4 py-2.5 font-mono text-[15px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                     placeholder="30"
                   />
                 </div>
               )}
-              <div className="flex gap-2">
+              <div className="flex gap-3 pt-1">
                 <Button onClick={() => submitForm()} disabled={submitting}>
                   {submitting ? "Kaydediliyor..." : "Kaydet"}
                 </Button>
@@ -292,7 +292,7 @@ export default function AlertsPage() {
           )}
 
           {alerts.length === 0 ? (
-            <p className="text-data-sm text-muted-foreground py-4">
+            <p className="text-[15px] text-muted-foreground py-4">
               Henüz uyarı tanımlanmamış. &quot;Uyarı ekle&quot; ile ekleyin.
             </p>
           ) : (
@@ -300,15 +300,15 @@ export default function AlertsPage() {
               {alerts.map((a) => (
                 <li
                   key={a.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/50 p-3"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border p-4"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">{typeLabel(a.type)}</span>
+                    <span className="font-medium text-[15px]">{typeLabel(a.type)}</span>
                     {!a.is_active && <Badge variant="secondary">Pasif</Badge>}
                     {Boolean((a.parameters as Record<string, unknown>)?.isin) && (
                       <Link
                         href={`/dashboard/bonds/${(a.parameters as Record<string, string>).isin}`}
-                        className="text-data-sm text-primary hover:underline"
+                        className="text-[13px] text-primary hover:underline"
                       >
                         {(a.parameters as Record<string, string>).isin}
                       </Link>

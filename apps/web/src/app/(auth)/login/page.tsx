@@ -59,29 +59,27 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background grain px-4">
-      <div className="data-strip fixed top-0 left-0 right-0" />
-
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm animate-fade-up">
-        <div className="text-center mb-8">
-          <div className="inline-flex h-10 w-10 items-center justify-center mb-4">
+        <div className="text-center mb-10">
+          <div className="inline-flex h-12 w-12 items-center justify-center mb-5">
             <Image
               src="/logo.png"
               alt="Bondley Logo"
-              width={40}
-              height={40}
-              className="h-10 w-10 object-contain"
+              width={48}
+              height={48}
+              className="h-12 w-12 object-contain"
               priority
             />
           </div>
-          <h1 className="font-display text-display-md text-foreground">Bondley</h1>
-          <p className="text-label text-muted-foreground mt-2">BOR�LANMA ARA�LARI ANAL�Z PLATFORMU</p>
+          <h1 className="text-display-md text-foreground">Bondley</h1>
+          <p className="text-[13px] font-medium text-muted-foreground mt-2">Borçlanma Araçları Analiz Platformu</p>
         </div>
 
-        <Card className="amber-glow-border">
+        <Card>
           <CardHeader className="pb-4">
             <CardDescription>
-              {mfaStep ? "İKİ ADIMLI DOĞRULAMA" : "KIMLIK DOGRULAMA"}
+              {mfaStep ? "İki Adımlı Doğrulama" : "Kimlik Doğrulama"}
             </CardDescription>
             <CardTitle className="mt-1">
               {mfaStep ? "Doğrulama Kodu" : "Giriş Yap"}
@@ -90,11 +88,11 @@ export default function LoginPage() {
           <CardContent>
             {mfaStep ? (
               <form onSubmit={handleMfaSubmit} className="space-y-4">
-                <p className="text-data-sm text-muted-foreground">
+                <p className="text-[13px] text-muted-foreground">
                   Authenticator uygulamanızdan 6 haneli kodu girin (veya yedek kodu).
                 </p>
                 <div className="space-y-2">
-                  <label className="text-label text-muted-foreground">KOD</label>
+                  <label className="text-[15px] font-medium text-foreground">Kod</label>
                   <Input
                     type="text"
                     inputMode="numeric"
@@ -107,7 +105,7 @@ export default function LoginPage() {
                   />
                 </div>
                 {error && (
-                  <div className="p-3 rounded-md border border-destructive/30 bg-destructive/5 text-destructive text-data-sm">
+                  <div className="p-3 rounded-xl border border-destructive/15 bg-destructive/5 text-destructive text-[13px]">
                     {error}
                   </div>
                 )}
@@ -127,18 +125,17 @@ export default function LoginPage() {
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-label text-muted-foreground">E-POSTA</label>
+                  <label className="text-[15px] font-medium text-foreground">E-posta</label>
                   <Input
                     type="email"
                     placeholder="ornek@sirket.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="font-mono-data"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-label text-muted-foreground">SIFRE</label>
+                  <label className="text-[15px] font-medium text-foreground">Şifre</label>
                   <Input
                     type="password"
                     placeholder="••••••••"
@@ -148,7 +145,7 @@ export default function LoginPage() {
                   />
                 </div>
                 {error && (
-                  <div className="p-3 rounded-md border border-destructive/30 bg-destructive/5 text-destructive text-data-sm">
+                  <div className="p-3 rounded-xl border border-destructive/15 bg-destructive/5 text-destructive text-[13px]">
                     {error}
                   </div>
                 )}
@@ -158,9 +155,9 @@ export default function LoginPage() {
               </form>
             )}
 
-            <div className="mt-6 pt-4 border-t border-border/50 text-center">
-              <p className="text-data-sm text-muted-foreground">
-                Hesabiniz yok mu?{" "}
+            <div className="mt-6 pt-5 border-t border-border/50 text-center">
+              <p className="text-[15px] text-muted-foreground">
+                Hesabınız yok mu?{" "}
                 <Link
                   href="/signup"
                   className="text-primary hover:text-primary/80 font-medium transition-colors"
@@ -172,7 +169,7 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-label text-muted-foreground/50 mt-6">&copy; 2026 Bondley</p>
+        <p className="text-center text-[13px] text-muted-foreground/50 mt-8">&copy; 2026 Bondley</p>
       </div>
     </div>
   );

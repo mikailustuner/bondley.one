@@ -5,8 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-background grain flex items-center justify-center px-4">
-      <div className="data-strip fixed top-0 left-0 right-0" />
+    <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <Card className="max-w-md w-full text-center animate-fade-up">
         <CardContent className="pt-12 pb-8">
           <div className="inline-flex h-16 w-16 items-center justify-center mb-6">
@@ -19,8 +18,8 @@ export default function NotFound() {
               priority
             />
           </div>
-          <h1 className="font-display text-display-md text-foreground mb-3">Sayfa bulunamadı</h1>
-          <p className="text-data-sm text-muted-foreground mb-8">
+          <h1 className="text-display-md text-foreground mb-3">Sayfa bulunamadı</h1>
+          <p className="text-[15px] text-muted-foreground mb-8">
             Aradığınız sayfa mevcut değil veya taşınmış olabilir.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">

@@ -5,20 +5,41 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { ProModeToggle } from "@/components/pro-mode-toggle";
 import { UserMenu } from "@/components/user-menu";
 import { getUser } from "@/lib/auth";
-import { AlertCircle, Mail, Loader2, CheckCircle2 } from "lucide-react";
+import {
+  LayoutDashboard,
+  List,
+  Bell,
+  BarChart3,
+  Settings,
+  Menu,
+  X,
+  Mail,
+  Loader2,
+  CheckCircle2,
+} from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Genel Bakis" },
-  { href: "/dashboard/bonds", label: "Borclanma Araclari" },
-  { href: "/dashboard/alerts", label: "Uyarilar" },
-  { href: "/dashboard/analytics", label: "Analiz" },
+const NAV_SECTIONS = [
+  {
+    title: null,
+    items: [
+      { href: "/dashboard", label: "Genel Bakış", icon: LayoutDashboard },
+      { href: "/dashboard/bonds", label: "Borçlanma Araçları", icon: List },
+      { href: "/dashboard/alerts", label: "Uyarılar", icon: Bell },
+      { href: "/dashboard/analytics", label: "Analiz", icon: BarChart3 },
+    ],
+  },
+  {
+    title: "Hesap",
+    items: [
+      { href: "/dashboard/settings", label: "Ayarlar", icon: Settings },
+    ],
+  },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -27,6 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [isResending, setIsResending] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const currentUser = getUser();
@@ -41,6 +63,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setUser(currentUser);
     setReady(true);
   }, [router]);
+
+  // Close sidebar on route change (mobile)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   const handleResendVerification = async () => {
     if (!user?.email) return;
@@ -62,88 +89,151 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!ready) return null;
 
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="data-strip" />
-      <nav className="border-b border-border/50 glass-surface sticky top-0 z-50">
-        <div className="container mx-auto flex h-12 items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link href="/dashboard" className="flex items-center gap-2.5">
-              <Image
-                src="/logo.png"
-                alt="Bondley Logo"
-                width={24}
-                height={24}
-                className="h-6 w-6 object-contain"
-                priority
-              />
-              <span className="font-display font-semibold text-sm tracking-tight">Bondley</span>
-            </Link>
+  const isActive = (href: string) =>
+    pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
 
-            <div className="h-4 w-px bg-border" />
+  const sidebarContent = (
+    <>
+      {/* Logo */}
+      <div className="flex items-center gap-2.5 px-5 py-5">
+        <Image
+          src="/logo.png"
+          alt="Bondley"
+          width={26}
+          height={26}
+          className="h-[26px] w-[26px] object-contain"
+          priority
+        />
+        <span className="font-semibold text-[16px] tracking-tight text-foreground">
+          Bondley
+        </span>
+      </div>
 
-            <div className="hidden md:flex items-center gap-1">
-              {NAV_ITEMS.map((item) => {
-                const isActive =
-                  pathname === item.href ||
-                  (item.href !== "/dashboard" && pathname.startsWith(item.href));
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`px-3 py-1.5 rounded-sm text-data-sm transition-colors ${isActive
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                      }`}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
+      {/* Navigation */}
+      <nav className="flex-1 px-3 space-y-6 overflow-y-auto">
+        {NAV_SECTIONS.map((section, si) => (
+          <div key={si}>
+            {section.title && (
+              <div className="px-3 mb-2 text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
+                {section.title}
+              </div>
+            )}
+            <div className="space-y-0.5">
+              {section.items.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`sidebar-item ${isActive(item.href) ? "sidebar-item-active" : ""}`}
+                >
+                  <item.icon className="h-[18px] w-[18px] shrink-0" />
+                  <span>{item.label}</span>
+                </Link>
+              ))}
             </div>
           </div>
-
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 text-label text-muted-foreground mr-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-positive live-indicator" />
-              CANLI
-            </div>
-            <ProModeToggle />
-            <ThemeToggle />
-            <UserMenu />
-          </div>
-        </div>
+        ))}
       </nav>
 
-      <main className="container mx-auto py-6 flex flex-col gap-6">
-        {user && user.is_email_verified === false && (
-          <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Mail className="h-5 w-5" />
-              <div>
-                <AlertTitle>E-posta adresiniz doğrulanmadı</AlertTitle>
-                <AlertDescription>
-                  Hesabınızın güvenliği ve tüm özelliklere erişebilmek için lütfen e-postanızı doğrulayın.
-                </AlertDescription>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="shrink-0 bg-background text-foreground"
-              onClick={handleResendVerification}
-              disabled={isResending}
-            >
-              {isResending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Yeniden Gönder
-            </Button>
-          </Alert>
-        )}
-
-        <div key={pathname} className="animate-fade-in">
-          {children}
+      {/* Bottom */}
+      <div className="px-3 pb-4 pt-2 border-t border-border/30 space-y-2">
+        <div className="flex items-center gap-2 px-3 py-1">
+          <span className="h-1.5 w-1.5 rounded-full bg-positive live-indicator" />
+          <span className="text-[11px] font-medium text-muted-foreground">Canlı Veri</span>
         </div>
-      </main>
+        <div className="flex items-center justify-between px-2">
+          <ThemeToggle />
+          <UserMenu />
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="min-h-screen bg-background flex">
+      {/* ═══ Desktop Sidebar ═══ */}
+      <aside className="sidebar hidden lg:flex flex-col w-[260px] shrink-0 h-screen sticky top-0">
+        {sidebarContent}
+      </aside>
+
+      {/* ═══ Mobile Overlay ═══ */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      <aside
+        className={`sidebar fixed inset-y-0 left-0 z-50 flex flex-col w-[280px] transform transition-transform duration-300 lg:hidden ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+        style={{ background: "hsl(var(--card))" }}
+      >
+        <button
+          onClick={() => setSidebarOpen(false)}
+          className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-secondary/60 text-muted-foreground"
+          aria-label="Menüyü kapat"
+        >
+          <X className="h-5 w-5" />
+        </button>
+        {sidebarContent}
+      </aside>
+
+      {/* ═══ Main Content ═══ */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Mobile top bar */}
+        <div className="lg:hidden apple-navbar sticky top-0 z-30 flex items-center justify-between px-4 h-14">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 -ml-2 rounded-lg hover:bg-secondary/60 text-muted-foreground"
+            aria-label="Menüyü aç"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <Image
+              src="/logo.png"
+              alt="Bondley"
+              width={22}
+              height={22}
+              className="h-[22px] w-[22px] object-contain"
+            />
+            <span className="font-semibold text-[15px] text-foreground">Bondley</span>
+          </Link>
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+          </div>
+        </div>
+
+        <main className="flex-1 px-6 lg:px-10 py-8 max-w-[1200px] mx-auto w-full">
+          {user && user.is_email_verified === false && (
+            <Alert variant="destructive" className="bg-destructive/5 border-destructive/15 text-destructive flex items-center justify-between rounded-2xl mb-6">
+              <div className="flex items-center gap-3">
+                <Mail className="h-5 w-5" />
+                <div>
+                  <AlertTitle>E-posta adresiniz doğrulanmadı</AlertTitle>
+                  <AlertDescription>
+                    Hesabınızın güvenliği ve tüm özelliklere erişebilmek için lütfen e-postanızı doğrulayın.
+                  </AlertDescription>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0 bg-background text-foreground"
+                onClick={handleResendVerification}
+                disabled={isResending}
+              >
+                {isResending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Yeniden Gönder
+              </Button>
+            </Alert>
+          )}
+
+          <div key={pathname} className="animate-fade-in">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

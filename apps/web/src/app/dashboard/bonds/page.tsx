@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { api, BondListItem, BondStats } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
-import { useProMode } from "@/components/pro-mode-provider";
 
 const CURRENCY_COLORS: Record<string, string> = {
   TRY: "default",
@@ -27,7 +26,6 @@ export default function BondsListPage() {
       document.title = "Bondley";
     };
   }, []);
-  const { isPro } = useProMode();
   const [bonds, setBonds] = useState<BondListItem[]>([]);
   const [recentBonds, setRecentBonds] = useState<BondListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -49,7 +47,6 @@ export default function BondsListPage() {
       return;
     }
 
-    // Faz 1: Son güncellenen 10 ihraç + stats + favoriler (hızlı)
     Promise.all([
       api.bonds.list(token, { active_only: true, limit: 10, order_by: "updated_at_desc" }),
       api.bonds.stats(token),
@@ -62,7 +59,6 @@ export default function BondsListPage() {
         setFavoriteIsins(new Set((favRes.items || []).map((b) => b.isin_code)));
         setLoading(false);
 
-        // Faz 2: Tam liste arka planda yüklenir
         setFullListLoading(true);
         api.bonds
           .list(token, { active_only: true, limit: 3000 })
@@ -70,13 +66,11 @@ export default function BondsListPage() {
             setBonds(fullRes.items || []);
             setTotal(fullRes.total ?? 0);
           })
-          .catch(() => {
-            // Faz 2 başarısız olursa recent bonds ile devam et
-          })
+          .catch(() => { })
           .finally(() => setFullListLoading(false));
       })
       .catch((e) => {
-        setError(e?.message || "Veri yuklenemedi");
+        setError(e?.message || "Veri yüklenemedi");
         setLoading(false);
       });
   }, []);
@@ -139,20 +133,22 @@ export default function BondsListPage() {
   }, [activeBonds]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Header */}
       <div className="flex items-center justify-between animate-fade-up">
         <div>
-          <h1 className="font-display text-display-md text-foreground">Borçlanma Araçları</h1>
-          <p className="text-data-sm text-muted-foreground mt-1">
+          <h1 className="text-display-md text-foreground">Borçlanma Araçları</h1>
+          <p className="text-[15px] text-muted-foreground mt-1.5">
             Tahvil, Bono, Kira Sertifikası, VDMK ve türevleri — {formatDecimal(total, 0)} aktif kayıt
           </p>
         </div>
       </div>
 
+      {/* Stats */}
       {loading && (
-        <div className={`grid gap-px md:grid-cols-4 bg-border/30 overflow-hidden animate-fade-up ${isPro ? "rounded-none" : "rounded-lg"}`}>
+        <div className="grid gap-4 md:grid-cols-4 animate-fade-up">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className={`bg-card ${isPro ? "p-3" : "p-5 grain"}`}>
+            <div key={i} className="bg-card rounded-3xl border border-border p-5">
               <Skeleton className="h-3 w-24 mb-2" />
               <Skeleton className="h-8 w-16 mb-1" />
               <Skeleton className="h-3 w-20" />
@@ -161,29 +157,29 @@ export default function BondsListPage() {
         </div>
       )}
       {stats && !loading && (
-        <div className={`grid gap-px md:grid-cols-4 bg-border/30 overflow-hidden animate-fade-up ${isPro ? "rounded-none border border-primary/30" : "rounded-lg"}`}>
-          <div className={`bg-card ${isPro ? "px-4 py-3" : "p-5 grain"}`}>
-            <div className={`text-label mb-2 ${isPro ? "text-primary" : "text-muted-foreground"}`}>TOPLAM MK</div>
+        <div className="grid gap-4 md:grid-cols-4 animate-fade-up">
+          <div className="bg-card rounded-3xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+            <div className="text-[13px] font-medium text-muted-foreground mb-2">Toplam Araç</div>
             <div className="font-mono-data text-stat text-primary">
               {formatDecimal(stats.total_bonds, 0)}
             </div>
-            {!isPro && <div className="text-label text-muted-foreground mt-1">Aktif kayit</div>}
+            <div className="text-[13px] text-muted-foreground mt-1.5">Aktif kayıt</div>
           </div>
-          <div className={`bg-card ${isPro ? "px-4 py-3" : "p-5 grain"}`}>
-            <div className={`text-label mb-2 ${isPro ? "text-primary" : "text-muted-foreground"}`}>ORT. VADE</div>
-            <div className={`font-mono-data text-stat ${isPro ? "text-primary" : "text-foreground"}`}>
+          <div className="bg-card rounded-3xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+            <div className="text-[13px] font-medium text-muted-foreground mb-2">Ort. Vade</div>
+            <div className="font-mono-data text-stat text-foreground">
               {stats.avg_days_to_maturity != null
                 ? `${Math.round(stats.avg_days_to_maturity)} gün`
                 : "—"}
             </div>
-            {!isPro && <div className="text-label text-muted-foreground mt-1">Kalan gün</div>}
+            <div className="text-[13px] text-muted-foreground mt-1.5">Kalan gün</div>
           </div>
-          <div className={`bg-card ${isPro ? "px-4 py-3" : "p-5 grain"}`}>
-            <div className={`text-label mb-2 ${isPro ? "text-primary" : "text-muted-foreground"}`}>PARA BIRIMI</div>
-            <div className={`font-mono-data text-stat ${isPro ? "text-primary" : "text-foreground"}`}>
+          <div className="bg-card rounded-3xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+            <div className="text-[13px] font-medium text-muted-foreground mb-2">Para Birimi</div>
+            <div className="font-mono-data text-stat text-foreground">
               {Object.keys(stats.by_currency).length}
             </div>
-            <div className={`text-label mt-1 ${isPro ? "text-primary/70" : "text-muted-foreground"}`}>
+            <div className="text-[13px] text-muted-foreground mt-1.5">
               {Object.entries(stats.by_currency)
                 .sort(([, a], [, b]) => b - a)
                 .slice(0, 3)
@@ -191,29 +187,28 @@ export default function BondsListPage() {
                 .join(", ")}
             </div>
           </div>
-          <div className={`bg-card ${isPro ? "px-4 py-3" : "p-5 grain"}`}>
-            <div className={`text-label mb-2 ${isPro ? "text-primary" : "text-muted-foreground"}`}>MK TURU</div>
-            <div className={`font-mono-data text-stat ${isPro ? "text-primary" : "text-foreground"}`}>
+          <div className="bg-card rounded-3xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+            <div className="text-[13px] font-medium text-muted-foreground mb-2">Araç Türü</div>
+            <div className="font-mono-data text-stat text-foreground">
               {Object.keys(stats.by_security_type).length}
             </div>
-            {!isPro && <div className="text-label text-muted-foreground mt-1">Farklı tür</div>}
+            <div className="text-[13px] text-muted-foreground mt-1.5">Farklı tür</div>
           </div>
         </div>
       )}
 
+      {/* Recent Bonds */}
       {!loading && recentBonds.length > 0 && (
-        <Card className={`animate-fade-up-delay-1 ${isPro ? "rounded-none border-primary/30 p-2" : ""}`}>
-          <CardHeader className={isPro ? "pb-2 pt-1 px-2" : "pb-3"}>
+        <Card className="animate-fade-up-delay-1">
+          <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
-                {!isPro && <CardDescription>SON GÜNCELLENEN</CardDescription>}
-                <CardTitle className={isPro ? "text-sm text-primary font-mono" : "mt-1"}>
-                  {isPro ? "[SON GUNCELLEMELER]" : "Son Güncellenen İhraçlar"}
-                </CardTitle>
+                <CardDescription>Son Güncellenen</CardDescription>
+                <CardTitle className="mt-1">Son Güncellenen İhraçlar</CardTitle>
               </div>
               {fullListLoading && (
-                <span className={`text-label animate-pulse ${isPro ? "text-primary" : "text-muted-foreground"}`}>
-                  {isPro ? "LISTE_YUKLENIYOR..." : "Tam liste yükleniyor…"}
+                <span className="text-[13px] text-muted-foreground animate-pulse">
+                  Tam liste yükleniyor…
                 </span>
               )}
             </div>
@@ -224,17 +219,17 @@ export default function BondsListPage() {
                 <Link
                   key={b.isin_code}
                   href={`/dashboard/bonds/${encodeURIComponent(b.isin_code)}`}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-secondary/50 px-2.5 py-1.5 text-data-sm text-foreground hover:bg-secondary transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/50 px-3 py-1.5 text-[13px] text-foreground hover:bg-secondary transition-colors"
                 >
                   <span className="font-mono-data font-medium">{b.isin_code}</span>
                   {b.issuer && (
                     <span className="text-muted-foreground truncate max-w-[120px]">{b.issuer}</span>
                   )}
-                  <Badge variant={(CURRENCY_COLORS[b.currency] as any) || "outline"} className="text-xs">
+                  <Badge variant={(CURRENCY_COLORS[b.currency] as any) || "outline"} className="text-[10px]">
                     {b.currency}
                   </Badge>
                   {b.last_issue_yield != null && (
-                    <span className="font-mono-data text-primary text-xs">
+                    <span className="font-mono-data text-primary text-[11px]">
                       {formatPercent(b.last_issue_yield)}
                     </span>
                   )}
@@ -245,32 +240,33 @@ export default function BondsListPage() {
         </Card>
       )}
 
-      <div className={`flex flex-wrap gap-3 animate-fade-up-delay-1 ${isPro ? "font-mono" : ""}`}>
+      {/* Search & Filters */}
+      <div className="flex flex-wrap gap-3 animate-fade-up-delay-1">
         <div className="flex-1 min-w-[200px] relative">
-          <Search className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 pointer-events-none ${isPro ? "text-primary/70" : "text-muted-foreground"}`} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-[18px] w-[18px] pointer-events-none text-muted-foreground/60" />
           <Input
-            placeholder={isPro ? "> ISIN VEYA IHRACCI GIRIN..." : "ISIN veya ihraççıyla ara..."}
-            className={`font-mono-data text-base pl-12 h-12 border-primary/40 bg-card hover:border-primary/60 transition-colors focus-visible:ring-primary shadow-sm ${isPro ? "rounded-none bg-black text-primary border-primary/50 focus-visible:ring-1" : "rounded-xl border-border"}`}
+            placeholder="ISIN veya ihraççıyla ara..."
+            className="pl-11 h-11 rounded-2xl bg-secondary/50 border-transparent hover:bg-secondary/80 focus-visible:bg-card focus-visible:border-border"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <select
-          className={`border bg-card px-4 py-2 text-base text-foreground focus:outline-none focus:ring-1 focus:ring-primary hover:border-primary/60 transition-colors shadow-sm ${isPro ? "rounded-none border-primary/50 h-12 bg-black uppercase text-sm text-primary" : "rounded-xl border-border h-12"}`}
+          className="h-11 rounded-xl border border-border bg-card px-4 py-2.5 text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
           value={currencyFilter}
           onChange={(e) => setCurrencyFilter(e.target.value)}
         >
-          <option value="">{isPro ? "TUM DOVIZLER" : "Tüm Para Birimleri"}</option>
+          <option value="">Tüm Para Birimleri</option>
           {currencies.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
         <select
-          className={`border bg-card px-4 py-2 text-base text-foreground focus:outline-none focus:ring-1 focus:ring-primary hover:border-primary/60 transition-colors shadow-sm max-w-[280px] ${isPro ? "rounded-none border-primary/50 h-12 bg-black uppercase text-sm text-primary" : "rounded-xl border-border h-12"}`}
+          className="h-11 rounded-xl border border-border bg-card px-4 py-2.5 text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all max-w-[280px]"
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
         >
-          <option value="">{isPro ? "TUM MK TURLERI" : "Tüm MK Türleri"}</option>
+          <option value="">Tüm Araç Türleri</option>
           {securityTypes.map((t) => (
             <option key={t} value={t}>
               {t.length > 40 ? t.substring(0, 40) + "…" : t}
@@ -279,73 +275,53 @@ export default function BondsListPage() {
         </select>
       </div>
 
-      <Card className={`animate-fade-up-delay-1 overflow-hidden ${isPro ? "rounded-none border-primary/50" : ""}`}>
-        <CardHeader className={isPro ? "bg-primary/5 border-b border-primary/20 py-2 px-3" : ""}>
+      {/* Bonds Table */}
+      <Card className="animate-fade-up-delay-1 overflow-hidden">
+        <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              {!isPro && <CardDescription>BORCLANMA ARACLARI</CardDescription>}
-              <CardTitle className={isPro ? "text-sm text-primary font-mono" : "mt-1"}>
-                {isPro ? "[BORCLANMA_ARACLARI_VERITABANI]" : "Borçlanma Araçları Listesi"}
-              </CardTitle>
+              <CardDescription>Borçlanma Araçları</CardDescription>
+              <CardTitle className="mt-1">Borçlanma Araçları Listesi</CardTitle>
             </div>
-            <span className={`text-label ${isPro ? "text-primary" : "text-muted-foreground"}`}>
+            <span className="text-[13px] font-medium text-muted-foreground">
               {fullListLoading
-                ? `${total} ${isPro ? "YUKLENIYOR..." : "kayıt yükleniyor…"}`
+                ? `${total} kayıt yükleniyor…`
                 : search || currencyFilter || typeFilter
-                  ? `${filtered.length} / ${total} KAYIT`
-                  : `${total} KAYIT`
+                  ? `${filtered.length} / ${total} Kayıt`
+                  : `${total} Kayıt`
               }
             </span>
           </div>
         </CardHeader>
-        <CardContent className={isPro ? "p-0" : ""}>
+        <CardContent>
           {loading && (
             <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
               <table className="w-full">
-                <thead className={`sticky top-0 z-10 ${isPro ? "bg-[#050505] border-b border-primary/40" : "bg-card"}`}>
-                  <tr className={isPro ? "border-b border-primary/20" : "border-b border-border"}>
-                    <th scope="col" className={`w-10 ${isPro ? "py-1.5" : "pb-3"}`} />
-                    <th scope="col" className={`${isPro ? "py-1.5 text-primary" : "pb-3 text-muted-foreground"} text-left text-label font-normal`}>
-                      ISIN
-                    </th>
-                    <th scope="col" className={`${isPro ? "py-1.5 text-primary" : "pb-3 text-muted-foreground"} text-left text-label font-normal`}>
-                      IHRACÇI
-                    </th>
-                    <th scope="col" className={`${isPro ? "py-1.5 text-primary" : "pb-3 text-muted-foreground"} text-left text-label font-normal`}>
-                      TUR
-                    </th>
-                    <th scope="col" className={`${isPro ? "py-1.5 text-primary" : "pb-3 text-muted-foreground"} text-left text-label font-normal`}>
-                      GETIRI TURU
-                    </th>
-                    <th scope="col" className={`${isPro ? "py-1.5 text-primary" : "pb-3 text-muted-foreground"} text-center text-label font-normal`}>
-                      DOVIZ
-                    </th>
-                    <th scope="col" className={`${isPro ? "py-1.5 text-primary" : "pb-3 text-muted-foreground"} text-right text-label font-normal`}>
-                      VADE
-                    </th>
-                    <th scope="col" className={`${isPro ? "py-1.5 text-primary" : "pb-3 text-muted-foreground"} text-right text-label font-normal`}>
-                      SON FIYAT
-                    </th>
-                    <th scope="col" className={`${isPro ? "py-1.5 text-primary" : "pb-3 text-muted-foreground"} text-right text-label font-normal`}>
-                      GETIRI %
-                    </th>
+                <thead className="sticky top-0 z-10 bg-card">
+                  <tr className="border-b border-border">
+                    <th scope="col" className="w-10 pb-3" />
+                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">ISIN</th>
+                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">İhraççı</th>
+                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">Tür</th>
+                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">Getiri Türü</th>
+                    <th scope="col" className="pb-3 text-center text-[13px] font-medium text-muted-foreground">Döviz</th>
+                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">Vade</th>
+                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">Son Fiyat</th>
+                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">Getiri %</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Array.from({ length: 18 }).map((_, i) => (
-                    <tr
-                      key={i}
-                      className="border-b border-border/30 last:border-0"
-                    >
-                      <td className="py-3 w-10 text-center"><Skeleton className="h-5 w-5 mx-auto" /></td>
-                      <td className="py-3"><Skeleton className="h-5 w-28" /></td>
-                      <td className="py-3"><Skeleton className="h-5 w-40" /></td>
-                      <td className="py-3"><Skeleton className="h-5 w-24" /></td>
-                      <td className="py-3"><Skeleton className="h-5 w-20" /></td>
-                      <td className="py-3 text-center"><Skeleton className="h-5 w-10 mx-auto" /></td>
-                      <td className="py-3 text-right"><Skeleton className="h-5 w-16 ml-auto" /></td>
-                      <td className="py-3 text-right"><Skeleton className="h-5 w-14 ml-auto" /></td>
-                      <td className="py-3 text-right"><Skeleton className="h-5 w-12 ml-auto" /></td>
+                    <tr key={i} className="border-b border-border/30 last:border-0">
+                      <td className="py-3.5 w-10 text-center"><Skeleton className="h-5 w-5 mx-auto" /></td>
+                      <td className="py-3.5"><Skeleton className="h-5 w-28" /></td>
+                      <td className="py-3.5"><Skeleton className="h-5 w-40" /></td>
+                      <td className="py-3.5"><Skeleton className="h-5 w-24" /></td>
+                      <td className="py-3.5"><Skeleton className="h-5 w-20" /></td>
+                      <td className="py-3.5 text-center"><Skeleton className="h-5 w-10 mx-auto" /></td>
+                      <td className="py-3.5 text-right"><Skeleton className="h-5 w-16 ml-auto" /></td>
+                      <td className="py-3.5 text-right"><Skeleton className="h-5 w-14 ml-auto" /></td>
+                      <td className="py-3.5 text-right"><Skeleton className="h-5 w-12 ml-auto" /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -355,7 +331,7 @@ export default function BondsListPage() {
           {error && !loading && (
             <EmptyState
               variant="error"
-              title="Veri yuklenemedi"
+              title="Veri yüklenemedi"
               description={error}
               icon={<AlertCircle className="h-7 w-7" />}
               action={{ label: "Yenile", onClick: () => window.location.reload() }}
@@ -365,13 +341,13 @@ export default function BondsListPage() {
             <EmptyState
               title={
                 search || currencyFilter || typeFilter
-                  ? "Filtreyle eşleşen bor�lanma arac� yok"
-                  : "Henüz bor�lanma arac� yok"
+                  ? "Filtreyle eşleşen borçlanma aracı yok"
+                  : "Henüz borçlanma aracı yok"
               }
               description={
                 search || currencyFilter || typeFilter
                   ? "Arama veya filtreleri değiştirerek tekrar deneyin."
-                  : "Admin panelden bor�lanma ara�lar� listesini güncelleyebilirsiniz."
+                  : "Admin panelden borçlanma araçları listesini güncelleyebilirsiniz."
               }
               icon={<Inbox className="h-7 w-7" />}
               action={
@@ -390,6 +366,7 @@ export default function BondsListPage() {
           )}
           {!loading && !error && filtered.length > 0 && (
             <>
+              {/* Mobile Cards */}
               <div className="block md:hidden space-y-3 max-h-[600px] overflow-y-auto">
                 {filtered.map((bond) => (
                   <Link
@@ -401,14 +378,12 @@ export default function BondsListPage() {
                           "bondley_bonds_isins",
                           JSON.stringify(filtered.map((b) => b.isin_code))
                         );
-                      } catch {
-                        // ignore
-                      }
+                      } catch { }
                     }}
-                    className="block rounded-xl border border-border bg-card p-4 hover:bg-secondary/30 transition-colors"
+                    className="block rounded-3xl border border-border bg-card p-4 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono-data text-data-sm font-medium text-primary">
+                      <span className="font-mono-data text-[13px] font-medium text-primary">
                         {bond.isin_code}
                       </span>
                       <div className="flex items-center gap-1">
@@ -421,7 +396,7 @@ export default function BondsListPage() {
                           aria-label={favoriteIsins.has(bond.isin_code) ? "Favorilerden çıkar" : "Favorilere ekle"}
                         >
                           <Star
-                            className={`h-4 w-4 ${favoriteIsins.has(bond.isin_code) ? "fill-primary text-primary" : "text-muted-foreground"}`}
+                            className={`h-4 w-4 ${favoriteIsins.has(bond.isin_code) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`}
                           />
                         </Button>
                         <Badge
@@ -432,10 +407,10 @@ export default function BondsListPage() {
                         </Badge>
                       </div>
                     </div>
-                    <p className="text-data-sm text-muted-foreground truncate mt-1">
+                    <p className="text-[13px] text-muted-foreground truncate mt-1">
                       {bond.issuer || "—"}
                     </p>
-                    <div className="flex justify-between text-data-sm mt-2 text-muted-foreground">
+                    <div className="flex justify-between text-[13px] mt-2.5 text-muted-foreground">
                       <span>
                         Vade:{" "}
                         {bond.days_to_maturity != null
@@ -446,52 +421,38 @@ export default function BondsListPage() {
                         {formatDecimal(bond.last_issue_price, 3)}
                       </span>
                     </div>
-                    <div className="text-data-sm text-positive font-mono-data mt-1">
+                    <div className="text-[13px] text-positive font-mono-data mt-1">
                       {bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"}
                     </div>
                   </Link>
                 ))}
               </div>
-              <div className="hidden md:block overflow-x-auto max-h-[70vh] overflow-y-auto custom-scrollbar">
+
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto max-h-[70vh] overflow-y-auto">
                 <table className="w-full">
-                  <thead className={`sticky top-0 z-10 ${isPro ? "bg-[#050505] border-b border-primary/40" : "bg-card"}`}>
-                    <tr className={isPro ? "border-b border-primary/20" : "border-b border-border"}>
-                      <th scope="col" className={`w-10 text-center ${isPro ? "py-1.5" : "pb-3"} text-label text-muted-foreground font-normal`}>
+                  <thead className="sticky top-0 z-10 bg-card">
+                    <tr className="border-b border-border">
+                      <th scope="col" className="w-10 text-center pb-3 text-[13px] font-medium text-muted-foreground">
                         <span className="sr-only">Favori</span>
                       </th>
-                      <th scope="col" className={`${isPro ? "py-1.5 text-primary" : "pb-3 text-muted-foreground"} text-left text-label font-normal`}>
-                        ISIN
-                      </th>
-                      <th scope="col" className={`${isPro ? "py-1.5 text-primary" : "pb-3 text-muted-foreground"} text-left text-label font-normal`}>
-                        IHRACÇI
-                      </th>
-                      <th scope="col" className={`${isPro ? "py-1.5 text-primary" : "pb-3 text-muted-foreground"} text-left text-label font-normal`}>
-                        TUR
-                      </th>
-                      <th scope="col" className={`${isPro ? "py-1.5 text-primary" : "pb-3 text-muted-foreground"} text-left text-label font-normal`}>
-                        GETIRI TURU
-                      </th>
-                      <th scope="col" className={`${isPro ? "py-1.5 text-primary" : "pb-3 text-muted-foreground"} text-center text-label font-normal`}>
-                        DOVIZ
-                      </th>
-                      <th scope="col" className={`${isPro ? "py-1.5 text-primary" : "pb-3 text-muted-foreground"} text-right text-label font-normal`}>
-                        VADE
-                      </th>
-                      <th scope="col" className={`${isPro ? "py-1.5 text-primary" : "pb-3 text-muted-foreground"} text-right text-label font-normal`}>
-                        SON FIYAT
-                      </th>
-                      <th scope="col" className={`${isPro ? "py-1.5 text-primary" : "pb-3 text-muted-foreground"} text-right text-label font-normal`}>
-                        GETIRI %
-                      </th>
+                      <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">ISIN</th>
+                      <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">İhraççı</th>
+                      <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">Tür</th>
+                      <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">Getiri Türü</th>
+                      <th scope="col" className="pb-3 text-center text-[13px] font-medium text-muted-foreground">Döviz</th>
+                      <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">Vade</th>
+                      <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">Son Fiyat</th>
+                      <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">Getiri %</th>
                     </tr>
                   </thead>
-                  <tbody className={isPro ? "font-mono text-xs" : ""}>
+                  <tbody>
                     {filtered.map((bond) => (
                       <tr
                         key={bond.isin_code}
-                        className={`${isPro ? "border-b border-primary/10 hover:bg-primary/5" : "border-b border-border/30 hover:bg-secondary/30"} last:border-0 transition-colors group`}
+                        className="border-b border-border/30 last:border-0 hover:bg-secondary/40 transition-colors group"
                       >
-                        <td className={`${isPro ? "py-1" : "py-3"} text-center`}>
+                        <td className="py-3.5 text-center">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -501,38 +462,36 @@ export default function BondsListPage() {
                             aria-label={favoriteIsins.has(bond.isin_code) ? "Favorilerden çıkar" : "Favorilere ekle"}
                           >
                             <Star
-                              className={`h-4 w-4 ${favoriteIsins.has(bond.isin_code) ? "fill-primary text-primary" : "text-muted-foreground"}`}
+                              className={`h-4 w-4 ${favoriteIsins.has(bond.isin_code) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`}
                             />
                           </Button>
                         </td>
-                        <td className={`${isPro ? "py-1 px-2" : "py-3"}`}>
+                        <td className="py-3.5">
                           <Link
                             href={`/dashboard/bonds/${bond.isin_code}`}
-                            className={`font-mono-data text-data-sm ${isPro ? "text-primary hover:text-white" : "text-foreground group-hover:text-primary"} transition-colors`}
+                            className="font-mono-data text-[13px] text-foreground group-hover:text-primary transition-colors"
                             onClick={() => {
                               try {
                                 sessionStorage.setItem(
                                   "bondley_bonds_isins",
                                   JSON.stringify(filtered.map((b) => b.isin_code))
                                 );
-                              } catch {
-                                // ignore
-                              }
+                              } catch { }
                             }}
                           >
                             {bond.isin_code}
                           </Link>
                         </td>
-                        <td className={`${isPro ? "py-1 text-xs text-primary/80" : "py-3 text-data-sm text-muted-foreground"} max-w-[200px] truncate`}>
+                        <td className="py-3.5 text-[13px] text-muted-foreground max-w-[200px] truncate">
                           {bond.issuer
                             ? bond.issuer.length > 35
                               ? bond.issuer.substring(0, 35) + "…"
                               : bond.issuer
                             : "—"}
                         </td>
-                        <td className={`${isPro ? "py-1 px-2" : "py-3"}`}>
+                        <td className="py-3.5">
                           {bond.security_type ? (
-                            <span className={isPro ? "text-xs text-primary/70" : "text-data-sm text-muted-foreground"}>
+                            <span className="text-[13px] text-muted-foreground">
                               {bond.security_type.split("/")[0].trim().length > 25
                                 ? bond.security_type.split("/")[0].trim().substring(0, 25) + "…"
                                 : bond.security_type.split("/")[0].trim()}
@@ -541,9 +500,9 @@ export default function BondsListPage() {
                             "—"
                           )}
                         </td>
-                        <td className={`${isPro ? "py-1 px-2" : "py-3"}`}>
+                        <td className="py-3.5">
                           {bond.yield_type ? (
-                            <span className={isPro ? "text-xs text-primary/70" : "text-data-sm text-muted-foreground"}>
+                            <span className="text-[13px] text-muted-foreground">
                               {bond.yield_type.split("/")[0].trim().length > 20
                                 ? bond.yield_type.split("/")[0].trim().substring(0, 20) + "…"
                                 : bond.yield_type.split("/")[0].trim()}
@@ -552,25 +511,24 @@ export default function BondsListPage() {
                             "—"
                           )}
                         </td>
-                        <td className={`${isPro ? "py-1 px-2" : "py-3"} text-center`}>
+                        <td className="py-3.5 text-center">
                           <Badge
                             variant={
                               (CURRENCY_COLORS[bond.currency] as any) || "outline"
                             }
-                            className={isPro ? "rounded-none text-[10px] px-1.5 py-0" : ""}
                           >
                             {bond.currency}
                           </Badge>
                         </td>
-                        <td className={`${isPro ? "py-1 px-2 text-primary/90" : "py-3 text-muted-foreground"} text-right font-mono-data text-data-sm`}>
+                        <td className="py-3.5 text-right font-mono-data text-[13px] text-muted-foreground">
                           {bond.days_to_maturity != null
                             ? `${bond.days_to_maturity} gün`
                             : formatDate(bond.maturity_date)}
                         </td>
-                        <td className={`${isPro ? "py-1 px-2 text-primary" : "py-3 text-foreground"} text-right font-mono-data text-data-sm`}>
+                        <td className="py-3.5 text-right font-mono-data text-[13px] text-foreground">
                           {formatDecimal(bond.last_issue_price, 3)}
                         </td>
-                        <td className={`${isPro ? "py-1 px-2 font-bold" : "py-3"} text-right font-mono-data text-data-sm text-positive`}>
+                        <td className="py-3.5 text-right font-mono-data text-[13px] text-positive">
                           {bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"}
                         </td>
                       </tr>

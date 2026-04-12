@@ -27,42 +27,42 @@ interface FormField {
 const FIELDS: FormField[] = [
   {
     key: "full_name",
-    label: "AD SOYAD",
+    label: "Ad Soyad",
     type: "text",
     placeholder: "Ad Soyad",
     autoComplete: "name",
   },
   {
     key: "email",
-    label: "KURUMSAL E-POSTA",
+    label: "Kurumsal E-posta",
     type: "email",
     placeholder: "ornek@sirket.com",
     autoComplete: "email",
   },
   {
     key: "company",
-    label: "SIRKET / KURUM ADI",
+    label: "Şirket / Kurum Adı",
     type: "text",
     placeholder: "Şirket veya kurum adı",
     autoComplete: "organization",
   },
   {
     key: "location",
-    label: "KONUM",
+    label: "Konum",
     type: "text",
     placeholder: "İstanbul, Türkiye",
     autoComplete: "address-level1",
   },
   {
     key: "password",
-    label: "SIFRE",
+    label: "Şifre",
     type: "password",
     placeholder: "En az 8 karakter",
     autoComplete: "new-password",
   },
   {
     key: "password_confirm",
-    label: "SIFRE TEKRAR",
+    label: "Şifre Tekrar",
     type: "password",
     placeholder: "Şifrenizi tekrar girin",
     autoComplete: "new-password",
@@ -123,39 +123,37 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background grain px-4 py-12">
-      <div className="data-strip fixed top-0 left-0 right-0" />
-
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-md animate-fade-up">
-        <div className="text-center mb-8">
-          <div className="inline-flex h-10 w-10 items-center justify-center mb-4">
+        <div className="text-center mb-10">
+          <div className="inline-flex h-12 w-12 items-center justify-center mb-5">
             <Image
               src="/logo.png"
               alt="Bondley Logo"
-              width={40}
-              height={40}
-              className="h-10 w-10 object-contain"
+              width={48}
+              height={48}
+              className="h-12 w-12 object-contain"
               priority
             />
           </div>
-          <h1 className="font-display text-display-md text-foreground">
+          <h1 className="text-display-md text-foreground">
             Bondley
           </h1>
-          <p className="text-label text-muted-foreground mt-2">
-            KURUMSAL HESAP OLUSTUR
+          <p className="text-[13px] font-medium text-muted-foreground mt-2">
+            Kurumsal Hesap Oluştur
           </p>
         </div>
 
-        <Card className="amber-glow-border">
+        <Card>
           <CardHeader className="pb-4">
-            <CardDescription>B2B KAYIT</CardDescription>
+            <CardDescription>B2B Kayıt</CardDescription>
             <CardTitle className="mt-1">Yeni Hesap</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {FIELDS.map((field) => (
                 <div key={field.key} className="space-y-1.5">
-                  <label className="text-label text-muted-foreground">
+                  <label className="text-[15px] font-medium text-foreground">
                     {field.label}
                   </label>
                   <Input
@@ -165,15 +163,12 @@ export default function SignupPage() {
                     value={form[field.key] ?? ""}
                     onChange={(e) => updateField(field.key, e.target.value)}
                     required
-                    className={
-                      field.type === "email" ? "font-mono-data" : undefined
-                    }
                   />
                 </div>
               ))}
 
               {error && (
-                <div className="p-3 rounded-md border border-destructive/30 bg-destructive/5 text-destructive text-data-sm">
+                <div className="p-3 rounded-xl border border-destructive/15 bg-destructive/5 text-destructive text-[13px]">
                   {error}
                 </div>
               )}
@@ -183,9 +178,9 @@ export default function SignupPage() {
               </Button>
             </form>
 
-            <div className="mt-6 pt-4 border-t border-border/50 text-center">
-              <p className="text-data-sm text-muted-foreground">
-                Zaten hesabiniz var mi?{" "}
+            <div className="mt-6 pt-5 border-t border-border/50 text-center">
+              <p className="text-[15px] text-muted-foreground">
+                Zaten hesabınız var mı?{" "}
                 <Link
                   href="/login"
                   className="text-primary hover:text-primary/80 font-medium transition-colors"
@@ -197,7 +192,7 @@ export default function SignupPage() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-label text-muted-foreground/50 mt-6">
+        <p className="text-center text-[13px] text-muted-foreground/50 mt-8">
           &copy; 2026 Bondley
         </p>
       </div>

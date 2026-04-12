@@ -272,8 +272,8 @@ export default function AdminPage() {
   return (
     <div className="space-y-6">
       <div className="animate-fade-up">
-        <h1 className="font-display text-display-md text-foreground">Yönetim Paneli</h1>
-        <p className="text-data-sm text-muted-foreground mt-1">
+        <h1 className="text-display-md text-foreground">Yönetim Paneli</h1>
+        <p className="text-[15px] text-muted-foreground mt-1.5">
           Sistem yönetimi ve veri operasyonları
         </p>
       </div>
@@ -284,21 +284,21 @@ export default function AdminPage() {
         )}
         {stats && (
           <>
-            <div className="bg-card p-5 grain">
+            <div className="bg-card p-5">
               <div className="text-label text-muted-foreground mb-2">TLREF KAYIT</div>
               <div className="font-mono-data text-stat text-foreground">
                 {formatDecimal(stats.tlref_count, 0)}
               </div>
               <div className="text-label text-muted-foreground/60 mt-1">Endeks kaydi</div>
             </div>
-            <div className="bg-card p-5 grain amber-glow-border">
+            <div className="bg-card p-5">
               <div className="text-label text-muted-foreground mb-2">TAHVIL</div>
               <div className="font-mono-data text-stat text-primary">
                 {formatDecimal(stats.bonds_count, 0)}
               </div>
               <div className="text-label text-muted-foreground/60 mt-1">Aktif borclanma araci</div>
             </div>
-            <div className="bg-card p-5 grain">
+            <div className="bg-card p-5">
               <div className="text-label text-muted-foreground mb-2">KULLANICI</div>
               <div className="font-mono-data text-stat text-foreground">
                 {formatDecimal(stats.users_count, 0)}
@@ -310,7 +310,7 @@ export default function AdminPage() {
         {!stats && !statsError && (
           <>
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-card p-5 grain">
+              <div key={i} className="bg-card p-5">
                 <div className="text-label text-muted-foreground animate-pulse">—</div>
               </div>
             ))}

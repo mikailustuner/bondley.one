@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Settings, LogOut, ChevronDown } from "lucide-react";
+import { Settings, LogOut, ChevronDown } from "lucide-react";
 import { getUser, clearAuth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -50,7 +50,7 @@ export function UserMenu() {
 
   if (!mounted) {
     return (
-      <div className="h-9 w-9 rounded-xl bg-secondary/50 animate-pulse" />
+      <div className="h-9 w-9 rounded-full bg-secondary animate-pulse" />
     );
   }
 
@@ -89,13 +89,13 @@ export function UserMenu() {
   const getRoleDisplayName = () => {
     switch (user.role) {
       case "admin":
-        return "ADMIN";
+        return "Admin";
       case "pro_user":
-        return "PRO";
+        return "Pro";
       case "premium_user":
-        return "PREMIUM";
+        return "Premium";
       default:
-        return "FREE";
+        return "Free";
     }
   };
 
@@ -112,7 +112,7 @@ export function UserMenu() {
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
           "flex items-center gap-2 px-2 py-1.5 rounded-xl transition-all duration-200",
-          "hover:bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 focus-visible:ring-offset-2",
+          "hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2",
           "active:scale-[0.98]",
           isOpen && "bg-secondary"
         )}
@@ -122,18 +122,17 @@ export function UserMenu() {
       >
         <div
           className={cn(
-            "h-8 w-8 rounded-xl flex items-center justify-center text-xs font-bold font-display",
+            "h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold",
             "transition-all duration-200",
-            "hover:scale-105 active:scale-95",
             getAvatarColor(),
-            isOpen && "ring-2 ring-emerald-500/50 ring-offset-2 ring-offset-background"
+            isOpen && "ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
           )}
         >
           {getInitials()}
         </div>
         <ChevronDown
           className={cn(
-            "h-4 w-4 text-muted-foreground transition-transform duration-200",
+            "h-3.5 w-3.5 text-muted-foreground transition-transform duration-200",
             isOpen && "rotate-180"
           )}
         />
@@ -142,7 +141,7 @@ export function UserMenu() {
       {isOpen && (
         <div
           className={cn(
-            "absolute right-0 mt-2 w-64 rounded-2xl border border-border glass-surface shadow-xl",
+            "absolute right-0 mt-2 w-64 rounded-xl border border-border bg-card shadow-lg",
             "z-50 overflow-hidden",
             "animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200",
             "md:w-64 w-[calc(100vw-2rem)] max-w-[280px]"
@@ -150,26 +149,26 @@ export function UserMenu() {
           role="menu"
         >
           {/* User Info Section */}
-          <div className="px-4 py-3 border-b border-border">
+          <div className="px-4 py-3.5 border-b border-border">
             <div className="flex items-center gap-3">
               <div
                 className={cn(
-                  "h-10 w-10 rounded-xl flex items-center justify-center text-sm font-bold font-display",
+                  "h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold",
                   getAvatarColor()
                 )}
               >
                 {getInitials()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate" title={user.full_name || user.email}>
+                <p className="text-[15px] font-medium text-foreground truncate" title={user.full_name || user.email}>
                   {user.full_name || user.email}
                 </p>
-                <p className="text-xs text-muted-foreground truncate" title={user.email}>
+                <p className="text-[13px] text-muted-foreground truncate" title={user.email}>
                   {user.email}
                 </p>
               </div>
             </div>
-            <div className="mt-2">
+            <div className="mt-2.5">
               <Badge
                 variant={
                   user.role === "admin"
@@ -178,7 +177,7 @@ export function UserMenu() {
                       ? "default"
                       : "secondary"
                 }
-                className="text-[9px]"
+                className="text-[10px]"
               >
                 {getRoleDisplayName()}
               </Badge>
@@ -186,18 +185,18 @@ export function UserMenu() {
           </div>
 
           {/* Menu Items */}
-          <div className="py-1">
+          <div className="py-1.5">
             <Link
               href="/dashboard/settings"
               onClick={() => setIsOpen(false)}
               className={cn(
-                "flex items-center gap-3 px-4 py-2 text-sm text-foreground",
+                "flex items-center gap-3 px-4 py-2.5 text-[15px] text-foreground",
                 "hover:bg-secondary transition-colors duration-150 cursor-pointer",
                 "active:bg-secondary/80"
               )}
               role="menuitem"
             >
-              <Settings className="h-4 w-4 text-muted-foreground transition-colors duration-150 group-hover:text-foreground" />
+              <Settings className="h-4 w-4 text-muted-foreground" />
               <span>Hesap ve Ayarlar</span>
             </Link>
           </div>
@@ -206,13 +205,13 @@ export function UserMenu() {
           <div className="border-t border-border" />
 
           {/* Logout */}
-          <div className="py-1">
+          <div className="py-1.5">
             <button
               onClick={handleLogout}
               className={cn(
-                "w-full flex items-center gap-3 px-4 py-2 text-sm text-foreground",
-                "hover:bg-destructive/10 hover:text-destructive transition-colors duration-150 cursor-pointer",
-                "active:bg-destructive/20"
+                "w-full flex items-center gap-3 px-4 py-2.5 text-[15px] text-foreground",
+                "hover:bg-destructive/8 hover:text-destructive transition-colors duration-150 cursor-pointer",
+                "active:bg-destructive/12"
               )}
               role="menuitem"
             >

@@ -9,10 +9,14 @@ const config: Config = {
   theme: {
     container: {
       center: true,
-      padding: "1.5rem",
-      screens: { "2xl": "1440px" },
+      padding: "2rem",
+      screens: { "2xl": "1280px" },
     },
     extend: {
+      fontFamily: {
+        sans: ['var(--font-inter)', 'SF Pro Display', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+        mono: ['SF Mono', 'ui-monospace', 'Menlo', 'Cascadia Code', 'monospace'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -52,17 +56,24 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontSize: {
-        "display-xl": ["3.5rem", { lineHeight: "1.05", letterSpacing: "-0.035em", fontWeight: "700" }],
-        "display-lg": ["2.75rem", { lineHeight: "1.1", letterSpacing: "-0.03em", fontWeight: "700" }],
-        "display-md": ["2rem", { lineHeight: "1.15", letterSpacing: "-0.025em", fontWeight: "600" }],
-        "stat": ["1.875rem", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "600" }],
-        "data-lg": ["1.125rem", { lineHeight: "1.4", letterSpacing: "-0.01em" }],
-        "data-sm": ["0.8125rem", { lineHeight: "1.5", letterSpacing: "0.01em" }],
-        "label": ["0.6875rem", { lineHeight: "1.4", letterSpacing: "0.04em", fontWeight: "600" }],
+        "display-xl": ["3rem", { lineHeight: "1.08", letterSpacing: "-0.03em", fontWeight: "700" }],
+        "display-lg": ["2.25rem", { lineHeight: "1.11", letterSpacing: "-0.025em", fontWeight: "700" }],
+        "display-md": ["1.75rem", { lineHeight: "1.14", letterSpacing: "-0.02em", fontWeight: "600" }],
+        "display-sm": ["1.375rem", { lineHeight: "1.18", letterSpacing: "-0.015em", fontWeight: "600" }],
+        "body-lg": ["1.0625rem", { lineHeight: "1.65", fontWeight: "400" }],
+        "body": ["0.9375rem", { lineHeight: "1.6", fontWeight: "400" }],
+        "body-sm": ["0.8125rem", { lineHeight: "1.5", fontWeight: "400" }],
+        "stat": ["2rem", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "700" }],
+        "label": ["0.6875rem", { lineHeight: "1.4", letterSpacing: "0.02em", fontWeight: "500" }],
+        "data-sm": ["0.8125rem", { lineHeight: "1.5", letterSpacing: "0.005em" }],
+        "data-lg": ["1.0625rem", { lineHeight: "1.4", letterSpacing: "-0.01em" }],
       },
       spacing: {
+        "4.5": "1.125rem",
         "18": "4.5rem",
         "22": "5.5rem",
+        "26": "6.5rem",
+        "30": "7.5rem",
       },
     },
   },
