@@ -43,17 +43,16 @@ fi
 
 log "PostgreSQL container'i hazir."
 
-# Python script ile admin sifresini guncelle
+# API container'inda Python kodunu calistir
 log "Admin sifresi guncelleniyor..."
 
-# Python script'i oluştur ve çalıştır
-python3 << EOF
+docker exec -i fincalc-api python3 << EOF
 import asyncio
 import sys
-from pathlib import Path
+import os
 
-# Add apps/api to path
-sys.path.insert(0, str(Path(__file__).parent / "apps" / "api"))
+# Container icindeki /app dizinini path'e ekle
+sys.path.insert(0, '/app')
 
 from app.core.database import async_session_factory
 from app.core.security import hash_password
@@ -76,18 +75,21 @@ async def update_admin_password():
                 password_hash=hash_password(new_password),
                 full_name="System Admin",
                 role="admin",
+                is_active=True,
             )
             session.add(admin)
             await session.commit()
             print(f"✓ Admin kullanici olusturuldu: {admin_email}")
         else:
             admin.password_hash = hash_password(new_password)
+            admin.is_active = True
             await session.commit()
             print(f"✓ Admin sifresi guncellendi: {admin_email}")
         
         print(f"✓ Yeni sifre: {new_password}")
 
-asyncio.run(update_admin_password())
+if __name__ == "__main__":
+    asyncio.run(update_admin_password())
 EOF
 
 if [ $? -eq 0 ]; then

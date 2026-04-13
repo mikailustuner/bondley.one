@@ -35,7 +35,8 @@ log "Container'lar hazir."
 
 # Script'i API container'ina kopyala
 log "Script API container'ina kopyalaniyor..."
-docker cp create-admin.py fincalc-api:/app/create-admin.py 2>/dev/null || {
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+docker cp "$SCRIPT_DIR/create-admin.py" fincalc-api:/app/create-admin.py 2>/dev/null || {
     warn "Script kopyalanamadi, direkt container icinde calistiriliyor..."
 }
 
