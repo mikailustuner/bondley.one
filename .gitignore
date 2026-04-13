@@ -19,7 +19,7 @@ __pycache__/
 venv/
 .venv/
 *.egg
-
+sure.md
 # Environment
 .env
 .env.local
