@@ -74,7 +74,7 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:3000"
 
     # Admin seed: only used when creating the initial admin user (not when one already exists)
-    ADMIN_EMAIL: str = "admin@fincalc.com"
+    ADMIN_EMAIL: str = "admin@bondley.one"
     ADMIN_INIT_PASSWORD: str = ""
 
     # Set to "production" to reject weak defaults and require explicit env for secrets

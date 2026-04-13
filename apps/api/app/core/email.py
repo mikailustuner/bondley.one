@@ -20,16 +20,16 @@ async def send_verification_email(to_email: str, verify_url: str):
         return
 
     msg = MIMEMultipart("alternative")
-    msg['Subject'] = "FinCalc - E-Posta Adresinizi Doğrulayın"
-    msg['From'] = f"FinCalc <{settings.SMTP_USER}>"
+    msg['Subject'] = "Bondley - E-Posta Adresinizi Doğrulayın"
+    msg['From'] = f"Bondley <{settings.SMTP_USER}>"
     msg['To'] = to_email
 
-    text = f"Merhaba, lütfen hesabınızı doğrulamak için şu linke tıklayın: {verify_url}"
+    text = f"Merhaba, lütfen Bondley hesabınızı doğrulamak için şu linke tıklayın: {verify_url}"
     html = f"""
     <html>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
         <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 8px;">
-            <h2 style="color: #2563eb;">FinCalc'a Hoş Geldiniz!</h2>
+            <h2 style="color: #2563eb;">Bondley'e Hoş Geldiniz!</h2>
             <p>Kayıt olduğunuz için teşekkür ederiz. Hesabınızı güvenle kullanmaya başlamak için lütfen e-posta adresinizi doğrulayın.</p>
             <div style="text-align: center; margin: 30px 0;">
                 <a href="{verify_url}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Hesabımı Doğrula</a>
