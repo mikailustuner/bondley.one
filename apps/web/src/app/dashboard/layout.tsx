@@ -56,12 +56,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.push("/login");
       return;
     }
-    if (!currentUser.profile_completed) {
-      router.push("/onboarding");
-      return;
-    }
+    
+    // Set initial local user
     setUser(currentUser);
     setReady(true);
+
+    // Fetch fresh user data from API to sync states (e.g. email verification)
+    const syncUser = async () => {
+      try {
+        const { data } = await api.get("/auth/me");
+        if (data) {
+          setUser(data);
+          const { updateLocalUser } = await import("@/lib/auth");
+          updateLocalUser(data);
+        }
+      } catch (error) {
+        console.error("Failed to sync user data:", error);
+      }
+    };
+
+    if (currentUser.profile_completed) {
+      syncUser();
+    } else {
+      router.push("/onboarding");
+    }
   }, [router]);
 
   // Close sidebar on route change (mobile)
