@@ -64,11 +64,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     // Fetch fresh user data from API to sync states (e.g. email verification)
     const syncUser = async () => {
       try {
-        const { data } = await api.get("/auth/me");
-        if (data) {
-          setUser(data);
-          const { updateLocalUser } = await import("@/lib/auth");
-          updateLocalUser(data);
+        const { getToken, updateLocalUser } = await import("@/lib/auth");
+        const token = getToken();
+        if (token) {
+          const freshUser = await api.auth.me(token);
+          setUser(freshUser);
+          updateLocalUser(freshUser);
         }
       } catch (error) {
         console.error("Failed to sync user data:", error);
