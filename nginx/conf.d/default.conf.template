@@ -1,49 +1,18 @@
-# --- HTTP Server (always available, for ACME challenge and fallback) ---
-# API subdomain
+# --- Bondley Nginx Gateway (Internal) ---
+# This Nginx instance runs inside Docker and handles internal routing.
+# SSL is terminated at the host Apache2 level.
+
 server {
     listen 80;
-    server_name api.${DOMAIN};
+    server_name ${DOMAIN} www.${DOMAIN} api.${DOMAIN} dashboard.${DOMAIN} admin.${DOMAIN};
 
-    location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
+    # Health check for Nginx itself
+    location /nginx-health {
+        return 200 "OK";
+        add_header Content-Type text/plain;
     }
 
-    location / {
-        proxy_pass http://api:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 300s;
-        proxy_connect_timeout 75s;
-    }
-}
-
-# Dashboard subdomain -> main domain path (301 so single origin / auth works)
-server {
-    listen 80;
-    server_name dashboard.${DOMAIN};
-    location /.well-known/acme-challenge/ { root /var/www/certbot; }
-    location / { return 301 https://${DOMAIN}/dashboard$request_uri; }
-}
-
-# Admin subdomain -> main domain path (301)
-server {
-    listen 80;
-    server_name admin.${DOMAIN};
-    location /.well-known/acme-challenge/ { root /var/www/certbot; }
-    location / { return 301 https://${DOMAIN}/admin$request_uri; }
-}
-
-# Web: main domain + www only (path-based: /dashboard, /admin, /landing)
-server {
-    listen 80;
-    server_name ${DOMAIN} www.${DOMAIN};
-
-    location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
-    }
-
+    # API v1 Proxy
     location /api/v1/ {
         proxy_pass http://api:8000/api/v1/;
         proxy_set_header Host $host;
@@ -54,78 +23,17 @@ server {
         proxy_connect_timeout 75s;
     }
 
+    # Next.js Web Proxy (Handles Landing, Dashboard, Admin paths)
     location / {
         proxy_pass http://web:3000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-
-# --- HTTPS (same cert covers api + dashboard + admin + domain) ---
-server {
-    listen 443 ssl;
-    server_name api.${DOMAIN};
-    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
-    resolver 8.8.8.8 8.8.4.4 valid=300s;
-    resolver_timeout 5s;
-    include /etc/nginx/ssl-params.conf;
-    location / {
-        proxy_pass http://api:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 300s;
-        proxy_connect_timeout 75s;
-    }
-}
-
-# Dashboard subdomain -> main domain path (301)
-server {
-    listen 443 ssl;
-    server_name dashboard.${DOMAIN};
-    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
-    include /etc/nginx/ssl-params.conf;
-    location / { return 301 https://${DOMAIN}/dashboard$request_uri; }
-}
-
-# Admin subdomain -> main domain path (301)
-server {
-    listen 443 ssl;
-    server_name admin.${DOMAIN};
-    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
-    include /etc/nginx/ssl-params.conf;
-    location / { return 301 https://${DOMAIN}/admin$request_uri; }
-}
-
-# Web: main domain + www only
-server {
-    listen 443 ssl;
-    server_name ${DOMAIN} www.${DOMAIN};
-    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
-    resolver 8.8.8.8 8.8.4.4 valid=300s;
-    resolver_timeout 5s;
-    include /etc/nginx/ssl-params.conf;
-    location /api/v1/ {
-        proxy_pass http://api:8000/api/v1/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 300s;
-        proxy_connect_timeout 75s;
-    }
-    location / {
-        proxy_pass http://web:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # Next.js hydration fix
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
     }
 }
