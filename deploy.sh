@@ -43,7 +43,7 @@ for svc in "${SERVICES[@]}"; do
         warn "  $svc: [DOWN] - Check 'docker logs $svc'"
     fi
 done
-
+eline Senkronizasyon
 # --- Step 3: Database Migrations ---
 log "Running database migrations (Alembic)..."
 if docker ps --format '{{.Names}}' | grep -q "fincalc-api"; then

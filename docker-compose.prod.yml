@@ -28,12 +28,6 @@ services:
         max-size: "10m"
         max-file: "3"
 
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
   postgres:
     image: postgres:16-alpine
     container_name: fincalc-postgres
@@ -97,6 +91,7 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-production}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@fincalc.com}
       ADMIN_INIT_PASSWORD: ${ADMIN_INIT_PASSWORD:-}
+      RUN_MIGRATIONS: "true"
       MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:-}
       RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
       RATE_LIMIT_LOGIN_PER_MINUTE: ${RATE_LIMIT_LOGIN_PER_MINUTE:-5}
