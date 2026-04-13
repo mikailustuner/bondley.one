@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS bonds (
     id                       SERIAL PRIMARY KEY,
     isin_code                VARCHAR(30) UNIQUE NOT NULL,
     issuer                   VARCHAR(255),
+    fund_user                VARCHAR(255),
+    source_institution       VARCHAR(255),
     issuance_type            VARCHAR(100),
     yield_type               VARCHAR(255),
     security_type            VARCHAR(255),
