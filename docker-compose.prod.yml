@@ -9,8 +9,7 @@ services:
     container_name: fincalc-nginx
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "3050:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl-params.conf:/etc/nginx/ssl-params.conf:ro
@@ -25,6 +24,11 @@ services:
     networks:
       - frontend
       - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   certbot:
     image: certbot/certbot
@@ -35,6 +39,11 @@ services:
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done'"
     networks:
       - frontend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   postgres:
     image: postgres:16-alpine
@@ -54,6 +63,11 @@ services:
       retries: 5
     networks:
       - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   redis:
     image: redis:7-alpine
@@ -67,6 +81,11 @@ services:
       retries: 5
     networks:
       - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   api:
     build:
@@ -115,6 +134,11 @@ services:
     networks:
       - frontend
       - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   celery-worker:
     build:
@@ -149,6 +173,11 @@ services:
     networks:
       - backend
       - frontend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   celery-beat:
     build:
@@ -183,6 +212,11 @@ services:
     networks:
       - backend
       - frontend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   web:
     build:
@@ -202,6 +236,11 @@ services:
     networks:
       - frontend
       - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   postgres_data:
