@@ -142,7 +142,7 @@ CREATE INDEX IF NOT EXISTS idx_bond_views_bond ON bond_views(bond_id);
 CREATE INDEX IF NOT EXISTS idx_bond_views_user ON bond_views(user_id);
 CREATE INDEX IF NOT EXISTS idx_bond_views_date ON bond_views(viewed_at);
 CREATE INDEX IF NOT EXISTS idx_bond_views_bond_date ON bond_views(bond_id, viewed_at);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_bond_views_unique ON bond_views(bond_id, user_id, DATE(viewed_at));
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bond_views_unique ON bond_views(bond_id, user_id, (CAST(viewed_at AT TIME ZONE 'UTC' AS DATE)));
 
 -- user_metrics: Kullanici metrikleri
 CREATE TABLE IF NOT EXISTS user_metrics (
