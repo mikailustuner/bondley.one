@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS users (
     role            VARCHAR(20) NOT NULL DEFAULT 'free_user'
                     CHECK (role IN ('admin', 'premium_user', 'pro_user', 'free_user')),
     is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+    is_email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

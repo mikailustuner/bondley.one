@@ -100,6 +100,12 @@ services:
       BIST_TLREF_HISTORICAL_URL: https://borsaistanbul.com/datum/BISTTLREFENDEKSI_D.zip
       BIST_BOND_LIST_URL: https://borsaistanbul.com/datum/tbliste.zip
       SENTRY_DSN: ${SENTRY_DSN:-}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      FRONTEND_URL: ${FRONTEND_URL}
+      PROJECT_NAME: ${PROJECT_NAME}
     depends_on:
       postgres:
         condition: service_healthy
