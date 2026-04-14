@@ -35,6 +35,10 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+    # Privacy policy acceptance
+    privacy_policy_accepted: Mapped[bool] = mapped_column(Boolean, default=False)
+    privacy_policy_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     # MFA / 2FA
     mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     mfa_secret_encrypted: Mapped[str | None] = mapped_column(String(255))

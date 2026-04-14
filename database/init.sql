@@ -94,6 +94,8 @@ CREATE TABLE IF NOT EXISTS users (
                     CHECK (role IN ('admin', 'premium_user', 'pro_user', 'free_user')),
     is_active       BOOLEAN NOT NULL DEFAULT TRUE,
     is_email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    privacy_policy_accepted BOOLEAN NOT NULL DEFAULT FALSE,
+    privacy_policy_accepted_at TIMESTAMPTZ,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

@@ -278,6 +278,7 @@ export const api = {
       full_name: string;
       company: string;
       location: string;
+      privacy_policy_accepted: boolean;
     }) =>
       apiFetch<{ access_token: string; refresh_token: string; user: any }>("/auth/signup", {
         method: "POST",

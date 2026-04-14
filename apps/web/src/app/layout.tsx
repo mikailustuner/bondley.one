@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { InitialLoader } from "@/components/initial-loader";
 import { MaintenanceGuard } from "@/components/maintenance-guard";
+import { CookieConsentBanner } from "@/components/ui/cookie-consent";
 import "./globals.css";
 
 const inter = Inter({
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <MaintenanceGuard>
             {children}
           </MaintenanceGuard>
+          <CookieConsentBanner />
         </ThemeProvider>
       </body>
     </html>

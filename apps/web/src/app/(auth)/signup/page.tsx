@@ -81,6 +81,7 @@ export default function SignupPage() {
     password: "",
     password_confirm: "",
   });
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -102,16 +103,25 @@ export default function SignupPage() {
       return;
     }
 
+    if (!privacyAccepted) {
+      setError("Devam etmek için Gizlilik Politikasını kabul etmelisiniz");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const { password_confirm: _, ...payload } = form;
-      const data = await api.auth.signup(payload as {
+      const data = await api.auth.signup({
+        ...payload,
+        privacy_policy_accepted: true,
+      } as {
         email: string;
         password: string;
         full_name: string;
         company: string;
         location: string;
+        privacy_policy_accepted: boolean;
       });
       setAuth(data.access_token, data.refresh_token, data.user);
       router.push("/onboarding");
@@ -167,13 +177,50 @@ export default function SignupPage() {
                 </div>
               ))}
 
+              {/* Privacy Policy Checkbox */}
+              <div className="pt-2">
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <div className="relative mt-0.5">
+                    <input
+                      type="checkbox"
+                      checked={privacyAccepted}
+                      onChange={(e) => setPrivacyAccepted(e.target.checked)}
+                      className="sr-only peer"
+                      id="privacy-policy-checkbox"
+                    />
+                    <div className={`h-[18px] w-[18px] rounded-md border-2 transition-all flex items-center justify-center ${
+                      privacyAccepted
+                        ? "border-primary bg-primary"
+                        : "border-muted-foreground/40 group-hover:border-muted-foreground/60"
+                    }`}>
+                      {privacyAccepted && (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-primary-foreground">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-[13px] leading-relaxed text-muted-foreground">
+                    <Link
+                      href="/privacy"
+                      target="_blank"
+                      className="text-primary hover:text-primary/80 underline underline-offset-2 font-medium transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Gizlilik ve Çerez Politikası
+                    </Link>
+                    &apos;nı okudum, anladım ve kabul ediyorum.
+                  </span>
+                </label>
+              </div>
+
               {error && (
                 <div className="p-3 rounded-xl border border-destructive/15 bg-destructive/5 text-destructive text-[13px]">
                   {error}
                 </div>
               )}
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full" disabled={loading || !privacyAccepted}>
                 {loading ? "Hesap oluşturuluyor..." : "Kayıt Ol"}
               </Button>
             </form>

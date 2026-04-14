@@ -1,4 +1,6 @@
 from datetime import datetime
+from typing import Optional
+
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -20,6 +22,11 @@ class PublicRegister(BaseModel):
     full_name: str = Field(min_length=2, max_length=255)
     company: str = Field(min_length=2, max_length=255)
     location: str = Field(min_length=2, max_length=255)
+    privacy_policy_accepted: bool = Field(
+        ...,
+        description="Gizlilik politikası onayı zorunludur. True olmalıdır."
+    )
+
 
 
 class OnboardingComplete(BaseModel):
@@ -51,8 +58,11 @@ class UserResponse(BaseModel):
     role: str
     is_active: bool
     is_email_verified: bool = False
+    privacy_policy_accepted: bool = False
+    privacy_policy_accepted_at: Optional[datetime] = None
     mfa_enabled: bool = False
     created_at: datetime
+
 
 
 class TokenResponse(BaseModel):

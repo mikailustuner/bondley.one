@@ -100,6 +100,14 @@ async def public_signup(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
+
+    # Privacy policy must be explicitly accepted
+    if not data.privacy_policy_accepted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Gizlilik politikasını kabul etmeniz gerekmektedir",
+        )
+
     existing = await db.execute(select(User).where(User.email == data.email))
     if existing.scalar_one_or_none():
         raise HTTPException(
@@ -107,6 +115,7 @@ async def public_signup(
             detail="Bu e-posta adresi zaten kayitli",
         )
 
+    from datetime import datetime as dt, timezone
     user = User(
         email=data.email,
         password_hash=hash_password(data.password),
@@ -115,6 +124,8 @@ async def public_signup(
         location=data.location,
         role="free_user",
         is_email_verified=False,
+        privacy_policy_accepted=True,
+        privacy_policy_accepted_at=dt.now(timezone.utc),
     )
     db.add(user)
     await db.flush()
@@ -134,6 +145,7 @@ async def public_signup(
         refresh_token=refresh_token,
         user=UserResponse.model_validate(user),
     )
+
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
