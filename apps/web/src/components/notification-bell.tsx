@@ -116,7 +116,7 @@ export function NotificationBell() {
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <>
       <button
         ref={triggerRef}
         onClick={() => setIsOpen(!isOpen)}
@@ -136,13 +136,17 @@ export function NotificationBell() {
       </button>
 
       {isOpen && (
-        <div
-          className={cn(
-            "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-80 rounded-2xl border border-border bg-card shadow-xl overflow-hidden z-50",
-            "animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-200",
-            "fixed md:absolute md:w-80 w-[calc(100vw-2rem)] max-w-[340px]"
-          )}
-        >
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-background/60 backdrop-blur-md transition-opacity"
+            onClick={() => setIsOpen(false)}
+          />
+          <div
+            className={cn(
+              "relative z-10 w-full max-w-[340px] rounded-[2rem] border border-border/50 bg-card shadow-2xl flex flex-col overflow-hidden",
+              "animate-in fade-in-0 zoom-in-95 duration-200"
+            )}
+          >
           <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-muted/30">
             <h3 className="text-sm font-semibold">Bildirimler</h3>
             {unreadCount > 0 && (
@@ -152,7 +156,7 @@ export function NotificationBell() {
             )}
           </div>
 
-          <div className="max-h-[350px] overflow-y-auto">
+          <div className="max-h-[60vh] overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="py-12 text-center text-muted-foreground">
                 <Bell className="h-8 w-8 mx-auto mb-3 opacity-20" />
@@ -214,8 +218,9 @@ export function NotificationBell() {
               </div>
             )}
           </div>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

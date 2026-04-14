@@ -296,11 +296,12 @@ class BondMetricsService:
             Decimal("0.00000001"), rounding=ROUND_HALF_UP
         )
 
-        # Oran degisimi (gunluk TLREF)
+        # Oran degisimi (Temiz Fiyat uzerinden gunluk % degisim)
         daily_rate_pct = None
-        latest_daily = await self.get_latest_daily_rate()
-        if latest_daily is not None:
-            daily_rate_pct = (latest_daily * Decimal("100")).quantize(
+        yest_clean_price, _ = await self.get_clean_price(bond.id, settlement_date - timedelta(days=1))
+        
+        if yest_clean_price is not None and clean_price is not None and yest_clean_price > 0:
+            daily_rate_pct = ((clean_price - yest_clean_price) / yest_clean_price * Decimal("100")).quantize(
                 Decimal("0.0001"), rounding=ROUND_HALF_UP
             )
 

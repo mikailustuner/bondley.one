@@ -8,7 +8,7 @@ import { getUser, clearAuth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-export function UserMenu({ position = "top" }: { position?: "top" | "bottom" }) {
+export function UserMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -106,7 +106,7 @@ export function UserMenu({ position = "top" }: { position?: "top" | "bottom" }) 
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <>
       <button
         ref={triggerRef}
         onClick={() => setIsOpen(!isOpen)}
@@ -139,17 +139,18 @@ export function UserMenu({ position = "top" }: { position?: "top" | "bottom" }) 
       </button>
 
       {isOpen && (
-        <div
-          className={cn(
-            "absolute left-1/2 -translate-x-1/2 w-64 rounded-xl border border-border bg-card shadow-lg",
-            "z-50 overflow-hidden",
-            position === "top" 
-              ? "bottom-full mb-2 animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-200" 
-              : "top-full mt-2 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200",
-            "md:w-64 w-[calc(100vw-2rem)] max-w-[280px]"
-          )}
-          role="menu"
-        >
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-background/60 backdrop-blur-md transition-opacity"
+            onClick={() => setIsOpen(false)}
+          />
+          <div
+            className={cn(
+              "relative z-10 w-full max-w-[320px] rounded-[2rem] border border-border/50 bg-card shadow-2xl overflow-hidden",
+              "animate-in fade-in-0 zoom-in-95 duration-200"
+            )}
+            role="menu"
+          >
           {/* User Info Section */}
           <div className="px-4 py-3.5 border-b border-border">
             <div className="flex items-center gap-3">
@@ -221,8 +222,9 @@ export function UserMenu({ position = "top" }: { position?: "top" | "bottom" }) 
               <span>Çıkış</span>
             </button>
           </div>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
