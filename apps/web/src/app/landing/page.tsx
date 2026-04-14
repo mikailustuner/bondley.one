@@ -77,7 +77,7 @@ export default function LandingPage() {
                   Dashboard
                 </Link>
                 <ThemeToggle />
-                <UserMenu />
+                <UserMenu position="bottom" />
               </>
             ) : (
               <>

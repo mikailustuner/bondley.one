@@ -8,7 +8,7 @@ import { getUser, clearAuth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-export function UserMenu() {
+export function UserMenu({ position = "top" }: { position?: "top" | "bottom" }) {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -141,9 +141,11 @@ export function UserMenu() {
       {isOpen && (
         <div
           className={cn(
-            "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 rounded-xl border border-border bg-card shadow-lg",
+            "absolute left-1/2 -translate-x-1/2 w-64 rounded-xl border border-border bg-card shadow-lg",
             "z-50 overflow-hidden",
-            "animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-200",
+            position === "top" 
+              ? "bottom-full mb-2 animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-200" 
+              : "top-full mt-2 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200",
             "md:w-64 w-[calc(100vw-2rem)] max-w-[280px]"
           )}
           role="menu"
