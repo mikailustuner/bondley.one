@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Eye, User, Briefcase, Info, Calendar, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
@@ -16,6 +17,11 @@ type UserRow = {
   location: string | null;
   role: string;
   is_active: boolean;
+  department: string | null;
+  job_title: string | null;
+  usage_purpose: string | null;
+  estimated_daily_views: number | null;
+  profile_completed: boolean;
   created_at: string;
 };
 
@@ -25,6 +31,7 @@ export default function AdminUsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
+  const [viewingUser, setViewingUser] = useState<UserRow | null>(null);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -113,6 +120,15 @@ export default function AdminUsersPage() {
                       </td>
                       <td className="py-3 text-right">
                         <div className="flex gap-2 justify-end">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="bg-primary/5 border-primary/20 text-primary hover:bg-primary/10 font-medium transition-all duration-300 rounded-full px-4"
+                            onClick={() => setViewingUser(user)}
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            İncele
+                          </Button>
                           <Button
                             size="sm"
                             variant="outline"
@@ -327,6 +343,113 @@ export default function AdminUsersPage() {
                 <Button type="submit">{editingUser ? "Güncelle" : "Oluştur"}</Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      
+      {/* View Details Modal */}
+      {viewingUser && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-[60] animate-in fade-in duration-300">
+          <div className="bg-card/95 backdrop-blur-xl p-0 rounded-[32px] max-w-lg w-full mx-4 overflow-hidden border border-white/10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] animate-in zoom-in-95 duration-300">
+            <div className="px-8 py-6 border-b border-border/20 bg-secondary/10 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/10">
+                  <User className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold tracking-tight text-foreground">Kullanıcı Detayları</h2>
+                  <p className="text-xs font-medium text-muted-foreground mt-0.5">{viewingUser.email}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setViewingUser(null)}
+                className="p-2 hover:bg-secondary/50 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-muted-foreground" />
+              </button>
+            </div>
+            
+            <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
+              {/* Status Section */}
+              <div className="flex items-center gap-3">
+                <Badge variant={viewingUser.profile_completed ? "default" : "secondary"} className="rounded-full px-4 py-1 text-[10px] font-bold tracking-wider">
+                  <Info className="w-3 h-3 mr-1.5" />
+                  {viewingUser.profile_completed ? "PROFIL TAMAMLANDI" : "ONBOARDING BEKLIYOR"}
+                </Badge>
+              </div>
+
+              {/* Grid Section */}
+              <div className="grid grid-cols-2 gap-x-12 gap-y-8">
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">AD SOYAD</p>
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    {viewingUser.full_name || "—"}
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">KAYIT TARIHI</p>
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-muted-foreground/40" />
+                    {new Date(viewingUser.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">ŞİRKET</p>
+                  <p className="text-sm font-semibold text-foreground">{viewingUser.company || "—"}</p>
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">KONUM</p>
+                  <p className="text-sm font-semibold text-foreground">{viewingUser.location || "—"}</p>
+                </div>
+              </div>
+
+              <div className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+
+              {/* Enhanced Professional Info */}
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-12">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="w-4 h-4 text-primary/60" />
+                      <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">DEPARTMAN</p>
+                    </div>
+                    <p className="text-sm font-semibold text-foreground pl-6">{viewingUser.department || "—"}</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-primary/60" />
+                      <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">UNVAN</p>
+                    </div>
+                    <p className="text-sm font-semibold text-foreground pl-6">{viewingUser.job_title || "—"}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] mb-3">KULLANIM AMACI</p>
+                  <div className="bg-secondary/40 p-5 rounded-[24px] border border-border/10">
+                    <p className="text-sm leading-relaxed text-muted-foreground italic font-serif">
+                      "{viewingUser.usage_purpose || "Belirtilmemiş"}"
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-primary/5 p-4 rounded-2xl flex items-center justify-between border border-primary/10">
+                  <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">GÜNLÜK TAHMİNİ GÖRÜNTÜLEME</p>
+                  <p className="text-sm font-bond-nums font-bold text-primary">
+                    {viewingUser.estimated_daily_views ? viewingUser.estimated_daily_views.toLocaleString() : "0"} IZLENME
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-8 py-6 border-t border-border/20 bg-secondary/5 flex justify-end">
+              <Button 
+                onClick={() => setViewingUser(null)}
+                className="rounded-full px-10 py-6 h-auto text-sm font-bold shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+              >
+                Kapat
+              </Button>
+            </div>
           </div>
         </div>
       )}
