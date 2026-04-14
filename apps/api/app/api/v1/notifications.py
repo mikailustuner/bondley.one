@@ -7,14 +7,14 @@ from app.api import deps
 from app.models.user import User
 from app.models.notification import Notification
 from app.schemas.notification import NotificationResponse, NotificationUpdate, NotificationBroadcast
-from app.db.session import get_db
+from app.core.database import get_db
 
 router = APIRouter()
 
 @router.get("/", response_model=List[NotificationResponse])
 async def get_notifications(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.get_current_user),
     skip: int = 0,
     limit: int = 100
 ):
@@ -33,7 +33,7 @@ async def get_notifications(
 async def mark_as_read(
     notification_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user)
+    current_user: User = Depends(deps.get_current_user)
 ):
     """Bildirimi okundu/okunmadı olarak işaretle."""
     query = select(Notification).where(
@@ -55,7 +55,7 @@ async def mark_as_read(
 async def delete_notification(
     notification_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user)
+    current_user: User = Depends(deps.get_current_user)
 ):
     """Bildirimi sil."""
     query = delete(Notification).where(
@@ -73,7 +73,7 @@ async def delete_notification(
 async def broadcast_notification(
     data: NotificationBroadcast,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_admin)
+    current_user: User = Depends(deps.get_admin_user)
 ):
     """Tüm aktif kullanıcılara bildirim gönder (Sadece Admin)."""
     # Tum aktif kullanicilari bul
