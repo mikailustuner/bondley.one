@@ -37,6 +37,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   { href: "/admin/logs", label: "Loglar" },
                   { href: "/admin/metrics", label: "Metrikler" },
                   { href: "/admin/import", label: "Veri Aktarımı" },
+                  { href: "/admin/sentry-debug", label: "Sentry" },
                 ].map((item) => (
                   <Link
                     key={item.href}

@@ -437,3 +437,12 @@ async def toggle_maintenance_mode(
     
     await db.commit()
     return {"message": "Bakım modu güncellendi.", "maintenance_mode": is_active}
+
+
+@router.get("/sentry-debug")
+async def trigger_sentry_error(
+    _admin: User = Depends(get_admin_user),
+):
+    """Admin-only: Sentry entegrasyonunu test etmek için kasti hata fırlatır."""
+    # Sentry'nin yakalaması için kasti bir uygulama hatası
+    raise Exception("Sentry Production Test Error: Backend error captured successfully.")

@@ -384,6 +384,11 @@ export const api = {
           location: string | null;
           role: string;
           is_active: boolean;
+          department: string | null;
+          job_title: string | null;
+          usage_purpose: string | null;
+          estimated_daily_views: number | null;
+          profile_completed: boolean;
           created_at: string;
         }[]
       >("/auth/users", { token }),
@@ -534,6 +539,8 @@ export const api = {
         total_calculations: number;
       }>(`/admin/metrics/overview?${query}`, { token });
     },
+    triggerSentryError: (token: string) =>
+      apiFetch<any>("/admin/sentry-debug", { token }),
   },
 
   bonds: {
