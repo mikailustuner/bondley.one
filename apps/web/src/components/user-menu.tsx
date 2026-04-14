@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -21,6 +22,8 @@ export function UserMenu() {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // CreatePortal icinde baska bir dom node'unda oldugu icin tiklanan yerin neresi oldugunu bulmamiz lazim
+      // dropdownRef artik portal icindeki modal container'i
       if (
         dropdownRef.current &&
         triggerRef.current &&
@@ -138,92 +141,94 @@ export function UserMenu() {
         />
       </button>
 
-      {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      {isOpen && mounted && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <div 
             className="absolute inset-0 bg-background/60 backdrop-blur-md transition-opacity"
             onClick={() => setIsOpen(false)}
           />
           <div
+            ref={dropdownRef}
             className={cn(
               "relative z-10 w-full max-w-[320px] rounded-[2rem] border border-border/50 bg-card shadow-2xl overflow-hidden",
               "animate-in fade-in-0 zoom-in-95 duration-200"
             )}
             role="menu"
           >
-          {/* User Info Section */}
-          <div className="px-4 py-3.5 border-b border-border">
-            <div className="flex items-center gap-3">
-              <div
+            {/* User Info Section */}
+            <div className="px-4 py-3.5 border-b border-border">
+              <div className="flex items-center gap-3">
+                <div
+                  className={cn(
+                    "h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold",
+                    getAvatarColor()
+                  )}
+                >
+                  {getInitials()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[15px] font-medium text-foreground truncate" title={user.full_name || user.email}>
+                    {user.full_name || user.email}
+                  </p>
+                  <p className="text-[13px] text-muted-foreground truncate" title={user.email}>
+                    {user.email}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-2.5">
+                <Badge
+                  variant={
+                    user.role === "admin"
+                      ? "destructive"
+                      : user.role === "pro_user"
+                        ? "default"
+                        : "secondary"
+                  }
+                  className="text-[10px]"
+                >
+                  {getRoleDisplayName()}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Menu Items */}
+            <div className="py-1.5">
+              <Link
+                href="/dashboard/settings"
+                onClick={() => setIsOpen(false)}
                 className={cn(
-                  "h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold",
-                  getAvatarColor()
+                  "flex items-center gap-3 px-4 py-2.5 text-[15px] text-foreground",
+                  "hover:bg-secondary transition-colors duration-150 cursor-pointer",
+                  "active:bg-secondary/80"
                 )}
+                role="menuitem"
               >
-                {getInitials()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[15px] font-medium text-foreground truncate" title={user.full_name || user.email}>
-                  {user.full_name || user.email}
-                </p>
-                <p className="text-[13px] text-muted-foreground truncate" title={user.email}>
-                  {user.email}
-                </p>
-              </div>
+                <Settings className="h-4 w-4 text-muted-foreground" />
+                <span>Hesap ve Ayarlar</span>
+              </Link>
             </div>
-            <div className="mt-2.5">
-              <Badge
-                variant={
-                  user.role === "admin"
-                    ? "destructive"
-                    : user.role === "pro_user"
-                      ? "default"
-                      : "secondary"
-                }
-                className="text-[10px]"
+
+            {/* Separator */}
+            <div className="border-t border-border" />
+
+            {/* Logout */}
+            <div className="py-1.5">
+              <button
+                onClick={handleLogout}
+                className={cn(
+                  "w-full flex items-center gap-3 px-4 py-2.5 text-[15px] text-foreground",
+                  "hover:bg-destructive/8 hover:text-destructive transition-colors duration-150 cursor-pointer",
+                  "active:bg-destructive/12"
+                )}
+                role="menuitem"
               >
-                {getRoleDisplayName()}
-              </Badge>
+                <LogOut className="h-4 w-4" />
+                <span>Çıkış</span>
+              </button>
             </div>
           </div>
-
-          {/* Menu Items */}
-          <div className="py-1.5">
-            <Link
-              href="/dashboard/settings"
-              onClick={() => setIsOpen(false)}
-              className={cn(
-                "flex items-center gap-3 px-4 py-2.5 text-[15px] text-foreground",
-                "hover:bg-secondary transition-colors duration-150 cursor-pointer",
-                "active:bg-secondary/80"
-              )}
-              role="menuitem"
-            >
-              <Settings className="h-4 w-4 text-muted-foreground" />
-              <span>Hesap ve Ayarlar</span>
-            </Link>
-          </div>
-
-          {/* Separator */}
-          <div className="border-t border-border" />
-
-          {/* Logout */}
-          <div className="py-1.5">
-            <button
-              onClick={handleLogout}
-              className={cn(
-                "w-full flex items-center gap-3 px-4 py-2.5 text-[15px] text-foreground",
-                "hover:bg-destructive/8 hover:text-destructive transition-colors duration-150 cursor-pointer",
-                "active:bg-destructive/12"
-              )}
-              role="menuitem"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Çıkış</span>
-            </button>
-          </div>
-          </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

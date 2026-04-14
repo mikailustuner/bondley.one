@@ -1,55 +1,58 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { useState, useEffect, useRef } from "react";
-import { Bell, Check, Trash2, Info, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { Bell, Check, Trash2, Info, AlertTriangle, CheckCircle2, XCircle, MoreVertical } from "lucide-react";
 import { api, NotificationRecord } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
-function formatRelativeTime(date: string | Date) {
+/* --- Native time formatting --- */
+function formatDistanceToNowNative(dateStr: string): string {
+  const date = new Date(dateStr);
   const now = new Date();
-  const then = new Date(date);
-  const diffInSeconds = Math.floor((now.getTime() - then.getTime()) / 1000);
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
 
-  if (diffInSeconds < 60) return "az önce";
-  const diffInMinutes = Math.floor(diffInSeconds / 60);
-  if (diffInMinutes < 60) return `${diffInMinutes} dk önce`;
-  const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) return `${diffInHours} saat önce`;
-  const diffInDays = Math.floor(diffInHours / 24);
-  if (diffInDays < 7) return `${diffInDays} gün önce`;
-  
-  return then.toLocaleDateString("tr-TR");
+  if (diffSec < 60) return "az önce";
+  if (diffMin < 60) return `${diffMin} dakika önce`;
+  if (diffHour < 24) return `${diffHour} saat önce`;
+  if (diffDay < 30) return `${diffDay} gün önce`;
+  return date.toLocaleDateString("tr-TR");
 }
 
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  
   const dropdownRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const fetchNotifications = async () => {
-    const token = getToken();
-    if (!token) return;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-    setIsLoading(true);
+  const fetchNotifications = async () => {
     try {
-      const data = await api.notifications.list(token);
-      setNotifications(data);
-      setUnreadCount(data.filter((n) => !n.is_read).length);
+      const token = getToken();
+      if (!token) return;
+      
+      const response = await api.notifications.list(token);
+      setNotifications(response);
+      setUnreadCount(response.filter((n) => !n.is_read).length);
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchNotifications();
-    // Refresh every 2 minutes
-    const interval = setInterval(fetchNotifications, 120000);
+    const interval = setInterval(fetchNotifications, 60000); // Check every minute
     return () => clearInterval(interval);
   }, []);
 
@@ -65,19 +68,30 @@ export function NotificationBell() {
       }
     };
 
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleEscape);
     }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, [isOpen]);
 
   const handleMarkAsRead = async (id: number) => {
-    const token = getToken();
-    if (!token) return;
-
     try {
+      const token = getToken();
+      if (!token) return;
+      
       await api.notifications.markAsRead(token, id);
-      setNotifications((prev) =>
+      setNotifications((prev) => 
         prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
@@ -86,34 +100,55 @@ export function NotificationBell() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    const token = getToken();
-    if (!token) return;
-
+  const handleMarkAllAsRead = async () => {
     try {
+      const token = getToken();
+      if (!token) return;
+      
+      await api.notifications.markAllAsRead(token);
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch (error) {
+      console.error("Failed to mark all as read:", error);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      const token = getToken();
+      if (!token) return;
+      
       await api.notifications.delete(token, id);
-      setNotifications((prev) => {
-        const remaining = prev.filter((n) => n.id !== id);
-        setUnreadCount(remaining.filter((n) => !n.is_read).length);
-        return remaining;
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      setUnreadCount((prevCount) => {
+        const deletedWasUnread = notifications.find(n => n.id === id && !n.is_read);
+        if (deletedWasUnread) return Math.max(0, prevCount - 1);
+        return prevCount;
       });
     } catch (error) {
       console.error("Failed to delete notification:", error);
     }
   };
 
-  const getTypeIcon = (type: string) => {
+  const getIcon = (type: string, isRead: boolean) => {
+    const isUnread = !isRead;
     switch (type) {
+      case "info":
+        return <Info className={cn("h-4 w-4", isUnread ? "text-blue-500" : "text-muted-foreground")} />;
       case "success":
-        return <CheckCircle2 className="h-4 w-4 text-positive" />;
+        return <CheckCircle2 className={cn("h-4 w-4", isUnread ? "text-green-500" : "text-muted-foreground")} />;
       case "warning":
-        return <AlertTriangle className="h-4 w-4 text-warning" />;
+        return <AlertTriangle className={cn("h-4 w-4", isUnread ? "text-yellow-500" : "text-muted-foreground")} />;
       case "error":
-        return <XCircle className="h-4 w-4 text-destructive" />;
+        return <XCircle className={cn("h-4 w-4", isUnread ? "text-red-500" : "text-muted-foreground")} />;
       default:
-        return <Info className="h-4 w-4 text-primary" />;
+        return <Info className={cn("h-4 w-4", isUnread ? "text-blue-500" : "text-muted-foreground")} />;
     }
   };
+
+  if (!mounted) {
+    return <div className="h-9 w-9 rounded-xl animate-pulse bg-secondary/50" />;
+  }
 
   return (
     <>
@@ -123,40 +158,31 @@ export function NotificationBell() {
         className={cn(
           "relative p-2 rounded-xl transition-all duration-200",
           "hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+          "active:scale-95",
           isOpen && "bg-secondary"
         )}
         aria-label="Bildirimler"
       >
-        <Bell className="h-5 w-5 text-muted-foreground" />
+        <Bell className={cn("h-5 w-5 text-muted-foreground", unreadCount > 0 && "text-foreground")} />
+        
         {unreadCount > 0 && (
-          <span className="absolute top-1.5 right-1.5 h-4 min-w-[16px] px-1 rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground flex items-center justify-center ring-2 ring-background">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
+          <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground ring-2 ring-background pointer-events-none" />
         )}
       </button>
 
-      {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      {isOpen && mounted && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <div 
             className="absolute inset-0 bg-background/60 backdrop-blur-md transition-opacity"
             onClick={() => setIsOpen(false)}
           />
           <div
+            ref={dropdownRef}
             className={cn(
               "relative z-10 w-full max-w-[340px] rounded-[2rem] border border-border/50 bg-card shadow-2xl flex flex-col overflow-hidden",
               "animate-in fade-in-0 zoom-in-95 duration-200"
             )}
           >
-          <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-muted/30">
-            <h3 className="text-sm font-semibold">Bildirimler</h3>
-            {unreadCount > 0 && (
-              <span className="text-[11px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
-                {unreadCount} yeni
-              </span>
-            )}
-          </div>
-
-          <div className="max-h-[60vh] overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="py-12 text-center text-muted-foreground">
                 <Bell className="h-8 w-8 mx-auto mb-3 opacity-20" />
