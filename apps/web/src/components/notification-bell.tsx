@@ -1,13 +1,26 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Bell, Check, Trash2, Info, AlertTriangle, CheckCircle2, XCircle, MoreVertical } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { tr } from "date-fns/locale";
+import { Bell, Check, Trash2, Info, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { api, NotificationRecord } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+
+function formatRelativeTime(date: string | Date) {
+  const now = new Date();
+  const then = new Date(date);
+  const diffInSeconds = Math.floor((now.getTime() - then.getTime()) / 1000);
+
+  if (diffInSeconds < 60) return "az önce";
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes} dk önce`;
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours} saat önce`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 7) return `${diffInDays} gün önce`;
+  
+  return then.toLocaleDateString("tr-TR");
+}
 
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
@@ -171,7 +184,7 @@ export function NotificationBell() {
                         </p>
                         <div className="flex items-center justify-between mt-2">
                           <span className="text-[10px] text-muted-foreground/60 uppercase font-medium">
-                            {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: tr })}
+                            {formatRelativeTime(notif.created_at)}
                           </span>
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             {!notif.is_read && (
