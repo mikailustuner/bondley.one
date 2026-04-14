@@ -75,7 +75,7 @@ export default function PrivacyPolicyPage() {
               MADDE 2 – VERİ SORUMLUSU BİLGİLERİ
             </h2>
             <p className="text-[14px] leading-relaxed text-muted-foreground">
-              <strong className="text-foreground">KVKK&apos;nın 10. maddesi</strong> gereğince veri sorumlusunun aydınlatma yükümlülüğü kapsamında: <strong className="text-foreground">Bondley</strong> platformunun veri sorumlusu sıfatıyla hareket eden tüzel kişiliğidir. Veri sorumlusuna ilişkin iletişim bilgileri, Platform&apos;un &quot;İletişim&quot; sayfasında yer almakta olup, kişisel verilerinize ilişkin tüm başvurularınızı buradan iletebilirsiniz. Veri sorumlusu, <strong className="text-foreground">Kişisel Verilerin Korunması Kurulu</strong> (&quot;Kurul&quot;) nezdinde <strong className="text-foreground">Veri Sorumluları Sicili&apos;ne (VERBİS)</strong> kayıt yükümlülüğüne tabidir ve gerekli kayıt işlemlerini yasal süreler dahilinde gerçekleştirmiştir veya gerçekleştirecektir.
+              <strong className="text-foreground">KVKK&apos;nın 10. maddesi</strong> gereğince veri sorumlusunun aydınlatma yükümlülüğü kapsamında: <strong className="text-foreground">Bondley</strong> platformunun veri sorumlusu sıfatıyla hareket eden tüzel kişiliğidir. Veri sorumlusuna ilişkin iletişim bilgileri, Platform&apos;un &quot;İletişim&quot; sayfasında yer almakta olup, kişisel verilerinize ilişkin tüm başvurularınızı buradan iletebilirsiniz.
             </p>
           </article>
 
@@ -395,7 +395,7 @@ export default function PrivacyPolicyPage() {
             </p>
             <ol className="list-[lower-alpha] pl-6 space-y-1.5 text-[14px] text-muted-foreground mb-3">
               <li>Platform üzerindeki <strong className="text-foreground">&quot;Hesap Ayarları &gt; Gizlilik&quot;</strong> bölümü aracılığıyla</li>
-              <li><strong className="text-foreground">kvkk@bondley.com</strong> elektronik posta adresine ileti göndererek</li>
+              <li><strong className="text-foreground">noreply@bondley.one</strong> elektronik posta adresine ileti göndererek</li>
               <li>Kayıtlı elektronik posta (<strong className="text-foreground">KEP</strong>) adresi üzerinden</li>
               <li>Noter aracılığıyla Şirket merkezine fiziki başvuru yaparak</li>
             </ol>
@@ -692,7 +692,6 @@ export default function PrivacyPolicyPage() {
               Platform, <strong className="text-foreground">KVKK ve ilgili mevzuat ile tam uyumu</strong> sürdürmeye yönelik kapsamlı bir uyumluluk programı yürütmektedir:
             </p>
             <ol className="list-[lower-alpha] pl-6 space-y-1.5 text-[14px] text-muted-foreground">
-              <li><strong className="text-foreground">VERBİS</strong> kaydının güncel tutulması</li>
               <li>Kişisel veri <strong className="text-foreground">envanter ve işleme süreçlerinin</strong> belgelenmesi</li>
               <li><strong className="text-foreground">Veri İşleme Etki Değerlendirmesi (DPIA)</strong> çalışmalarının yapılması</li>
               <li><strong className="text-foreground">Aydınlatma metinlerinin</strong> güncel tutulması</li>
