@@ -13,8 +13,8 @@ export default function SentryDebugPage() {
 
   const triggerFrontendError = () => {
     setResult({ type: "success", message: "Frontend hatası fırlatıldı! Sentry panelinizi kontrol edin." });
-    // Intentionally throw an error that Sentry will catch
-    throw new Error("Sentry Frontend Test Error: This is a deliberate browser-side crash.");
+    // @ts-ignore - Intentionally calling an undefined function to trigger a ReferenceError
+    myUndefinedFunction();
   };
 
   const triggerBackendError = async () => {
