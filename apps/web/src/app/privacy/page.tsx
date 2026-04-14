@@ -22,7 +22,7 @@ export default function PrivacyPolicyPage() {
             Gizlilik ve Çerez Politikası
           </h1>
           <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground max-w-2xl mx-auto">
-            Bu gizlilik politikası, Bondley platformu tarafından kişisel verilerinizin nasıl toplandığını,
+            Bu gizlilik politikası, <strong className="text-foreground">Bondley</strong> platformu tarafından kişisel verilerinizin nasıl toplandığını,
             işlendiğini, saklandığını ve korunduğunu ayrıntılı biçimde açıklamaktadır. Platformumuzu
             kullanarak aşağıda belirtilen koşulları kabul etmiş sayılırsınız.
           </p>
@@ -31,293 +31,764 @@ export default function PrivacyPolicyPage() {
 
       {/* Content */}
       <section className="mx-auto max-w-4xl px-6 py-16">
-        <div className="prose prose-neutral dark:prose-invert max-w-none
-          prose-headings:font-semibold prose-headings:tracking-tight
-          prose-h2:text-[20px] prose-h2:mt-12 prose-h2:mb-4 prose-h2:pb-3 prose-h2:border-b prose-h2:border-border/30
-          prose-h3:text-[16px] prose-h3:mt-6 prose-h3:mb-3
-          prose-p:text-[14px] prose-p:leading-relaxed prose-p:text-muted-foreground
-          prose-li:text-[14px] prose-li:text-muted-foreground
-          prose-strong:text-foreground prose-strong:font-semibold
-        ">
+        <div className="space-y-10">
 
           {/* RESERVATION OF RIGHTS NOTICE */}
           <div className="rounded-2xl border-2 border-amber-500/30 bg-amber-500/5 p-6 mb-12">
             <div className="flex items-start gap-3">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
               <div>
-                <p className="text-[14px] font-bold text-amber-700 dark:text-amber-300 !mt-0">
-                  ÖNEMLİ UYARI – DEĞİŞİKLİK HAKKI SAKLI
+                <p className="text-[15px] font-bold text-amber-700 dark:text-amber-300">
+                  ⚠️ ÖNEMLİ UYARI – DEĞİŞİKLİK HAKKI SAKLI
                 </p>
-                <p className="text-[13px] text-amber-700/90 dark:text-amber-300/80 !mb-0 mt-2">
-                  Bondley (&quot;Hizmet Verici Kurum&quot;), işbu Gizlilik ve Çerez Politikası&apos;nı herhangi bir zamanda, herhangi bir gerekçe göstermeksizin, önceden bildirimde bulunmaksızın veya bulunarak, tamamen kendi takdir yetkisi dahilinde, kısmen veya bütünüyle değiştirme, güncelleme, kaldırma veya yeniden düzenleme hakkını münhasıran ve kayıtsız şartsız olarak saklı tutar. Değişikliklerin yürürlük tarihi, platformda ilan edildiği andır. Kullanıcıların güncel politikayı düzenli olarak kontrol etmeleri kendi sorumluluklarındadır. Platformun kullanılmaya devam edilmesi, güncellenen politikanın bütünüyle kabul edildiği anlamına gelir.
+                <p className="text-[13px] text-amber-700/90 dark:text-amber-300/80 mt-2 leading-relaxed">
+                  <strong>Bondley</strong> (&quot;Hizmet Verici Kurum&quot;), işbu Gizlilik ve Çerez Politikası&apos;nı <strong>herhangi bir zamanda</strong>, herhangi bir gerekçe göstermeksizin, <strong>önceden bildirimde bulunmaksızın</strong> veya bulunarak, tamamen kendi takdir yetkisi dahilinde, kısmen veya bütünüyle <strong>değiştirme, güncelleme, kaldırma veya yeniden düzenleme hakkını münhasıran ve kayıtsız şartsız olarak saklı tutar</strong>. Değişikliklerin yürürlük tarihi, platformda ilan edildiği andır. Kullanıcıların güncel politikayı düzenli olarak kontrol etmeleri <strong>kendi sorumluluklarındadır</strong>. Platformun kullanılmaya devam edilmesi, güncellenen politikanın bütünüyle kabul edildiği anlamına gelir.
                 </p>
               </div>
             </div>
           </div>
 
           {/* MADDE 1 */}
-          <h2>MADDE 1 – TANIMLAR VE KAPSAM</h2>
-          <p>
-            İşbu Gizlilik ve Çerez Politikası (&quot;Politika&quot;), Bondley ticari unvanı altında faaliyet gösteren borçlanma araçları değerleme ve analiz platformu (&quot;Platform&quot;, &quot;Hizmet&quot;, &quot;Bondley&quot;, &quot;Biz&quot;, &quot;Bizim&quot;) ile Platform&apos;u kullanan tüm gerçek ve tüzel kişiler (&quot;Kullanıcı&quot;, &quot;Siz&quot;, &quot;Sizin&quot;, &quot;Üye&quot;, &quot;Ziyaretçi&quot;) arasındaki kişisel verilerin işlenmesine ilişkin hüküm ve koşulları düzenler. Bu Politika, 6698 sayılı Kişisel Verilerin Korunması Kanunu (&quot;KVKK&quot;), Avrupa Birliği Genel Veri Koruma Tüzüğü (&quot;GDPR&quot;), Elektronik Ticaretin Düzenlenmesi Hakkında Kanun ve ilgili ikincil mevzuat ile uyumlu olarak hazırlanmıştır.
-          </p>
-          <p>
-            Kişisel veri, kimliği belirli veya belirlenebilir gerçek kişiye ilişkin her türlü bilgiyi ifade eder. Bu tanım kapsamında; ad, soyad, elektronik posta adresi, IP adresi, çerez tanımlayıcıları, cihaz parmak izi (device fingerprint), coğrafi konum verileri, kullanım geçmişi, tercih verileri, erişim logları, tarayıcı bilgileri, işletim sistemi türü ve sürümü, ekran çözünürlüğü ile benzeri tüm veriler kişisel veri olarak kabul edilir ve işbu Politika kapsamında korunur.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 1 – TANIMLAR VE KAPSAM
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              İşbu <strong className="text-foreground">Gizlilik ve Çerez Politikası</strong> (&quot;Politika&quot;), <strong className="text-foreground">Bondley</strong> ticari unvanı altında faaliyet gösteren borçlanma araçları değerleme ve analiz platformu (&quot;Platform&quot;, &quot;Hizmet&quot;, &quot;Bondley&quot;, &quot;Biz&quot;, &quot;Bizim&quot;) ile Platform&apos;u kullanan tüm gerçek ve tüzel kişiler (&quot;Kullanıcı&quot;, &quot;Siz&quot;, &quot;Sizin&quot;, &quot;Üye&quot;, &quot;Ziyaretçi&quot;) arasındaki kişisel verilerin işlenmesine ilişkin hüküm ve koşulları düzenler.
+            </p>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Bu Politika, aşağıdaki mevzuat ile uyumlu olarak hazırlanmıştır:
+            </p>
+            <ul className="list-disc pl-6 space-y-1.5 text-[14px] text-muted-foreground mb-3">
+              <li><strong className="text-foreground">6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK)</strong></li>
+              <li><strong className="text-foreground">Avrupa Birliği Genel Veri Koruma Tüzüğü (GDPR)</strong></li>
+              <li><strong className="text-foreground">Elektronik Ticaretin Düzenlenmesi Hakkında Kanun</strong> ve ilgili ikincil mevzuat</li>
+            </ul>
+            <p className="text-[14px] leading-relaxed text-muted-foreground">
+              <strong className="text-foreground">Kişisel veri</strong>, kimliği belirli veya belirlenebilir gerçek kişiye ilişkin her türlü bilgiyi ifade eder. Bu tanım kapsamında; ad, soyad, elektronik posta adresi, IP adresi, çerez tanımlayıcıları, cihaz parmak izi (<em>device fingerprint</em>), coğrafi konum verileri, kullanım geçmişi, tercih verileri, erişim logları, tarayıcı bilgileri, işletim sistemi türü ve sürümü, ekran çözünürlüğü ile benzeri tüm veriler <strong className="text-foreground">kişisel veri</strong> olarak kabul edilir ve işbu Politika kapsamında korunur.
+            </p>
+          </article>
 
           {/* MADDE 2 */}
-          <h2>MADDE 2 – VERİ SORUMLUSU BİLGİLERİ</h2>
-          <p>
-            KVKK&apos;nın 10. maddesi gereğince veri sorumlusunun aydınlatma yükümlülüğü kapsamında: Bondley platformunun veri sorumlusu sıfatıyla hareket eden tüzel kişiliğidir. Veri sorumlusuna ilişkin iletişim bilgileri, Platform&apos;un &quot;İletişim&quot; sayfasında yer almakta olup, kişisel verilerinize ilişkin tüm başvurularınızı buradan iletebilirsiniz. Veri sorumlusu, Kişisel Verilerin Korunması Kurulu (&quot;Kurul&quot;) nezdinde Veri Sorumluları Sicili&apos;ne (&quot;VERBİS&quot;) kayıt yükümlülüğüne tabidir ve gerekli kayıt işlemlerini yasal süreler dahilinde gerçekleştirmiştir veya gerçekleştirecektir.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 2 – VERİ SORUMLUSU BİLGİLERİ
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground">
+              <strong className="text-foreground">KVKK&apos;nın 10. maddesi</strong> gereğince veri sorumlusunun aydınlatma yükümlülüğü kapsamında: <strong className="text-foreground">Bondley</strong> platformunun veri sorumlusu sıfatıyla hareket eden tüzel kişiliğidir. Veri sorumlusuna ilişkin iletişim bilgileri, Platform&apos;un &quot;İletişim&quot; sayfasında yer almakta olup, kişisel verilerinize ilişkin tüm başvurularınızı buradan iletebilirsiniz. Veri sorumlusu, <strong className="text-foreground">Kişisel Verilerin Korunması Kurulu</strong> (&quot;Kurul&quot;) nezdinde <strong className="text-foreground">Veri Sorumluları Sicili&apos;ne (VERBİS)</strong> kayıt yükümlülüğüne tabidir ve gerekli kayıt işlemlerini yasal süreler dahilinde gerçekleştirmiştir veya gerçekleştirecektir.
+            </p>
+          </article>
 
           {/* MADDE 3 */}
-          <h2>MADDE 3 – TOPLANAN KİŞİSEL VERİLER</h2>
-          <p>
-            Platform tarafından toplanan kişisel veriler aşağıda sınıflandırılmıştır. Her bir veri kategorisi, işlenme amacı ve hukuki dayanağı ile birlikte değerlendirilmelidir:
-          </p>
-          <h3>3.1 – Kimlik Verileri</h3>
-          <p>
-            Ad, soyad, kullanıcı adı, hesap numarası, e-posta adresi, şifre hash&apos;i (kriptografik olarak şifrelenmiş parola). Bu veriler, hesap oluşturma, kimlik doğrulama ve hesap güvenliğinin sağlanması amacıyla toplanır. Hukuki dayanak: sözleşmenin ifası, meşru menfaat.
-          </p>
-          <h3>3.2 – İletişim Verileri</h3>
-          <p>
-            Elektronik posta adresi, kurumsal telefon numarası (opsiyonel), şirket adresi bilgisi, konum bilgisi (il/ilçe düzeyinde). Bu veriler, kullanıcı ile iletişim kurulması, destek taleplerinin yanıtlanması ve yasal bildirimlerin iletilmesi amacıyla kullanılır. Hukuki dayanak: sözleşmenin ifası, yasal yükümlülük.
-          </p>
-          <h3>3.3 – Kurumsal ve Mesleki Veriler</h3>
-          <p>
-            Şirket/kurum adı, departman, unvan, faaliyet alanı, tahmini günlük kullanım hacmi, kullanım amacı. Bu veriler, B2B hizmet düzeyinin belirlenmesi, kullanıcı segmentasyonu ve ürün geliştirme süreçlerinde kullanılır. Hukuki dayanak: meşru menfaat, sözleşmenin ifası.
-          </p>
-          <h3>3.4 – Teknik ve Erişim Verileri</h3>
-          <p>
-            IP adresi (IPv4 ve IPv6), tarayıcı türü ve sürümü, işletim sistemi, cihaz türü (masaüstü, mobil, tablet), ekran çözünürlüğü, dil tercihi, saat dilimi, erişim zamanları, oturum süresi, sayfa görüntüleme verileri, tıklama verileri, kaydırma derinliği, fare hareketleri (anonim heat-map amacıyla), referans URL&apos;si, çıkış URL&apos;si. Bu veriler otomatik yollarla toplanır ve sistem güvenliği, performans optimizasyonu, hata tespiti ve kullanıcı deneyiminin iyileştirilmesi amacıyla işlenir. Hukuki dayanak: meşru menfaat.
-          </p>
-          <h3>3.5 – İşlem ve Kullanım Verileri</h3>
-          <p>
-            Görüntülenen tahvil/bono ISIN kodları, yapılan hesaplama detayları, filtreleme ve sıralama tercihleri, favorilere eklenen enstrümanlar, indirilen raporlar, API çağrı logları, kullanım sıklığı ve desen verileri. Bu veriler hizmetin sunulması, kişiselleştirme ve istatistiksel analiz amacıyla işlenir. Hukuki dayanak: sözleşmenin ifası, meşru menfaat.
-          </p>
-          <h3>3.6 – Güvenlik Verileri</h3>
-          <p>
-            İki faktörlü kimlik doğrulama (2FA/MFA) kayıtları, oturum açma/kapama logları, başarısız giriş denemeleri, şüpheli aktivite kayıtları, cihaz parmak izi hashleri. Bu veriler hesap güvenliğinin sağlanması ve yetkisiz erişimin önlenmesi amacıyla işlenir. Hukuki dayanak: meşru menfaat, yasal yükümlülük.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 3 – TOPLANAN KİŞİSEL VERİLER
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-4">
+              Platform tarafından toplanan kişisel veriler aşağıda sınıflandırılmıştır. Her bir veri kategorisi, <strong className="text-foreground">işlenme amacı ve hukuki dayanağı</strong> ile birlikte değerlendirilmelidir:
+            </p>
+
+            <h3 className="text-[16px] font-semibold text-foreground mt-6 mb-2">3.1 – Kimlik Verileri</h3>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-2">
+              Ad, soyad, kullanıcı adı, hesap numarası, e-posta adresi, şifre hash&apos;i (kriptografik olarak şifrelenmiş parola).
+            </p>
+            <ul className="list-disc pl-6 space-y-1 text-[14px] text-muted-foreground mb-4">
+              <li><strong className="text-foreground">Amaç:</strong> Hesap oluşturma, kimlik doğrulama ve hesap güvenliğinin sağlanması</li>
+              <li><strong className="text-foreground">Hukuki dayanak:</strong> Sözleşmenin ifası, meşru menfaat</li>
+            </ul>
+
+            <h3 className="text-[16px] font-semibold text-foreground mt-6 mb-2">3.2 – İletişim Verileri</h3>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-2">
+              Elektronik posta adresi, kurumsal telefon numarası <em>(opsiyonel)</em>, şirket adresi bilgisi, konum bilgisi <em>(il/ilçe düzeyinde)</em>.
+            </p>
+            <ul className="list-disc pl-6 space-y-1 text-[14px] text-muted-foreground mb-4">
+              <li><strong className="text-foreground">Amaç:</strong> Kullanıcı ile iletişim, destek talepleri, yasal bildirimler</li>
+              <li><strong className="text-foreground">Hukuki dayanak:</strong> Sözleşmenin ifası, yasal yükümlülük</li>
+            </ul>
+
+            <h3 className="text-[16px] font-semibold text-foreground mt-6 mb-2">3.3 – Kurumsal ve Mesleki Veriler</h3>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-2">
+              Şirket/kurum adı, departman, unvan, faaliyet alanı, tahmini günlük kullanım hacmi, kullanım amacı.
+            </p>
+            <ul className="list-disc pl-6 space-y-1 text-[14px] text-muted-foreground mb-4">
+              <li><strong className="text-foreground">Amaç:</strong> B2B hizmet düzeyinin belirlenmesi, kullanıcı segmentasyonu, ürün geliştirme</li>
+              <li><strong className="text-foreground">Hukuki dayanak:</strong> Meşru menfaat, sözleşmenin ifası</li>
+            </ul>
+
+            <h3 className="text-[16px] font-semibold text-foreground mt-6 mb-2">3.4 – Teknik ve Erişim Verileri</h3>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-2">
+              IP adresi <em>(IPv4 ve IPv6)</em>, tarayıcı türü ve sürümü, işletim sistemi, cihaz türü, ekran çözünürlüğü, dil tercihi, saat dilimi, erişim zamanları, oturum süresi, sayfa görüntüleme verileri, tıklama verileri, kaydırma derinliği, referans URL&apos;si, çıkış URL&apos;si.
+            </p>
+            <ul className="list-disc pl-6 space-y-1 text-[14px] text-muted-foreground mb-4">
+              <li><strong className="text-foreground">Amaç:</strong> Sistem güvenliği, performans optimizasyonu, hata tespiti, kullanıcı deneyiminin iyileştirilmesi</li>
+              <li><strong className="text-foreground">Hukuki dayanak:</strong> Meşru menfaat</li>
+              <li><strong className="text-foreground">Toplama yöntemi:</strong> Otomatik</li>
+            </ul>
+
+            <h3 className="text-[16px] font-semibold text-foreground mt-6 mb-2">3.5 – İşlem ve Kullanım Verileri</h3>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-2">
+              Görüntülenen tahvil/bono ISIN kodları, yapılan hesaplama detayları, filtreleme ve sıralama tercihleri, favorilere eklenen enstrümanlar, indirilen raporlar, API çağrı logları, kullanım sıklığı ve desen verileri.
+            </p>
+            <ul className="list-disc pl-6 space-y-1 text-[14px] text-muted-foreground mb-4">
+              <li><strong className="text-foreground">Amaç:</strong> Hizmetin sunulması, kişiselleştirme, istatistiksel analiz</li>
+              <li><strong className="text-foreground">Hukuki dayanak:</strong> Sözleşmenin ifası, meşru menfaat</li>
+            </ul>
+
+            <h3 className="text-[16px] font-semibold text-foreground mt-6 mb-2">3.6 – Güvenlik Verileri</h3>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-2">
+              İki faktörlü kimlik doğrulama <em>(2FA/MFA)</em> kayıtları, oturum açma/kapama logları, başarısız giriş denemeleri, şüpheli aktivite kayıtları, cihaz parmak izi hashleri.
+            </p>
+            <ul className="list-disc pl-6 space-y-1 text-[14px] text-muted-foreground">
+              <li><strong className="text-foreground">Amaç:</strong> Hesap güvenliğinin sağlanması, yetkisiz erişimin önlenmesi</li>
+              <li><strong className="text-foreground">Hukuki dayanak:</strong> Meşru menfaat, yasal yükümlülük</li>
+            </ul>
+          </article>
 
           {/* MADDE 4 */}
-          <h2>MADDE 4 – KİŞİSEL VERİLERİN TOPLANMA YÖNTEMLERİ</h2>
-          <p>
-            Kişisel verileriniz aşağıdaki yöntemler ile otomatik ve otomatik olmayan yollarla toplanmaktadır: (i) Platform üzerindeki kayıt ve üyelik formları aracılığıyla doğrudan sizden; (ii) Platform kullanımınız sırasında çerezler, piksel etiketleri, web işaretçileri ve benzeri izleme teknolojileri vasıtasıyla otomatik olarak; (iii) Üçüncü taraf analiz hizmetleri (Google Analytics, Sentry hata izleme vb.) aracılığıyla; (iv) E-posta iletişimleri yoluyla; (v) Müşteri destek talepleri ve geri bildirim formları aracılığıyla; (vi) API entegrasyonları üzerinden; (vii) Sunucu erişim logları aracılığıyla otomatik olarak. Tüm toplama yöntemleri için KVKK&apos;nın 5. ve 6. maddelerinde belirlenen hukuki dayanaklar esas alınır.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 4 – KİŞİSEL VERİLERİN TOPLANMA YÖNTEMLERİ
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Kişisel verileriniz aşağıdaki yöntemler ile <strong className="text-foreground">otomatik ve otomatik olmayan</strong> yollarla toplanmaktadır:
+            </p>
+            <ol className="list-decimal pl-6 space-y-2 text-[14px] text-muted-foreground">
+              <li>Platform üzerindeki <strong className="text-foreground">kayıt ve üyelik formları</strong> aracılığıyla doğrudan sizden</li>
+              <li>Platform kullanımınız sırasında <strong className="text-foreground">çerezler, piksel etiketleri, web işaretçileri</strong> ve benzeri izleme teknolojileri vasıtasıyla otomatik olarak</li>
+              <li>Üçüncü taraf analiz hizmetleri (<strong className="text-foreground">Google Analytics, Sentry</strong> hata izleme vb.) aracılığıyla</li>
+              <li><strong className="text-foreground">E-posta iletişimleri</strong> yoluyla</li>
+              <li>Müşteri destek talepleri ve <strong className="text-foreground">geri bildirim formları</strong> aracılığıyla</li>
+              <li><strong className="text-foreground">API entegrasyonları</strong> üzerinden</li>
+              <li><strong className="text-foreground">Sunucu erişim logları</strong> aracılığıyla otomatik olarak</li>
+            </ol>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mt-3">
+              Tüm toplama yöntemleri için <strong className="text-foreground">KVKK&apos;nın 5. ve 6. maddelerinde</strong> belirlenen hukuki dayanaklar esas alınır.
+            </p>
+          </article>
 
           {/* MADDE 5 */}
-          <h2>MADDE 5 – KİŞİSEL VERİLERİN İŞLENME AMAÇLARI</h2>
-          <p>
-            Toplanan kişisel veriler, aşağıda sıralanan amaçlarla sınırlı olmak üzere işlenmektedir: (a) Platform üyelik süreçlerinin yürütülmesi ve hesap yönetimi; (b) Borçlanma araçları değerleme, fiyat hesaplama ve analiz hizmetlerinin sunulması; (c) Kullanıcı kimlik doğrulama ve yetkilendirme süreçlerinin yönetimi; (d) Platform güvenliğinin sağlanması ve yetkisiz erişimin engellenmesi; (e) Yasal yükümlülüklerin yerine getirilmesi; (f) Müşteri destek hizmetlerinin sunulması; (g) Hizmet kalitesinin ölçülmesi ve iyileştirilmesi; (h) İstatistiksel analizlerin yapılması; (i) Kullanıcı deneyiminin kişiselleştirilmesi; (j) Pazarlama iletişimlerinin gönderilmesi (ayrıca onay alınması kaydıyla); (k) Yasal uyuşmazlıklarda delil teşkil etmesi; (l) Düzenleyici kurumlara raporlama yükümlülüklerinin yerine getirilmesi; (m) Kurumsal risk yönetimi ve iç denetim süreçleri; (n) B2B sözleşme yükümlülüklerinin ifası; (o) Platform altyapısının bakım ve geliştirme süreçleri.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 5 – KİŞİSEL VERİLERİN İŞLENME AMAÇLARI
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Toplanan kişisel veriler, aşağıda sıralanan amaçlarla <strong className="text-foreground">sınırlı olmak üzere</strong> işlenmektedir:
+            </p>
+            <ol className="list-[lower-alpha] pl-6 space-y-1.5 text-[14px] text-muted-foreground">
+              <li>Platform üyelik süreçlerinin yürütülmesi ve <strong className="text-foreground">hesap yönetimi</strong></li>
+              <li><strong className="text-foreground">Borçlanma araçları değerleme</strong>, fiyat hesaplama ve analiz hizmetlerinin sunulması</li>
+              <li>Kullanıcı <strong className="text-foreground">kimlik doğrulama ve yetkilendirme</strong> süreçlerinin yönetimi</li>
+              <li>Platform güvenliğinin sağlanması ve <strong className="text-foreground">yetkisiz erişimin engellenmesi</strong></li>
+              <li><strong className="text-foreground">Yasal yükümlülüklerin</strong> yerine getirilmesi</li>
+              <li>Müşteri destek hizmetlerinin sunulması</li>
+              <li>Hizmet kalitesinin ölçülmesi ve iyileştirilmesi</li>
+              <li><strong className="text-foreground">İstatistiksel analizlerin</strong> yapılması</li>
+              <li>Kullanıcı deneyiminin <strong className="text-foreground">kişiselleştirilmesi</strong></li>
+              <li>Pazarlama iletişimlerinin gönderilmesi <em>(ayrıca onay alınması kaydıyla)</em></li>
+              <li>Yasal uyuşmazlıklarda <strong className="text-foreground">delil teşkil etmesi</strong></li>
+              <li>Düzenleyici kurumlara raporlama yükümlülüklerinin yerine getirilmesi</li>
+              <li>Kurumsal <strong className="text-foreground">risk yönetimi</strong> ve iç denetim süreçleri</li>
+              <li><strong className="text-foreground">B2B sözleşme</strong> yükümlülüklerinin ifası</li>
+              <li>Platform altyapısının bakım ve geliştirme süreçleri</li>
+            </ol>
+          </article>
 
           {/* MADDE 6 */}
-          <h2>MADDE 6 – KİŞİSEL VERİLERİN İŞLENMESİNİN HUKUKİ DAYANAĞI</h2>
-          <p>
-            Kişisel verileriniz, KVKK&apos;nın 5. maddesinin 2. fıkrasında belirlenen aşağıdaki hukuki dayanaklara istinaden işlenmektedir: (a) Kanunlarda açıkça öngörülmesi; (b) Fiili imkansızlık nedeniyle rızasını açıklayamayacak durumda bulunan veya rızasına hukuki geçerlilik tanınmayan kişinin kendisinin ya da bir başkasının hayatı veya beden bütünlüğünün korunması için zorunlu olması; (c) Bir sözleşmenin kurulması veya ifasıyla doğrudan doğruya ilgili olması kaydıyla, sözleşmenin taraflarına ait kişisel verilerin işlenmesinin gerekli olması; (d) Veri sorumlusunun hukuki yükümlülüğünü yerine getirebilmesi için zorunlu olması; (e) İlgili kişinin kendisi tarafından alenileştirilmiş olması; (f) Bir hakkın tesisi, kullanılması veya korunması için veri işlemenin zorunlu olması; (g) İlgili kişinin temel hak ve özgürlüklerine zarar vermemek kaydıyla, veri sorumlusunun meşru menfaatleri için veri işlenmesinin zorunlu olması. Ayrıca, GDPR kapsamında Madde 6(1)(a) ila 6(1)(f) hükümleri de ek hukuki dayanak olarak değerlendirilmektedir.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 6 – KİŞİSEL VERİLERİN İŞLENMESİNİN HUKUKİ DAYANAĞI
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Kişisel verileriniz, <strong className="text-foreground">KVKK&apos;nın 5. maddesinin 2. fıkrasında</strong> belirlenen aşağıdaki hukuki dayanaklara istinaden işlenmektedir:
+            </p>
+            <ol className="list-[lower-alpha] pl-6 space-y-1.5 text-[14px] text-muted-foreground">
+              <li><strong className="text-foreground">Kanunlarda açıkça öngörülmesi</strong></li>
+              <li>Fiili imkansızlık nedeniyle rızasını açıklayamayacak durumda bulunan kişinin hayatı veya beden bütünlüğünün korunması için <strong className="text-foreground">zorunlu olması</strong></li>
+              <li>Bir <strong className="text-foreground">sözleşmenin kurulması veya ifasıyla</strong> doğrudan ilgili olması kaydıyla veri işlemenin gerekli olması</li>
+              <li>Veri sorumlusunun <strong className="text-foreground">hukuki yükümlülüğünü</strong> yerine getirebilmesi için zorunlu olması</li>
+              <li>İlgili kişinin kendisi tarafından <strong className="text-foreground">alenileştirilmiş</strong> olması</li>
+              <li>Bir <strong className="text-foreground">hakkın tesisi, kullanılması veya korunması</strong> için zorunlu olması</li>
+              <li>İlgili kişinin temel hak ve özgürlüklerine zarar vermemek kaydıyla, veri sorumlusunun <strong className="text-foreground">meşru menfaatleri</strong> için zorunlu olması</li>
+            </ol>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mt-3">
+              Ayrıca, <strong className="text-foreground">GDPR kapsamında Madde 6(1)(a) ila 6(1)(f)</strong> hükümleri de ek hukuki dayanak olarak değerlendirilmektedir.
+            </p>
+          </article>
 
           {/* MADDE 7 */}
-          <h2>MADDE 7 – ÇEREZ (COOKIE) POLİTİKASI</h2>
-          <p>
-            Platform, kullanıcı deneyimini iyileştirmek, hizmetlerin düzgün çalışmasını sağlamak ve istatistiksel veriler toplamak amacıyla çeşitli çerez türleri kullanmaktadır. Çerez, web tarayıcınız aracılığıyla cihazınıza yerleştirilen küçük metin dosyalarıdır. Bu bölüm, kullanılan çerez türlerini, amaçlarını ve yönetim seçeneklerini kapsamlı biçimde açıklamaktadır.
-          </p>
-          <h3>7.1 – Zorunlu (Temel) Çerezler</h3>
-          <p>
-            Bu çerezler, Platform&apos;un temel işlevlerinin çalışması için mutlak surette gereklidir ve devre dışı bırakılamaz. Oturum yönetimi, güvenlik doğrulaması, yük dengeleme, kullanıcı tercih hafızası (dil, tema seçimi) gibi fonksiyonlar bu çerezler aracılığıyla sağlanır. Yasal dayanak: KVKK madde 5/2(c) – sözleşmenin ifası; ePrivacy Directive madde 5(3) – teknik olarak zorunlu çerezler. Saklama süresi: oturum bazlı veya en fazla 13 ay.
-          </p>
-          <h3>7.2 – Analiz ve Performans Çerezleri</h3>
-          <p>
-            Bu çerezler, Platform&apos;un kullanım istatistiklerini anonim olarak toplamak, sayfa yüklenme sürelerini ölçmek, popüler içerikleri belirlemek ve teknik hataları tespit etmek amacıyla kullanılır. Bu çerezler yalnızca kullanıcının açık rızası ile etkinleştirilir. Kullanılan araçlar: Google Analytics 4, Sentry performans izleme. Yasal dayanak: açık rıza (KVKK madde 5/1; GDPR madde 6/1(a)). Saklama süresi: en fazla 26 ay.
-          </p>
-          <h3>7.3 – Pazarlama ve Hedefleme Çerezleri</h3>
-          <p>
-            Bu çerezler, kullanıcılara kişiselleştirilmiş içerik ve reklamlar sunmak, reklam kampanyalarının etkinliğini ölçmek ve kullanıcı segmentasyonu yapmak amacıyla kullanılır. Bu çerezler yalnızca kullanıcının açık rızası ile etkinleştirilir. Üçüncü taraf çerezleri de bu kategoride yer alabilir. Yasal dayanak: açık rıza (KVKK madde 5/1; GDPR madde 6/1(a)). Saklama süresi: en fazla 13 ay.
-          </p>
-          <h3>7.4 – Çerez Yönetimi</h3>
-          <p>
-            Kullanıcılar, Platform&apos;a ilk erişimlerinde gösterilen çerez izin barı aracılığıyla tercihlerini belirleyebilir. Tercihler her zaman tarayıcı ayarlarından veya Platform&apos;un çerez ayarları bölümünden güncellenebilir. Zorunlu çerezler haricindeki tüm çerezler, kullanıcının açık rızası olmaksızın etkinleştirilmez. Çerezlerin tümünü reddetmeniz halinde Platform&apos;un belirli fonksiyonlarında kısıtlamalar yaşanabilir.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 7 – ÇEREZ (COOKIE) POLİTİKASI
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-4">
+              Platform, kullanıcı deneyimini iyileştirmek, hizmetlerin düzgün çalışmasını sağlamak ve istatistiksel veriler toplamak amacıyla çeşitli <strong className="text-foreground">çerez türleri</strong> kullanmaktadır. <strong className="text-foreground">Çerez</strong>, web tarayıcınız aracılığıyla cihazınıza yerleştirilen küçük metin dosyalarıdır.
+            </p>
+
+            <h3 className="text-[16px] font-semibold text-foreground mt-6 mb-2">🟢 7.1 – Zorunlu (Temel) Çerezler</h3>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-2">
+              Bu çerezler, Platform&apos;un temel işlevlerinin çalışması için <strong className="text-foreground">mutlak surette gereklidir</strong> ve devre dışı bırakılamaz.
+            </p>
+            <ul className="list-disc pl-6 space-y-1 text-[14px] text-muted-foreground mb-4">
+              <li><strong className="text-foreground">İşlevler:</strong> Oturum yönetimi, güvenlik doğrulaması, yük dengeleme, kullanıcı tercih hafızası (dil, tema)</li>
+              <li><strong className="text-foreground">Yasal dayanak:</strong> KVKK madde 5/2(c) – sözleşmenin ifası; ePrivacy Directive madde 5(3)</li>
+              <li><strong className="text-foreground">Saklama süresi:</strong> Oturum bazlı veya en fazla 13 ay</li>
+            </ul>
+
+            <h3 className="text-[16px] font-semibold text-foreground mt-6 mb-2">🔵 7.2 – Analiz ve Performans Çerezleri</h3>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-2">
+              Platform&apos;un kullanım istatistiklerini anonim olarak toplamak, sayfa yüklenme sürelerini ölçmek ve teknik hataları tespit etmek amacıyla kullanılır. <strong className="text-foreground">Yalnızca kullanıcının açık rızası ile</strong> etkinleştirilir.
+            </p>
+            <ul className="list-disc pl-6 space-y-1 text-[14px] text-muted-foreground mb-4">
+              <li><strong className="text-foreground">Kullanılan araçlar:</strong> Google Analytics 4, Sentry performans izleme</li>
+              <li><strong className="text-foreground">Yasal dayanak:</strong> Açık rıza (KVKK madde 5/1; GDPR madde 6/1(a))</li>
+              <li><strong className="text-foreground">Saklama süresi:</strong> En fazla 26 ay</li>
+            </ul>
+
+            <h3 className="text-[16px] font-semibold text-foreground mt-6 mb-2">🟠 7.3 – Pazarlama ve Hedefleme Çerezleri</h3>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-2">
+              Kişiselleştirilmiş içerik ve reklamlar sunmak, kampanya etkinliğini ölçmek ve kullanıcı segmentasyonu yapmak amaçlıdır. <strong className="text-foreground">Yalnızca kullanıcının açık rızası ile</strong> etkinleştirilir.
+            </p>
+            <ul className="list-disc pl-6 space-y-1 text-[14px] text-muted-foreground mb-4">
+              <li><strong className="text-foreground">Yasal dayanak:</strong> Açık rıza (KVKK madde 5/1; GDPR madde 6/1(a))</li>
+              <li><strong className="text-foreground">Saklama süresi:</strong> En fazla 13 ay</li>
+            </ul>
+
+            <h3 className="text-[16px] font-semibold text-foreground mt-6 mb-2">⚙️ 7.4 – Çerez Yönetimi</h3>
+            <p className="text-[14px] leading-relaxed text-muted-foreground">
+              Kullanıcılar, Platform&apos;a ilk erişimlerinde gösterilen <strong className="text-foreground">çerez izin barı</strong> aracılığıyla tercihlerini belirleyebilir. Tercihler her zaman tarayıcı ayarlarından veya Platform&apos;un çerez ayarları bölümünden güncellenebilir. <strong className="text-foreground">Zorunlu çerezler haricindeki tüm çerezler</strong>, kullanıcının açık rızası olmaksızın etkinleştirilmez.
+            </p>
+          </article>
 
           {/* MADDE 8 */}
-          <h2>MADDE 8 – KİŞİSEL VERİLERİN AKTARIMI</h2>
-          <p>
-            Kişisel verileriniz, aşağıda belirtilen taraflarla, yalnızca belirtilen amaçlar ve hukuki dayanaklar doğrultusunda paylaşılabilir: (a) Yasal zorunluluk halinde yetkili kamu kurum ve kuruluşları (mahkemeler, savcılıklar, düzenleyici otorites, KVKK Kurulu); (b) Hizmet altyapısının sağlanması amacıyla bulut bilişim hizmet sağlayıcıları (sunucu barındırma, CDN hizmetleri); (c) E-posta gönderim hizmetleri sağlayıcıları; (d) Ödeme işleme hizmetleri sağlayıcıları; (e) Hata izleme ve performans analiz hizmetleri (Sentry); (f) İstatistiksel analiz hizmetleri; (g) Hukuk müşavirleri ve bağımsız denetim kuruluşları. Her bir veri aktarımında KVKK&apos;nın 8. ve 9. maddelerinde düzenlenen koşullara uyulur. Yurt dışına veri aktarımı halinde, aktarım yapılan ülkede yeterli korumanın bulunması veya veri sorumlusunun yeterli korumayı yazılı olarak taahhüt etmesi koşulu aranır.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 8 – KİŞİSEL VERİLERİN AKTARIMI
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Kişisel verileriniz, aşağıda belirtilen taraflarla, <strong className="text-foreground">yalnızca belirtilen amaçlar ve hukuki dayanaklar</strong> doğrultusunda paylaşılabilir:
+            </p>
+            <ol className="list-[lower-alpha] pl-6 space-y-1.5 text-[14px] text-muted-foreground">
+              <li>Yasal zorunluluk halinde <strong className="text-foreground">yetkili kamu kurum ve kuruluşları</strong> (mahkemeler, savcılıklar, düzenleyici otoriteler, KVKK Kurulu)</li>
+              <li>Hizmet altyapısının sağlanması amacıyla <strong className="text-foreground">bulut bilişim hizmet sağlayıcıları</strong> (sunucu barındırma, CDN hizmetleri)</li>
+              <li><strong className="text-foreground">E-posta gönderim</strong> hizmetleri sağlayıcıları</li>
+              <li>Ödeme işleme hizmetleri sağlayıcıları</li>
+              <li>Hata izleme ve performans analiz hizmetleri (<strong className="text-foreground">Sentry</strong>)</li>
+              <li>İstatistiksel analiz hizmetleri</li>
+              <li>Hukuk müşavirleri ve bağımsız denetim kuruluşları</li>
+            </ol>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mt-3">
+              Her bir veri aktarımında <strong className="text-foreground">KVKK&apos;nın 8. ve 9. maddelerinde</strong> düzenlenen koşullara uyulur. Yurt dışına veri aktarımı halinde, aktarım yapılan ülkede <strong className="text-foreground">yeterli korumanın bulunması</strong> veya veri sorumlusunun yeterli korumayı yazılı olarak taahhüt etmesi koşulu aranır.
+            </p>
+          </article>
 
           {/* MADDE 9 */}
-          <h2>MADDE 9 – KİŞİSEL VERİLERİN SAKLANMA SÜRESİ</h2>
-          <p>
-            Kişisel verileriniz, işlenme amaçlarının gerektirdiği süre boyunca ve her halükarda ilgili mevzuatta öngörülen asgari saklama sürelerinden kısa olmamak üzere saklanır. Hesap verileri, üyelik sona erdikten sonra 5 (beş) yıl; işlem logları ve denetim kayıtları 10 (on) yıl; yasal uyuşmazlıklara konu olabilecek veriler, zamanaşımı süresi sona erene kadar; finansal işlemlere ilişkin veriler, Türk Ticaret Kanunu ve Vergi Usul Kanunu gereğince 10 (on) yıl süreyle saklanır. Saklama süresinin sona ermesi halinde veriler KVKK&apos;nın 7. maddesi kapsamında silinir, yok edilir veya anonim hale getirilir. Anonim hale getirme işlemi geri dönüşümsüz niteliktedir ve bu işlem sonrasında veri, kişisel veri vasfını yitirir.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 9 – KİŞİSEL VERİLERİN SAKLANMA SÜRESİ
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Kişisel verileriniz, işlenme amaçlarının gerektirdiği süre boyunca ve her halükarda ilgili mevzuatta öngörülen <strong className="text-foreground">asgari saklama sürelerinden kısa olmamak üzere</strong> saklanır:
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[14px] border border-border/30 rounded-xl overflow-hidden">
+                <thead>
+                  <tr className="bg-muted/30">
+                    <th className="text-left px-4 py-3 font-semibold text-foreground border-b border-border/30">Veri Türü</th>
+                    <th className="text-left px-4 py-3 font-semibold text-foreground border-b border-border/30">Saklama Süresi</th>
+                  </tr>
+                </thead>
+                <tbody className="text-muted-foreground">
+                  <tr className="border-b border-border/20">
+                    <td className="px-4 py-2.5">Hesap verileri</td>
+                    <td className="px-4 py-2.5"><strong className="text-foreground">Üyelik sona erdikten sonra 5 yıl</strong></td>
+                  </tr>
+                  <tr className="border-b border-border/20">
+                    <td className="px-4 py-2.5">İşlem logları ve denetim kayıtları</td>
+                    <td className="px-4 py-2.5"><strong className="text-foreground">10 yıl</strong></td>
+                  </tr>
+                  <tr className="border-b border-border/20">
+                    <td className="px-4 py-2.5">Yasal uyuşmazlıklara konu olabilecek veriler</td>
+                    <td className="px-4 py-2.5"><strong className="text-foreground">Zamanaşımı süresi sona erene kadar</strong></td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-2.5">Finansal işlemlere ilişkin veriler</td>
+                    <td className="px-4 py-2.5"><strong className="text-foreground">TTK ve VUK gereğince 10 yıl</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mt-3">
+              Saklama süresinin sona ermesi halinde veriler <strong className="text-foreground">KVKK&apos;nın 7. maddesi</strong> kapsamında silinir, yok edilir veya <strong className="text-foreground">anonim hale getirilir</strong>. Anonim hale getirme işlemi geri dönüşümsüz niteliktedir.
+            </p>
+          </article>
 
           {/* MADDE 10 */}
-          <h2>MADDE 10 – VERİ GÜVENLİĞİ ÖNLEMLERİ</h2>
-          <p>
-            Platform, kişisel verilerin hukuka aykırı olarak işlenmesini, erişilmesini, ifşa edilmesini, değiştirilmesini veya imha edilmesini önlemek amacıyla sektör standartlarına uygun teknik ve idari güvenlik tedbirleri almaktadır. Bu tedbirler şunları kapsar ancak bunlarla sınırlı değildir: (a) TLS 1.3 şifreleme ile aktarım güvenliği; (b) AES-256 şifreleme ile veri depolama güvenliği; (c) Parola hashleme algoritmaları (bcrypt, Argon2); (d) Ağ güvenlik duvarları ve DDoS koruma sistemleri; (e) Çok faktörlü kimlik doğrulama (MFA/2FA); (f) Düzenli güvenlik denetimleri ve penetrasyon testleri; (g) Erişim kontrol listeleri (ACL) ve rol tabanlı yetkilendirme; (h) Güvenlik olayı izleme ve uyarı sistemleri; (i) Veri yedekleme ve felaket kurtarma planları; (j) Çalışanlara yönelik veri güvenliği eğitimleri; (k) Veri minimizasyonu ilkesinin uygulanması; (l) Günlük otomatik güvenlik taramaları.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 10 – VERİ GÜVENLİĞİ ÖNLEMLERİ
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Platform, kişisel verilerin hukuka aykırı olarak işlenmesini önlemek amacıyla <strong className="text-foreground">sektör standartlarına uygun</strong> teknik ve idari güvenlik tedbirleri almaktadır:
+            </p>
+            <ul className="list-disc pl-6 space-y-1.5 text-[14px] text-muted-foreground">
+              <li><strong className="text-foreground">TLS 1.3</strong> şifreleme ile aktarım güvenliği</li>
+              <li><strong className="text-foreground">AES-256</strong> şifreleme ile veri depolama güvenliği</li>
+              <li>Parola hashleme algoritmaları (<strong className="text-foreground">bcrypt, Argon2</strong>)</li>
+              <li>Ağ güvenlik duvarları ve <strong className="text-foreground">DDoS koruma</strong> sistemleri</li>
+              <li>Çok faktörlü kimlik doğrulama (<strong className="text-foreground">MFA/2FA</strong>)</li>
+              <li>Düzenli <strong className="text-foreground">güvenlik denetimleri</strong> ve penetrasyon testleri</li>
+              <li>Erişim kontrol listeleri (<strong className="text-foreground">ACL</strong>) ve rol tabanlı yetkilendirme</li>
+              <li>Güvenlik olayı izleme ve uyarı sistemleri</li>
+              <li>Veri yedekleme ve <strong className="text-foreground">felaket kurtarma planları</strong></li>
+              <li>Çalışanlara yönelik veri güvenliği eğitimleri</li>
+              <li><strong className="text-foreground">Veri minimizasyonu</strong> ilkesinin uygulanması</li>
+              <li>Günlük otomatik güvenlik taramaları</li>
+            </ul>
+          </article>
 
           {/* MADDE 11 */}
-          <h2>MADDE 11 – KVKK KAPSAMINDAKİ İLGİLİ KİŞİ HAKLARI</h2>
-          <p>
-            KVKK&apos;nın 11. maddesi kapsamında, ilgili kişi olarak aşağıdaki haklara sahipsiniz: (a) Kişisel verilerinizin işlenip işlenmediğini öğrenme; (b) Kişisel verileriniz işlenmişse buna ilişkin bilgi talep etme; (c) Kişisel verilerinizin işlenme amacını ve bunların amacına uygun kullanılıp kullanılmadığını öğrenme; (d) Yurt içinde veya yurt dışında kişisel verilerinizin aktarıldığı üçüncü kişileri bilme; (e) Kişisel verilerinizin eksik veya yanlış işlenmiş olması halinde bunların düzeltilmesini isteme; (f) KVKK&apos;nın 7. maddesinde öngörülen şartlar çerçevesinde kişisel verilerinizin silinmesini veya yok edilmesini isteme; (g) (e) ve (f) bentleri uyarınca yapılan işlemlerin, kişisel verilerinizin aktarıldığı üçüncü kişilere bildirilmesini isteme; (h) İşlenen verilerin münhasıran otomatik sistemler vasıtasıyla analiz edilmesi suretiyle aleyhinize bir sonucun ortaya çıkmasına itiraz etme; (ı) Kişisel verilerin kanuna aykırı olarak işlenmesi sebebiyle zarara uğramanız halinde zararın giderilmesini talep etme.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 11 – KVKK KAPSAMINDAKİ İLGİLİ KİŞİ HAKLARI
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              <strong className="text-foreground">KVKK&apos;nın 11. maddesi</strong> kapsamında, ilgili kişi olarak aşağıdaki haklara sahipsiniz:
+            </p>
+            <ol className="list-[lower-alpha] pl-6 space-y-1.5 text-[14px] text-muted-foreground">
+              <li>Kişisel verilerinizin <strong className="text-foreground">işlenip işlenmediğini öğrenme</strong></li>
+              <li>Kişisel verileriniz işlenmişse buna ilişkin <strong className="text-foreground">bilgi talep etme</strong></li>
+              <li>Kişisel verilerinizin <strong className="text-foreground">işlenme amacını</strong> ve bunların amacına uygun kullanılıp kullanılmadığını öğrenme</li>
+              <li>Yurt içinde veya yurt dışında kişisel verilerinizin <strong className="text-foreground">aktarıldığı üçüncü kişileri bilme</strong></li>
+              <li>Kişisel verilerinizin eksik veya yanlış işlenmiş olması halinde <strong className="text-foreground">düzeltilmesini isteme</strong></li>
+              <li>KVKK&apos;nın 7. maddesi çerçevesinde kişisel verilerinizin <strong className="text-foreground">silinmesini veya yok edilmesini isteme</strong></li>
+              <li>Yapılan işlemlerin aktarıldığı <strong className="text-foreground">üçüncü kişilere bildirilmesini</strong> isteme</li>
+              <li>İşlenen verilerin otomatik sistemler vasıtasıyla analiz edilmesi suretiyle <strong className="text-foreground">aleyhinize bir sonuç ortaya çıkmasına itiraz etme</strong></li>
+              <li>Kişisel verilerin kanuna aykırı işlenmesi sebebiyle zarara uğramanız halinde <strong className="text-foreground">zararın giderilmesini talep etme</strong></li>
+            </ol>
+          </article>
 
           {/* MADDE 12 */}
-          <h2>MADDE 12 – GDPR KAPSAMINDAKİ EK HAKLAR</h2>
-          <p>
-            Avrupa Ekonomik Alanı (AEA) dahilinde ikamet eden kullanıcılar, GDPR kapsamında aşağıdaki ek haklara sahiptir: (a) Veri taşınabilirliği hakkı (Madde 20) – kişisel verilerinizi yapılandırılmış, yaygın olarak kullanılan ve makine tarafından okunabilir bir formatta alma hakkı; (b) Unutulma hakkı (Madde 17) – belirli koşullar altında kişisel verilerinizin silinmesini talep etme hakkı; (c) İşlemeyi kısıtlama hakkı (Madde 18); (d) İtiraz hakkı (Madde 21) – meşru menfaat dayanaklı veri işlemeye itiraz etme hakkı; (e) Otomatik karar alma ve profillemeye ilişkin haklar (Madde 22); (f) Denetim makamına şikayet hakkı (Madde 77).
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 12 – GDPR KAPSAMINDAKİ EK HAKLAR
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              <strong className="text-foreground">Avrupa Ekonomik Alanı (AEA)</strong> dahilinde ikamet eden kullanıcılar, GDPR kapsamında aşağıdaki ek haklara sahiptir:
+            </p>
+            <ol className="list-[lower-alpha] pl-6 space-y-1.5 text-[14px] text-muted-foreground">
+              <li><strong className="text-foreground">Veri taşınabilirliği hakkı</strong> (Madde 20) – kişisel verilerinizi yapılandırılmış, yaygın olarak kullanılan ve makine tarafından okunabilir bir formatta alma hakkı</li>
+              <li><strong className="text-foreground">Unutulma hakkı</strong> (Madde 17) – belirli koşullar altında kişisel verilerinizin silinmesini talep etme hakkı</li>
+              <li><strong className="text-foreground">İşlemeyi kısıtlama hakkı</strong> (Madde 18)</li>
+              <li><strong className="text-foreground">İtiraz hakkı</strong> (Madde 21) – meşru menfaat dayanaklı veri işlemeye itiraz etme hakkı</li>
+              <li><strong className="text-foreground">Otomatik karar alma ve profillemeye ilişkin haklar</strong> (Madde 22)</li>
+              <li><strong className="text-foreground">Denetim makamına şikayet hakkı</strong> (Madde 77)</li>
+            </ol>
+          </article>
 
           {/* MADDE 13 */}
-          <h2>MADDE 13 – BAŞVURU PROSEDÜRÜ</h2>
-          <p>
-            Yukarıda belirtilen haklarınızı kullanmak için aşağıdaki yöntemlerden birini tercih edebilirsiniz: (a) Platform üzerindeki &quot;Hesap Ayarları &gt; Gizlilik&quot; bölümü aracılığıyla; (b) kvkk@bondley.com elektronik posta adresine ileti göndererek; (c) Kayıtlı elektronik posta (KEP) adresi üzerinden; (d) Noter aracılığıyla Şirket merkezine fiziki başvuru yaparak. Başvurunuzda kimliğinizi tevsik edici bilgi ve belgeler ile talebinizin açık ve anlaşılır biçimde yer alması gerekmektedir. Veri sorumlusu, başvurunuzu en geç 30 (otuz) gün içinde sonuçlandıracaktır. İşlemin ayrıca bir maliyet gerektirmesi halinde, KVKK Kurulu tarafından belirlenen tarife esas alınır.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 13 – BAŞVURU PROSEDÜRÜ
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Yukarıda belirtilen haklarınızı kullanmak için aşağıdaki yöntemlerden birini tercih edebilirsiniz:
+            </p>
+            <ol className="list-[lower-alpha] pl-6 space-y-1.5 text-[14px] text-muted-foreground mb-3">
+              <li>Platform üzerindeki <strong className="text-foreground">&quot;Hesap Ayarları &gt; Gizlilik&quot;</strong> bölümü aracılığıyla</li>
+              <li><strong className="text-foreground">kvkk@bondley.com</strong> elektronik posta adresine ileti göndererek</li>
+              <li>Kayıtlı elektronik posta (<strong className="text-foreground">KEP</strong>) adresi üzerinden</li>
+              <li>Noter aracılığıyla Şirket merkezine fiziki başvuru yaparak</li>
+            </ol>
+            <div className="bg-muted/30 rounded-xl p-4 text-[14px] text-muted-foreground">
+              <strong className="text-foreground">⏱ Yanıt süresi:</strong> Veri sorumlusu, başvurunuzu en geç <strong className="text-foreground">30 (otuz) gün</strong> içinde sonuçlandıracaktır. İşlemin ayrıca bir maliyet gerektirmesi halinde, KVKK Kurulu tarafından belirlenen tarife esas alınır.
+            </div>
+          </article>
 
           {/* MADDE 14 */}
-          <h2>MADDE 14 – OTOMATİK KARAR ALMA VE PROFİLLEME</h2>
-          <p>
-            Platform, kullanıcı hizmet düzeyinin belirlenmesi, güvenlik risk analizlerinin yapılması ve kullanıcı deneyiminin kişiselleştirilmesi amacıyla otomatik karar alma mekanizmaları ve profilleme teknikleri kullanabilmektedir. Otomatik karar alma, kişisel verilerinizin tamamen otomatik yollarla değerlendirilmesi sonucunda, sizin hakkınızda hukuki sonuç doğuran veya sizi önemli ölçüde etkileyen kararların alınması anlamına gelir. Platform, yalnızca güvenlik doğrulaması ve hile önleme amacıyla otomatik karar alma kullanmakta olup, ticari avantaj veya dezavantaj oluşturacak nitelikte otomatik kararlar almamaktadır. İlgili kişi olarak, otomatik karar alma süreçlerine itiraz etme, insan müdahalesi talep etme ve kararın yeniden değerlendirilmesini isteme hakkına sahipsiniz.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 14 – OTOMATİK KARAR ALMA VE PROFİLLEME
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Platform, kullanıcı hizmet düzeyinin belirlenmesi, güvenlik risk analizlerinin yapılması ve kullanıcı deneyiminin kişiselleştirilmesi amacıyla <strong className="text-foreground">otomatik karar alma mekanizmaları</strong> ve profilleme teknikleri kullanabilmektedir.
+            </p>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Platform, <strong className="text-foreground">yalnızca güvenlik doğrulaması ve hile önleme</strong> amacıyla otomatik karar alma kullanmakta olup, ticari avantaj veya dezavantaj oluşturacak nitelikte otomatik kararlar <strong className="text-foreground">almamaktadır</strong>.
+            </p>
+            <div className="bg-primary/5 rounded-xl p-4 text-[14px] text-muted-foreground border border-primary/10">
+              <strong className="text-foreground">Haklarınız:</strong> İlgili kişi olarak, otomatik karar alma süreçlerine <strong className="text-foreground">itiraz etme</strong>, <strong className="text-foreground">insan müdahalesi talep etme</strong> ve kararın yeniden değerlendirilmesini isteme hakkına sahipsiniz.
+            </div>
+          </article>
 
           {/* MADDE 15 */}
-          <h2>MADDE 15 – ÜÇÜNCÜ TARAF HİZMETLER VE BAĞLANTILAR</h2>
-          <p>
-            Platform, üçüncü taraf web siteleri, hizmetler ve uygulamalarla bağlantılar içerebilir. Bu bağlantılar aracılığıyla eriştiğiniz üçüncü taraf siteler, kendi gizlilik politikaları ve veri işleme uygulamalarına tabidir. Bondley, üçüncü taraf sitelerin gizlilik uygulamaları, içerikleri veya hizmetleri hakkında herhangi bir sorumluluk üstlenmez. Üçüncü taraf hizmetlerine erişmeden önce ilgili hizmetin gizlilik politikasını okumanızı kesinlikle tavsiye ederiz. Platformda kullanılan başlıca üçüncü taraf hizmetleri: bulut altyapı sağlayıcıları (PostgreSQL veritabanı barındırma), CDN hizmetleri, e-posta gönderim altyapısı, hata izleme hizmetleri (Sentry), SSL/TLS sertifika sağlayıcıları.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 15 – ÜÇÜNCÜ TARAF HİZMETLER VE BAĞLANTILAR
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Platform, üçüncü taraf web siteleri, hizmetler ve uygulamalarla bağlantılar içerebilir. Bu bağlantılar aracılığıyla eriştiğiniz üçüncü taraf siteler, <strong className="text-foreground">kendi gizlilik politikaları</strong> ve veri işleme uygulamalarına tabidir. Bondley, üçüncü taraf sitelerin gizlilik uygulamaları hakkında <strong className="text-foreground">herhangi bir sorumluluk üstlenmez</strong>.
+            </p>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-2">
+              <strong className="text-foreground">Platformda kullanılan başlıca üçüncü taraf hizmetleri:</strong>
+            </p>
+            <ul className="list-disc pl-6 space-y-1 text-[14px] text-muted-foreground">
+              <li>Bulut altyapı sağlayıcıları (PostgreSQL veritabanı barındırma)</li>
+              <li>CDN hizmetleri</li>
+              <li>E-posta gönderim altyapısı</li>
+              <li>Hata izleme hizmetleri (<strong className="text-foreground">Sentry</strong>)</li>
+              <li>SSL/TLS sertifika sağlayıcıları</li>
+            </ul>
+          </article>
 
           {/* MADDE 16 */}
-          <h2>MADDE 16 – ÇOCUKLARIN KİŞİSEL VERİLERİ</h2>
-          <p>
-            Platform, 18 yaşın altındaki bireylere yönelik bir hizmet sunmamaktadır ve bilinçli olarak 18 yaşın altındaki bireylerden kişisel veri toplamamaktadır. 18 yaşın altında olduğunuzu tespit etmemiz halinde, hesabınız derhal askıya alınacak ve toplanan tüm kişisel veriler KVKK&apos;nın 7. maddesi kapsamında silinecek veya yok edilecektir. Bir çocuğun ebeveyn veya yasal vasi onayı olmaksızın kişisel verilerini Platform&apos;a sunduğunu tespit etmeniz durumunda, lütfen derhal bizimle iletişime geçiniz.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 16 – ÇOCUKLARIN KİŞİSEL VERİLERİ
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground">
+              Platform, <strong className="text-foreground">18 yaşın altındaki bireylere</strong> yönelik bir hizmet sunmamaktadır ve bilinçli olarak 18 yaşın altındaki bireylerden kişisel veri toplamamaktadır. 18 yaşın altında olduğunuzu tespit etmemiz halinde, hesabınız <strong className="text-foreground">derhal askıya alınacak</strong> ve toplanan tüm kişisel veriler KVKK&apos;nın 7. maddesi kapsamında <strong className="text-foreground">silinecek veya yok edilecektir</strong>. Bir çocuğun ebeveyn veya yasal vasi onayı olmaksızın kişisel verilerini Platform&apos;a sunduğunu tespit etmeniz durumunda, lütfen derhal bizimle iletişime geçiniz.
+            </p>
+          </article>
 
           {/* MADDE 17 */}
-          <h2>MADDE 17 – VERİ İHLALİ BİLDİRİM PROSEDÜRÜ</h2>
-          <p>
-            Kişisel verilerin hukuka aykırı olarak üçüncü kişiler tarafından ele geçirilmesi (veri ihlali) halinde, Platform; (a) En kısa sürede ve her halükarda ihlalden haberdar olmasından itibaren 72 saat içinde Kişisel Verileri Koruma Kurulu&apos;na bildirimde bulunacaktır; (b) İhlalin ilgili kişilerin hak ve özgürlükleri üzerinde yüksek risk oluşturması halinde, ilgili kişileri makul sürede bilgilendirecektir; (c) İhlalin kapsamı, etki alanı, alınan önlemler ve tavsiye edilen tedbirleri içeren detaylı bir bildirim raporu hazırlayacaktır; (d) İhlali tekrarlamamak adına gerekli teknik ve idari önlemleri derhal alacaktır. Veri ihlali bildirimleri, kayıtlı e-posta adresinize veya Platform üzerinden anlık bildirim olarak iletilecektir.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 17 – VERİ İHLALİ BİLDİRİM PROSEDÜRÜ
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Kişisel verilerin hukuka aykırı olarak üçüncü kişiler tarafından ele geçirilmesi (<strong className="text-foreground">veri ihlali</strong>) halinde, Platform:
+            </p>
+            <ol className="list-[lower-alpha] pl-6 space-y-1.5 text-[14px] text-muted-foreground">
+              <li>En kısa sürede ve her halükarda ihlalden haberdar olmasından itibaren <strong className="text-foreground">72 saat içinde</strong> Kişisel Verileri Koruma Kurulu&apos;na bildirimde bulunacaktır</li>
+              <li>İhlalin <strong className="text-foreground">yüksek risk</strong> oluşturması halinde, ilgili kişileri makul sürede bilgilendirecektir</li>
+              <li>İhlalin kapsamı, etki alanı, alınan önlemler ve tavsiye edilen tedbirleri içeren <strong className="text-foreground">detaylı bir bildirim raporu</strong> hazırlayacaktır</li>
+              <li>İhlali tekrarlamamak adına gerekli <strong className="text-foreground">teknik ve idari önlemleri derhal</strong> alacaktır</li>
+            </ol>
+          </article>
 
           {/* MADDE 18 */}
-          <h2>MADDE 18 – ULUSLARARASI VERİ AKTARIMI</h2>
-          <p>
-            Platform altyapısının bir kısmı, Türkiye dışında konumlandırılmış sunucularda barındırılabilir. Bu durumda kişisel verileriniz, sunucunun bulunduğu ülkeye aktarılmış olacaktır. Yurt dışına veri aktarımı halinde: (a) Aktarımın yapıldığı ülkenin Kişisel Verileri Koruma Kurulu tarafından yeterli koruma sağladığı ilan edilen ülkeler arasında olup olmadığı kontrol edilir; (b) Yeterli koruma bulunmayan ülkelere aktarım halinde, standart sözleşme hükümleri (Standard Contractual Clauses – SCC), bağlayıcı kurumsal kurallar (Binding Corporate Rules – BCR) veya ilgili kişinin açık rızası gibi uygun güvenceler sağlanır; (c) GDPR kapsamındaki aktarımlarda Madde 44-49 hükümleri esas alınır; (d) Aktarım yapılan tüm taraflarla veri işleme sözleşmeleri (Data Processing Agreement – DPA) imzalanır.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 18 – ULUSLARARASI VERİ AKTARIMI
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Platform altyapısının bir kısmı, Türkiye dışında konumlandırılmış sunucularda barındırılabilir. Yurt dışına veri aktarımı halinde:
+            </p>
+            <ol className="list-[lower-alpha] pl-6 space-y-1.5 text-[14px] text-muted-foreground">
+              <li>Aktarımın yapıldığı ülkenin <strong className="text-foreground">KVKK Kurulu tarafından yeterli koruma sağladığı ilan edilen ülkeler</strong> arasında olup olmadığı kontrol edilir</li>
+              <li>Yeterli koruma bulunmayan ülkelere aktarım halinde, <strong className="text-foreground">Standart Sözleşme Hükümleri (SCC)</strong>, <strong className="text-foreground">Bağlayıcı Kurumsal Kurallar (BCR)</strong> veya ilgili kişinin açık rızası gibi uygun güvenceler sağlanır</li>
+              <li>GDPR kapsamındaki aktarımlarda <strong className="text-foreground">Madde 44-49</strong> hükümleri esas alınır</li>
+              <li>Aktarım yapılan tüm taraflarla <strong className="text-foreground">Veri İşleme Sözleşmeleri (DPA)</strong> imzalanır</li>
+            </ol>
+          </article>
 
           {/* MADDE 19 */}
-          <h2>MADDE 19 – ELEKTRONİK TİCARİ İLETİ VE PAZARLAMA</h2>
-          <p>
-            6563 sayılı Elektronik Ticaretin Düzenlenmesi Hakkında Kanun ve ilgili yönetmelikler uyarınca, ticari elektronik ileti gönderilebilmesi için alıcının önceden onayının alınması zorunludur. Platform, aşağıdaki durumlarda elektronik ticari ileti gönderebilir: (a) Kayıt sırasında veya sonrasında açık onay verilmişse; (b) Mevcut müşteri ilişkisi kapsamında, daha önce satın alınan veya kullanılan hizmetlere benzer ürün/hizmetlere ilişkin bilgilendirme gönderilmesi halinde (opt-out hakkı saklı kalmak kaydıyla). Ticari elektronik iletilerde: red hakkının kullanılmasına ilişkin bilgi, gönderenin açık kimliği ve iletişim bilgileri yer alacaktır. Red talebiniz, talebinizin ulaştığı tarihten itibaren 3 (üç) iş günü içinde yerine getirilir. İleti Yönetim Sistemi (İYS) üzerinden de tercihlerinizi yönetebilirsiniz.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 19 – ELEKTRONİK TİCARİ İLETİ VE PAZARLAMA
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              <strong className="text-foreground">6563 sayılı Elektronik Ticaretin Düzenlenmesi Hakkında Kanun</strong> uyarınca, ticari elektronik ileti gönderilebilmesi için alıcının <strong className="text-foreground">önceden onayının alınması zorunludur</strong>.
+            </p>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-2">
+              Platform, aşağıdaki durumlarda elektronik ticari ileti gönderebilir:
+            </p>
+            <ul className="list-disc pl-6 space-y-1 text-[14px] text-muted-foreground mb-3">
+              <li>Kayıt sırasında veya sonrasında <strong className="text-foreground">açık onay verilmişse</strong></li>
+              <li>Mevcut müşteri ilişkisi kapsamında, benzer hizmetlere ilişkin bilgilendirme gönderilmesi halinde <em>(opt-out hakkı saklı)</em></li>
+            </ul>
+            <div className="bg-muted/30 rounded-xl p-4 text-[14px] text-muted-foreground">
+              <strong className="text-foreground">Red hakkı:</strong> Red talebiniz, talebinizin ulaştığı tarihten itibaren <strong className="text-foreground">3 (üç) iş günü</strong> içinde yerine getirilir. <strong className="text-foreground">İleti Yönetim Sistemi (İYS)</strong> üzerinden de tercihlerinizi yönetebilirsiniz.
+            </div>
+          </article>
 
           {/* MADDE 20 */}
-          <h2>MADDE 20 – FİNANSAL VERİLERE İLİŞKİN ÖZEL HÜKÜMLER</h2>
-          <p>
-            Platform, borçlanma araçları değerleme ve analiz hizmeti sunmakta olup, kullanıcıların finansal kararlarına yönelik herhangi bir yatırım tavsiyesi vermemektedir. Platforma girilen veya Platform tarafından hesaplanan finansal veriler (tahvil fiyatları, getiri oranları, spread değerleri, duration hesaplamaları vb.) yalnızca bilgilendirme amaçlıdır. Bu verilere dayalı olarak alınan yatırım kararlarından Bondley sorumlu tutulamaz. Finansal hesaplama sonuçları, kullanıcı hesabına bağlı olarak saklanabilir ve kullanıcının talebi üzerine dışa aktarılabilir (veri taşınabilirliği hakkı kapsamında). Finansal verilerin işlenmesinde TÜBİTAK ULAKBİM güvenlik standartlarına ve SPK düzenlemelerine uyulur.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 20 – FİNANSAL VERİLERE İLİŞKİN ÖZEL HÜKÜMLER
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Platform, borçlanma araçları değerleme ve analiz hizmeti sunmakta olup, kullanıcıların finansal kararlarına yönelik <strong className="text-foreground">herhangi bir yatırım tavsiyesi vermemektedir</strong>. Platforma girilen veya Platform tarafından hesaplanan finansal veriler (tahvil fiyatları, getiri oranları, spread değerleri, duration hesaplamaları vb.) <strong className="text-foreground">yalnızca bilgilendirme amaçlıdır</strong>.
+            </p>
+            <div className="bg-destructive/5 rounded-xl p-4 text-[14px] text-muted-foreground border border-destructive/15">
+              <strong className="text-foreground">⚠️ Sorumluluk Reddi:</strong> Bu verilere dayalı olarak alınan yatırım kararlarından <strong className="text-foreground">Bondley sorumlu tutulamaz</strong>. Finansal verilerin işlenmesinde TÜBİTAK ULAKBİM güvenlik standartlarına ve SPK düzenlemelerine uyulur.
+            </div>
+          </article>
 
           {/* MADDE 21 */}
-          <h2>MADDE 21 – LOG KAYITLARI VE DENETİM İZLERİ</h2>
-          <p>
-            Platform, güvenlik, hata tespiti, performans analizi ve yasal yükümlülüklerin karşılanması amacıyla kapsamlı log kayıtları tutmaktadır. Bu kayıtlar şunları içerir: (a) Erişim logları: tarih, saat, IP adresi, erişilen kaynak, HTTP metodu, yanıt kodu; (b) Kimlik doğrulama logları: başarılı/başarısız giriş denemeleri, MFA doğrulamaları, oturum oluşturma/sonlandırma olayları; (c) İşlem logları: kullanıcı eylemleri, veri erişim kayıtları, hesaplama talepleri; (d) Hata logları: uygulama hataları, sistem istisnaları, performans anormallikleri; (e) Güvenlik logları: şüpheli aktiviteler, rate limiting tetiklenmeleri, yetkisiz erişim denemeleri. Log kayıtları, 5651 sayılı İnternet Ortamında Yapılan Yayınların Düzenlenmesi ve Bu Yayınlar Yoluyla İşlenen Suçlarla Mücadele Edilmesi Hakkında Kanun gereğince en az 2 (iki) yıl süreyle saklanır.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 21 – LOG KAYITLARI VE DENETİM İZLERİ
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Platform, güvenlik, hata tespiti, performans analizi ve yasal yükümlülüklerin karşılanması amacıyla <strong className="text-foreground">kapsamlı log kayıtları</strong> tutmaktadır:
+            </p>
+            <ul className="list-disc pl-6 space-y-1.5 text-[14px] text-muted-foreground mb-3">
+              <li><strong className="text-foreground">Erişim logları:</strong> Tarih, saat, IP adresi, erişilen kaynak, HTTP metodu, yanıt kodu</li>
+              <li><strong className="text-foreground">Kimlik doğrulama logları:</strong> Başarılı/başarısız giriş denemeleri, MFA doğrulamaları, oturum olayları</li>
+              <li><strong className="text-foreground">İşlem logları:</strong> Kullanıcı eylemleri, veri erişim kayıtları, hesaplama talepleri</li>
+              <li><strong className="text-foreground">Hata logları:</strong> Uygulama hataları, sistem istisnaları, performans anormallikleri</li>
+              <li><strong className="text-foreground">Güvenlik logları:</strong> Şüpheli aktiviteler, rate limiting tetiklenmeleri, yetkisiz erişim denemeleri</li>
+            </ul>
+            <div className="bg-muted/30 rounded-xl p-4 text-[14px] text-muted-foreground">
+              <strong className="text-foreground">Yasal zorunluluk:</strong> Log kayıtları, <strong className="text-foreground">5651 sayılı Kanun</strong> gereğince en az <strong className="text-foreground">2 (iki) yıl</strong> süreyle saklanır.
+            </div>
+          </article>
 
           {/* MADDE 22 */}
-          <h2>MADDE 22 – ANONİMLEŞTİRME VE TAKMA AD KULLANIMI</h2>
-          <p>
-            Platform, veri minimizasyonu ilkesi doğrultusunda, kişisel verilerin mümkün olan en erken aşamada anonimleştirilmesi veya takma adla (pseudonymization) değiştirilmesi yöntemlerini uygulamaktadır. Anonimleştirme, kişisel verilerin başka verilerle eşleştirerek dahi kimliği belirli veya belirlenebilir bir gerçek kişiyle ilişkilendirilememesi durumuna getirilmesidir. Anonimleştirilmiş veriler KVKK kapsamında kişisel veri sayılmaz ve bu Politika hükümleri anonim verilere uygulanmaz. Takma ad kullanımı ise, ek bilgi kullanılmaksızın kişisel verilerin belirli bir kişiyle ilişkilendirilememesi durumunu ifade eder; ancak bu yöntemle işlenen veriler hâlâ kişisel veri statüsündedir.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 22 – ANONİMLEŞTİRME VE TAKMA AD KULLANIMI
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Platform, <strong className="text-foreground">veri minimizasyonu</strong> ilkesi doğrultusunda, kişisel verilerin mümkün olan en erken aşamada anonimleştirilmesi veya takma adla (<em>pseudonymization</em>) değiştirilmesi yöntemlerini uygulamaktadır.
+            </p>
+            <ul className="list-disc pl-6 space-y-1.5 text-[14px] text-muted-foreground">
+              <li><strong className="text-foreground">Anonimleştirme:</strong> Kişisel verilerin başka verilerle eşleştirerek dahi kimliği belirlenebilir bir kişiyle ilişkilendirilememesi durumu. Anonimleştirilmiş veriler <strong className="text-foreground">KVKK kapsamında kişisel veri sayılmaz</strong>.</li>
+              <li><strong className="text-foreground">Takma ad kullanımı (Pseudonymization):</strong> Ek bilgi kullanılmaksızın verilerin belirli bir kişiyle ilişkilendirilememesi durumu. Bu yöntemle işlenen veriler <strong className="text-foreground">hâlâ kişisel veri statüsündedir</strong>.</li>
+            </ul>
+          </article>
 
           {/* MADDE 23 */}
-          <h2>MADDE 23 – API ERİŞİMİ VE VERİ ENTEGRASYONLARı</h2>
-          <p>
-            Platform, B2B müşterilerine API aracılığıyla entegrasyon imkanı sunmaktadır. API erişimi kapsamında: (a) Her API çağrısı, kimlik doğrulama tokenı (JWT) ile yetkilendirilir; (b) API çağrı logları, güvenlik ve faturalama amacıyla saklanır; (c) Rate limiting uygulanarak hizmet reddi saldırılarına karşı koruma sağlanır; (d) API aracılığıyla iletilen tüm veriler TLS 1.3 şifreleme ile korunur; (e) API kullanıcıları, veri işleme sözleşmesi (DPA) imzalamakla yükümlüdür; (f) API anahtarları kriptografik olarak hashlenmiş biçimde saklanır ve düz metin olarak ifşa edilmez; (g) API kullanım kotaları ve erişim düzeyleri, kullanıcının abonelik planına göre belirlenir.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 23 – API ERİŞİMİ VE VERİ ENTEGRASYONLARI
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Platform, B2B müşterilerine <strong className="text-foreground">API aracılığıyla entegrasyon</strong> imkanı sunmaktadır. API erişimi kapsamında:
+            </p>
+            <ol className="list-[lower-alpha] pl-6 space-y-1.5 text-[14px] text-muted-foreground">
+              <li>Her API çağrısı, <strong className="text-foreground">JWT (JSON Web Token)</strong> ile yetkilendirilir</li>
+              <li>API çağrı logları, <strong className="text-foreground">güvenlik ve faturalama</strong> amacıyla saklanır</li>
+              <li><strong className="text-foreground">Rate limiting</strong> uygulanarak hizmet reddi saldırılarına karşı koruma sağlanır</li>
+              <li>API aracılığıyla iletilen tüm veriler <strong className="text-foreground">TLS 1.3</strong> şifreleme ile korunur</li>
+              <li>API kullanıcıları, <strong className="text-foreground">Veri İşleme Sözleşmesi (DPA)</strong> imzalamakla yükümlüdür</li>
+              <li>API anahtarları <strong className="text-foreground">kriptografik olarak hashlenmiş</strong> biçimde saklanır</li>
+              <li>API kullanım kotaları ve erişim düzeyleri, <strong className="text-foreground">abonelik planına göre</strong> belirlenir</li>
+            </ol>
+          </article>
 
           {/* MADDE 24 */}
-          <h2>MADDE 24 – FELAKET KURTARMA VE İŞ SÜREKLİLİĞİ</h2>
-          <p>
-            Platform, kişisel verilerin korunmasını sağlamak üzere kapsamlı bir felaket kurtarma ve iş sürekliliği planı uygulamaktadır. Bu plan şunları kapsar: (a) Veritabanının düzenli olarak yedeklenmesi (günlük tam yedekleme, saatlik artımlı yedekleme); (b) Yedeklerin coğrafi olarak farklı lokasyonlarda şifreli olarak saklanması; (c) Felaket senaryolarında hizmetin en fazla 4 saat içinde yeniden devreye alınması hedefi (RTO); (d) En fazla 1 saatlik veri kaybı toleransı (RPO); (e) Yılda en az iki kez felaket kurtarma tatbikatı yapılması; (f) Yedek verilere yetkisiz erişimin önlenmesi için ayrı erişim kontrol mekanizmaları.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 24 – FELAKET KURTARMA VE İŞ SÜREKLİLİĞİ
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Platform, kişisel verilerin korunmasını sağlamak üzere kapsamlı bir <strong className="text-foreground">felaket kurtarma ve iş sürekliliği planı</strong> uygulamaktadır:
+            </p>
+            <ul className="list-disc pl-6 space-y-1.5 text-[14px] text-muted-foreground">
+              <li>Veritabanının düzenli olarak yedeklenmesi (<strong className="text-foreground">günlük tam yedekleme, saatlik artımlı yedekleme</strong>)</li>
+              <li>Yedeklerin <strong className="text-foreground">coğrafi olarak farklı lokasyonlarda</strong> şifreli olarak saklanması</li>
+              <li>Felaket senaryolarında hizmetin en fazla <strong className="text-foreground">4 saat içinde</strong> yeniden devreye alınması hedefi (RTO)</li>
+              <li>En fazla <strong className="text-foreground">1 saatlik</strong> veri kaybı toleransı (RPO)</li>
+              <li>Yılda en az <strong className="text-foreground">iki kez</strong> felaket kurtarma tatbikatı yapılması</li>
+              <li>Yedek verilere yetkisiz erişimin önlenmesi için ayrı erişim kontrol mekanizmaları</li>
+            </ul>
+          </article>
 
           {/* MADDE 25 */}
-          <h2>MADDE 25 – OTURUM YÖNETİMİ VE GÜVENLİK</h2>
-          <p>
-            Platform, kullanıcı oturumlarının güvenliğini sağlamak amacıyla aşağıdaki önlemleri almaktadır: (a) Oturum tokenları JWT (JSON Web Token) standardında, RS256 veya HS256 algoritmaları ile imzalanır; (b) Access token süresi 15-30 dakika, refresh token süresi 7-30 gün ile sınırlıdır; (c) Her yeni oturum için benzersiz oturum tanımlayıcı oluşturulur; (d) Eşzamanlı oturum sayısı sınırlandırılabilir; (e) Şüpheli aktivite tespit edilmesi halinde tüm oturumlar otomatik olarak sonlandırılır; (f) Oturum bilgileri httpOnly ve secure bayrağı ile korunur; (g) CSRF koruması uygulanır; (h) Belirli bir süre hareketsizlik sonrasında oturum otomatik olarak sonlandırılır.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 25 – OTURUM YÖNETİMİ VE GÜVENLİK
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Platform, kullanıcı oturumlarının güvenliğini sağlamak amacıyla aşağıdaki önlemleri almaktadır:
+            </p>
+            <ul className="list-disc pl-6 space-y-1.5 text-[14px] text-muted-foreground">
+              <li>Oturum tokenları <strong className="text-foreground">JWT standardında</strong>, RS256 veya HS256 algoritmaları ile imzalanır</li>
+              <li>Access token süresi <strong className="text-foreground">15-30 dakika</strong>, refresh token süresi <strong className="text-foreground">7-30 gün</strong> ile sınırlıdır</li>
+              <li>Her yeni oturum için <strong className="text-foreground">benzersiz oturum tanımlayıcı</strong> oluşturulur</li>
+              <li>Eşzamanlı oturum sayısı sınırlandırılabilir</li>
+              <li>Şüpheli aktivite tespit edilmesi halinde tüm oturumlar <strong className="text-foreground">otomatik olarak sonlandırılır</strong></li>
+              <li>Oturum bilgileri <strong className="text-foreground">httpOnly</strong> ve <strong className="text-foreground">secure</strong> bayrağı ile korunur</li>
+              <li><strong className="text-foreground">CSRF koruması</strong> uygulanır</li>
+              <li>Belirli bir süre hareketsizlik sonrasında oturum otomatik olarak sonlandırılır</li>
+            </ul>
+          </article>
 
           {/* MADDE 26 */}
-          <h2>MADDE 26 – PAROLA POLİTİKASI</h2>
-          <p>
-            Platform, kullanıcı hesaplarının güvenliğini sağlamak amacıyla aşağıdaki parola politikasını uygulamaktadır: (a) Minimum parola uzunluğu 8 karakterdir; (b) Parolalar bcrypt veya Argon2id algoritması ile hashlenmiş olarak saklanır, düz metin olarak saklanmaz; (c) İki faktörlü kimlik doğrulama (2FA/MFA) opsiyonel olarak sunulur ve TOTP standardını destekler; (d) Belirli sayıda başarısız giriş denemesi sonrasında hesap geçici olarak kilitlenir (rate limiting); (e) Parola değişikliği işlemlerinde mevcut parolanın doğrulanması zorunludur; (f) Parola sıfırlama tokenları zaman sınırlıdır ve tek kullanımlıktır; (g) Sızdırılmış parola veritabanlarına (Have I Been Pwned vb.) karşı kontrol yapılması değerlendirme altındadır.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 26 – PAROLA POLİTİKASI
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Platform, kullanıcı hesaplarının güvenliğini sağlamak amacıyla aşağıdaki <strong className="text-foreground">parola politikasını</strong> uygulamaktadır:
+            </p>
+            <ul className="list-disc pl-6 space-y-1.5 text-[14px] text-muted-foreground">
+              <li>Minimum parola uzunluğu <strong className="text-foreground">8 karakter</strong>dir</li>
+              <li>Parolalar <strong className="text-foreground">bcrypt veya Argon2id</strong> algoritması ile hashlenmiş olarak saklanır, düz metin olarak <strong className="text-foreground">saklanmaz</strong></li>
+              <li>İki faktörlü kimlik doğrulama (<strong className="text-foreground">2FA/MFA</strong>) opsiyonel olarak sunulur ve <strong className="text-foreground">TOTP standardını</strong> destekler</li>
+              <li>Belirli sayıda başarısız giriş denemesi sonrasında hesap <strong className="text-foreground">geçici olarak kilitlenir</strong> (rate limiting)</li>
+              <li>Parola değişikliği işlemlerinde <strong className="text-foreground">mevcut parolanın doğrulanması</strong> zorunludur</li>
+              <li>Parola sıfırlama tokenları <strong className="text-foreground">zaman sınırlıdır</strong> ve tek kullanımlıktır</li>
+            </ul>
+          </article>
 
           {/* MADDE 27 */}
-          <h2>MADDE 27 – E-POSTA GÜVENLİĞİ</h2>
-          <p>
-            Platform tarafından gönderilen tüm e-postalarda güvenlik standartlarına uyulur: (a) E-posta sunucuları TLS şifreleme ile korunur; (b) SPF, DKIM ve DMARC kayıtları yapılandırılarak e-posta sahteciliği önlenir; (c) E-posta doğrulama tokenları tek kullanımlıktır ve belirlenen süre sonunda geçersiz hale gelir; (d) Hassas bilgiler e-posta ile düz metin olarak iletilmez; link üzerinden güvenli platforma yönlendirme yapılır; (e) E-posta iletim logları, hizmet sağlayıcı tarafından 90 gün süreyle saklanır; (f) Oltalama (phishing) saldırılarına karşı kullanıcılar uyarılır ve platformdan gelen e-postalar marka tutarlılığı ile tanımlanabilir kılınır.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 27 – E-POSTA GÜVENLİĞİ
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Platform tarafından gönderilen tüm e-postalarda güvenlik standartlarına uyulur:
+            </p>
+            <ul className="list-disc pl-6 space-y-1.5 text-[14px] text-muted-foreground">
+              <li>E-posta sunucuları <strong className="text-foreground">TLS şifreleme</strong> ile korunur</li>
+              <li><strong className="text-foreground">SPF, DKIM ve DMARC</strong> kayıtları yapılandırılarak e-posta sahteciliği önlenir</li>
+              <li>E-posta doğrulama tokenları <strong className="text-foreground">tek kullanımlıktır</strong> ve belirlenen süre sonunda geçersiz hale gelir</li>
+              <li>Hassas bilgiler e-posta ile düz metin olarak <strong className="text-foreground">iletilmez</strong>; güvenli platforma yönlendirme yapılır</li>
+              <li>E-posta iletim logları, hizmet sağlayıcı tarafından <strong className="text-foreground">90 gün</strong> süreyle saklanır</li>
+              <li><strong className="text-foreground">Oltalama (phishing)</strong> saldırılarına karşı kullanıcılar uyarılır</li>
+            </ul>
+          </article>
 
           {/* MADDE 28 */}
-          <h2>MADDE 28 – ERİŞİM KONTROLÜ VE YETKİLENDİRME</h2>
-          <p>
-            Platform, rol tabanlı erişim kontrolü (RBAC) uygulayarak kişisel verilere erişimi sınırlandırmaktadır. Mevcut kullanıcı rolleri: (a) Admin – tam sistem erişimi, kullanıcı yönetimi, sistem konfigürasyonu; (b) Premium User – gelişmiş özellikler, detaylı raporlama, API erişimi; (c) Pro User – standart özellikler, sınırlı API erişimi; (d) Free User – temel özellikler, kısıtlı veri erişimi. Her rol, minimum yetki ilkesi (principle of least privilege) doğrultusunda yalnızca görevinin gerektirdiği verilere erişim hakkına sahiptir. Erişim hakları düzenli olarak gözden geçirilir ve güncellenir. Tüm yetkili erişimler denetim loglarına kaydedilir.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 28 – ERİŞİM KONTROLÜ VE YETKİLENDİRME
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Platform, <strong className="text-foreground">Rol Tabanlı Erişim Kontrolü (RBAC)</strong> uygulayarak kişisel verilere erişimi sınırlandırmaktadır:
+            </p>
+            <div className="overflow-x-auto mb-3">
+              <table className="w-full text-[14px] border border-border/30 rounded-xl overflow-hidden">
+                <thead>
+                  <tr className="bg-muted/30">
+                    <th className="text-left px-4 py-3 font-semibold text-foreground border-b border-border/30">Rol</th>
+                    <th className="text-left px-4 py-3 font-semibold text-foreground border-b border-border/30">Erişim Düzeyi</th>
+                  </tr>
+                </thead>
+                <tbody className="text-muted-foreground">
+                  <tr className="border-b border-border/20">
+                    <td className="px-4 py-2.5"><strong className="text-foreground">Admin</strong></td>
+                    <td className="px-4 py-2.5">Tam sistem erişimi, kullanıcı yönetimi, sistem konfigürasyonu</td>
+                  </tr>
+                  <tr className="border-b border-border/20">
+                    <td className="px-4 py-2.5"><strong className="text-foreground">Premium User</strong></td>
+                    <td className="px-4 py-2.5">Gelişmiş özellikler, detaylı raporlama, API erişimi</td>
+                  </tr>
+                  <tr className="border-b border-border/20">
+                    <td className="px-4 py-2.5"><strong className="text-foreground">Pro User</strong></td>
+                    <td className="px-4 py-2.5">Standart özellikler, sınırlı API erişimi</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-2.5"><strong className="text-foreground">Free User</strong></td>
+                    <td className="px-4 py-2.5">Temel özellikler, kısıtlı veri erişimi</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[14px] leading-relaxed text-muted-foreground">
+              Her rol, <strong className="text-foreground">minimum yetki ilkesi</strong> (<em>principle of least privilege</em>) doğrultusunda yalnızca görevinin gerektirdiği verilere erişim hakkına sahiptir. Tüm yetkili erişimler <strong className="text-foreground">denetim loglarına kaydedilir</strong>.
+            </p>
+          </article>
 
           {/* MADDE 29 */}
-          <h2>MADDE 29 – KVKK UYUMLULUK PROGRAMI</h2>
-          <p>
-            Platform, KVKK ve ilgili mevzuat ile tam uyumu sürdürmeye yönelik kapsamlı bir uyumluluk programı yürütmektedir. Bu program: (a) VERBİS (Veri Sorumluları Sicil Bilgi Sistemi) kaydının güncel tutulması; (b) Kişisel veri envanter ve işleme süreçlerinin belgelenmesi; (c) Veri İşleme Etki Değerlendirmesi (DPIA) çalışmalarının yapılması; (d) Aydınlatma metinlerinin güncel tutulması; (e) Açık rıza beyanlarının mevzuata uygun biçimde alınması ve saklanması; (f) Veri işleme sözleşmelerinin üçüncü taraflarla imzalanması; (g) Periyodik iç denetim ve uyumluluk değerlendirmeleri; (h) Kişisel veri ihlal müdahale planının güncel tutulması; (i) Çalışan farkındalık eğitimlerinin düzenlenmesi kapsamındaki faaliyetleri içerir. Uyumluluk programı, mevzuat değişiklikleri ve Kurul kararları doğrultusunda düzenli olarak güncellenir.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 29 – KVKK UYUMLULUK PROGRAMI
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Platform, <strong className="text-foreground">KVKK ve ilgili mevzuat ile tam uyumu</strong> sürdürmeye yönelik kapsamlı bir uyumluluk programı yürütmektedir:
+            </p>
+            <ol className="list-[lower-alpha] pl-6 space-y-1.5 text-[14px] text-muted-foreground">
+              <li><strong className="text-foreground">VERBİS</strong> kaydının güncel tutulması</li>
+              <li>Kişisel veri <strong className="text-foreground">envanter ve işleme süreçlerinin</strong> belgelenmesi</li>
+              <li><strong className="text-foreground">Veri İşleme Etki Değerlendirmesi (DPIA)</strong> çalışmalarının yapılması</li>
+              <li><strong className="text-foreground">Aydınlatma metinlerinin</strong> güncel tutulması</li>
+              <li>Açık rıza beyanlarının mevzuata uygun biçimde alınması ve saklanması</li>
+              <li><strong className="text-foreground">Veri işleme sözleşmelerinin</strong> üçüncü taraflarla imzalanması</li>
+              <li>Periyodik <strong className="text-foreground">iç denetim</strong> ve uyumluluk değerlendirmeleri</li>
+              <li>Kişisel veri <strong className="text-foreground">ihlal müdahale planının</strong> güncel tutulması</li>
+              <li>Çalışan <strong className="text-foreground">farkındalık eğitimlerinin</strong> düzenlenmesi</li>
+            </ol>
+          </article>
 
           {/* MADDE 30 */}
-          <h2>MADDE 30 – VERİ ETKİ DEĞERLENDİRMESİ (DPIA)</h2>
-          <p>
-            Kişisel verilerin işlenmesinin bireylerin hak ve özgürlükleri üzerinde yüksek risk oluşturma ihtimalinin bulunduğu durumlarda, Platform veri koruma etki değerlendirmesi (DPIA – Data Protection Impact Assessment) gerçekleştirmektedir. DPIA, yeni bir veri işleme faaliyeti başlatılmadan önce veya mevcut işleme faaliyetlerinde önemli değişiklikler yapılmadan önce uygulanır. Değerlendirme; işleme faaliyetinin sistematik tanımı, amaçların orantılılık değerlendirmesi, risk analizi, risk azaltma tedbirleri ve istisnai durum planlarını kapsar. DPIA sonuçları belgelenir ve gerektiğinde Kişisel Verileri Koruma Kurulu ile paylaşılır.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 30 – VERİ ETKİ DEĞERLENDİRMESİ (DPIA)
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground">
+              Kişisel verilerin işlenmesinin bireylerin hak ve özgürlükleri üzerinde <strong className="text-foreground">yüksek risk oluşturma ihtimalinin</strong> bulunduğu durumlarda, Platform <strong className="text-foreground">veri koruma etki değerlendirmesi (DPIA)</strong> gerçekleştirmektedir. DPIA, yeni bir veri işleme faaliyeti başlatılmadan önce veya mevcut işleme faaliyetlerinde önemli değişiklikler yapılmadan önce uygulanır. Değerlendirme; işleme faaliyetinin sistematik tanımı, amaçların orantılılık değerlendirmesi, <strong className="text-foreground">risk analizi</strong>, risk azaltma tedbirleri ve istisnai durum planlarını kapsar. DPIA sonuçları belgelenir ve gerektiğinde <strong className="text-foreground">Kişisel Verileri Koruma Kurulu</strong> ile paylaşılır.
+            </p>
+          </article>
 
           {/* MADDE 31 */}
-          <h2>MADDE 31 – E-POSTA DOĞRULAMA VE HESAP AKTİVASYONU</h2>
-          <p>
-            Platform güvenliğini artırmak ve spam hesapların önüne geçmek amacıyla, kayıt işleminin tamamlanması için e-posta doğrulama zorunlu tutulmaktadır. Kayıt sırasında girilen e-posta adresine bir doğrulama bağlantısı gönderilir. Bu bağlantı belirli bir süre (genellikle 24-48 saat) geçerlidir. Doğrulama tamamlanmadan hesap, tam işlevsellikle kullanılamaz. Doğrulama e-postasının yeniden gönderilmesi talep edilebilir. E-posta adresi değişikliği yapıldığında yeni adresin doğrulanması da zorunludur. Bu süreçte toplanan veriler sadece hesap güvenliği amacıyla kullanılır.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 31 – E-POSTA DOĞRULAMA VE HESAP AKTİVASYONU
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground">
+              Platform güvenliğini artırmak ve spam hesapların önüne geçmek amacıyla, kayıt işleminin tamamlanması için <strong className="text-foreground">e-posta doğrulama zorunlu</strong> tutulmaktadır. Kayıt sırasında girilen e-posta adresine bir doğrulama bağlantısı gönderilir. Bu bağlantı belirli bir süre (genellikle <strong className="text-foreground">24-48 saat</strong>) geçerlidir. Doğrulama tamamlanmadan hesap, tam işlevsellikle kullanılamaz. E-posta adresi değişikliği yapıldığında <strong className="text-foreground">yeni adresin doğrulanması da zorunludur</strong>.
+            </p>
+          </article>
 
           {/* MADDE 32 */}
-          <h2>MADDE 32 – GİZLİLİK POLİTİKASI ONAY MEKANİZMASI</h2>
-          <p>
-            Platform&apos;a kayıt olurken tüm kullanıcılardan, işbu Gizlilik ve Çerez Politikası&apos;nı okuduklarına ve kabul ettiklerine dair açık onay alınmaktadır. Bu onay: (a) Kayıt formunda &quot;Gizlilik Politikasını okudum ve kabul ediyorum&quot; kutucuğunun işaretlenmesi suretiyle alınır; (b) Onay olmaksızın kayıt işlemi tamamlanamaz; (c) Onay tarihi, saati ve onay veren kullanıcının IP adresi dahil olmak üzere kayıt altına alınır; (d) Bu onay kaydı, Platform veritabanında güvenli biçimde saklanır ve yasal delil niteliğindedir; (e) Kullanıcı, onayını dilediği zaman geri çekme hakkına sahiptir; ancak onayın geri çekilmesi, onaya dayalı hizmetlerin sunulmasının kısmen veya tamamen durdurulmasına yol açabilir; (f) Gizlilik politikasında önemli değişiklikler yapılması halinde, kullanıcılardan yeniden onay alınması değerlendirilecektir.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 32 – GİZLİLİK POLİTİKASI ONAY MEKANİZMASI
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              Platform&apos;a kayıt olurken tüm kullanıcılardan, işbu Gizlilik ve Çerez Politikası&apos;nı <strong className="text-foreground">okuduklarına ve kabul ettiklerine dair açık onay</strong> alınmaktadır:
+            </p>
+            <ol className="list-[lower-alpha] pl-6 space-y-1.5 text-[14px] text-muted-foreground">
+              <li>Kayıt formunda <strong className="text-foreground">&quot;Gizlilik Politikasını okudum ve kabul ediyorum&quot;</strong> kutucuğunun işaretlenmesi suretiyle alınır</li>
+              <li><strong className="text-foreground">Onay olmaksızın</strong> kayıt işlemi tamamlanamaz</li>
+              <li>Onay tarihi, saati ve onay veren kullanıcının IP adresi dahil olmak üzere <strong className="text-foreground">kayıt altına alınır</strong></li>
+              <li>Bu onay kaydı, Platform veritabanında güvenli biçimde saklanır ve <strong className="text-foreground">yasal delil niteliğindedir</strong></li>
+              <li>Kullanıcı, onayını dilediği zaman <strong className="text-foreground">geri çekme hakkına</strong> sahiptir; ancak onayın geri çekilmesi, hizmetlerin kısmen veya tamamen durdurulmasına yol açabilir</li>
+              <li>Gizlilik politikasında önemli değişiklikler yapılması halinde, kullanıcılardan <strong className="text-foreground">yeniden onay alınması</strong> değerlendirilecektir</li>
+            </ol>
+          </article>
 
           {/* MADDE 33 */}
-          <h2>MADDE 33 – UYUŞMAZLIK ÇÖZÜMÜ VE YETKİLİ MAHKEME</h2>
-          <p>
-            İşbu Politika&apos;dan kaynaklanan veya Politika ile bağlantılı tüm uyuşmazlıkların çözümünde öncelikle dostane yollar (müzakere, arabuluculuk) denenecektir. Uyuşmazlığın dostane yollarla çözümlenememesi halinde, Türkiye Cumhuriyeti kanunları uygulanacak ve İstanbul Mahkemeleri ve İcra Daireleri münhasıran yetkili olacaktır. GDPR kapsamındaki uyuşmazlıklarda, ilgili kişinin ikamet ettiği AEA üye devletindeki denetim makamına başvuru hakkı saklıdır. Platform, yargılama süreci boyunca ilgili kişisel verileri mevzuatın izin verdiği ölçüde saklamaya devam edecektir.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 33 – UYUŞMAZLIK ÇÖZÜMÜ VE YETKİLİ MAHKEME
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground">
+              İşbu Politika&apos;dan kaynaklanan veya Politika ile bağlantılı tüm uyuşmazlıkların çözümünde öncelikle <strong className="text-foreground">dostane yollar</strong> (müzakere, arabuluculuk) denenecektir. Uyuşmazlığın dostane yollarla çözümlenememesi halinde, <strong className="text-foreground">Türkiye Cumhuriyeti kanunları</strong> uygulanacak ve <strong className="text-foreground">İstanbul Mahkemeleri ve İcra Daireleri</strong> münhasıran yetkili olacaktır. GDPR kapsamındaki uyuşmazlıklarda, ilgili kişinin ikamet ettiği AEA üye devletindeki denetim makamına başvuru hakkı saklıdır.
+            </p>
+          </article>
 
           {/* MADDE 34 */}
-          <h2>MADDE 34 – POLİTİKA DEĞİŞİKLİKLERİ VE BİLDİRİM</h2>
-          <p>
-            İşbu Politika, herhangi bir zamanda Bondley tarafından tek taraflı olarak değiştirilebilir, güncellenebilir veya yeniden düzenlenebilir. Politika değişiklikleri: (a) Platform üzerinde güncellenmiş metnin yayımlanması ile yürürlüğe girer; (b) Önemli değişikliklerde kayıtlı e-posta adresine bildirim gönderilebilir; (c) Değişiklik tarihi, Politika&apos;nın başında &quot;Son Güncelleme&quot; tarihi olarak gösterilir; (d) Değişiklik sonrasında Platform&apos;un kullanılmaya devam edilmesi, güncellenmiş Politika&apos;nın kabul edildiği anlamına gelir; (e) Önceki Politika versiyonlarına erişim imkanı sağlanması değerlendirilecektir; (f) Kullanıcıların Politika&apos;yı düzenli olarak gözden geçirmesi kendi sorumluluğundadır. Bondley, Politika değişikliklerinin zamanlaması, kapsamı ve sıklığı konusunda tam takdir yetkisine sahiptir.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 34 – POLİTİKA DEĞİŞİKLİKLERİ VE BİLDİRİM
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
+              İşbu Politika, herhangi bir zamanda Bondley tarafından <strong className="text-foreground">tek taraflı olarak değiştirilebilir</strong>, güncellenebilir veya yeniden düzenlenebilir. Politika değişiklikleri:
+            </p>
+            <ol className="list-[lower-alpha] pl-6 space-y-1.5 text-[14px] text-muted-foreground">
+              <li>Platform üzerinde <strong className="text-foreground">güncellenmiş metnin yayımlanması</strong> ile yürürlüğe girer</li>
+              <li>Önemli değişikliklerde kayıtlı e-posta adresine <strong className="text-foreground">bildirim gönderilebilir</strong></li>
+              <li>Değişiklik tarihi, Politika&apos;nın başında <strong className="text-foreground">&quot;Son Güncelleme&quot;</strong> tarihi olarak gösterilir</li>
+              <li>Değişiklik sonrasında Platform&apos;un <strong className="text-foreground">kullanılmaya devam edilmesi</strong>, güncellenmiş Politika&apos;nın kabul edildiği anlamına gelir</li>
+              <li>Bondley, Politika değişikliklerinin zamanlaması, kapsamı ve sıklığı konusunda <strong className="text-foreground">tam takdir yetkisine</strong> sahiptir</li>
+            </ol>
+          </article>
 
           {/* MADDE 35 */}
-          <h2>MADDE 35 – YÜRÜRLÜK VE BÜTÜNLÜK</h2>
-          <p>
-            İşbu Gizlilik ve Çerez Politikası, Platform üzerinde yayımlandığı tarihte yürürlüğe girer ve aksine bir bildirim yapılmadıkça süresiz olarak yürürlükte kalır. Politika&apos;nın herhangi bir maddesinin yetkili bir mahkeme veya düzenleyici otorite tarafından geçersiz veya uygulanamaz bulunması halinde, söz konusu madde Politika&apos;dan bağımsız olarak değerlendirilir ve diğer maddelerin geçerliliğini etkilemez. Geçersiz bulunan madde, hükmün amacına en yakın biçimde yorumlanarak uygulanacaktır. Bu Politika, kişisel verilerin korunmasına ilişkin olarak Platform ile kullanıcı arasındaki ilişkiyi düzenleyen temel belge niteliğindedir ve Platform Kullanım Koşulları ile birlikte değerlendirilir.
-          </p>
+          <article>
+            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
+              MADDE 35 – YÜRÜRLÜK VE BÜTÜNLÜK
+            </h2>
+            <p className="text-[14px] leading-relaxed text-muted-foreground">
+              İşbu Gizlilik ve Çerez Politikası, Platform üzerinde <strong className="text-foreground">yayımlandığı tarihte yürürlüğe girer</strong> ve aksine bir bildirim yapılmadıkça süresiz olarak yürürlükte kalır. Politika&apos;nın herhangi bir maddesinin yetkili bir mahkeme veya düzenleyici otorite tarafından geçersiz veya uygulanamaz bulunması halinde, söz konusu madde Politika&apos;dan bağımsız olarak değerlendirilir ve <strong className="text-foreground">diğer maddelerin geçerliliğini etkilemez</strong>. Bu Politika, kişisel verilerin korunmasına ilişkin olarak Platform ile kullanıcı arasındaki ilişkiyi düzenleyen <strong className="text-foreground">temel belge</strong> niteliğindedir ve <strong className="text-foreground">Platform Kullanım Koşulları</strong> ile birlikte değerlendirilir.
+            </p>
+          </article>
 
           {/* FINAL RESERVATION BLOCK */}
-          <div className="mt-16 rounded-2xl border-2 border-amber-500/30 bg-amber-500/5 p-6">
+          <div className="mt-8 rounded-2xl border-2 border-amber-500/30 bg-amber-500/5 p-6">
             <div className="flex items-start gap-3">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
               <div>
-                <p className="text-[14px] font-bold text-amber-700 dark:text-amber-300 !mt-0">
-                  DEĞİŞİKLİK HAKKI TEKRAREN BEYAN
+                <p className="text-[15px] font-bold text-amber-700 dark:text-amber-300">
+                  ⚠️ DEĞİŞİKLİK HAKKI TEKRAREN BEYAN
                 </p>
-                <p className="text-[13px] text-amber-700/90 dark:text-amber-300/80 !mb-0 mt-2">
-                  Hizmet Verici Kurum olan Bondley, işbu Gizlilik ve Çerez Politikası&apos;nın tamamı veya herhangi bir maddesi üzerinde, önceden herhangi bir bildirimde bulunma yükümlülüğü olmaksızın, tek taraflı olarak değişiklik yapma, güncelleme, kaldırma, ek hükümler ekleme veya mevcut hükümleri tamamen yeniden düzenleme hakkını münhasıran saklı tutmaktadır. Bu hak, Platform&apos;un faaliyette olduğu tüm süre boyunca geçerlidir ve kullanıcıların söz konusu değişiklikleri düzenli olarak takip etmesi kendi sorumluluklarındadır. Güncellenen politikanın yürürlük tarihi, Platform üzerinde ilan edildiği tarihtir. Platform&apos;un kullanılmaya devam edilmesi, değişikliklerin bütünüyle kabul edildiği anlamını taşır.
+                <p className="text-[13px] text-amber-700/90 dark:text-amber-300/80 mt-2 leading-relaxed">
+                  Hizmet Verici Kurum olan <strong>Bondley</strong>, işbu Gizlilik ve Çerez Politikası&apos;nın tamamı veya herhangi bir maddesi üzerinde, <strong>önceden herhangi bir bildirimde bulunma yükümlülüğü olmaksızın</strong>, tek taraflı olarak değişiklik yapma, güncelleme, kaldırma, ek hükümler ekleme veya mevcut hükümleri tamamen yeniden düzenleme hakkını <strong>münhasıran saklı tutmaktadır</strong>. Bu hak, Platform&apos;un faaliyette olduğu tüm süre boyunca geçerlidir ve kullanıcıların söz konusu değişiklikleri düzenli olarak takip etmesi <strong>kendi sorumluluklarındadır</strong>. Güncellenen politikanın yürürlük tarihi, Platform üzerinde ilan edildiği tarihtir. Platform&apos;un kullanılmaya devam edilmesi, <strong>değişikliklerin bütünüyle kabul edildiği</strong> anlamını taşır.
                 </p>
               </div>
             </div>
@@ -326,8 +797,8 @@ export default function PrivacyPolicyPage() {
           {/* Footer Info */}
           <div className="mt-12 pt-8 border-t border-border/30">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-[13px] text-muted-foreground">
-              <p className="!mb-0">
-                 Bu politika 35 madde halinde düzenlenmiş olup, tüm maddeleri tek bir bütünlük içinde yorumlanmalıdır.
+              <p>
+                Bu politika <strong className="text-foreground">35 madde</strong> halinde düzenlenmiş olup, tüm maddeleri tek bir bütünlük içinde yorumlanmalıdır.
               </p>
               <Link
                 href="/"

@@ -202,7 +202,7 @@ export default function SignupPage() {
                   </div>
                   <span className="text-[13px] leading-relaxed text-muted-foreground">
                     <Link
-                      href="/privacy"
+                      href="/gizlilik"
                       target="_blank"
                       className="text-primary hover:text-primary/80 underline underline-offset-2 font-medium transition-colors"
                       onClick={(e) => e.stopPropagation()}
