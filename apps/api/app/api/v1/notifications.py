@@ -51,6 +51,21 @@ async def mark_as_read(
     await db.refresh(notification)
     return notification
 
+@router.patch("/read-all", status_code=status.HTTP_200_OK)
+async def mark_all_as_read(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """Kullanıcının tüm bildirimlerini okundu olarak işaretle."""
+    query = update(Notification).where(
+        Notification.user_id == current_user.id,
+        Notification.is_read == False
+    ).values(is_read=True)
+    
+    result = await db.execute(query)
+    await db.commit()
+    return {"status": "success", "updated_count": result.rowcount}
+
 @router.delete("/{notification_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_notification(
     notification_id: int,

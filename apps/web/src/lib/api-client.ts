@@ -689,6 +689,8 @@ export const api = {
       apiFetch<NotificationRecord[]>(`/notifications/?skip=${skip}&limit=${limit}`, { token }),
     markAsRead: (token: string, id: number) =>
       apiFetch<NotificationRecord>(`/notifications/${id}/read`, { method: "PATCH", token }),
+    markAllAsRead: (token: string) =>
+      apiFetch<{ status: string; updated_count: number }>(`/notifications/read-all`, { method: "PATCH", token }),
     delete: (token: string, id: number) =>
       apiFetch<void>(`/notifications/${id}`, { method: "DELETE", token }),
     broadcast: (token: string, data: { title: string; message: string; type?: string }) =>
