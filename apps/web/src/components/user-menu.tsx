@@ -141,7 +141,7 @@ export function UserMenu() {
       {isOpen && (
         <div
           className={cn(
-            "absolute right-0 bottom-full mb-2 w-64 rounded-xl border border-border bg-card shadow-lg",
+            "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 rounded-xl border border-border bg-card shadow-lg",
             "z-50 overflow-hidden",
             "animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-200",
             "md:w-64 w-[calc(100vw-2rem)] max-w-[280px]"
