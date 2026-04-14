@@ -12,9 +12,20 @@ branch_labels = None
 depends_on = None
 
 
+
+def _column_exists(table_name: str, column_name: str) -> bool:
+    conn = op.get_bind()
+    res = conn.execute(sa.text(
+        f"SELECT 1 FROM information_schema.columns WHERE table_name='{table_name}' AND column_name='{column_name}'"
+    ))
+    return res.scalar() is not None
+
+
 def upgrade() -> None:
-    op.add_column("users", sa.Column("privacy_policy_accepted", sa.Boolean(), nullable=False, server_default=sa.text("false")))
-    op.add_column("users", sa.Column("privacy_policy_accepted_at", sa.DateTime(timezone=True), nullable=True))
+    if not _column_exists('users', 'privacy_policy_accepted'):
+        op.add_column("users", sa.Column("privacy_policy_accepted", sa.Boolean(), nullable=False, server_default=sa.text("false")))
+    if not _column_exists('users', 'privacy_policy_accepted_at'):
+        op.add_column("users", sa.Column("privacy_policy_accepted_at", sa.DateTime(timezone=True), nullable=True))
 
 
 def downgrade() -> None:
