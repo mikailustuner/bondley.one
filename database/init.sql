@@ -276,4 +276,18 @@ CREATE TABLE IF NOT EXISTS kap_disclosure_details (
 CREATE INDEX IF NOT EXISTS idx_kap_details_isin ON kap_disclosure_details(isin_code);
 CREATE INDEX IF NOT EXISTS idx_kap_details_disclosure ON kap_disclosure_details(disclosure_id);
 
+-- notifications: Kullanici bildirimleri
+CREATE TABLE IF NOT EXISTS notifications (
+    id              SERIAL PRIMARY KEY,
+    user_id         INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title           VARCHAR(255) NOT NULL,
+    message         TEXT NOT NULL,
+    type            VARCHAR(20) DEFAULT 'info',
+    is_read         BOOLEAN DEFAULT FALSE,
+    created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at);
+
 COMMIT;

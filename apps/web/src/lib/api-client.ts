@@ -683,7 +683,32 @@ export const api = {
   system: {
     getMaintenanceStatus: () => apiFetch<{ is_maintenance: boolean }>("/system/maintenance"),
   },
+
+  notifications: {
+    list: (token: string, skip: number = 0, limit: number = 100) =>
+      apiFetch<NotificationRecord[]>(`/notifications/?skip=${skip}&limit=${limit}`, { token }),
+    markAsRead: (token: string, id: number) =>
+      apiFetch<NotificationRecord>(`/notifications/${id}/read`, { method: "PATCH", token }),
+    delete: (token: string, id: number) =>
+      apiFetch<void>(`/notifications/${id}`, { method: "DELETE", token }),
+    broadcast: (token: string, data: { title: string; message: string; type?: string }) =>
+      apiFetch<{ status: string; users_notified: number }>("/notifications/broadcast", {
+        method: "POST",
+        token,
+        body: JSON.stringify(data),
+      }),
+  },
 };
+
+export interface NotificationRecord {
+  id: number;
+  user_id: number;
+  title: string;
+  message: string;
+  type: string;
+  is_read: boolean;
+  created_at: string;
+}
 
 export interface AlertRecord {
   id: number;

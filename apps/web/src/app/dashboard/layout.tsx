@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
+import { NotificationBell } from "@/components/notification-bell";
 import { getUser } from "@/lib/auth";
 import {
   LayoutDashboard,
@@ -160,7 +161,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <span className="text-[11px] font-medium text-muted-foreground">Canlı Veri</span>
         </div>
         <div className="flex items-center justify-between px-2">
-          <ThemeToggle />
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <NotificationBell />
+          </div>
           <UserMenu />
         </div>
       </div>
@@ -219,6 +223,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="font-semibold text-[15px] text-foreground">Bondley</span>
           </Link>
           <div className="flex items-center gap-1">
+            <NotificationBell />
             <ThemeToggle />
           </div>
         </div>
