@@ -240,6 +240,7 @@ export default function AdminUsersPage() {
                       full_name: formData.full_name,
                       company: formData.company,
                       location: formData.location,
+                      privacy_policy_accepted: true,
                     });
                     // After signup, admin needs to update role
                     const newUsers = await api.auth.usersList(token);
