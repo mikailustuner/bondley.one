@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { AlertCircle, Inbox, Star, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { api, BondListItem, BondStats } from "@/lib/api-client";
+import { api, BondListItem, BondStats, TLREFRecord } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
 
@@ -38,6 +38,7 @@ export default function BondsListPage() {
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [favoriteIsins, setFavoriteIsins] = useState<Set<string>>(new Set());
   const [favoriteToggling, setFavoriteToggling] = useState<string | null>(null);
+  const [tlrefLatest, setTlrefLatest] = useState<TLREFRecord | null>(null);
 
   useEffect(() => {
     const token = getToken();
@@ -51,12 +52,14 @@ export default function BondsListPage() {
       api.bonds.list(token, { active_only: true, limit: 10, order_by: "updated_at_desc" }),
       api.bonds.stats(token),
       api.bonds.favoritesList(token),
+      api.tlref.latest(token),
     ])
-      .then(([recentRes, statsRes, favRes]) => {
+      .then(([recentRes, statsRes, favRes, tlrefRes]) => {
         setRecentBonds(recentRes.items || []);
         setTotal(recentRes.total ?? 0);
         setStats(statsRes);
         setFavoriteIsins(new Set((favRes.items || []).map((b) => b.isin_code)));
+        setTlrefLatest(tlrefRes);
         setLoading(false);
 
         setFullListLoading(true);
@@ -195,6 +198,39 @@ export default function BondsListPage() {
             <div className="text-[13px] text-muted-foreground mt-1.5">Farklı tür</div>
           </div>
         </div>
+      )}
+
+      {!loading && tlrefLatest && (
+        <Card className="animate-fade-up">
+          <CardHeader>
+            <CardDescription>TLREF Referansı</CardDescription>
+            <CardTitle className="mt-1">Son Oran ve Endeks</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="border-b border-border/50">
+                    <th className="text-left py-2.5 text-muted-foreground font-medium">Tarih</th>
+                    <th className="text-right py-2.5 text-muted-foreground font-medium">TLREF Oranı %</th>
+                    <th className="text-right py-2.5 text-muted-foreground font-medium">TLREF Endeksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-border/20">
+                    <td className="py-2.5 font-mono-data">{formatDate(tlrefLatest.rate_date)}</td>
+                    <td className="py-2.5 text-right font-mono-data">
+                      {tlrefLatest.daily_rate != null ? formatPercentFromDecimal(tlrefLatest.daily_rate * 365, 4) : "—"}
+                    </td>
+                    <td className="py-2.5 text-right font-mono-data">
+                      {formatDecimal(tlrefLatest.index_value, 5, 5)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Recent Bonds */}
@@ -410,6 +446,12 @@ export default function BondsListPage() {
                     <p className="text-[13px] text-muted-foreground truncate mt-1">
                       {bond.issuer || "—"}
                     </p>
+                    {bond.fund_user && (
+                      <p className="text-[11px] text-muted-foreground/70 truncate flex items-center gap-1 mt-0.5">
+                        <span className="shrink-0 text-primary/40">↳</span>
+                        {bond.fund_user}
+                      </p>
+                    )}
                     <div className="flex justify-between text-[13px] mt-2.5 text-muted-foreground">
                       <span>
                         Vade:{" "}
@@ -483,11 +525,21 @@ export default function BondsListPage() {
                           </Link>
                         </td>
                         <td className="py-3.5 text-[13px] text-muted-foreground max-w-[200px] truncate">
-                          {bond.issuer
-                            ? bond.issuer.length > 35
-                              ? bond.issuer.substring(0, 35) + "…"
-                              : bond.issuer
-                            : "—"}
+                          <div className="truncate">
+                            {bond.issuer
+                              ? bond.issuer.length > 35
+                                ? bond.issuer.substring(0, 35) + "…"
+                                : bond.issuer
+                              : "—"}
+                          </div>
+                          {bond.fund_user && (
+                            <div className="truncate text-[11px] text-muted-foreground/70 flex items-center gap-1 mt-0.5" title={bond.fund_user}>
+                              <span className="shrink-0 text-primary/40">↳</span>
+                              {bond.fund_user.length > 40
+                                ? bond.fund_user.substring(0, 40) + "…"
+                                : bond.fund_user}
+                            </div>
+                          )}
                         </td>
                         <td className="py-3.5">
                           {bond.security_type ? (

@@ -38,6 +38,7 @@ async def list_bonds(
     limit: int = Query(50, ge=1, le=3000),
     active_only: bool = True,
     search: str | None = Query(None, description="ISIN veya ihracciyla ara"),
+    fund_user: str | None = Query(None, description="Fon kullanicisi ile ara"),
     currency: str | None = Query(None, description="Para birimi filtresi"),
     security_type: str | None = Query(None, description="MK turu filtresi"),
     yield_type: str | None = Query(None, description="Getiri turu filtresi"),
@@ -56,11 +57,18 @@ async def list_bonds(
         query = query.where(Bond.is_active == True)
         count_query = count_query.where(Bond.is_active == True)
 
+    if fund_user:
+        pattern = f"%{fund_user}%"
+        query = query.where(Bond.fund_user.ilike(pattern))
+        count_query = count_query.where(Bond.fund_user.ilike(pattern))
+
     if search:
         pattern = f"%{search}%"
         search_filter = or_(
             Bond.isin_code.ilike(pattern),
             Bond.issuer.ilike(pattern),
+            Bond.fund_user.ilike(pattern),
+            Bond.source_institution.ilike(pattern),
         )
         query = query.where(search_filter)
         count_query = count_query.where(search_filter)

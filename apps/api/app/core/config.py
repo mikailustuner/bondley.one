@@ -51,6 +51,8 @@ class Settings(BaseSettings):
     MFA_ENCRYPTION_KEY: str = ""
 
     BIST_TLREF_DAILY_URL: str = "https://borsaistanbul.com/datum/bisttlrefendeksi.csv"
+    BIST_TLREF_RATE_DAILY_URL: str = "https://www.borsaistanbul.com/datum/tlrefkorani.csv"
+    BIST_TLREF_INDEX_DAILY_URL: str = "https://www.borsaistanbul.com/datum/bisttlrefkendeksi.csv"
     BIST_TLREF_HISTORICAL_URL: str = "https://borsaistanbul.com/datum/BISTTLREFENDEKSI_D.zip"
     BIST_BOND_LIST_URL: str = "https://borsaistanbul.com/datum/tbliste.zip"
 

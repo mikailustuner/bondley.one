@@ -114,8 +114,11 @@ export interface TLREFRecord {
 export interface TLREFStats {
   total_records: number;
   latest_date: string;
+  latest_index_date?: string;
   latest_index: number;
   latest_daily_rate: number | null;
+  latest_annual_rate?: number | null;
+  latest_source?: string;
   first_date: string;
   first_index: number;
   cumulative_return_pct: number | null;
@@ -142,6 +145,7 @@ export interface BondListItem {
   id: number;
   isin_code: string;
   issuer: string | null;
+  fund_user: string | null;
   yield_type: string | null;
   security_type: string | null;
   currency: string;
@@ -174,12 +178,15 @@ export interface BondCalculatedMetrics {
   return_to_date_used_fallback_price?: boolean;
   used_fallback_market_data?: boolean;
   market_data_date?: string | null;
+  tlref_rate_date?: string | null;
 }
 
 export interface BondDetail {
   id: number;
   isin_code: string;
   issuer: string | null;
+  fund_user: string | null;
+  source_institution: string | null;
   issuance_type: string | null;
   yield_type: string | null;
   security_type: string | null;

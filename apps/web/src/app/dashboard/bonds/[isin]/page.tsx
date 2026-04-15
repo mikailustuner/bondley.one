@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { FileQuestion, AlertCircle, ChevronLeft, ChevronRight, Star } from "lucide-react";
-import { api, BondDetail } from "@/lib/api-client";
+import { api, BondDetail, TLREFRecord } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate, formatLastIssueDateText } from "@/lib/utils";
 
@@ -75,6 +75,7 @@ export default function BondDetailPage({
   const [scenarioLoading, setScenarioLoading] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteToggling, setFavoriteToggling] = useState(false);
+  const [tlrefLatest, setTlrefLatest] = useState<TLREFRecord | null>(null);
 
   useEffect(() => {
     if (bond) setIsFavorite(!!bond.is_favorite);
@@ -113,6 +114,15 @@ export default function BondDetailPage({
       document.title = "Bondley";
     };
   }, [isin]);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+    api.tlref
+      .latest(token)
+      .then(setTlrefLatest)
+      .catch(() => setTlrefLatest(null));
+  }, []);
 
   useEffect(() => {
     if (!isin) return;
@@ -220,6 +230,8 @@ export default function BondDetailPage({
   const generalInfo = [
     ["ISIN Kodu", bond.isin_code],
     ["İhraççı", bond.issuer],
+    ...(bond.fund_user ? [["Fon Kullanıcısı", bond.fund_user]] : []),
+    ...(bond.source_institution ? [["Kaynak Kuruluş", bond.source_institution]] : []),
     ["İhraç Türü", bond.issuance_type],
     ["Getiri Türü", bond.yield_type],
     ["MK Türü", bond.security_type],
@@ -246,6 +258,18 @@ export default function BondDetailPage({
     ["Son İhraç Getirisi %", bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"],
     ["Sonraki Kupon Oranı %", formatPercentFromDecimal(bond.next_coupon_rate, 4)],
     ["Spread %", formatPercentFromDecimal(bond.spread, 4)],
+    [
+      "Son TLREF Oranı %",
+      tlrefLatest?.daily_rate != null ? formatPercentFromDecimal(tlrefLatest.daily_rate * 365, 4) : "—",
+    ],
+    [
+      "Son TLREF Endeksi",
+      tlrefLatest?.index_value != null ? formatDecimal(tlrefLatest.index_value, 5, 5) : "—",
+    ],
+    [
+      "Hesaplamada Kullanılan TLREF Tarihi",
+      bond.calculated_metrics?.tlref_rate_date ? formatDate(bond.calculated_metrics.tlref_rate_date) : "—",
+    ],
     [
       "Toplam İhraç Tutarı",
       bond.total_issue_amount != null
@@ -287,9 +311,15 @@ export default function BondDetailPage({
               <Badge>{bond.currency}</Badge>
               {!bond.is_active && <Badge variant="destructive">Pasif</Badge>}
             </div>
-            <p className="text-[15px] text-muted-foreground mt-1">
-              {bond.issuer || "Bilinmiyor"} · {bond.security_type ? bond.security_type.split("/")[0].trim() : "—"}
-            </p>
+            {bond.fund_user ? (
+              <p className="text-[15px] text-muted-foreground mt-1">
+                İhraççı VKŞ: <span className="font-medium text-foreground">{bond.issuer || "Bilinmiyor"}</span> · Fon Kullanıcısı: <span className="font-medium text-foreground">{bond.fund_user}</span>
+              </p>
+            ) : (
+              <p className="text-[15px] text-muted-foreground mt-1">
+                {bond.issuer || "Bilinmiyor"} · {bond.security_type ? bond.security_type.split("/")[0].trim() : "—"}
+              </p>
+            )}
           </div>
 
           {/* Actions */}

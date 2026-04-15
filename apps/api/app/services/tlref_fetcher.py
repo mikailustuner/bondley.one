@@ -2,9 +2,13 @@
 Borsa Istanbul BIST TLREF Endeks veri cekme servisi.
 
 Kaynaklar:
-- Gunluk:    https://borsaistanbul.com/datum/bisttlrefendeksi.csv
-  Format:    2 header satiri, semicolon delimited, tarih DD/MM/YYYY
-  Ornek:     1;BISTTLREF;BIST TLREF ENDEKSI;BIST TLREF INDEX;TRY;18/02/2026;5379.45049;...
+- Gunluk Oran:   https://www.borsaistanbul.com/datum/tlrefkorani.csv
+  Format:        2 header satiri, semicolon delimited, tarih DD/MM/YYYY
+  Ornek:         14/04/2026;...;39.8721
+
+- Gunluk Endeks: https://www.borsaistanbul.com/datum/bisttlrefkendeksi.csv
+  Format:        2 header satiri, semicolon delimited, tarih DD/MM/YYYY
+  Ornek:         1;BISTTLREFK;...;14/04/2026;3533.16729;...
 
 - Tarihsel:  https://borsaistanbul.com/datum/BISTTLREFENDEKSI_D.zip
   Icerik:    BISTTLREFENDEKSI_D.csv
@@ -19,7 +23,7 @@ from datetime import datetime, date
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,24 +35,37 @@ settings = get_settings()
 
 
 class TLREFFetcher:
-    DAILY_URL = settings.BIST_TLREF_DAILY_URL
+    DAILY_RATE_URL = settings.BIST_TLREF_RATE_DAILY_URL
+    DAILY_INDEX_URL = settings.BIST_TLREF_INDEX_DAILY_URL
     HISTORICAL_URL = settings.BIST_TLREF_HISTORICAL_URL
 
     def __init__(self, db: AsyncSession):
         self.db = db
 
     async def fetch_daily(self) -> dict:
-        """Gunluk endeks verisini cek, upsert et ve ardından gunluk oranları (bir onceki gun vs bugun) hesapla."""
-        logger.info("Fetching daily TLREF index...")
+        """
+        Gunluk oran ve endeks verisini cek, tarih bazinda birlestir ve upsert et.
+        - daily_rate: tlrefkorani.csv'den gelir (yuzdelik oran -> gunluk ondalik)
+        - index_value: bisttlrefkendeksi.csv'den gelir
+        """
+        logger.info("Fetching daily TLREF rate + index...")
         try:
-            content = await self._download(self.DAILY_URL)
-            records = self._parse_daily_csv(content)
+            rate_content = await self._download(self.DAILY_RATE_URL)
+            index_content = await self._download(self.DAILY_INDEX_URL)
+
+            rate_records = self._parse_daily_rate_csv(rate_content)
+            index_records = self._parse_daily_index_csv(index_content)
+            records = self._merge_daily_records(rate_records, index_records)
             count = await self._upsert_records(records)
-            rate_count = await self._compute_daily_rates()
+            # fallback: daily_rate bos kalan satirlari endeks farkindan tamamla
+            rate_count = await self._compute_daily_rates(only_missing=True)
             return {
                 "status": "success",
-                "records": count,
-                "rates_computed": rate_count,
+                "rate_records": len(rate_records),
+                "index_records": len(index_records),
+                "merged_records": len(records),
+                "upserted_records": count,
+                "fallback_rates_computed": rate_count,
             }
         except Exception as e:
             logger.error(f"Daily TLREF fetch failed: {e}")
@@ -87,12 +104,12 @@ class TLREFFetcher:
             logger.info(f"Extracting {csv_name} from ZIP")
             return zf.read(csv_name)
 
-    def _parse_daily_csv(self, content: bytes) -> list[dict]:
+    def _parse_daily_index_csv(self, content: bytes) -> list[dict]:
         """
-        Gunluk CSV formati (bisttlrefendeksi.csv):
+        Gunluk endeks CSV formati (bisttlrefkendeksi.csv):
         Satir 1: KAYIT SIRA;ENDEKS KODU;ENDEKSLER;...;TARIH;KAPANIS;ACILIS;EN DUSUK;EN YUKSEK
         Satir 2: ORDER;INDEX CODE;...  (Ingilizce basliklar)
-        Satir 3+: 1;BISTTLREF;...;18/02/2026;5379.45049;5379.45049;5379.45049;5379.45049
+        Satir 3+: 1;BISTTLREFK;...;18/02/2026;3533.16729;...
         """
         text = content.decode("utf-8-sig", errors="replace")
         lines = [l.strip() for l in text.strip().splitlines() if l.strip()]
@@ -125,11 +142,91 @@ class TLREFFetcher:
                 records.append({
                     "rate_date": row_date,
                     "index_value": closing_value,
-                    "source": "BIST",
                 })
 
-        logger.info(f"Daily CSV parsed: {len(records)} records")
+        logger.info(f"Daily index CSV parsed: {len(records)} records")
         return records
+
+    def _parse_daily_rate_csv(self, content: bytes) -> list[dict]:
+        """
+        Gunluk oran CSV formati (tlrefkorani.csv):
+        Satir 1: TARIH;...;DEGER
+        Satir 2: DATE;...;VALUE
+        Satir 3+: 14/04/2026;...;39.8721
+
+        DEGER yuzdelik annual oran oldugu icin:
+        daily_rate = (oran_yuzde / 100) / 365
+        """
+        text = content.decode("utf-8-sig", errors="replace")
+        lines = [l.strip() for l in text.strip().splitlines() if l.strip()]
+
+        records: list[dict] = []
+        skipped = 0
+        for line in lines:
+            parts = [p.strip() for p in line.split(";")]
+            if len(parts) < 2:
+                skipped += 1
+                continue
+
+            row_date: date | None = None
+            for part in parts:
+                row_date = self._try_parse_date(part)
+                if row_date is not None:
+                    break
+
+            if row_date is None:
+                skipped += 1
+                continue
+
+            value = self._to_decimal(parts[-1])
+            if value is None or value < 0:
+                skipped += 1
+                continue
+
+            daily_rate = (value / Decimal("100") / Decimal("365")).quantize(
+                Decimal("0.0000000001"), rounding=ROUND_HALF_UP
+            )
+            records.append({
+                "rate_date": row_date,
+                "daily_rate": daily_rate,
+            })
+
+        logger.info("Daily rate CSV parsed: parsed=%s skipped=%s", len(records), skipped)
+        return records
+
+    def _merge_daily_records(
+        self,
+        rate_records: list[dict],
+        index_records: list[dict],
+    ) -> list[dict]:
+        """Ayni tarihli oran + endeks kayitlarini birlestirip upsert'e hazirlar."""
+        by_date: dict[date, dict] = {}
+
+        for rec in index_records:
+            d = rec["rate_date"]
+            by_date[d] = {
+                "rate_date": d,
+                "index_value": rec.get("index_value"),
+                "daily_rate": None,
+                "source": "BIST_DAILY",
+            }
+
+        for rec in rate_records:
+            d = rec["rate_date"]
+            row = by_date.get(d)
+            if row is None:
+                # TLREFRate.index_value nullable olmadigi icin index olmayan gunleri atla
+                continue
+            row["daily_rate"] = rec.get("daily_rate")
+
+        merged = [v for v in by_date.values() if v.get("index_value") is not None]
+        logger.info(
+            "Daily TLREF merge summary: index=%s rate=%s merged=%s",
+            len(index_records),
+            len(rate_records),
+            len(merged),
+        )
+        return merged
 
     def _parse_historical_csv(self, content: bytes) -> list[dict]:
         """
@@ -160,7 +257,7 @@ class TLREFFetcher:
             records.append({
                 "rate_date": row_date,
                 "index_value": closing_value,
-                "source": "BIST",
+                "source": "BIST_HISTORICAL",
             })
 
         logger.info(f"Historical CSV parsed: {len(records)} records (from {len(lines)} lines)")
@@ -177,6 +274,7 @@ class TLREFFetcher:
                 index_elements=["rate_date"],
                 set_={
                     "index_value": stmt.excluded.index_value,
+                    "daily_rate": func.coalesce(stmt.excluded.daily_rate, TLREFRate.daily_rate),
                     "source": stmt.excluded.source,
                 },
             )
@@ -186,7 +284,7 @@ class TLREFFetcher:
         logger.info(f"Upserted {count} TLREF index records")
         return count
 
-    async def _compute_daily_rates(self) -> int:
+    async def _compute_daily_rates(self, only_missing: bool = False) -> int:
         """
         Ardisik endeks degerlerinden gunluk oranlari hesapla ve DB'ye yaz.
         Formul: rate_date = D olan satir icin daily_rate = (D gunu endeks - D-1 gunu endeks) / D-1 gunu endeks.
@@ -206,6 +304,8 @@ class TLREFFetcher:
             prev_val = Decimal(str(prev.index_value)) if prev.index_value is not None else None
             curr_val = Decimal(str(curr.index_value)) if curr.index_value is not None else None
             if prev_val is not None and curr_val is not None and prev_val > 0:
+                if only_missing and curr.daily_rate is not None:
+                    continue
                 daily = (curr_val - prev_val) / prev_val
                 curr.daily_rate = daily.quantize(Decimal("0.0000000001"), rounding=ROUND_HALF_UP)
                 updated += 1

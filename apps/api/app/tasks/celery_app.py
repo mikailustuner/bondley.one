@@ -32,7 +32,7 @@ celery_app.conf.beat_schedule = {
     },
     "fetch-daily-tlref": {
         "task": "app.tasks.data_tasks.fetch_daily_tlref",
-        "schedule": crontab(hour=17, minute=5, day_of_week="1-5"),
+        "schedule": crontab(hour=16, minute=45, day_of_week="1-5"),
         "options": {"queue": "default"},
     },
     "fetch-bond-list": {

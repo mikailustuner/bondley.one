@@ -28,7 +28,7 @@ class MarketDataService:
         self, bond: Bond, calc_date: date, clean_price: Decimal
     ) -> dict:
         """Tek bir tahvil icin tum hesaplamalari calistir ve DB'ye kaydet."""
-        tlref_rate = await get_tlref_annual_yield_for_date(self.db, calc_date)
+        tlref_rate, _ = await get_tlref_annual_yield_for_date(self.db, calc_date)
         inputs = bond_to_calculator_inputs(bond)
         if not inputs:
             raise ValueError(f"Bond {bond.isin_code}: first_issue_date veya maturity_date eksik")

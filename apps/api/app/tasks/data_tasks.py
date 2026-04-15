@@ -2,8 +2,8 @@
 Celery tasks for automated TLREF and bond data fetching.
 
 Daily schedule (weekdays):
-- 18:30 Istanbul time: Fetch TLREF index from BIST
-- 19:00 Istanbul time: Fetch bond list from BIST
+- 16:45 Istanbul time: Fetch TLREF rate+index from BIST
+- 17:10 Istanbul time: Fetch bond list from BIST
 """
 
 import asyncio

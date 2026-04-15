@@ -136,7 +136,9 @@ def bond_to_calculator_inputs(bond: Bond) -> tuple[date, date, Decimal, int] | N
     return (issue_date, maturity_date, coupon_rate, freq)
 
 
-async def get_tlref_annual_yield_for_date(db: AsyncSession, target_date: date) -> Decimal | None:
+async def get_tlref_annual_yield_for_date(
+    db: AsyncSession, target_date: date
+) -> tuple[Decimal | None, date | None]:
     """
     Hedef tarih icin TLREF yillik getiri: daily_rate * 365.
     rate_date <= target_date olan en son kaydin daily_rate'i kullanilir; yoksa None.
@@ -149,10 +151,10 @@ async def get_tlref_annual_yield_for_date(db: AsyncSession, target_date: date) -
     )
     row = result.scalar_one_or_none()
     if row is None:
-        return None
+        return None, None
     if row.daily_rate is not None:
-        return row.daily_rate * Decimal("365")
-    return None
+        return row.daily_rate * Decimal("365"), row.rate_date
+    return None, row.rate_date
 
 
 class BondMetricsService:
@@ -312,6 +314,7 @@ class BondMetricsService:
         macaulay_duration = None
         convexity = None
         coupon_payment_amount = None
+        tlref_rate_date = None
 
         inputs = bond_to_calculator_inputs(bond)
         if inputs:
@@ -331,7 +334,7 @@ class BondMetricsService:
                     coupon_payment_amount = (
                         FACE_VALUE * _coupon_rate_to_decimal(bond.next_coupon_rate) / Decimal(str(coupon_frequency_int))
                     ).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
-                tlref_yield = await self._get_tlref_annual_yield(settlement_date)
+                tlref_yield, tlref_rate_date = await self._get_tlref_annual_yield(settlement_date)
                 if tlref_yield is not None:
                     spread_bp = calc.spread(ytm, tlref_yield)
                 modified_duration = calc.modified_duration(clean_price, settlement_date)
@@ -391,6 +394,7 @@ class BondMetricsService:
             "return_to_date_used_fallback_price": return_to_date_used_fallback_price,
             "used_fallback_market_data": used_fallback_market_data,
             "market_data_date": market_data_date.isoformat() if market_data_date else None,
+            "tlref_rate_date": tlref_rate_date.isoformat() if tlref_rate_date else None,
         }
 
     def compute_return_to_date_only(
@@ -434,7 +438,7 @@ class BondMetricsService:
         )
         return (return_to_date_pct, return_to_date_used_fallback_price)
 
-    async def _get_tlref_annual_yield(self, target_date: date) -> Decimal | None:
+    async def _get_tlref_annual_yield(self, target_date: date) -> tuple[Decimal | None, date | None]:
         return await get_tlref_annual_yield_for_date(self.db, target_date)
 
     def _convexity(

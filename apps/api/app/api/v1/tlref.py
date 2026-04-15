@@ -93,8 +93,11 @@ async def get_tlref_stats(
     return {
         "total_records": total,
         "latest_date": latest_rate.rate_date.isoformat(),
+        "latest_index_date": latest_rate.rate_date.isoformat(),
         "latest_index": float(latest_rate.index_value),
         "latest_daily_rate": float(latest_rate.daily_rate * 100) if latest_rate.daily_rate else None,
+        "latest_annual_rate": float(latest_rate.daily_rate * 365 * 100) if latest_rate.daily_rate else None,
+        "latest_source": latest_rate.source,
         "first_date": first_rate.rate_date.isoformat() if first_rate else None,
         "first_index": float(first_rate.index_value) if first_rate else None,
         "cumulative_return_pct": cumulative_return,

@@ -22,6 +22,7 @@ import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.models.bond import Bond
 from app.models.kap_disclosure import KapCompany, KapDisclosure, KapDisclosureDetail
 
 logger = logging.getLogger(__name__)
@@ -538,6 +539,17 @@ def fetch_all_kap_data(db: Session, max_companies: int | None = None, fetch_deta
                             detail_data.update(rating_updates)
 
                             save_disclosure_detail(db, disc, detail_data)
+                            
+                            if detail_data.get("fund_user") or detail_data.get("source_institution"):
+                                bond_record = db.execute(
+                                    select(Bond).where(Bond.isin_code == disc.isin_code)
+                                ).scalar_one_or_none()
+                                if bond_record:
+                                    if detail_data.get("fund_user") and not bond_record.fund_user:
+                                        bond_record.fund_user = detail_data["fund_user"]
+                                    if detail_data.get("source_institution") and not bond_record.source_institution:
+                                        bond_record.source_institution = detail_data["source_institution"]
+
                             total_details += 1
 
                 # Sirketin last_fetched_at guncelle
@@ -556,3 +568,37 @@ def fetch_all_kap_data(db: Session, max_companies: int | None = None, fetch_deta
 
     logger.info(f"KAP cekimi tamamlandi: {total_new} yeni bildirim, {total_details} detay")
     return {"new_disclosures": total_new, "new_details": total_details}
+
+
+def backfill_fund_users(db: Session):
+    """KAP verilerinden bonds tablosundaki fund_user/source_institution alanlarini doldur."""
+    details = db.execute(
+        select(KapDisclosureDetail, KapDisclosure)
+        .join(KapDisclosure)
+        .where(
+            (KapDisclosureDetail.fund_user.isnot(None)) | 
+            (KapDisclosureDetail.source_institution.isnot(None))
+        )
+    ).all()
+    
+    updated = 0
+    for detail, disclosure in details:
+        bond_record = db.execute(
+            select(Bond).where(Bond.isin_code == disclosure.isin_code)
+        ).scalar_one_or_none()
+        
+        needs_update = False
+        if bond_record:
+            if detail.fund_user and not bond_record.fund_user:
+                bond_record.fund_user = detail.fund_user
+                needs_update = True
+            if detail.source_institution and not bond_record.source_institution:
+                bond_record.source_institution = detail.source_institution
+                needs_update = True
+                
+            if needs_update:
+                updated += 1
+    
+    db.commit()
+    logger.info(f"Backfilled {updated} bonds with fund_user/source_institution from KAP data.")
+    return updated
