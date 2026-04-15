@@ -113,30 +113,54 @@ class TLREFFetcher:
         """
         text = content.decode("utf-8-sig", errors="replace")
         lines = [l.strip() for l in text.strip().splitlines() if l.strip()]
+        if not lines:
+            return []
+
+        # Header tespiti
+        date_idx = -1
+        value_idx = -1
+        
+        # Baslik satirlarindan (ilk 2 satir) sutun yerlerini bulmaya calis
+        for i in range(min(2, len(lines))):
+            cols = [c.upper() for c in lines[i].split(";")]
+            if "TARIH" in cols or "DATE" in cols:
+                date_idx = cols.index("TARIH") if "TARIH" in cols else cols.index("DATE")
+            if "KAPANIS" in cols or "CLOSING" in cols or "VALUE" in cols:
+                # KAPANIS'i bulmaya calis, yoksa VALUE'ya bak
+                if "KAPANIS" in cols: value_idx = cols.index("KAPANIS")
+                elif "CLOSING" in cols: value_idx = cols.index("CLOSING")
+                else: value_idx = cols.index("VALUE")
 
         records: list[dict] = []
-        for line in lines:
+        # Veri satirlarina gec (genelde 2. satirdan sonra baslar)
+        start_row = 2 if len(lines) > 2 else 0
+
+        for line in lines[start_row:]:
             parts = line.split(";")
-            if len(parts) < 7:
+            if len(parts) < 2:
                 continue
 
             row_date = None
             closing_value = None
 
-            for part in parts:
-                part = part.strip()
-                if row_date is None:
-                    row_date = self._try_parse_date(part)
-                if row_date is not None and closing_value is None:
-                    val = self._to_decimal(part)
-                    if val is not None and val > 0:
-                        closing_value = val
+            # Eğer index tespiti basariliysa direkt kullan
+            if date_idx != -1 and date_idx < len(parts):
+                row_date = self._try_parse_date(parts[date_idx].strip())
+            if value_idx != -1 and value_idx < len(parts):
+                closing_value = self._to_decimal(parts[value_idx].strip())
 
-            if row_date is None:
+            # Fallback: Eğer index tespiti basarisizsa eski yontemi (ilk tarih ve sonrasindaki ilk sayi) kullan
+            if row_date is None or closing_value is None:
+                tmp_date = None
                 for part in parts:
-                    row_date = self._try_parse_date(part.strip())
-                    if row_date:
-                        break
+                    part = part.strip()
+                    if tmp_date is None:
+                        tmp_date = self._try_parse_date(part)
+                    elif closing_value is None:
+                        val = self._to_decimal(part)
+                        if val is not None and val > 1: # Endeks 1'den buyuktur (TLREFK ~3500)
+                            closing_value = val
+                row_date = row_date or tmp_date
 
             if row_date and closing_value:
                 records.append({

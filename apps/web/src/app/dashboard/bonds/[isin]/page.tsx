@@ -259,11 +259,11 @@ export default function BondDetailPage({
     ["Sonraki Kupon Oranı %", formatPercentFromDecimal(bond.next_coupon_rate, 4)],
     ["Spread %", formatPercentFromDecimal(bond.spread, 4)],
     [
-      "Son TLREF Oranı %",
+      "Son TLREF (Gecelik Faiz) %",
       tlrefLatest?.daily_rate != null ? formatPercentFromDecimal(tlrefLatest.daily_rate * 365, 4) : "—",
     ],
     [
-      "Son TLREF Endeksi",
+      "Son TLREFK (Endeks)",
       tlrefLatest?.index_value != null ? formatDecimal(tlrefLatest.index_value, 5, 5) : "—",
     ],
     [

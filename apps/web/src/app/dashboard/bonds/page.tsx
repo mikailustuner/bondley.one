@@ -212,8 +212,8 @@ export default function BondsListPage() {
                 <thead>
                   <tr className="border-b border-border/50">
                     <th className="text-left py-2.5 text-muted-foreground font-medium">Tarih</th>
-                    <th className="text-right py-2.5 text-muted-foreground font-medium">TLREF Oranı %</th>
-                    <th className="text-right py-2.5 text-muted-foreground font-medium">TLREF Endeksi</th>
+                    <th className="text-right py-2.5 text-muted-foreground font-medium">TLREF (Gecelik Faiz) %</th>
+                    <th className="text-right py-2.5 text-muted-foreground font-medium">TLREFK (Endeks)</th>
                   </tr>
                 </thead>
                 <tbody>
