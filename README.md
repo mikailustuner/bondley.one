@@ -213,3 +213,4 @@ docker-compose logs -f [service-name]
 ## Lisans
 
 Bu proje özel bir projedir.
+

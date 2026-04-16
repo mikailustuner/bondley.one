@@ -51,9 +51,12 @@ class Settings(BaseSettings):
     MFA_ENCRYPTION_KEY: str = ""
 
     BIST_TLREF_DAILY_URL: str = "https://borsaistanbul.com/datum/bisttlrefendeksi.csv"
-    BIST_TLREF_RATE_DAILY_URL: str = "https://www.borsaistanbul.com/datum/tlrefkorani.csv"
-    BIST_TLREF_INDEX_DAILY_URL: str = "https://www.borsaistanbul.com/datum/bisttlrefkendeksi.csv"
+    BIST_TLREF_RATE_DAILY_URL: str = "https://www.borsaistanbul.com/datum/tlreforani.csv"
+    BIST_TLREF_INDEX_DAILY_URL: str = "https://www.borsaistanbul.com/datum/bisttlrefendeksi.csv"
     BIST_TLREF_HISTORICAL_URL: str = "https://borsaistanbul.com/datum/BISTTLREFENDEKSI_D.zip"
+    # Katılım (Participation) için gerekirse alternatifler:
+    BIST_TLREFK_RATE_URL: str = "https://www.borsaistanbul.com/datum/tlrefkorani.csv"
+    BIST_TLREFK_INDEX_URL: str = "https://www.borsaistanbul.com/datum/bisttlrefkendeksi.csv"
     BIST_BOND_LIST_URL: str = "https://borsaistanbul.com/datum/tbliste.zip"
 
     CORS_ORIGINS: str = "http://localhost:3000,http://landing.localhost:3000,http://dashboard.localhost:3000,http://admin.localhost:3000"

@@ -173,41 +173,75 @@ class TLREFFetcher:
 
     def _parse_daily_rate_csv(self, content: bytes) -> list[dict]:
         """
-        Gunluk oran CSV formati (tlrefkorani.csv):
-        Satir 1: TARIH;...;DEGER
-        Satir 2: DATE;...;VALUE
-        Satir 3+: 14/04/2026;...;39.8721
+        Gunluk oran CSV formati (tlreforani.csv):
+        Satir 1: TARIH;AD;INGILIZCE ADI;KOD;ISIN;DEGER
+        Satir 2: DATE;NAME;NAME IN ENGLISH;CODE;ISIN;VALUE
+        Satir 3+: 16/04/2026;TURK LIRASI GECELIK...;TLREF;...;39.8729
 
         DEGER yuzdelik annual oran oldugu icin:
         daily_rate = (oran_yuzde / 100) / 365
         """
         text = content.decode("utf-8-sig", errors="replace")
         lines = [l.strip() for l in text.strip().splitlines() if l.strip()]
+        if not lines:
+            return []
+
+        # Header tespiti
+        date_idx = -1
+        value_idx = -1
+        for i in range(min(2, len(lines))):
+            cols = [c.upper() for c in lines[i].split(";")]
+            if "TARIH" in cols or "DATE" in cols:
+                date_idx = cols.index("TARIH") if "TARIH" in cols else cols.index("DATE")
+            # Hem DEGER hem VALUE hem de "ORAN" (Rate) diye gelebilir
+            for keyword in ["DEGER", "VALUE", "ORAN", "RATE"]:
+                if keyword in cols:
+                    value_idx = cols.index(keyword)
+                    break
 
         records: list[dict] = []
         skipped = 0
-        for line in lines:
+        start_row = 2 if len(lines) > 2 else 0
+
+        for line in lines[start_row:]:
             parts = [p.strip() for p in line.split(";")]
             if len(parts) < 2:
                 skipped += 1
                 continue
 
-            row_date: date | None = None
-            for part in parts:
-                row_date = self._try_parse_date(part)
-                if row_date is not None:
-                    break
+            row_date = None
+            raw_value = None
 
-            if row_date is None:
+            # Header indeksi basariliysa direkt kullan
+            if date_idx != -1 and date_idx < len(parts):
+                row_date = self._try_parse_date(parts[date_idx])
+            if value_idx != -1 and value_idx < len(parts):
+                raw_value = self._to_decimal(parts[value_idx])
+
+            # Fallback: Header tespit edilemediyse eski usul
+            if row_date is None or raw_value is None:
+                tmp_date = None
+                for part in parts:
+                    tmp_date = self._try_parse_date(part)
+                    if tmp_date: break
+                
+                # Oran genellikle son kolondadır veya 10'dan büyüktür (örn %40)
+                if raw_value is None:
+                    raw_value = self._to_decimal(parts[-1])
+                
+                row_date = row_date or tmp_date
+
+            if row_date is None or raw_value is None or raw_value < 0:
                 skipped += 1
                 continue
 
-            value = self._to_decimal(parts[-1])
-            if value is None or value < 0:
-                skipped += 1
+            # Check if this is accidentally an index (very large value)
+            if raw_value > 1000:
+                logger.warning(f"Extreme rate value detected ({raw_value}) on {row_date}, might be an index mix-up.")
+                # If it's an index, we shouldn't store it as a rate
                 continue
 
-            daily_rate = (value / Decimal("100") / Decimal("365")).quantize(
+            daily_rate = (raw_value / Decimal("100") / Decimal("365")).quantize(
                 Decimal("0.0000000001"), rounding=ROUND_HALF_UP
             )
             records.append({
