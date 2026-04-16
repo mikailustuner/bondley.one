@@ -34,29 +34,28 @@ class MetricsService:
         db.add(bond_view)
         try:
             await db.flush()
+            # Important: We need a commit here because this is often called from GET requests
+            # which don't automatically commit the transaction.
+            await db.commit()
         except Exception:
             # If unique constraint violation or any other error, rollback and skip tracking
-            # This prevents transaction abort errors
             try:
                 await db.rollback()
             except Exception:
                 pass
-            # Skip tracking for this request if insert fails
-            # The unique constraint prevents duplicate views per day anyway
             return None
 
         # Update user metrics for today
         if user_id and bond_view:
             try:
                 await MetricsService._update_user_metrics(db, user_id, increment_bonds_viewed=True)
+                await db.commit()
             except Exception:
-                # If metrics update fails, rollback and skip metrics update
                 try:
                     await db.rollback()
                 except Exception:
                     pass
-                # Continue without metrics update rather than failing
-
+        
         return bond_view
 
     @staticmethod

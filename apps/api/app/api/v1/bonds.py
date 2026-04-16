@@ -299,6 +299,17 @@ async def get_bond_scenario(
         delta_price_pct = 0.0
     new_dirty_price_approx = current_dirty * (1.0 + delta_price_pct)
     price_change_pct = (new_dirty_price_approx - current_dirty) / current_dirty * 100.0
+
+    # Track scenario run
+    try:
+        await MetricsService.increment_calculation_run(db=db, user_id=_user.id)
+        await db.commit()
+    except Exception:
+        try:
+            await db.rollback()
+        except Exception:
+            pass
+
     return BondScenarioResponse(
         current_ytm=current_ytm,
         current_dirty_price=current_dirty,
