@@ -3,12 +3,12 @@ import Link from "next/link";
 import { tr } from "@/locales/tr";
 
 export const metadata: Metadata = {
-  title: tr.admin.privacy.meta.title,
-  description: tr.admin.privacy.meta.description,
+  title: tr.dashboard.admin.privacy.meta.title,
+  description: tr.dashboard.admin.privacy.meta.description,
 };
 
 export default function PrivacyPolicyPage() {
-  const t = tr.admin.privacy;
+  const t = tr.dashboard.admin.privacy;
   return (
     <main className="min-h-screen bg-background">
       {/* Hero */}
