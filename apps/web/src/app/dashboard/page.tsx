@@ -211,7 +211,7 @@ export default function DashboardPage() {
           <div className="widget-green rounded-3xl border border-border p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <div className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">{tr.dashboard.overview.widgets.dailyRate}</div>
             <div className="font-mono-data text-[2.25rem] font-bold text-positive leading-none tracking-tight">
-              {formatPercentFromDecimal(stats.latest_daily_rate, 4)}
+              {formatPercent(stats.latest_daily_rate, 4)}
             </div>
             <div className="text-[13px] text-muted-foreground mt-2.5">{tr.dashboard.overview.widgets.dailyRateDesc}</div>
           </div>

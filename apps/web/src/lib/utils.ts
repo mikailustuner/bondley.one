@@ -16,10 +16,11 @@ export function formatCurrency(value: number | string, currency = "TRY"): string
 }
 
 /** Expects value already in percent (e.g. 5.0 for 5%). Formats with tr-TR. */
-export function formatPercent(value: number | string): string {
+export function formatPercent(value: number | string | null | undefined, decimals = 4): string {
+  if (value == null) return "—";
   const num = typeof value === "string" ? parseFloat(value) : value;
   if (Number.isNaN(num)) return "—";
-  return `%${num.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
+  return `%${num.toLocaleString("tr-TR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
 }
 
 /**

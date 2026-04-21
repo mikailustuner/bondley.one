@@ -181,7 +181,7 @@ export default function LandingPage() {
                   : [{ label: tr.landing.ticker.labels.comparedToYesterday, value: "—" }]),
                 {
                   label: tr.landing.ticker.labels.dailyRate,
-                  value: formatPercentFromDecimal(summary?.tlref_daily_rate, 4),
+                  value: formatPercent(summary?.tlref_daily_rate, 4),
                   positive: true,
                 },
                 {

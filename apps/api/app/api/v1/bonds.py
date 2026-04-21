@@ -334,8 +334,9 @@ async def get_bond(
     if not bond:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tahvil bulunamadi")
 
-    # Get bond.id immediately to avoid lazy loading issues
+    # Get bond.id and user.id immediately to avoid lazy loading issues after potential rollback
     bond_id = bond.id
+    user_id = user.id
     
     base = BondDetailWithMetrics.model_validate(bond)
     calc_date = settlement_date or date.today()
@@ -356,7 +357,7 @@ async def get_bond(
         await MetricsService.track_bond_view(
             db=db,
             bond_id=bond_id,
-            user_id=user.id,
+            user_id=user_id,
             ip_address=client_host,
             user_agent=user_agent,
             settlement_date=calc_date,
@@ -436,7 +437,7 @@ async def get_bond(
     # Favori mi?
     fav_check = await db.execute(
         select(UserFavoriteBond).where(
-            UserFavoriteBond.user_id == user.id,
+            UserFavoriteBond.user_id == user_id,
             UserFavoriteBond.bond_id == bond_id,
         )
     )
