@@ -395,8 +395,6 @@ export default function PrivacyPolicyPage() {
             <ol className="list-[lower-alpha] pl-6 space-y-1.5 text-[14px] text-muted-foreground mb-3">
               <li>Platform üzerindeki <strong className="text-foreground">&quot;Hesap Ayarları &gt; Gizlilik&quot;</strong> bölümü aracılığıyla</li>
               <li><strong className="text-foreground">noreply@bondley.one</strong> elektronik posta adresine ileti göndererek</li>
-              <li>Kayıtlı elektronik posta (<strong className="text-foreground">KEP</strong>) adresi üzerinden</li>
-              <li>Noter aracılığıyla Şirket merkezine fiziki başvuru yaparak</li>
             </ol>
             <div className="bg-muted/30 rounded-xl p-4 text-[14px] text-muted-foreground">
               <strong className="text-foreground">⏱ Yanıt süresi:</strong> Veri sorumlusu, başvurunuzu en geç <strong className="text-foreground">30 (otuz) gün</strong> içinde sonuçlandıracaktır. İşlemin ayrıca bir maliyet gerektirmesi halinde, KVKK Kurulu tarafından belirlenen tarife esas alınır.
@@ -458,7 +456,6 @@ export default function PrivacyPolicyPage() {
               Kişisel verilerin hukuka aykırı olarak üçüncü kişiler tarafından ele geçirilmesi (<strong className="text-foreground">veri ihlali</strong>) halinde, Platform:
             </p>
             <ol className="list-[lower-alpha] pl-6 space-y-1.5 text-[14px] text-muted-foreground">
-              <li>En kısa sürede ve her halükarda ihlalden haberdar olmasından itibaren <strong className="text-foreground">72 saat içinde</strong> Kişisel Verileri Koruma Kurulu&apos;na bildirimde bulunacaktır</li>
               <li>İhlalin <strong className="text-foreground">yüksek risk</strong> oluşturması halinde, ilgili kişileri makul sürede bilgilendirecektir</li>
               <li>İhlalin kapsamı, etki alanı, alınan önlemler ve tavsiye edilen tedbirleri içeren <strong className="text-foreground">detaylı bir bildirim raporu</strong> hazırlayacaktır</li>
               <li>İhlali tekrarlamamak adına gerekli <strong className="text-foreground">teknik ve idari önlemleri derhal</strong> alacaktır</li>
@@ -474,10 +471,8 @@ export default function PrivacyPolicyPage() {
               Platform altyapısının bir kısmı, Türkiye dışında konumlandırılmış sunucularda barındırılabilir. Yurt dışına veri aktarımı halinde:
             </p>
             <ol className="list-[lower-alpha] pl-6 space-y-1.5 text-[14px] text-muted-foreground">
-              <li>Aktarımın yapıldığı ülkenin <strong className="text-foreground">KVKK Kurulu tarafından yeterli koruma sağladığı ilan edilen ülkeler</strong> arasında olup olmadığı kontrol edilir</li>
               <li>Yeterli koruma bulunmayan ülkelere aktarım halinde, <strong className="text-foreground">Standart Sözleşme Hükümleri (SCC)</strong>, <strong className="text-foreground">Bağlayıcı Kurumsal Kurallar (BCR)</strong> veya ilgili kişinin açık rızası gibi uygun güvenceler sağlanır</li>
               <li>GDPR kapsamındaki aktarımlarda <strong className="text-foreground">Madde 44-49</strong> hükümleri esas alınır</li>
-              <li>Aktarım yapılan tüm taraflarla <strong className="text-foreground">Veri İşleme Sözleşmeleri (DPA)</strong> imzalanır</li>
             </ol>
           </article>
 
@@ -537,21 +532,7 @@ export default function PrivacyPolicyPage() {
           {/* MADDE 22 */}
           <article>
             <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
-              MADDE 22 – ANONİMLEŞTİRME VE TAKMA AD KULLANIMI
-            </h2>
-            <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
-              Platform, <strong className="text-foreground">veri minimizasyonu</strong> ilkesi doğrultusunda, kişisel verilerin mümkün olan en erken aşamada anonimleştirilmesi veya takma adla (<em>pseudonymization</em>) değiştirilmesi yöntemlerini uygulamaktadır.
-            </p>
-            <ul className="list-disc pl-6 space-y-1.5 text-[14px] text-muted-foreground">
-              <li><strong className="text-foreground">Anonimleştirme:</strong> Kişisel verilerin başka verilerle eşleştirerek dahi kimliği belirlenebilir bir kişiyle ilişkilendirilememesi durumu. Anonimleştirilmiş veriler <strong className="text-foreground">KVKK kapsamında kişisel veri sayılmaz</strong>.</li>
-              <li><strong className="text-foreground">Takma ad kullanımı (Pseudonymization):</strong> Ek bilgi kullanılmaksızın verilerin belirli bir kişiyle ilişkilendirilememesi durumu. Bu yöntemle işlenen veriler <strong className="text-foreground">hâlâ kişisel veri statüsündedir</strong>.</li>
-            </ul>
-          </article>
-
-          {/* MADDE 23 */}
-          <article>
-            <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
-              MADDE 23 – API ERİŞİMİ VE VERİ ENTEGRASYONLARI
+              MADDE 22 – API ERİŞİMİ VE VERİ ENTEGRASYONLARI
             </h2>
             <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
               Platform, B2B müşterilerine <strong className="text-foreground">API aracılığıyla entegrasyon</strong> imkanı sunmaktadır. API erişimi kapsamında:
@@ -567,10 +548,10 @@ export default function PrivacyPolicyPage() {
             </ol>
           </article>
 
-          {/* MADDE 24 */}
+          {/* MADDE 23 */}
           <article>
             <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
-              MADDE 24 – FELAKET KURTARMA VE İŞ SÜREKLİLİĞİ
+              MADDE 23 – FELAKET KURTARMA VE İŞ SÜREKLİLİĞİ
             </h2>
             <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
               Platform, kişisel verilerin korunmasını sağlamak üzere kapsamlı bir <strong className="text-foreground">felaket kurtarma ve iş sürekliliği planı</strong> uygulamaktadır:
@@ -585,10 +566,10 @@ export default function PrivacyPolicyPage() {
             </ul>
           </article>
 
-          {/* MADDE 25 */}
+          {/* MADDE 24 */}
           <article>
             <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
-              MADDE 25 – OTURUM YÖNETİMİ VE GÜVENLİK
+              MADDE 24 – OTURUM YÖNETİMİ VE GÜVENLİK
             </h2>
             <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
               Platform, kullanıcı oturumlarının güvenliğini sağlamak amacıyla aşağıdaki önlemleri almaktadır:
@@ -605,10 +586,10 @@ export default function PrivacyPolicyPage() {
             </ul>
           </article>
 
-          {/* MADDE 26 */}
+          {/* MADDE 25 */}
           <article>
             <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
-              MADDE 26 – PAROLA POLİTİKASI
+              MADDE 25 – PAROLA POLİTİKASI
             </h2>
             <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
               Platform, kullanıcı hesaplarının güvenliğini sağlamak amacıyla aşağıdaki <strong className="text-foreground">parola politikasını</strong> uygulamaktadır:
@@ -623,17 +604,16 @@ export default function PrivacyPolicyPage() {
             </ul>
           </article>
 
-          {/* MADDE 27 */}
+          {/* MADDE 26 */}
           <article>
             <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
-              MADDE 27 – E-POSTA GÜVENLİĞİ
+              MADDE 26 – E-POSTA GÜVENLİĞİ
             </h2>
             <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
               Platform tarafından gönderilen tüm e-postalarda güvenlik standartlarına uyulur:
             </p>
             <ul className="list-disc pl-6 space-y-1.5 text-[14px] text-muted-foreground">
               <li>E-posta sunucuları <strong className="text-foreground">TLS şifreleme</strong> ile korunur</li>
-              <li><strong className="text-foreground">SPF, DKIM ve DMARC</strong> kayıtları yapılandırılarak e-posta sahteciliği önlenir</li>
               <li>E-posta doğrulama tokenları <strong className="text-foreground">tek kullanımlıktır</strong> ve belirlenen süre sonunda geçersiz hale gelir</li>
               <li>Hassas bilgiler e-posta ile düz metin olarak <strong className="text-foreground">iletilmez</strong>; güvenli platforma yönlendirme yapılır</li>
               <li>E-posta iletim logları, hizmet sağlayıcı tarafından <strong className="text-foreground">90 gün</strong> süreyle saklanır</li>
@@ -641,10 +621,10 @@ export default function PrivacyPolicyPage() {
             </ul>
           </article>
 
-          {/* MADDE 28 */}
+          {/* MADDE 27 */}
           <article>
             <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
-              MADDE 28 – ERİŞİM KONTROLÜ VE YETKİLENDİRME
+              MADDE 27 – ERİŞİM KONTROLÜ VE YETKİLENDİRME
             </h2>
             <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
               Platform, <strong className="text-foreground">Rol Tabanlı Erişim Kontrolü (RBAC)</strong> uygulayarak kişisel verilere erişimi sınırlandırmaktadır:
@@ -682,10 +662,10 @@ export default function PrivacyPolicyPage() {
             </p>
           </article>
 
-          {/* MADDE 29 */}
+          {/* MADDE 28 */}
           <article>
             <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
-              MADDE 29 – KVKK UYUMLULUK PROGRAMI
+              MADDE 28 – KVKK UYUMLULUK PROGRAMI
             </h2>
             <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
               Platform, <strong className="text-foreground">KVKK ve ilgili mevzuat ile tam uyumu</strong> sürdürmeye yönelik kapsamlı bir uyumluluk programı yürütmektedir:
@@ -702,30 +682,30 @@ export default function PrivacyPolicyPage() {
             </ol>
           </article>
 
-          {/* MADDE 30 */}
+          {/* MADDE 29 */}
           <article>
             <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
-              MADDE 30 – VERİ ETKİ DEĞERLENDİRMESİ (DPIA)
+              MADDE 29 – VERİ ETKİ DEĞERLENDİRMESİ (DPIA)
             </h2>
             <p className="text-[14px] leading-relaxed text-muted-foreground">
               Kişisel verilerin işlenmesinin bireylerin hak ve özgürlükleri üzerinde <strong className="text-foreground">yüksek risk oluşturma ihtimalinin</strong> bulunduğu durumlarda, Platform <strong className="text-foreground">veri koruma etki değerlendirmesi (DPIA)</strong> gerçekleştirmektedir. DPIA, yeni bir veri işleme faaliyeti başlatılmadan önce veya mevcut işleme faaliyetlerinde önemli değişiklikler yapılmadan önce uygulanır. Değerlendirme; işleme faaliyetinin sistematik tanımı, amaçların orantılılık değerlendirmesi, <strong className="text-foreground">risk analizi</strong>, risk azaltma tedbirleri ve istisnai durum planlarını kapsar. DPIA sonuçları belgelenir ve gerektiğinde <strong className="text-foreground">Kişisel Verileri Koruma Kurulu</strong> ile paylaşılır.
             </p>
           </article>
 
-          {/* MADDE 31 */}
+          {/* MADDE 30 */}
           <article>
             <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
-              MADDE 31 – E-POSTA DOĞRULAMA VE HESAP AKTİVASYONU
+              MADDE 30 – E-POSTA DOĞRULAMA VE HESAP AKTİVASYONU
             </h2>
             <p className="text-[14px] leading-relaxed text-muted-foreground">
               Platform güvenliğini artırmak ve spam hesapların önüne geçmek amacıyla, kayıt işleminin tamamlanması için <strong className="text-foreground">e-posta doğrulama zorunlu</strong> tutulmaktadır. Kayıt sırasında girilen e-posta adresine bir doğrulama bağlantısı gönderilir. Bu bağlantı belirli bir süre (genellikle <strong className="text-foreground">24-48 saat</strong>) geçerlidir. Doğrulama tamamlanmadan hesap, tam işlevsellikle kullanılamaz. E-posta adresi değişikliği yapıldığında <strong className="text-foreground">yeni adresin doğrulanması da zorunludur</strong>.
             </p>
           </article>
 
-          {/* MADDE 32 */}
+          {/* MADDE 31 */}
           <article>
             <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
-              MADDE 32 – GİZLİLİK POLİTİKASI ONAY MEKANİZMASI
+              MADDE 31 – GİZLİLİK POLİTİKASI ONAY MEKANİZMASI
             </h2>
             <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
               Platform&apos;a kayıt olurken tüm kullanıcılardan, işbu Gizlilik ve Çerez Politikası&apos;nı <strong className="text-foreground">okuduklarına ve kabul ettiklerine dair açık onay</strong> alınmaktadır:
@@ -740,20 +720,20 @@ export default function PrivacyPolicyPage() {
             </ol>
           </article>
 
-          {/* MADDE 33 */}
+          {/* MADDE 32 */}
           <article>
             <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
-              MADDE 33 – UYUŞMAZLIK ÇÖZÜMÜ VE YETKİLİ MAHKEME
+              MADDE 32 – UYUŞMAZLIK ÇÖZÜMÜ VE YETKİLİ MAHKEME
             </h2>
             <p className="text-[14px] leading-relaxed text-muted-foreground">
               İşbu Politika&apos;dan kaynaklanan veya Politika ile bağlantılı tüm uyuşmazlıkların çözümünde öncelikle <strong className="text-foreground">dostane yollar</strong> (müzakere, arabuluculuk) denenecektir. Uyuşmazlığın dostane yollarla çözümlenememesi halinde, <strong className="text-foreground">Türkiye Cumhuriyeti kanunları</strong> uygulanacak ve <strong className="text-foreground">İstanbul Mahkemeleri ve İcra Daireleri</strong> münhasıran yetkili olacaktır. GDPR kapsamındaki uyuşmazlıklarda, ilgili kişinin ikamet ettiği AEA üye devletindeki denetim makamına başvuru hakkı saklıdır.
             </p>
           </article>
 
-          {/* MADDE 34 */}
+          {/* MADDE 33 */}
           <article>
             <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
-              MADDE 34 – POLİTİKA DEĞİŞİKLİKLERİ VE BİLDİRİM
+              MADDE 33 – POLİTİKA DEĞİŞİKLİKLERİ VE BİLDİRİM
             </h2>
             <p className="text-[14px] leading-relaxed text-muted-foreground mb-3">
               İşbu Politika, herhangi bir zamanda Bondley tarafından <strong className="text-foreground">tek taraflı olarak değiştirilebilir</strong>, güncellenebilir veya yeniden düzenlenebilir. Politika değişiklikleri:
@@ -767,10 +747,10 @@ export default function PrivacyPolicyPage() {
             </ol>
           </article>
 
-          {/* MADDE 35 */}
+          {/* MADDE 34 */}
           <article>
             <h2 className="text-[20px] font-bold text-foreground tracking-tight pb-3 border-b border-border/30 mb-4">
-              MADDE 35 – YÜRÜRLÜK VE BÜTÜNLÜK
+              MADDE 34 – YÜRÜRLÜK VE BÜTÜNLÜK
             </h2>
             <p className="text-[14px] leading-relaxed text-muted-foreground">
               İşbu Gizlilik ve Çerez Politikası, Platform üzerinde <strong className="text-foreground">yayımlandığı tarihte yürürlüğe girer</strong> ve aksine bir bildirim yapılmadıkça süresiz olarak yürürlükte kalır. Politika&apos;nın herhangi bir maddesinin yetkili bir mahkeme veya düzenleyici otorite tarafından geçersiz veya uygulanamaz bulunması halinde, söz konusu madde Politika&apos;dan bağımsız olarak değerlendirilir ve <strong className="text-foreground">diğer maddelerin geçerliliğini etkilemez</strong>. Bu Politika, kişisel verilerin korunmasına ilişkin olarak Platform ile kullanıcı arasındaki ilişkiyi düzenleyen <strong className="text-foreground">temel belge</strong> niteliğindedir ve <strong className="text-foreground">Platform Kullanım Koşulları</strong> ile birlikte değerlendirilir.
@@ -796,7 +776,7 @@ export default function PrivacyPolicyPage() {
           <div className="mt-12 pt-8 border-t border-border/30">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-[13px] text-muted-foreground">
               <p>
-                Bu politika <strong className="text-foreground">35 madde</strong> halinde düzenlenmiş olup, tüm maddeleri tek bir bütünlük içinde yorumlanmalıdır.
+                Bu politika <strong className="text-foreground">34</strong> halinde düzenlenmiş olup, tüm maddeleri tek bir bütünlük içinde yorumlanmalıdır.
               </p>
               <Link
                 href="/"
