@@ -909,15 +909,7 @@ export const tr = {
                         calculations: "Hesaplamalar",
                     }
                 },
-                topUsers: {
-                    title: "En Aktif Kullanıcılar",
-                    table: {
-                        userId: "User ID",
-                        bondViews: "Tahvil Görüntüleme",
-                        apiCalls: "API Çağrıları",
-                        calculations: "Hesaplamalar",
-                    }
-                }
+
             },
             notifications: {
                 title: "Duyuru Yönetimi",
