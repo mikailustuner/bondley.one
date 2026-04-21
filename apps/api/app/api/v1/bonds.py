@@ -422,6 +422,7 @@ async def get_bond(
             next_coupon_date=None,
             return_to_date_pct=None,
             return_to_date_used_fallback_price=False,
+            is_theoretical=stored_calc.is_theoretical,
         )
         # Bugüne kadar getiri: DB'de saklanmaz, anlık hesapla ve ekle
         rtd_pct, rtd_fallback = metrics_svc.compute_return_to_date_only(

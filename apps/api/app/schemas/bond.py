@@ -104,6 +104,7 @@ class BondCalculatedMetrics(BaseModel):
     used_fallback_market_data: bool = False
     market_data_date: str | None = None
     tlref_rate_date: str | None = None
+    is_theoretical: bool = False
 
 
 class BondDetailWithMetrics(BondResponse):

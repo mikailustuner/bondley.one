@@ -457,6 +457,7 @@ export const tr = {
                 macDuration: "Macaulay Dürasyon",
                 convexity: "Konveksite",
                 couponAmount: "Kupon Ödeme Tutarı",
+                theoreticalBadge: "Teorik Fiyat (Tahmini)",
                 fallbackNotice: "Veri bulunamadığı için 100 olarak kabul edilmiştir.",
             },
             scenario: {

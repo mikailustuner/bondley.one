@@ -221,6 +221,44 @@ class BondCalculator:
         ytm = 0.5 * (lo + hi)
         return Decimal(str(ytm)).quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
 
+    def dirty_price_from_yield(self, ytm: Decimal, settlement_date: date) -> Decimal:
+        """
+        Verilen YTM (BEY) oranina gore tahvilin kirli fiyatini (Dirty Price) hesaplar.
+        """
+        self._validate_settlement(settlement_date)
+        cash_flows = self.generate_cash_flows(settlement_date)
+        if not cash_flows:
+            return Decimal("0")
+            
+        y = float(ytm)
+        k = self.coupon_frequency
+        period_days = self._period_days()
+        
+        times = [
+            (cf.payment_date - settlement_date).days / period_days
+            for cf in cash_flows
+        ]
+        amounts = [float(cf.amount) for cf in cash_flows]
+        
+        factor = 1.0 + y / k
+        if factor <= 0:
+            return Decimal("0")
+            
+        d_price = sum(a / (factor ** t) for a, t in zip(amounts, times))
+        return Decimal(str(d_price)).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
+
+    def clean_price_from_yield(self, ytm: Decimal, settlement_date: date) -> Decimal:
+        """
+        Verilen YTM oranina gore tahvilin temiz fiyatini (Clean Price) hesaplar.
+        Clean Price = Dirty Price - Accrued Interest
+        """
+        d_price = self.dirty_price_from_yield(ytm, settlement_date)
+        if d_price == 0:
+            return Decimal("0")
+        accrued = self.accrued_interest(settlement_date)
+        return (d_price - accrued).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
+
+
     def spread(self, bond_yield: Decimal, tlref_yield: Decimal) -> Decimal:
         """
         Piyasa ima spread'i: Spread = YTM(BEY) - TLREF(yillik basit).

@@ -38,7 +38,7 @@ def log(msg):
         print(msg)
 
 
-async def populate_calculations(calc_date: date, dry_run: bool = False):
+async def populate_calculations(calc_date: date, dry_run: bool = False, stale_limit: int = 5):
     """
     Belirtilen tarih için market_data olan tüm tahvillerde hesaplama yapar ve calculations tablosuna yazar.
     """
@@ -72,7 +72,7 @@ async def populate_calculations(calc_date: date, dry_run: bool = False):
             return
 
         service = MarketDataService(session)
-        results = await service.run_daily_calculations(calc_date)
+        results = await service.run_daily_calculations(calc_date, stale_limit=stale_limit)
         await session.commit()
 
         log(f"\n✅ {len(results)} tahvil için hesaplama tamamlandı ve calculations tablosuna yazıldı.")
@@ -96,6 +96,12 @@ async def main():
         action="store_true",
         help="Sadece önizleme, veritabanına yazma",
     )
+    parser.add_argument(
+        "--stale-limit",
+        type=int,
+        default=5,
+        help="Geçmiş getiri oranının kullanılacağı gün limiti (varsayılan: 5)",
+    )
     args = parser.parse_args()
 
     if args.date:
@@ -109,7 +115,7 @@ async def main():
         log(f"⚠️ Tarih belirtilmedi, bugün kullanılıyor: {calc_date}")
 
     try:
-        await populate_calculations(calc_date, dry_run=args.dry_run)
+        await populate_calculations(calc_date, dry_run=args.dry_run, stale_limit=args.stale_limit)
     except Exception as e:
         log(f"\n❌ Hata: {e}")
         import traceback

@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.constants import FACE_VALUE
 from app.models.bond import Bond
 from app.models.market_data import MarketData
+from app.models.calculation import Calculation
 from app.models.tlref_rate import TLREFRate
 from app.services.bond_calculator import BondCalculator
 
@@ -254,12 +255,54 @@ class BondMetricsService:
         clean_price = clean_price_override
         market_data_date = settlement_date
         used_fallback_market_data = False
+        is_theoretical = False
         if clean_price is None:
             clean_price, market_data_date = await self.get_clean_price(bond.id, settlement_date)
             if clean_price is None:
-                logger.warning(f"No market data for bond {bond.isin_code} on date {settlement_date} (no fallback available)")
-                return None
-            if market_data_date != settlement_date:
+                # Fallback: Yield-to-Price calculation
+                stale_limit = 5
+                limit_date = settlement_date - timedelta(days=stale_limit)
+                fallback_calc = await self.db.execute(
+                    select(Calculation)
+                    .where(
+                        Calculation.bond_id == bond.id,
+                        Calculation.calc_date < settlement_date,
+                        Calculation.calc_date >= limit_date,
+                        Calculation.spread.isnot(None),
+                    )
+                    .order_by(Calculation.calc_date.desc())
+                    .limit(1)
+                )
+                last_calc = fallback_calc.scalar_one_or_none()
+                tlref_rate, _ = await get_tlref_annual_yield_for_date(self.db, settlement_date)
+                
+                if last_calc and tlref_rate:
+                    theoretical_ytm = tlref_rate + last_calc.spread
+                    inputs = bond_to_calculator_inputs(bond)
+                    if inputs:
+                        issue_date, maturity_date, coupon_rate, coupon_frequency_int = inputs
+                        calc = BondCalculator(
+                            isin=bond.isin_code,
+                            issue_date=issue_date,
+                            maturity_date=maturity_date,
+                            coupon_rate=coupon_rate,
+                            face_value=FACE_VALUE,
+                            coupon_frequency=coupon_frequency_int,
+                            next_coupon_date=bond.next_coupon_date,
+                        )
+                        try:
+                            calc_price = calc.clean_price_from_yield(theoretical_ytm, settlement_date)
+                            if calc_price > 0:
+                                clean_price = calc_price
+                                market_data_date = settlement_date
+                                is_theoretical = True
+                        except Exception as e:
+                            logger.warning(f"Theoretical price calc failed in compute_metrics for {bond.isin_code}: {e}")
+
+                if clean_price is None:
+                    logger.warning(f"No market data or theoretical price for bond {bond.isin_code} on date {settlement_date}")
+                    return None
+            elif market_data_date != settlement_date:
                 used_fallback_market_data = True
                 logger.info(f"Using fallback market data for {bond.isin_code}: requested {settlement_date}, using {market_data_date}")
 
@@ -409,6 +452,7 @@ class BondMetricsService:
             "used_fallback_market_data": used_fallback_market_data,
             "market_data_date": market_data_date.isoformat() if market_data_date else None,
             "tlref_rate_date": tlref_rate_date.isoformat() if tlref_rate_date else None,
+            "is_theoretical": is_theoretical,
         }
 
     def compute_return_to_date_only(

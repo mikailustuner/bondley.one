@@ -462,7 +462,14 @@ export default function BondDetailPage({
         <Card className="animate-fade-up border-primary/20 bg-primary/[0.02]">
           <CardHeader>
             <CardDescription>{tr.dashboard.bondDetails.calculatedMetrics.title}</CardDescription>
-            <CardTitle className="mt-1">{tr.dashboard.bondDetails.calculatedMetrics.subtitle.replace("{date}", formatDate(selectedDate))}</CardTitle>
+            <CardTitle className="mt-1 flex items-center gap-2">
+              {tr.dashboard.bondDetails.calculatedMetrics.subtitle.replace("{date}", formatDate(selectedDate))}
+              {bond.calculated_metrics.is_theoretical && (
+                <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-500/20 font-normal">
+                  {tr.dashboard.bondDetails.calculatedMetrics.theoreticalBadge}
+                </Badge>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

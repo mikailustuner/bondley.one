@@ -21,6 +21,7 @@ class CalculationResponse(BaseModel):
     spread: Decimal | None
     modified_duration: Decimal | None
     macaulay_duration: Decimal | None
+    is_theoretical: bool
     created_at: datetime
 
 
@@ -33,3 +34,4 @@ class CalculationSummary(BaseModel):
     accrued_interest: Decimal
     ytm: Decimal
     spread: Decimal | None
+    is_theoretical: bool

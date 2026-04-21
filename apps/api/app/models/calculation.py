@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, Numeric, Integer, DateTime, ForeignKey, UniqueConstraint, func
+from sqlalchemy import Date, Numeric, Integer, DateTime, ForeignKey, UniqueConstraint, func, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.base import Base
@@ -20,6 +20,7 @@ class Calculation(Base):
     spread: Mapped[Decimal | None] = mapped_column(Numeric(10, 6))
     modified_duration: Mapped[Decimal | None] = mapped_column(Numeric(10, 6))
     macaulay_duration: Mapped[Decimal | None] = mapped_column(Numeric(10, 6))
+    is_theoretical: Mapped[bool] = mapped_column(Boolean, server_default="false", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     bond = relationship("Bond", back_populates="calculations")
