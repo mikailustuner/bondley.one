@@ -157,13 +157,19 @@ export interface TLREFStats {
 }
 
 export interface PublicSummary {
-  tlref_index: number | null;
-  tlref_date: string | null;
-  tlref_daily_rate: number | null;
-  tlref_annualized_rate: number | null;
-  tlref_index_change_pct: number | null;
-  total_tlref_records: number;
-  total_bonds: number;
+    tlref_index: number | null;
+    tlref_date: string | null;
+    tlref_daily_rate: number | null;
+    tlref_annualized_rate: number | null;
+    tlref_index_change_pct: number | null;
+    total_tlref_records: number;
+    total_bonds: number;
+    upcoming_bonds?: {
+        isin_code: string;
+        issuer: string | null;
+        next_coupon_date: string | null;
+        days_to_coupon: number;
+    }[];
 }
 
 // --- Bond Types ---

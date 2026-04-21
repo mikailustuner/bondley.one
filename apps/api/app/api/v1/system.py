@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -61,6 +63,25 @@ async def get_public_summary(db: AsyncSession = Depends(get_db)):
             ratio = float(latest.index_value / first.index_value)
             annualized_rate = round((ratio ** (365.0 / days) - 1) * 100, 2)
 
+    # 4. Veri açıklanmasına 1 gün kalan tahvilleri getir
+    tomorrow = date.today() + timedelta(days=1)
+    upcoming_result = await db.execute(
+        select(Bond)
+        .where(Bond.is_active == True)
+        .where(Bond.next_coupon_date == tomorrow)
+        .limit(5)
+    )
+    upcoming_bonds_records = upcoming_result.scalars().all()
+    upcoming_bonds = [
+        {
+            "isin_code": b.isin_code,
+            "issuer": b.issuer,
+            "next_coupon_date": b.next_coupon_date.isoformat() if b.next_coupon_date else None,
+            "days_to_coupon": 1
+        }
+        for b in upcoming_bonds_records
+    ]
+
     return {
         "tlref_index": float(latest.index_value) if latest else None,
         "tlref_date": latest.rate_date.isoformat() if latest else None,
@@ -69,4 +90,5 @@ async def get_public_summary(db: AsyncSession = Depends(get_db)):
         "tlref_index_change_pct": tlref_index_change_pct,
         "total_tlref_records": tlref_count,
         "total_bonds": total_bonds,
+        "upcoming_bonds": upcoming_bonds,
     }

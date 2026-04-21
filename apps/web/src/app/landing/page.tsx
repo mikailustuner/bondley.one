@@ -147,6 +147,43 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ═══════ Upcoming Bonds Ticker ═══════ */}
+      {summary?.upcoming_bonds && summary.upcoming_bonds.length > 0 && (
+        <section className="container mx-auto pb-10">
+          <div className="animate-fade-up-delay-2">
+            <div className="flex flex-col md:flex-row items-center gap-4 bg-primary/5 border border-primary/20 rounded-2xl p-4 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-1 h-full bg-primary/40"></div>
+              <div className="flex items-center gap-2 shrink-0 md:border-r md:border-primary/10 md:pr-4">
+                <Bell className="h-5 w-5 text-primary animate-pulse" />
+                <span className="text-[14px] font-semibold text-primary">
+                  {tr.landing.upcoming.title}
+                </span>
+              </div>
+              <div className="flex-1 flex flex-wrap gap-2 items-center justify-center md:justify-start">
+                {summary.upcoming_bonds.map((b) => (
+                  <Link
+                    key={b.isin_code}
+                    href="/signup"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-background px-3 py-1.5 text-[13px] border border-border/50 hover:border-primary/40 hover:shadow-sm transition-all"
+                    title={b.issuer || b.isin_code}
+                  >
+                    <span className="font-mono-data font-medium text-foreground">{b.isin_code}</span>
+                    {b.issuer && (
+                      <span className="text-muted-foreground truncate max-w-[150px]">{b.issuer}</span>
+                    )}
+                  </Link>
+                ))}
+              </div>
+              <Link href="/signup" className="shrink-0">
+                <Button variant="ghost" size="sm" className="text-[13px] h-8 text-primary hover:text-primary hover:bg-primary/10 transition-colors">
+                  {tr.landing.upcoming.seeMore} <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ═══════ Live Data Ticker — Apple product spec style ═══════ */}
       <section className="container mx-auto pb-24">
         <div className="animate-fade-up-delay-3">

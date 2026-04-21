@@ -241,8 +241,12 @@ export const tr = {
         },
         cta: {
             title: "Hemen başlayın.",
-            description: "Ücretsiz hesap oluşturun ve Türkiye borçlanma araçları piyasasını profesyonel araçlarla analiz etmeye başlayın.",
-            button: "Ücretsiz Hesap Oluştur",
+            description: "Gelişmiş analitikler, portföy yönetimi ve gerçek zamanlı piyasa verilerine erişmek için ücretsiz hesabınızı oluşturun.",
+            button: "Ücretsiz Başlayın",
+        },
+        upcoming: {
+            title: "Veri Açıklanmasına 1 Gün Kalanlar",
+            seeMore: "Daha fazlasını gör",
         },
         trust: [
             "BIST resmî veri kaynağı",
