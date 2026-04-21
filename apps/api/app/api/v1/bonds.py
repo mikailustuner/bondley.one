@@ -369,6 +369,14 @@ async def get_bond(
             await db.rollback()
         except Exception:
             pass
+    
+    # Ensure bond object is not expired after potential rollback
+    try:
+        await db.refresh(bond)
+    except Exception:
+        # If refresh fails, we still have the object but might hit lazy-load later
+        # We can also re-fetch it if needed, but refresh is usually enough
+        pass
 
     # Once DB'de (calculations) kayit var mi kontrol et; varsa oradan doldur.
     calc_result = await db.execute(

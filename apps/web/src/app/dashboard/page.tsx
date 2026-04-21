@@ -127,7 +127,7 @@ export default function DashboardPage() {
             {getTodayText()}
           </p>
         </div>
-        <div ref={quickSearchRef} className="relative w-full md:w-[340px]">
+        <div ref={quickSearchRef} className="relative w-full md:w-[460px]">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-[16px] w-[16px] pointer-events-none text-muted-foreground/50" />
           <Input
             type="search"
@@ -135,7 +135,7 @@ export default function DashboardPage() {
             value={quickSearchQuery}
             onChange={(e) => setQuickSearchQuery(e.target.value)}
             onFocus={() => quickSearchResults.length > 0 && setQuickSearchOpen(true)}
-            className="pl-10 h-10 rounded-2xl bg-secondary/50 border-transparent hover:bg-secondary/80 focus-visible:bg-card focus-visible:border-border text-[14px]"
+            className="pl-10 h-10 rounded-2xl bg-secondary/30 border-border/60 hover:bg-secondary/50 focus-visible:bg-card focus-visible:border-primary/50 text-[14px] transition-all shadow-sm"
             aria-label={tr.dashboard.overview.search.ariaLabel}
             autoComplete="off"
           />
@@ -249,7 +249,14 @@ export default function DashboardPage() {
       {bondStats?.by_maturity_bucket && (bondStats.by_maturity_bucket.short + bondStats.by_maturity_bucket.medium + bondStats.by_maturity_bucket.long) > 0 && (
         <div className="animate-fade-up-delay-1">
           <div className="rounded-3xl border border-border bg-card p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="text-[13px] font-medium text-muted-foreground mb-4">{tr.dashboard.overview.maturity.title}</div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-[13px] font-medium text-muted-foreground">{tr.dashboard.overview.maturity.title}</div>
+              {bondStats?.avg_days_to_maturity && (
+                <div className="text-[12px] font-medium text-primary/80 bg-primary/5 px-3 py-1 rounded-xl border border-primary/10">
+                  {tr.dashboard.overview.widgets.avgMaturity.replace("{days}", Math.round(bondStats.avg_days_to_maturity).toString())}
+                </div>
+              )}
+            </div>
             <div className="flex rounded-full overflow-hidden h-3 bg-secondary">
               {(() => {
                 const total = bondStats.by_maturity_bucket.short + bondStats.by_maturity_bucket.medium + bondStats.by_maturity_bucket.long;

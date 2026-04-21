@@ -39,7 +39,7 @@ export default function BondsListPage() {
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [favoriteIsins, setFavoriteIsins] = useState<Set<string>>(new Set());
   const [favoriteToggling, setFavoriteToggling] = useState<string | null>(null);
-  const [tlrefLatest, setTlrefLatest] = useState<TLREFRecord | null>(null);
+
 
   useEffect(() => {
     const token = getToken();
@@ -53,14 +53,12 @@ export default function BondsListPage() {
       api.bonds.list(token, { active_only: true, limit: 10, order_by: "updated_at_desc" }),
       api.bonds.stats(token),
       api.bonds.favoritesList(token),
-      api.tlref.latest(token),
     ])
-      .then(([recentRes, statsRes, favRes, tlrefRes]) => {
+      .then(([recentRes, statsRes, favRes]) => {
         setRecentBonds(recentRes.items || []);
         setTotal(recentRes.total ?? 0);
         setStats(statsRes);
         setFavoriteIsins(new Set((favRes.items || []).map((b) => b.isin_code)));
-        setTlrefLatest(tlrefRes);
         setLoading(false);
 
         setFullListLoading(true);
@@ -199,38 +197,7 @@ export default function BondsListPage() {
         </div>
       )}
 
-      {!loading && tlrefLatest && (
-        <Card className="animate-fade-up">
-          <CardHeader>
-            <CardDescription>{tr.dashboard.bonds.tlref.title}</CardDescription>
-            <CardTitle className="mt-1">{tr.dashboard.bonds.tlref.subtitle}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-[13px]">
-                <thead>
-                  <tr className="border-b border-border/50">
-                    <th className="text-left py-2.5 text-muted-foreground font-medium">{tr.dashboard.bonds.tlref.date}</th>
-                    <th className="text-right py-2.5 text-muted-foreground font-medium">{tr.dashboard.bonds.tlref.rate}</th>
-                    <th className="text-right py-2.5 text-muted-foreground font-medium">{tr.dashboard.bonds.tlref.index}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b border-border/20">
-                    <td className="py-2.5 font-mono-data">{formatDate(tlrefLatest.rate_date)}</td>
-                    <td className="py-2.5 text-right font-mono-data">
-                      {tlrefLatest.daily_rate != null ? formatPercentFromDecimal(tlrefLatest.daily_rate * 365, 4) : "—"}
-                    </td>
-                    <td className="py-2.5 text-right font-mono-data">
-                      {formatDecimal(tlrefLatest.index_value, 5, 5)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+
 
       {/* Recent Bonds */}
       {!loading && recentBonds.length > 0 && (
