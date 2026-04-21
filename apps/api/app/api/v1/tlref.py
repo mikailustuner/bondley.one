@@ -83,12 +83,21 @@ async def get_tlref_stats(
             (latest_rate.index_value - first_rate.index_value) / first_rate.index_value * 100
         )
 
+    # Yıllık bileşik oran: bugünkü günlük oranın bileşik yıllıklaştırması
+    # Formül: (1 + daily_rate)^365 - 1
+    # Bu değer günlük oran widgetiyle tutarlı olmalıdır.
     annualized_rate = None
+    if latest_rate.daily_rate:
+        daily = float(latest_rate.daily_rate)
+        annualized_rate = round(((1 + daily) ** 365 - 1) * 100, 4)
+
+    # Tarihsel yıllıklaştırılmış bileşik getiri (ilk kayıttan bugüne)
+    historical_annualized_rate = None
     if first_rate and first_rate.index_value > 0:
         days = (latest_rate.rate_date - first_rate.rate_date).days
         if days > 0:
             ratio = float(latest_rate.index_value / first_rate.index_value)
-            annualized_rate = round((ratio ** (365.0 / days) - 1) * 100, 4)
+            historical_annualized_rate = round((ratio ** (365.0 / days) - 1) * 100, 4)
 
     return {
         "total_records": total,
@@ -102,6 +111,7 @@ async def get_tlref_stats(
         "first_index": float(first_rate.index_value) if first_rate else None,
         "cumulative_return_pct": cumulative_return,
         "annualized_rate_pct": annualized_rate,
+        "historical_annualized_rate_pct": historical_annualized_rate,
     }
 
 
