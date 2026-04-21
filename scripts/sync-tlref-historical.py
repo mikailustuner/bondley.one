@@ -22,28 +22,35 @@ def log(msg: str) -> None:
     print(f"[TLREF_SYNC] {msg}")
 
 
-async def sync_historical_rates() -> dict:
+async def sync_historical_data() -> dict:
     log("=" * 60)
-    log("TLREFORANI_D.zip Tarihsel Oran Verisi Senkronizasyonu Basliyor")
+    log("TLREF TAM GECMIS SENKRONIZASYONU (Endeks + Oranlar)")
     log("=" * 60)
 
     async with async_session_factory() as session:
         fetcher = TLREFFetcher(session)
-        log("BIST sunucularina baglaniliyor...")
-        res = await fetcher.fetch_historical_rate()
         
-        if res.get("status") == "success":
-            log(f"✅ Basarili! Toplam {res.get('rate_records')} kayit guncellendi.")
+        log("1. Endeks gecmisi cekiliyor (BISTTLREFENDEKSI_D.zip)...")
+        idx_res = await fetcher.fetch_historical()
+        if idx_res.get("status") == "success":
+            log(f"✅ Endeksler tamam: {idx_res.get('index_records')} kayit.")
         else:
-            log(f"❌ Hata: {res.get('error')}")
+            log(f"⚠️ Endeks hatasi: {idx_res.get('error')}")
+
+        log("2. Faiz orani gecmisi cekiliyor (TLREFORANI_D.zip)...")
+        rate_res = await fetcher.fetch_historical_rate()
+        if rate_res.get("status") == "success":
+            log(f"✅ Oranlar tamam: {rate_res.get('rate_records')} kayit guncellendi.")
+        else:
+            log(f"⚠️ Oran hatasi: {rate_res.get('error')}")
             
         await session.commit()
-        return res
+        return {"index": idx_res, "rate": rate_res}
 
 
 async def main() -> None:
     try:
-        await sync_historical_rates()
+        await sync_historical_data()
     except Exception as e:
         log(f"❌ Kritik Hata: {e}")
         import traceback
