@@ -167,8 +167,8 @@ export default function AdminPage() {
         setSyncMessage({
           type: "success",
           text: tr.dashboard.admin.overview.operations.bondsSuccess
-            .replace("{upserted}", result.bonds_upserted.toString())
-            .replace("{deactivated}", result.bonds_deactivated.toString()),
+            .replace("{upserted}", (result.bonds_upserted || 0).toString())
+            .replace("{deactivated}", (result.bonds_deactivated || 0).toString()),
         });
       } else {
         setSyncMessage({
