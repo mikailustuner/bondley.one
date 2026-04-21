@@ -158,6 +158,9 @@ export default function AdminUsersPage() {
                           <Button
                             size="sm"
                             variant="outline"
+                            onClick={async () => {
+                              const token = getToken();
+                              if (!token) return;
                                if (confirm(tr.admin.users.table.confirmRoleChange.replace("{email}", user.email))) {
                                 try {
                                   const newRole = user.role === "admin" ? "free_user" : user.role === "free_user" ? "premium_user" : user.role === "premium_user" ? "pro_user" : "admin";
