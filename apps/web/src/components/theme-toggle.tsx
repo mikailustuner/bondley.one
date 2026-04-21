@@ -27,7 +27,7 @@ export function ThemeToggle({ className }: { className?: string }) {
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
         className
       )}
-      aria-label={isDark ? tr.components.themeToggle.toLight : tr.components.themeToggle.toDark}
+      aria-label={isDark ? tr.dashboard.components.themeToggle.toLight : tr.dashboard.components.themeToggle.toDark}
     >
       <svg
         className={cn(

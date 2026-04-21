@@ -18,10 +18,10 @@ function formatDistanceToNowNative(dateStr: string): string {
   const diffHour = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHour / 24);
 
-  if (diffSec < 60) return tr.components.notificationBell.timeAgo.justNow;
-  if (diffMin < 60) return tr.components.notificationBell.timeAgo.minutes.replace("{count}", diffMin.toString());
-  if (diffHour < 24) return tr.components.notificationBell.timeAgo.hours.replace("{count}", diffHour.toString());
-  if (diffDay < 30) return tr.components.notificationBell.timeAgo.days.replace("{count}", diffDay.toString());
+  if (diffSec < 60) return tr.dashboard.components.notificationBell.timeAgo.justNow;
+  if (diffMin < 60) return tr.dashboard.components.notificationBell.timeAgo.minutes.replace("{count}", diffMin.toString());
+  if (diffHour < 24) return tr.dashboard.components.notificationBell.timeAgo.hours.replace("{count}", diffHour.toString());
+  if (diffDay < 30) return tr.dashboard.components.notificationBell.timeAgo.days.replace("{count}", diffDay.toString());
   return date.toLocaleDateString("tr-TR");
 }
 
@@ -194,7 +194,7 @@ export function NotificationBell() {
                   }}
                   className="text-[11px] text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
                 >
-                  <Check className="h-3 w-3" /> {tr.components.notificationBell.markAllRead}
+                  <Check className="h-3 w-3" /> {tr.dashboard.components.notificationBell.markAllRead}
                 </button>
               )}
             </div>
@@ -203,7 +203,7 @@ export function NotificationBell() {
               {notifications.length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground">
                   <Bell className="h-8 w-8 mx-auto mb-3 opacity-20" />
-                  <p className="text-sm">{tr.components.notificationBell.empty}</p>
+                  <p className="text-sm">{tr.dashboard.components.notificationBell.empty}</p>
                 </div>
               ) : (
                 <div className="divide-y divide-border/40">
@@ -242,7 +242,7 @@ export function NotificationBell() {
                               handleMarkAsRead(notif.id);
                             }}
                             className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary"
-                            title={tr.components.notificationBell.markRead}
+                            title={tr.dashboard.components.notificationBell.markRead}
                           >
                             <Check className="h-3.5 w-3.5" />
                           </button>

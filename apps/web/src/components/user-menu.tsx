@@ -120,7 +120,7 @@ export function UserMenu() {
           "active:scale-[0.98]",
           isOpen && "bg-secondary"
         )}
-        aria-label={tr.components.userMenu.ariaLabel}
+        aria-label={tr.dashboard.components.userMenu.ariaLabel}
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
@@ -224,7 +224,7 @@ export function UserMenu() {
                 role="menuitem"
               >
                 <LogOut className="h-4 w-4" />
-                <span>{tr.components.userMenu.logout}</span>
+                <span>{tr.dashboard.components.userMenu.logout}</span>
               </button>
             </div>
           </div>

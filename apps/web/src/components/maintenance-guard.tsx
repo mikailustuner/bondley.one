@@ -55,7 +55,7 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
             {isMaintenance && isAdmin && pathname !== "/maintenance" && (
                 <div className="bg-red-500 text-white p-2 text-center text-sm font-medium flex items-center justify-center gap-2 z-[100] relative">
                     <AlertCircle className="w-4 h-4" />
-                    {tr.components.maintenance.message}
+                    {tr.dashboard.components.maintenance.message}
                 </div>
             )}
             {children}
