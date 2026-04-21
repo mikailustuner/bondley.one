@@ -30,11 +30,11 @@ log "Domain: $DOMAIN"
 
 # Step 1: Build canary containers
 log "Canary container'lar build ediliyor..."
-docker-compose -f docker-compose.canary.yml build --no-cache
+docker compose -f docker-compose.canary.yml build --no-cache
 
 # Step 2: Start canary containers
 log "Canary container'lar baslatiliyor..."
-docker-compose -f docker-compose.canary.yml up -d
+docker compose -f docker-compose.canary.yml up -d
 
 # Step 3: Wait for containers to be healthy
 log "Container'larin saglikli olmasini bekliyoruz..."

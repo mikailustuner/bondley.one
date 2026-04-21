@@ -20,7 +20,7 @@ log "Canary deployment rollback yapiliyor..."
 
 # Step 1: Stop canary containers
 log "Canary container'lar durduruluyor..."
-docker-compose -f docker-compose.canary.yml down || true
+docker compose -f docker-compose.canary.yml down || true
 
 # Step 2: Remove canary nginx configuration
 log "Canary nginx yapilandirmasi kaldiriliyor..."
@@ -50,7 +50,7 @@ done
 
 if [ "$ALL_RUNNING" = false ]; then
     warn "Bazi stable container'lar calismiyor, yeniden baslatiliyor..."
-    docker-compose -f docker-compose.prod.yml up -d web api || true
+    docker compose -f docker-compose.prod.yml up -d web api || true
 fi
 
 log "============================================"

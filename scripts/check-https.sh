@@ -12,7 +12,7 @@ echo "=== 1. Nginx çalışıyor mu? ==="
 if docker ps --format '{{.Names}}' | grep -q fincalc-nginx; then
   echo "  OK: fincalc-nginx running"
 else
-  echo "  HATA: fincalc-nginx yok. Başlat: docker-compose -f docker-compose.prod.yml up -d nginx"
+  echo "  HATA: fincalc-nginx yok. Başlat: docker compose -f docker-compose.prod.yml up -d nginx"
   exit 1
 fi
 
@@ -32,7 +32,7 @@ if docker exec fincalc-nginx cat /etc/nginx/conf.d/default.conf 2>/dev/null | gr
   echo "  OK: 443 açık"
 else
   echo "  HATA: Nginx sadece HTTP (80) ile başlamış. Sertifika sonrası Nginx'i yeniden başlat:"
-  echo "  docker-compose -f docker-compose.prod.yml up -d --force-recreate nginx"
+  echo "  docker compose -f docker-compose.prod.yml up -d --force-recreate nginx"
   exit 1
 fi
 

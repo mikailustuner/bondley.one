@@ -45,7 +45,7 @@ fi
 
 # Restart containers to apply new healthcheck
 log "\nContainer'lar yeniden baslatiliyor (yeni healthcheck'lerle)..."
-docker-compose -f docker-compose.prod.yml restart celery-worker celery-beat
+docker compose -f docker-compose.prod.yml restart celery-worker celery-beat
 
 log "Bekleniyor (30 saniye)..."
 sleep 30

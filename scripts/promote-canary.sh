@@ -20,15 +20,15 @@ log "Canary'i stable'e promote ediliyor..."
 
 # Step 1: Stop stable containers
 log "Stable container'lar durduruluyor..."
-docker-compose -f docker-compose.prod.yml stop web api || true
+docker compose -f docker-compose.prod.yml stop web api || true
 
 # Step 2: Rebuild stable containers with latest code
 log "Stable container'lar guncelleniyor..."
-docker-compose -f docker-compose.prod.yml build --no-cache web api
+docker compose -f docker-compose.prod.yml build --no-cache web api
 
 # Step 3: Start stable containers
 log "Stable container'lar baslatiliyor..."
-docker-compose -f docker-compose.prod.yml up -d web api
+docker compose -f docker-compose.prod.yml up -d web api
 
 # Step 4: Wait for stable containers to be healthy
 log "Stable container'larin saglikli olmasini bekliyoruz..."
@@ -63,7 +63,7 @@ fi
 
 # Step 7: Stop and remove canary containers
 log "Canary container'lar kaldiriliyor..."
-docker-compose -f docker-compose.canary.yml down || true
+docker compose -f docker-compose.canary.yml down || true
 
 log "============================================"
 log "  Promotion tamamlandi!"

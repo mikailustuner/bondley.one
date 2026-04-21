@@ -55,4 +55,4 @@ jobs:
 
       - name: Build Docker images
         run: |
-          docker-compose -f docker-compose.prod.yml build --no-cache api web
+          docker compose -f docker-compose.prod.yml build --no-cache api web

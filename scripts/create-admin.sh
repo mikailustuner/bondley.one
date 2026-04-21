@@ -21,13 +21,13 @@ source .env
 
 # PostgreSQL container'inin calisip calismadigini kontrol et
 if ! docker ps | grep -q fincalc-postgres; then
-    error "PostgreSQL container'i calismiyor! Once container'i baslat:\n  docker-compose -f docker-compose.prod.yml up -d postgres"
+    error "PostgreSQL container'i calismiyor! Once container'i baslat:\n  docker compose -f docker-compose.prod.yml up -d postgres"
 fi
 
 # API container'inin calisip calismadigini kontrol et
 if ! docker ps | grep -q fincalc-api; then
     warn "API container'i calismiyor. Baslatiliyor..."
-    docker-compose -f docker-compose.prod.yml up -d api
+    docker compose -f docker-compose.prod.yml up -d api
     sleep 5
 fi
 

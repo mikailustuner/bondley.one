@@ -26,10 +26,10 @@ log "Starting deployment for domain: $DOMAIN"
 
 # --- Step 1: Build & Deploy ---
 log "Building containers (this may take a few minutes)..."
-docker-compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml build
 
 log "Starting Bondley services..."
-docker-compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml up -d
 
 # --- Step 2: Health check ---
 log "Verifying service status..."

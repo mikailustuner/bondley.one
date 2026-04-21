@@ -32,7 +32,7 @@ elif [ -f "$PROJECT_ROOT/.env" ] || [ -f "$PROJECT_ROOT/.env.production" ]; then
         read -r response
         if [[ "$response" =~ ^[Yy]$ ]]; then
             cd "$PROJECT_ROOT"
-            docker-compose up -d api 2>/dev/null || docker-compose -f docker-compose.prod.yml up -d api 2>/dev/null || {
+            docker compose up -d api 2>/dev/null || docker compose -f docker-compose.prod.yml up -d api 2>/dev/null || {
                 warn "Container başlatılamadı, lokal Python kullanılacak."
                 USE_DOCKER=false
             }

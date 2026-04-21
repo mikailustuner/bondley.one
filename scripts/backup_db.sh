@@ -7,7 +7,7 @@ set -e
 # ============================================
 
 # Environment variables should ideally be loaded from a secure location or passed at runtime
-# This script expects to run on the host machine where docker-compose is running
+# This script expects to run on the host machine where docker compose is running
 source "$(dirname "$0")/../.env"
 
 BACKUP_DIR="/tmp/fincalc_backups"

@@ -107,7 +107,7 @@ if [ "$USE_TEMP_NGINX" = "1" ]; then
 fi
 
 log "Nginx yeniden oluşturuluyor (443'ü açmak için entrypoint tekrar çalışacak)..."
-docker-compose -f docker-compose.prod.yml up -d --force-recreate nginx 2>/dev/null || \
+docker compose -f docker-compose.prod.yml up -d --force-recreate nginx 2>/dev/null || \
 docker compose -f docker-compose.prod.yml up -d --force-recreate nginx 2>/dev/null || true
 
 echo ""
