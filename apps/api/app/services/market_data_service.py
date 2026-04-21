@@ -115,8 +115,15 @@ class MarketDataService:
                 )
                 last_calc = fallback_result.scalar_one_or_none()
 
-                if last_calc and tlref_rate:
-                    theoretical_ytm = tlref_rate + last_calc.spread
+                theoretical_spread = None
+                if last_calc and last_calc.spread is not None:
+                    theoretical_spread = last_calc.spread
+                elif bond.spread is not None:
+                    s = Decimal(str(bond.spread))
+                    theoretical_spread = s / Decimal("100") if abs(s) > 1 else s
+
+                if theoretical_spread is not None and tlref_rate:
+                    theoretical_ytm = tlref_rate + theoretical_spread
                     inputs = bond_to_calculator_inputs(bond)
                     if inputs:
                         issue_date, maturity_date, coupon_rate, coupon_frequency_int = inputs

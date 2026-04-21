@@ -276,8 +276,14 @@ class BondMetricsService:
                 last_calc = fallback_calc.scalar_one_or_none()
                 tlref_rate, _ = await get_tlref_annual_yield_for_date(self.db, settlement_date)
                 
-                if last_calc and tlref_rate:
-                    theoretical_ytm = tlref_rate + last_calc.spread
+                theoretical_spread = None
+                if last_calc and last_calc.spread is not None:
+                    theoretical_spread = last_calc.spread
+                elif bond.spread is not None:
+                    theoretical_spread = _spread_to_decimal(bond.spread)
+
+                if theoretical_spread is not None and tlref_rate:
+                    theoretical_ytm = tlref_rate + theoretical_spread
                     inputs = bond_to_calculator_inputs(bond)
                     if inputs:
                         issue_date, maturity_date, coupon_rate, coupon_frequency_int = inputs
