@@ -26,10 +26,10 @@ fi
 
 if [ "$USE_DOCKER" = true ]; then
     log "Script Docker container içine kopyalanıyor..."
-    docker cp "$PYTHON_SCRIPT" fincalc-api:/app/scripts/sync-tlref-historical.py
+    docker cp "$PYTHON_SCRIPT" fincalc-api:/app/sync-tlref-historical.py
 
     log "Script Docker container içinde çalıştırılıyor..."
-    docker exec -w /app fincalc-api python3 scripts/sync-tlref-historical.py
+    docker exec -w /app fincalc-api python3 sync-tlref-historical.py
 else
     log "Lokal Python ile çalıştırılıyor..."
     
