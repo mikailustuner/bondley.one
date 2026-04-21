@@ -193,6 +193,9 @@ export default function AdminUsersPage() {
                           <Button
                             size="sm"
                             variant="destructive"
+                            onClick={async () => {
+                              const token = getToken();
+                              if (!token) return;
                                if (confirm(tr.admin.users.confirmDelete.replace("{email}", user.email))) {
                                 try {
                                   await api.admin.deleteUser(token, user.id);
