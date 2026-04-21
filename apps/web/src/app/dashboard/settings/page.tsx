@@ -10,7 +10,7 @@ import { tr } from "@/locales/tr";
 
 export default function SettingsPage() {
   useEffect(() => {
-    document.title = `${tr.settings.title} — ${tr.common.brand}`;
+    document.title = `${tr.dashboard.settings.title} — ${tr.common.brand}`;
     return () => {
       document.title = tr.common.brand;
     };
@@ -74,9 +74,9 @@ export default function SettingsPage() {
       const updated = await api.auth.updateProfile(token, profileData);
       const refreshToken = getRefreshToken() || "";
       setAuth(token, refreshToken, updated);
-      setSuccess(tr.settings.success.profile);
+      setSuccess(tr.dashboard.settings.success.profile);
     } catch (e) {
-      setError(e instanceof Error ? e.message : tr.settings.errors.profile);
+      setError(e instanceof Error ? e.message : tr.dashboard.settings.errors.profile);
     } finally {
       setLoading(false);
     }
@@ -88,12 +88,12 @@ export default function SettingsPage() {
     if (!token) return;
 
     if (passwordData.new_password !== passwordData.confirm_password) {
-      setError(tr.settings.errors.passwordMismatch);
+      setError(tr.dashboard.settings.errors.passwordMismatch);
       return;
     }
 
     if (passwordData.new_password.length < 8) {
-      setError(tr.settings.errors.passwordTooShort);
+      setError(tr.dashboard.settings.errors.passwordTooShort);
       return;
     }
 
@@ -106,14 +106,14 @@ export default function SettingsPage() {
         current_password: passwordData.current_password,
         new_password: passwordData.new_password,
       });
-      setSuccess(tr.settings.success.password);
+      setSuccess(tr.dashboard.settings.success.password);
       setPasswordData({
         current_password: "",
         new_password: "",
         confirm_password: "",
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : tr.settings.errors.passwordChange);
+      setError(e instanceof Error ? e.message : tr.dashboard.settings.errors.passwordChange);
     } finally {
       setLoading(false);
     }
@@ -132,9 +132,9 @@ export default function SettingsPage() {
       const updated = await api.auth.changeEmail(token, emailData);
       const refreshToken = getRefreshToken() || "";
       setAuth(token, refreshToken, updated);
-      setSuccess(tr.settings.success.email);
+      setSuccess(tr.dashboard.settings.success.email);
     } catch (e) {
-      setError(e instanceof Error ? e.message : tr.settings.errors.emailChange);
+      setError(e instanceof Error ? e.message : tr.dashboard.settings.errors.emailChange);
     } finally {
       setLoading(false);
     }
@@ -159,7 +159,7 @@ export default function SettingsPage() {
       }
       setMfaSetupStep("qr");
     } catch (e) {
-      setError(e instanceof Error ? e.message : tr.settings.errors.mfaSetup);
+      setError(e instanceof Error ? e.message : tr.dashboard.settings.errors.mfaSetup);
     } finally {
       setLoading(false);
     }
@@ -178,7 +178,7 @@ export default function SettingsPage() {
       setMfaEnabled(true);
       setMfaConfirmCode("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : tr.settings.errors.invalidCode);
+      setError(e instanceof Error ? e.message : tr.dashboard.settings.errors.invalidCode);
     } finally {
       setLoading(false);
     }
@@ -195,9 +195,9 @@ export default function SettingsPage() {
       await api.auth.mfaDisable(token, mfaDisablePassword);
       setMfaEnabled(false);
       setMfaDisablePassword("");
-      setSuccess(tr.settings.success.mfaDisabled);
+      setSuccess(tr.dashboard.settings.success.mfaDisabled);
     } catch (e) {
-      setError(e instanceof Error ? e.message : tr.settings.errors.mfaDisable);
+      setError(e instanceof Error ? e.message : tr.dashboard.settings.errors.mfaDisable);
     } finally {
       setLoading(false);
     }
@@ -206,8 +206,8 @@ export default function SettingsPage() {
   return (
     <div className="space-y-8 max-w-2xl">
       <div className="animate-fade-up">
-        <h1 className="text-display-md text-foreground">{tr.settings.title}</h1>
-        <p className="text-[15px] text-muted-foreground mt-1.5">{tr.settings.desc}</p>
+        <h1 className="text-display-md text-foreground">{tr.dashboard.settings.title}</h1>
+        <p className="text-[15px] text-muted-foreground mt-1.5">{tr.dashboard.settings.desc}</p>
       </div>
 
       {error && (
@@ -225,34 +225,34 @@ export default function SettingsPage() {
       {/* Profile Update */}
       <Card className="animate-fade-up-delay-1">
         <CardHeader>
-          <CardDescription>{tr.settings.profile.desc}</CardDescription>
-          <CardTitle className="mt-1">{tr.settings.profile.title}</CardTitle>
+          <CardDescription>{tr.dashboard.settings.profile.desc}</CardDescription>
+          <CardTitle className="mt-1">{tr.dashboard.settings.profile.title}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleProfileUpdate} className="space-y-4">
             <div>
-              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.settings.profile.name}</label>
+              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.dashboard.settings.profile.name}</label>
               <Input
                 value={profileData.full_name}
                 onChange={(e) => setProfileData({ ...profileData, full_name: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.settings.profile.company}</label>
+              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.dashboard.settings.profile.company}</label>
               <Input
                 value={profileData.company}
                 onChange={(e) => setProfileData({ ...profileData, company: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.settings.profile.location}</label>
+              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.dashboard.settings.profile.location}</label>
               <Input
                 value={profileData.location}
                 onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
               />
             </div>
             <Button type="submit" disabled={loading}>
-              {loading ? tr.settings.profile.saving : tr.settings.profile.update}
+              {loading ? tr.dashboard.settings.profile.saving : tr.dashboard.settings.profile.update}
             </Button>
           </form>
         </CardContent>
@@ -261,13 +261,13 @@ export default function SettingsPage() {
       {/* Password Change */}
       <Card className="animate-fade-up-delay-2">
         <CardHeader>
-          <CardDescription>{tr.settings.password.desc}</CardDescription>
-          <CardTitle className="mt-1">{tr.settings.password.title}</CardTitle>
+          <CardDescription>{tr.dashboard.settings.password.desc}</CardDescription>
+          <CardTitle className="mt-1">{tr.dashboard.settings.password.title}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handlePasswordChange} className="space-y-4">
             <div>
-              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.settings.password.current}</label>
+              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.dashboard.settings.password.current}</label>
               <Input
                 type="password"
                 value={passwordData.current_password}
@@ -276,7 +276,7 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.settings.password.new}</label>
+              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.dashboard.settings.password.new}</label>
               <Input
                 type="password"
                 value={passwordData.new_password}
@@ -286,7 +286,7 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.settings.password.confirm}</label>
+              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.dashboard.settings.password.confirm}</label>
               <Input
                 type="password"
                 value={passwordData.confirm_password}
@@ -296,7 +296,7 @@ export default function SettingsPage() {
               />
             </div>
             <Button type="submit" disabled={loading}>
-              {loading ? tr.settings.password.changing : tr.settings.password.update}
+              {loading ? tr.dashboard.settings.password.changing : tr.dashboard.settings.password.update}
             </Button>
           </form>
         </CardContent>
@@ -305,13 +305,13 @@ export default function SettingsPage() {
       {/* Email Change */}
       <Card className="animate-fade-up-delay-3">
         <CardHeader>
-          <CardDescription>{tr.settings.email.desc}</CardDescription>
-          <CardTitle className="mt-1">{tr.settings.email.title}</CardTitle>
+          <CardDescription>{tr.dashboard.settings.email.desc}</CardDescription>
+          <CardTitle className="mt-1">{tr.dashboard.settings.email.title}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleEmailChange} className="space-y-4">
             <div>
-              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.settings.email.new}</label>
+              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.dashboard.settings.email.new}</label>
               <Input
                 type="email"
                 value={emailData.new_email}
@@ -320,7 +320,7 @@ export default function SettingsPage() {
               />
             </div>
             <Button type="submit" disabled={loading}>
-              {loading ? tr.settings.email.changing : tr.settings.email.update}
+              {loading ? tr.dashboard.settings.email.changing : tr.dashboard.settings.email.update}
             </Button>
           </form>
         </CardContent>
@@ -329,54 +329,54 @@ export default function SettingsPage() {
       {/* Two-Factor Authentication */}
       <Card>
         <CardHeader>
-          <CardDescription>{tr.settings.mfa.desc}</CardDescription>
-          <CardTitle className="mt-1">{tr.settings.mfa.title}</CardTitle>
+          <CardDescription>{tr.dashboard.settings.mfa.desc}</CardDescription>
+          <CardTitle className="mt-1">{tr.dashboard.settings.mfa.title}</CardTitle>
           <p className="text-[15px] text-muted-foreground mt-1.5">
-            {tr.settings.mfa.status.replace("{status}", mfaEnabled === null ? "..." : mfaEnabled ? tr.settings.mfa.on : tr.settings.mfa.off)}
+            {tr.dashboard.settings.mfa.status.replace("{status}", mfaEnabled === null ? "..." : mfaEnabled ? tr.dashboard.settings.mfa.on : tr.dashboard.settings.mfa.off)}
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
           {mfaSetupStep === "backup" && mfaBackupCodes && (
             <div className="p-5 rounded-xl border border-yellow-500/20 bg-yellow-500/5 space-y-3">
-              <p className="text-[15px] font-medium text-foreground">{tr.settings.mfa.backupTitle}</p>
+              <p className="text-[15px] font-medium text-foreground">{tr.dashboard.settings.mfa.backupTitle}</p>
               <pre className="text-[13px] font-mono break-all bg-background/50 p-3 rounded-lg">
                 {mfaBackupCodes.join(" ")}
               </pre>
               <Button type="button" onClick={() => { setMfaSetupStep("idle"); setMfaBackupCodes(null); setMfaSetupSecret(null); setMfaQrUri(null); setMfaQrDataUrl(null); }}>
-                {tr.settings.mfa.ok}
+                {tr.dashboard.settings.mfa.ok}
               </Button>
             </div>
           )}
           {mfaSetupStep === "qr" && mfaSetupSecret && (
             <form onSubmit={handleMfaConfirm} className="space-y-4">
               <p className="text-[15px] text-muted-foreground">
-                {tr.settings.mfa.qrTitle}
+                {tr.dashboard.settings.mfa.qrTitle}
               </p>
               {mfaQrDataUrl && (
                 <div className="flex justify-center p-4 bg-white rounded-xl border border-border inline-block">
                   <img src={mfaQrDataUrl} alt="2FA QR kodu" width={200} height={200} className="rounded-lg" />
                 </div>
               )}
-              <p className="text-[12px] text-muted-foreground">{tr.settings.mfa.secretLabel}</p>
+              <p className="text-[12px] text-muted-foreground">{tr.dashboard.settings.mfa.secretLabel}</p>
               <p className="text-[13px] font-mono break-all bg-secondary/50 p-3 rounded-lg">{mfaSetupSecret}</p>
               <div>
-                <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.settings.mfa.codeLabel}</label>
+                <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.dashboard.settings.mfa.codeLabel}</label>
                 <Input
                   type="text"
                   inputMode="numeric"
                   maxLength={6}
                   value={mfaConfirmCode}
                   onChange={(e) => setMfaConfirmCode(e.target.value.replace(/\D/g, ""))}
-                  placeholder={tr.settings.mfa.placeholder}
+                  placeholder={tr.dashboard.settings.mfa.placeholder}
                   className="font-mono w-32"
                 />
               </div>
               <div className="flex gap-3">
                 <Button type="submit" disabled={loading || mfaConfirmCode.length !== 6}>
-                  {loading ? tr.settings.mfa.verifying : tr.settings.mfa.enabling}
+                  {loading ? tr.dashboard.settings.mfa.verifying : tr.dashboard.settings.mfa.enabling}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => { setMfaSetupStep("idle"); setMfaSetupSecret(null); setMfaQrUri(null); setMfaQrDataUrl(null); setMfaConfirmCode(""); }}>
-                  {tr.settings.mfa.cancel}
+                  {tr.dashboard.settings.mfa.cancel}
                 </Button>
               </div>
             </form>
@@ -385,19 +385,19 @@ export default function SettingsPage() {
             <>
               {!mfaEnabled ? (
                 <Button onClick={handleMfaSetupStart} disabled={loading}>
-                  {loading ? tr.settings.mfa.preparing : tr.settings.mfa.enable}
+                  {loading ? tr.dashboard.settings.mfa.preparing : tr.dashboard.settings.mfa.enable}
                 </Button>
               ) : (
                 <form onSubmit={handleMfaDisable} className="space-y-4">
-                  <p className="text-[15px] text-muted-foreground">{tr.settings.mfa.mfaDisableDesc}</p>
+                  <p className="text-[15px] text-muted-foreground">{tr.dashboard.settings.mfa.mfaDisableDesc}</p>
                   <Input
                     type="password"
-                    placeholder={tr.settings.mfa.currentPassword}
+                    placeholder={tr.dashboard.settings.mfa.currentPassword}
                     value={mfaDisablePassword}
                     onChange={(e) => setMfaDisablePassword(e.target.value)}
                   />
                   <Button type="submit" disabled={loading || !mfaDisablePassword}>
-                    {loading ? tr.settings.mfa.disabling : tr.settings.mfa.disable}
+                    {loading ? tr.dashboard.settings.mfa.disabling : tr.dashboard.settings.mfa.disable}
                   </Button>
                 </form>
               )}
