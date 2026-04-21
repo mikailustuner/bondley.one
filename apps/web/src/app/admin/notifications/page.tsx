@@ -181,7 +181,7 @@ export default function AdminNotificationsPage() {
                     </p>
                     <div className="mt-2">
                       <span className="text-[10px] text-muted-foreground/60 uppercase font-medium">
-                        {tr.components.notificationBell.now}
+                        {tr.dashboard.components.notificationBell.timeAgo.justNow}
                       </span>
                     </div>
                   </div>
