@@ -55,7 +55,7 @@ Write-Log "  Yeni sifre: $ADMIN_INIT_PASSWORD"
 # PostgreSQL container'inin calisip calismadigini kontrol et
 $postgresRunning = docker ps --format "{{.Names}}" | Select-String -Pattern "fincalc-postgres"
 if (-not $postgresRunning) {
-    Write-Error "PostgreSQL container'i calismiyor! Once container'i baslat:`n  docker compose -f docker-compose.prod.yml up -d postgres"
+    Write-Error "PostgreSQL container'i calismiyor! Once container'i baslat:`n  docker-compose -f docker-compose.prod.yml up -d postgres"
 }
 
 Write-Log "PostgreSQL container'i hazir."

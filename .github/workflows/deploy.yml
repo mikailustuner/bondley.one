@@ -70,7 +70,7 @@ jobs:
 
       - name: Build Docker images (test)
         run: |
-          docker compose -f docker-compose.prod.yml build --no-cache api web
+          docker-compose -f docker-compose.prod.yml build --no-cache api web
 
   deploy-canary:
     name: Deploy Canary

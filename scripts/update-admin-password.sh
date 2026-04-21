@@ -38,7 +38,7 @@ log "  Yeni sifre: $ADMIN_INIT_PASSWORD"
 
 # PostgreSQL container'inin calisip calismadigini kontrol et
 if ! docker ps | grep -q fincalc-postgres; then
-    error "PostgreSQL container'i calismiyor! Once container'i baslat:\n  docker compose -f docker-compose.prod.yml up -d postgres"
+    error "PostgreSQL container'i calismiyor! Once container'i baslat:\n  docker-compose -f docker-compose.prod.yml up -d postgres"
 fi
 
 log "PostgreSQL container'i hazir."

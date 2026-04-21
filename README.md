@@ -4,7 +4,7 @@ Türk Devlet Tahvilleri (TRT/TRB) için değerleme, fiyat takibi ve analiz siste
 
 ## Teknoloji Yığını
 
-- **Frontend:** Next.js 16 (App Router), TypeScript, Tailwind CSS, Shadcn/UI, Recharts
+- **Frontend:** Next.js 14 (App Router), TypeScript, Tailwind CSS, Shadcn/UI, Recharts
 - **Backend:** Python FastAPI, SQLAlchemy (async), numpy-financial
 - **Veritabanı:** PostgreSQL (tüm parasal değerler DECIMAL)
 - **Kuyruk:** Celery + Redis
