@@ -211,6 +211,7 @@ export interface BondCalculatedMetrics {
   used_fallback_market_data?: boolean;
   market_data_date?: string | null;
   tlref_rate_date?: string | null;
+  is_theoretical?: boolean;
 }
 
 export interface BondDetail {
