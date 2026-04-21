@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     BIST_TLREF_RATE_DAILY_URL: str = "https://www.borsaistanbul.com/datum/tlreforani.csv"
     BIST_TLREF_INDEX_DAILY_URL: str = "https://www.borsaistanbul.com/datum/bisttlrefendeksi.csv"
     BIST_TLREF_HISTORICAL_URL: str = "https://borsaistanbul.com/datum/BISTTLREFENDEKSI_D.zip"
+    BIST_TLREF_RATE_HISTORICAL_URL: str = "https://www.borsaistanbul.com/datum/TLREFORANI_D.zip"
     # Katılım (Participation) için gerekirse alternatifler:
     BIST_TLREFK_RATE_URL: str = "https://www.borsaistanbul.com/datum/tlrefkorani.csv"
     BIST_TLREFK_INDEX_URL: str = "https://www.borsaistanbul.com/datum/bisttlrefkendeksi.csv"

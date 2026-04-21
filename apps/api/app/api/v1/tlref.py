@@ -128,9 +128,11 @@ async def sync_tlref_now(
     """
     fetcher = TLREFFetcher(db)
     historical = await fetcher.fetch_historical()
+    historical_rate = await fetcher.fetch_historical_rate()
     daily = await fetcher.fetch_daily()
 
     return {
         "historical": historical,
+        "historical_rate": historical_rate,
         "daily": daily,
     }

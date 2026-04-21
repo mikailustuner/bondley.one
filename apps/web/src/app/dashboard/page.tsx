@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { TlrefIndexChart } from "@/components/charts/tlref-index-chart";
+import { TlrefRateTVChart } from "@/components/charts/tlref-rate-tv-chart";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton-components";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTlrefHistory } from "@/hooks/use-tlref-history";
@@ -111,7 +112,7 @@ export default function DashboardPage() {
       .catch(() => { });
   }, []);
 
-  const { history, indexData, stats, bondStats, loading, error } = useTlrefHistory();
+  const { history, indexData, annualRateData, stats, bondStats, loading, error } = useTlrefHistory();
   const { summary: usageSummary } = useUsageSummary();
 
   return (
@@ -301,7 +302,7 @@ export default function DashboardPage() {
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <span className="font-mono-data text-[13px] font-medium text-foreground">{b.isin_code}</span>
-                        <span className="text-[12px] text-muted-foreground truncate max-w-[120px]">{b.issuer ?? "—"}</span>
+                        <span className="text-[12px] text-muted-foreground truncate max-w-[240px]">{b.issuer ?? "—"}</span>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="font-mono-data text-[13px] text-muted-foreground">
@@ -334,7 +335,7 @@ export default function DashboardPage() {
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <span className="font-mono-data text-[13px] font-medium text-foreground">{b.isin_code}</span>
-                        <span className="text-[12px] text-muted-foreground truncate max-w-[120px]">{b.issuer ?? "—"}</span>
+                        <span className="text-[12px] text-muted-foreground truncate max-w-[240px]">{b.issuer ?? "—"}</span>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="font-mono-data text-[13px] text-positive font-medium">
@@ -369,7 +370,7 @@ export default function DashboardPage() {
                   className="inline-flex items-center gap-2 rounded-2xl bg-secondary/40 px-4 py-2 text-[13px] text-foreground hover:bg-secondary/70 transition-colors"
                 >
                   <span className="font-mono-data font-medium">{b.isin_code}</span>
-                  {b.issuer && <span className="text-muted-foreground text-[12px] truncate max-w-[100px]">{b.issuer}</span>}
+                  {b.issuer && <span className="text-muted-foreground text-[12px] truncate max-w-[180px]">{b.issuer}</span>}
                 </Link>
               ))}
             </div>
@@ -424,6 +425,23 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <TlrefIndexChart data={indexData} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardDescription>Borsa İstanbul tarafından yayımlanan günlük gecelik faiz oranı</CardDescription>
+                <CardTitle className="mt-1">TLREF Oranı</CardTitle>
+              </div>
+              <Badge variant="outline" className="rounded-xl">
+                {annualRateData.length} kayıt
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="px-0 pb-0 overflow-hidden rounded-b-2xl">
+            <TlrefRateTVChart data={annualRateData} />
           </CardContent>
         </Card>
       </div>

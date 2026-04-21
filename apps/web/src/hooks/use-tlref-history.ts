@@ -58,6 +58,16 @@ export function useTlrefHistory(opts?: { withStats?: boolean; withBondStats?: bo
     value: r.index_value,
   }));
 
+  // lightweight-charts icin ISO tarih (YYYY-MM-DD) ve yillik % oran gerekiyor
+  const annualRateData = history
+    .filter((r) => r.published_annual_rate_pct != null || r.daily_rate != null)
+    .map((r) => ({
+      time: r.rate_date.slice(0, 10) as `${number}-${number}-${number}`,
+      value: r.published_annual_rate_pct != null
+        ? +Number(r.published_annual_rate_pct).toFixed(4)
+        : +(r.daily_rate! * 365 * 100).toFixed(4),
+    }));
+
   const rateData = history
     .filter((r) => r.daily_rate != null)
     .map((r) => ({
@@ -65,5 +75,5 @@ export function useTlrefHistory(opts?: { withStats?: boolean; withBondStats?: bo
       rate: +(r.daily_rate! * 100).toFixed(6),
     }));
 
-  return { history, indexData, rateData, stats, bondStats, loading, error };
+  return { history, indexData, annualRateData, rateData, stats, bondStats, loading, error };
 }

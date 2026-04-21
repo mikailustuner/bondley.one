@@ -137,6 +137,7 @@ export interface TLREFRecord {
   rate_date: string;
   index_value: number;
   daily_rate: number | null;
+  published_annual_rate_pct: number | null;
   source: string;
   created_at: string;
 }

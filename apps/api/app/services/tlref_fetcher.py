@@ -38,6 +38,7 @@ class TLREFFetcher:
     DAILY_RATE_URL = settings.BIST_TLREF_RATE_DAILY_URL
     DAILY_INDEX_URL = settings.BIST_TLREF_INDEX_DAILY_URL
     HISTORICAL_URL = settings.BIST_TLREF_HISTORICAL_URL
+    RATE_HISTORICAL_URL = settings.BIST_TLREF_RATE_HISTORICAL_URL
 
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -86,6 +87,27 @@ class TLREFFetcher:
             }
         except Exception as e:
             logger.error(f"Historical TLREF fetch failed: {e}")
+            return {"status": "error", "error": str(e)}
+
+    async def fetch_historical_rate(self) -> dict:
+        """
+        TLREFORANI_D.zip'ten tarihsel TLREF oranlarini indir ve DB'ye yaz.
+        Dosya: UTF-16 LE, semicolon delimited, 1 header satiri.
+        Sutunlar: 0=Tarih(DD/MM/YYYY), 5=DEGER(yillik % oran).
+        Sadece mevcut kayitlari gunceller (published_annual_rate_pct + daily_rate).
+        """
+        logger.info("Fetching historical TLREF rate (TLREFORANI_D.zip)...")
+        try:
+            content = await self._download(self.RATE_HISTORICAL_URL)
+            csv_bytes = self._extract_zip(content)
+            records = self._parse_historical_rate_csv(csv_bytes)
+            count = await self._upsert_rate_records(records)
+            return {
+                "status": "success",
+                "rate_records": count,
+            }
+        except Exception as e:
+            logger.error(f"Historical TLREF rate fetch failed: {e}")
             return {"status": "error", "error": str(e)}
 
     async def _download(self, url: str) -> bytes:
@@ -320,6 +342,89 @@ class TLREFFetcher:
 
         logger.info(f"Historical CSV parsed: {len(records)} records (from {len(lines)} lines)")
         return records
+
+    def _parse_historical_rate_csv(self, content: bytes) -> list[dict]:
+        """
+        TLREFORANI_D.csv formati (ZIP icinde):
+        - Encoding: UTF-16 LE (BOM ile)
+        - Ayrac: semicolon (;)
+        - Satir 1: header
+        - Sutun 0: Tarih (DD/MM/YYYY)
+        - Sutun 5: DEGER — yillik % oran (orn: 23.8738)
+        """
+        try:
+            text = content.decode("utf-16", errors="replace")
+        except (UnicodeDecodeError, LookupError):
+            text = content.decode("utf-8-sig", errors="replace")
+
+        lines = [l.strip() for l in text.strip().splitlines() if l.strip()]
+        if not lines:
+            return []
+
+        # Header satirini atla, tarih/deger indexlerini tespit et
+        date_idx = 0
+        value_idx = 5
+        header_parts = [c.strip().upper() for c in lines[0].split(";")]
+        for i, col in enumerate(header_parts):
+            if col in ("TARIH", "DATE", "TARIH/DATE"):
+                date_idx = i
+            if col in ("DEGER", "VALUE", "DEGER/VALUE"):
+                value_idx = i
+
+        records: list[dict] = []
+        skipped = 0
+        for line in lines[1:]:
+            parts = [p.strip() for p in line.split(";")]
+            if len(parts) <= max(date_idx, value_idx):
+                skipped += 1
+                continue
+
+            row_date = self._try_parse_date(parts[date_idx])
+            raw_value = self._to_decimal(parts[value_idx])
+
+            if row_date is None or raw_value is None or raw_value <= 0:
+                skipped += 1
+                continue
+
+            # Guvence: cok buyuk deger endeks karisikligina isaret eder
+            if raw_value > 500:
+                logger.warning(f"Suspicious rate value {raw_value} on {row_date}, skipping")
+                skipped += 1
+                continue
+
+            daily_rate = (raw_value / Decimal("100") / Decimal("365")).quantize(
+                Decimal("0.0000000001"), rounding=ROUND_HALF_UP
+            )
+            records.append({
+                "rate_date": row_date,
+                "published_annual_rate_pct": raw_value,
+                "daily_rate": daily_rate,
+            })
+
+        logger.info("Historical rate CSV parsed: records=%s skipped=%s", len(records), skipped)
+        return records
+
+    async def _upsert_rate_records(self, records: list[dict]) -> int:
+        """Sadece published_annual_rate_pct ve daily_rate'i gunceller; index_value'ya dokunmaz."""
+        if not records:
+            return 0
+        from sqlalchemy import update as sa_update
+
+        count = 0
+        for rec in records:
+            await self.db.execute(
+                sa_update(TLREFRate)
+                .where(TLREFRate.rate_date == rec["rate_date"])
+                .values(
+                    published_annual_rate_pct=rec["published_annual_rate_pct"],
+                    daily_rate=rec["daily_rate"],
+                )
+            )
+            count += 1
+
+        await self.db.commit()
+        logger.info(f"Updated published_annual_rate_pct for {count} TLREF records")
+        return count
 
     async def _upsert_records(self, records: list[dict]) -> int:
         if not records:

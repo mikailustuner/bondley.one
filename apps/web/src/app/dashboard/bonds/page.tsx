@@ -258,7 +258,7 @@ export default function BondsListPage() {
                 >
                   <span className="font-mono-data font-medium">{b.isin_code}</span>
                   {b.issuer && (
-                    <span className="text-muted-foreground truncate max-w-[120px]">{b.issuer}</span>
+                    <span className="text-muted-foreground truncate max-w-[240px]">{b.issuer}</span>
                   )}
                   <Badge variant={(CURRENCY_COLORS[b.currency] as any) || "outline"} className="text-[10px]">
                     {b.currency}
@@ -523,29 +523,21 @@ export default function BondsListPage() {
                             {bond.isin_code}
                           </Link>
                         </td>
-                        <td className="py-3.5 text-[13px] text-muted-foreground max-w-[200px] truncate">
-                          <div className="truncate">
-                            {bond.issuer
-                              ? bond.issuer.length > 35
-                                ? bond.issuer.substring(0, 35) + "…"
-                                : bond.issuer
-                              : "—"}
+                        <td className="py-3.5 text-[13px] text-muted-foreground max-w-[400px] truncate">
+                          <div className="truncate" title={bond.issuer ?? ""}>
+                            {bond.issuer ?? "—"}
                           </div>
                           {bond.fund_user && (
                             <div className="truncate text-[11px] text-muted-foreground/70 flex items-center gap-1 mt-0.5" title={bond.fund_user}>
                               <span className="shrink-0 text-primary/40">↳</span>
-                              {bond.fund_user.length > 40
-                                ? bond.fund_user.substring(0, 40) + "…"
-                                : bond.fund_user}
+                              {bond.fund_user}
                             </div>
                           )}
                         </td>
                         <td className="py-3.5">
                           {bond.security_type ? (
                             <span className="text-[13px] text-muted-foreground">
-                              {bond.security_type.split("/")[0].trim().length > 25
-                                ? bond.security_type.split("/")[0].trim().substring(0, 25) + "…"
-                                : bond.security_type.split("/")[0].trim()}
+                              {bond.security_type.split("/")[0].trim()}
                             </span>
                           ) : (
                             "—"
@@ -554,9 +546,7 @@ export default function BondsListPage() {
                         <td className="py-3.5">
                           {bond.yield_type ? (
                             <span className="text-[13px] text-muted-foreground">
-                              {bond.yield_type.split("/")[0].trim().length > 20
-                                ? bond.yield_type.split("/")[0].trim().substring(0, 20) + "…"
-                                : bond.yield_type.split("/")[0].trim()}
+                              {bond.yield_type.split("/")[0].trim()}
                             </span>
                           ) : (
                             "—"
