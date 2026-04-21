@@ -13,7 +13,7 @@ import { tr } from "@/locales/tr";
 
 export default function AdminPage() {
   useEffect(() => {
-    document.title = `${tr.admin.overview.title} — ${tr.common.brand}`;
+    document.title = `${tr.dashboard.admin.overview.title} — ${tr.common.brand}`;
     return () => {
       document.title = tr.common.brand;
     };
@@ -103,7 +103,7 @@ export default function AdminPage() {
     api.admin
       .stats(token)
       .then(setStats)
-      .catch((e) => setStatsError(e instanceof Error ? e.message : tr.admin.overview.stats.error));
+      .catch((e) => setStatsError(e instanceof Error ? e.message : tr.dashboard.admin.overview.stats.error));
     api.tlref
       .latest(token)
       .then((res) => {
@@ -123,7 +123,7 @@ export default function AdminPage() {
   async function handleTlrefSync() {
     const token = getToken();
     if (!token) {
-      setSyncMessage({ type: "error", text: tr.admin.overview.operations.noSession });
+      setSyncMessage({ type: "error", text: tr.dashboard.admin.overview.operations.noSession });
       return;
     }
     setSyncing(true);
@@ -133,20 +133,20 @@ export default function AdminPage() {
       const h = result.historical ?? {};
       const d = result.daily ?? {};
       const parts: string[] = [];
-      if (h.index_records) parts.push(tr.admin.overview.operations.tlrefHistorical.replace("{count}", h.index_records.toString()));
-      if (h.rates_computed) parts.push(tr.admin.overview.operations.tlrefRates.replace("{count}", h.rates_computed.toString()));
-      if (d.records) parts.push(tr.admin.overview.operations.tlrefDaily.replace("{count}", d.records.toString()));
-      if (h.status === "error") parts.push(tr.admin.overview.operations.tlrefHistError.replace("{error}", h.error));
-      if (d.status === "error") parts.push(tr.admin.overview.operations.tlrefDailyError.replace("{error}", d.error));
+      if (h.index_records) parts.push(tr.dashboard.admin.overview.operations.tlrefHistorical.replace("{count}", h.index_records.toString()));
+      if (h.rates_computed) parts.push(tr.dashboard.admin.overview.operations.tlrefRates.replace("{count}", h.rates_computed.toString()));
+      if (d.records) parts.push(tr.dashboard.admin.overview.operations.tlrefDaily.replace("{count}", d.records.toString()));
+      if (h.status === "error") parts.push(tr.dashboard.admin.overview.operations.tlrefHistError.replace("{error}", h.error));
+      if (d.status === "error") parts.push(tr.dashboard.admin.overview.operations.tlrefDailyError.replace("{error}", d.error));
       setSyncMessage({
         type: h.status === "error" && d.status === "error" ? "error" : "success",
-        text: parts.length ? parts.join(" | ") : tr.admin.overview.operations.tlrefSuccess,
+        text: parts.length ? parts.join(" | ") : tr.dashboard.admin.overview.operations.tlrefSuccess,
       });
       refreshStats();
     } catch (e) {
       setSyncMessage({
         type: "error",
-        text: e instanceof Error ? e.message : tr.admin.overview.operations.syncError,
+        text: e instanceof Error ? e.message : tr.dashboard.admin.overview.operations.syncError,
       });
     } finally {
       setSyncing(false);
@@ -156,7 +156,7 @@ export default function AdminPage() {
   async function handleBondSync() {
     const token = getToken();
     if (!token) {
-      setSyncMessage({ type: "error", text: tr.admin.overview.operations.noSession });
+      setSyncMessage({ type: "error", text: tr.dashboard.admin.overview.operations.noSession });
       return;
     }
     setSyncingBonds(true);
@@ -166,7 +166,7 @@ export default function AdminPage() {
       if (result.status === "success") {
         setSyncMessage({
           type: "success",
-          text: tr.admin.overview.operations.bondsSuccess
+          text: tr.dashboard.admin.overview.operations.bondsSuccess
             .replace("{upserted}", result.bonds_upserted.toString())
             .replace("{deactivated}", result.bonds_deactivated.toString()),
         });
@@ -180,7 +180,7 @@ export default function AdminPage() {
     } catch (e) {
       setSyncMessage({
         type: "error",
-        text: e instanceof Error ? e.message : tr.admin.overview.operations.syncError,
+        text: e instanceof Error ? e.message : tr.dashboard.admin.overview.operations.syncError,
       });
     } finally {
       setSyncingBonds(false);
@@ -190,7 +190,7 @@ export default function AdminPage() {
   async function handleSyncAll() {
     const token = getToken();
     if (!token) {
-      setSyncMessage({ type: "error", text: tr.admin.overview.operations.noSession });
+      setSyncMessage({ type: "error", text: tr.dashboard.admin.overview.operations.noSession });
       return;
     }
     setSyncingAll(true);
@@ -201,21 +201,21 @@ export default function AdminPage() {
       const h = result.tlref_historical ?? {};
       const d = result.tlref_daily ?? {};
       const b = result.bonds ?? {};
-      if (h.index_records) parts.push(`${tr.admin.overview.operations.tlref}: ${tr.admin.overview.operations.tlrefHistorical.replace("{count}", h.index_records.toString())}`);
-      if (d.records) parts.push(tr.admin.overview.operations.tlrefDaily.replace("{count}", d.records.toString()));
-      if (b.bonds_upserted) parts.push(tr.admin.overview.operations.bondsUpdated.replace("{count}", b.bonds_upserted.toString()));
-      if (b.bonds_deactivated) parts.push(tr.admin.overview.operations.bondsDeactivated.replace("{count}", b.bonds_deactivated.toString()));
-      if (h.status === "error") parts.push(tr.admin.overview.operations.tlrefError.replace("{error}", h.error));
-      if (b.status === "error") parts.push(tr.admin.overview.operations.bondsError.replace("{error}", b.error));
+      if (h.index_records) parts.push(`${tr.dashboard.admin.overview.operations.tlref}: ${tr.dashboard.admin.overview.operations.tlrefHistorical.replace("{count}", h.index_records.toString())}`);
+      if (d.records) parts.push(tr.dashboard.admin.overview.operations.tlrefDaily.replace("{count}", d.records.toString()));
+      if (b.bonds_upserted) parts.push(tr.dashboard.admin.overview.operations.bondsUpdated.replace("{count}", b.bonds_upserted.toString()));
+      if (b.bonds_deactivated) parts.push(tr.dashboard.admin.overview.operations.bondsDeactivated.replace("{count}", b.bonds_deactivated.toString()));
+      if (h.status === "error") parts.push(tr.dashboard.admin.overview.operations.tlrefError.replace("{error}", h.error));
+      if (b.status === "error") parts.push(tr.dashboard.admin.overview.operations.bondsError.replace("{error}", b.error));
       setSyncMessage({
         type: parts.some((p) => p.includes(tr.common.error.toLowerCase())) ? "error" : "success",
-        text: parts.length ? parts.join(" | ") : tr.admin.overview.operations.syncSuccess,
+        text: parts.length ? parts.join(" | ") : tr.dashboard.admin.overview.operations.syncSuccess,
       });
       refreshStats();
     } catch (e) {
       setSyncMessage({
         type: "error",
-        text: e instanceof Error ? e.message : tr.admin.overview.operations.syncError,
+        text: e instanceof Error ? e.message : tr.dashboard.admin.overview.operations.syncError,
       });
     } finally {
       setSyncingAll(false);
@@ -227,18 +227,18 @@ export default function AdminPage() {
 
     // Create CSV content
     const headers = [
-      tr.admin.overview.health.csvHeaders.isin,
-      tr.admin.overview.health.csvHeaders.issuer,
-      tr.admin.overview.health.csvHeaders.issues,
-      tr.admin.overview.health.csvHeaders.tblisteUpdate,
-      tr.admin.overview.health.csvHeaders.maturityDate
+      tr.dashboard.admin.overview.health.csvHeaders.isin,
+      tr.dashboard.admin.overview.health.csvHeaders.issuer,
+      tr.dashboard.admin.overview.health.csvHeaders.issues,
+      tr.dashboard.admin.overview.health.csvHeaders.tblisteUpdate,
+      tr.dashboard.admin.overview.health.csvHeaders.maturityDate
     ];
     const rows = dataHealth.bonds_with_issues.map(b => [
       b.isin_code,
       `"${(b.issuer || "").replace(/"/g, '""')}"`,
-      `"${b.issues.map(i => i === 'tbliste_outdated' ? tr.admin.overview.health.issues.outdated : tr.admin.overview.health.issues.kapMissing).join(", ")}"`,
-      b.tbliste_updated_at ? formatDate(b.tbliste_updated_at.split('T')[0]) : tr.admin.users.details.notSpecified,
-      b.maturity_date ? formatDate(b.maturity_date) : tr.admin.users.details.notSpecified
+      `"${b.issues.map(i => i === 'tbliste_outdated' ? tr.dashboard.admin.overview.health.issues.outdated : tr.dashboard.admin.overview.health.issues.kapMissing).join(", ")}"`,
+      b.tbliste_updated_at ? formatDate(b.tbliste_updated_at.split('T')[0]) : tr.dashboard.admin.users.details.notSpecified,
+      b.maturity_date ? formatDate(b.maturity_date) : tr.dashboard.admin.users.details.notSpecified
     ]);
 
     const csvContent = [
@@ -281,9 +281,9 @@ export default function AdminPage() {
   return (
     <div className="space-y-6">
       <div className="animate-fade-up">
-        <h1 className="text-display-md text-foreground">{tr.admin.overview.title}</h1>
+        <h1 className="text-display-md text-foreground">{tr.dashboard.admin.overview.title}</h1>
         <p className="text-[15px] text-muted-foreground mt-1.5">
-          {tr.admin.overview.description}
+          {tr.dashboard.admin.overview.description}
         </p>
       </div>
 
@@ -294,25 +294,25 @@ export default function AdminPage() {
         {stats && (
           <>
             <div className="bg-card p-5">
-              <div className="text-label text-muted-foreground mb-2">{tr.admin.overview.stats.tlref}</div>
+              <div className="text-label text-muted-foreground mb-2">{tr.dashboard.admin.overview.stats.tlref}</div>
               <div className="font-mono-data text-stat text-foreground">
                 {formatDecimal(stats.tlref_count, 0)}
               </div>
-              <div className="text-label text-muted-foreground/60 mt-1">{tr.admin.overview.stats.tlrefDesc}</div>
+              <div className="text-label text-muted-foreground/60 mt-1">{tr.dashboard.admin.overview.stats.tlrefDesc}</div>
             </div>
             <div className="bg-card p-5">
-              <div className="text-label text-muted-foreground mb-2">{tr.admin.overview.stats.bonds}</div>
+              <div className="text-label text-muted-foreground mb-2">{tr.dashboard.admin.overview.stats.bonds}</div>
               <div className="font-mono-data text-stat text-primary">
                 {formatDecimal(stats.bonds_count, 0)}
               </div>
-              <div className="text-label text-muted-foreground/60 mt-1">{tr.admin.overview.stats.bondsDesc}</div>
+              <div className="text-label text-muted-foreground/60 mt-1">{tr.dashboard.admin.overview.stats.bondsDesc}</div>
             </div>
             <div className="bg-card p-5">
-              <div className="text-label text-muted-foreground mb-2">{tr.admin.overview.stats.users}</div>
+              <div className="text-label text-muted-foreground mb-2">{tr.dashboard.admin.overview.stats.users}</div>
               <div className="font-mono-data text-stat text-foreground">
                 {formatDecimal(stats.users_count, 0)}
               </div>
-              <div className="text-label text-muted-foreground/60 mt-1">{tr.admin.overview.stats.usersDesc}</div>
+              <div className="text-label text-muted-foreground/60 mt-1">{tr.dashboard.admin.overview.stats.usersDesc}</div>
             </div>
           </>
         )}
@@ -330,8 +330,8 @@ export default function AdminPage() {
       <div className="grid gap-6 md:grid-cols-2 animate-fade-up-delay-2">
         <Card>
           <CardHeader>
-            <CardDescription>{tr.admin.overview.operations.label}</CardDescription>
-            <CardTitle className="mt-1">{tr.admin.overview.operations.title}</CardTitle>
+            <CardDescription>{tr.dashboard.admin.overview.operations.label}</CardDescription>
+            <CardTitle className="mt-1">{tr.dashboard.admin.overview.operations.title}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <Button
@@ -341,7 +341,7 @@ export default function AdminPage() {
               disabled={anyLoading}
             >
               <span>
-                {syncingAll ? tr.admin.overview.operations.syncingAll : tr.admin.overview.operations.syncAll}
+                {syncingAll ? tr.dashboard.admin.overview.operations.syncingAll : tr.dashboard.admin.overview.operations.syncAll}
               </span>
               <span className="text-muted-foreground/40 group-hover:text-primary transition-colors">
                 &rarr;
@@ -355,7 +355,7 @@ export default function AdminPage() {
                 onClick={handleTlrefSync}
                 disabled={anyLoading}
               >
-                <span>{syncing ? tr.admin.overview.operations.syncing : tr.admin.overview.operations.tlref}</span>
+                <span>{syncing ? tr.dashboard.admin.overview.operations.syncing : tr.dashboard.admin.overview.operations.tlref}</span>
               </Button>
               <Button
                 variant="outline"
@@ -363,7 +363,7 @@ export default function AdminPage() {
                 onClick={handleBondSync}
                 disabled={anyLoading}
               >
-                <span>{syncingBonds ? tr.admin.overview.operations.syncing : tr.admin.overview.operations.bonds}</span>
+                <span>{syncingBonds ? tr.dashboard.admin.overview.operations.syncing : tr.dashboard.admin.overview.operations.bonds}</span>
               </Button>
             </div>
 
@@ -379,45 +379,45 @@ export default function AdminPage() {
 
         <Card>
           <CardHeader>
-            <CardDescription>{tr.admin.overview.system.label}</CardDescription>
-            <CardTitle className="mt-1">{tr.admin.overview.system.title}</CardTitle>
+            <CardDescription>{tr.dashboard.admin.overview.system.label}</CardDescription>
+            <CardTitle className="mt-1">{tr.dashboard.admin.overview.system.title}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-0">
               <div className="flex justify-between items-center py-2.5 border-b border-border/30">
-                <span className="text-data-sm text-muted-foreground">{tr.admin.overview.system.lastTlrefDate}</span>
+                <span className="text-data-sm text-muted-foreground">{tr.dashboard.admin.overview.system.lastTlrefDate}</span>
                 <span className="font-mono-data text-label text-foreground">
                   {formatDate(tlrefLatest?.rate_date)}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2.5 border-b border-border/30">
-                <span className="text-data-sm text-muted-foreground">{tr.admin.overview.system.lastIndexValue}</span>
+                <span className="text-data-sm text-muted-foreground">{tr.dashboard.admin.overview.system.lastIndexValue}</span>
                 <span className="font-mono-data text-label text-primary">
                   {formatDecimal(tlrefLatest?.index_value, 5)}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2.5 border-b border-border/30">
-                <span className="text-data-sm text-muted-foreground">{tr.admin.overview.system.activeBonds}</span>
+                <span className="text-data-sm text-muted-foreground">{tr.dashboard.admin.overview.system.activeBonds}</span>
                 <span className="font-mono-data text-label text-primary">
                   {formatDecimal(stats?.bonds_count, 0)}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2.5 border-b border-border/30">
-                <span className="text-data-sm text-muted-foreground">{tr.admin.overview.system.totalTlref}</span>
+                <span className="text-data-sm text-muted-foreground">{tr.dashboard.admin.overview.system.totalTlref}</span>
                 <span className="font-mono-data text-label text-foreground">
                   {formatDecimal(stats?.tlref_count, 0)}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2.5 border-b border-border/30">
-                <span className="text-data-sm text-muted-foreground">{tr.admin.overview.system.userCount}</span>
+                <span className="text-data-sm text-muted-foreground">{tr.dashboard.admin.overview.system.userCount}</span>
                 <span className="font-mono-data text-label text-foreground">
                   {formatDecimal(stats?.users_count, 0)}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2.5 border-b border-border/30">
                 <div className="flex flex-col gap-1">
-                  <Label htmlFor="maintenance-mode" className="text-data-sm text-muted-foreground">{tr.admin.overview.system.maintenance}</Label>
-                  <span className="text-xs text-muted-foreground/70">{tr.admin.overview.system.maintenanceDesc}</span>
+                  <Label htmlFor="maintenance-mode" className="text-data-sm text-muted-foreground">{tr.dashboard.admin.overview.system.maintenance}</Label>
+                  <span className="text-xs text-muted-foreground/70">{tr.dashboard.admin.overview.system.maintenanceDesc}</span>
                 </div>
                 <Switch
                   id="maintenance-mode"
@@ -427,7 +427,7 @@ export default function AdminPage() {
                 />
               </div>
               <div className="flex justify-between items-center py-2.5">
-                <span className="text-data-sm text-muted-foreground">{tr.admin.overview.system.autoUpdate}</span>
+                <span className="text-data-sm text-muted-foreground">{tr.dashboard.admin.overview.system.autoUpdate}</span>
                 <span className="font-mono-data text-label text-positive">
                   TLREF 18:30 / TAHVIL 19:00
                 </span>
@@ -442,35 +442,35 @@ export default function AdminPage() {
         <Card className={dataHealth && dataHealth.total_issues > 0 ? "border-amber-500/30" : ""}>
           <CardHeader className="flex flex-row items-start justify-between">
             <div>
-              <CardDescription>{tr.admin.overview.health.label}</CardDescription>
-              <CardTitle className="mt-1">{tr.admin.overview.health.title}</CardTitle>
+              <CardDescription>{tr.dashboard.admin.overview.health.label}</CardDescription>
+              <CardTitle className="mt-1">{tr.dashboard.admin.overview.health.title}</CardTitle>
             </div>
             {dataHealth && dataHealth.total_issues > 0 && (
               <Button onClick={exportDataHealthCSV} variant="outline" size="sm" className="hidden sm:flex">
-                {tr.admin.overview.health.export}
+                {tr.dashboard.admin.overview.health.export}
               </Button>
             )}
           </CardHeader>
           <CardContent>
             {loadingHealth ? (
-              <div className="text-sm text-muted-foreground animate-pulse">{tr.admin.overview.health.checking}</div>
+              <div className="text-sm text-muted-foreground animate-pulse">{tr.dashboard.admin.overview.health.checking}</div>
             ) : dataHealth ? (
               <div>
                 <div className="flex items-center justify-between py-3 border-b border-border/30">
-                  <span className="text-data-sm text-muted-foreground">{tr.admin.overview.health.activeBonds}</span>
+                  <span className="text-data-sm text-muted-foreground">{tr.dashboard.admin.overview.health.activeBonds}</span>
                   <span className="font-mono-data text-foreground text-sm">{dataHealth.total_active_bonds}</span>
                 </div>
                 <div className="flex items-center justify-between py-3 border-b border-border/30">
-                  <span className="text-data-sm text-muted-foreground">{tr.admin.overview.health.issuesCount}</span>
+                  <span className="text-data-sm text-muted-foreground">{tr.dashboard.admin.overview.health.issuesCount}</span>
                   <span className={`font-mono-data text-sm font-medium ${dataHealth.total_issues > 0 ? 'text-amber-500' : 'text-positive'}`}>{dataHealth.total_issues}</span>
                 </div>
 
                 {dataHealth.total_issues > 0 && (
                   <div className="mt-4">
-                    <p className="text-xs text-muted-foreground mb-3">{tr.admin.overview.health.description}</p>
+                    <p className="text-xs text-muted-foreground mb-3">{tr.dashboard.admin.overview.health.description}</p>
                     <div className="sm:hidden mb-4">
                       <Button onClick={exportDataHealthCSV} variant="outline" size="sm" className="w-full">
-                        {tr.admin.overview.health.downloadIssues}
+                        {tr.dashboard.admin.overview.health.downloadIssues}
                       </Button>
                     </div>
                   </div>
@@ -478,12 +478,12 @@ export default function AdminPage() {
 
                 {dataHealth.total_issues === 0 && (
                   <div className="mt-4 p-4 rounded-md bg-positive/10 border border-positive/20 text-positive text-sm flex items-center gap-2">
-                    {tr.admin.overview.health.allGood}
+                    {tr.dashboard.admin.overview.health.allGood}
                   </div>
                 )}
               </div>
             ) : (
-              <div className="text-sm text-muted-foreground">{tr.admin.overview.health.error}</div>
+              <div className="text-sm text-muted-foreground">{tr.dashboard.admin.overview.health.error}</div>
             )}
           </CardContent>
         </Card>

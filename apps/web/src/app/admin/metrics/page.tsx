@@ -35,7 +35,7 @@ export default function AdminMetricsPage() {
       setBondMetrics(bondsData.bonds);
       setUserMetrics(usersData.users);
     } catch (e) {
-      setError(e instanceof Error ? e.message : tr.admin.metrics.error);
+      setError(e instanceof Error ? e.message : tr.dashboard.admin.metrics.error);
     } finally {
       setLoading(false);
     }
@@ -49,8 +49,8 @@ export default function AdminMetricsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between animate-fade-up">
         <div>
-          <h1 className="font-display text-display-md text-foreground">{tr.admin.metrics.title}</h1>
-          <p className="text-data-sm text-muted-foreground mt-1">{tr.admin.metrics.description}</p>
+          <h1 className="font-display text-display-md text-foreground">{tr.dashboard.admin.metrics.title}</h1>
+          <p className="text-data-sm text-muted-foreground mt-1">{tr.dashboard.admin.metrics.description}</p>
         </div>
         <div className="flex items-center gap-2">
           <Input
@@ -61,7 +61,7 @@ export default function AdminMetricsPage() {
             min={1}
             max={365}
           />
-          <span className="text-sm text-muted-foreground">{tr.admin.metrics.days}</span>
+          <span className="text-sm text-muted-foreground">{tr.dashboard.admin.metrics.days}</span>
         </div>
       </div>
 
@@ -76,25 +76,25 @@ export default function AdminMetricsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-fade-up-delay-1">
           <Card>
             <CardHeader>
-              <CardDescription>{tr.admin.metrics.overview.bondViews}</CardDescription>
+              <CardDescription>{tr.dashboard.admin.metrics.overview.bondViews}</CardDescription>
               <CardTitle className="mt-1 text-2xl">{overview.total_bond_views}</CardTitle>
             </CardHeader>
           </Card>
           <Card>
             <CardHeader>
-              <CardDescription>{tr.admin.metrics.overview.uniqueUsers}</CardDescription>
+              <CardDescription>{tr.dashboard.admin.metrics.overview.uniqueUsers}</CardDescription>
               <CardTitle className="mt-1 text-2xl">{overview.unique_users}</CardTitle>
             </CardHeader>
           </Card>
           <Card>
             <CardHeader>
-              <CardDescription>{tr.admin.metrics.overview.apiCalls}</CardDescription>
+              <CardDescription>{tr.dashboard.admin.metrics.overview.apiCalls}</CardDescription>
               <CardTitle className="mt-1 text-2xl">{overview.total_api_calls}</CardTitle>
             </CardHeader>
           </Card>
           <Card>
             <CardHeader>
-              <CardDescription>{tr.admin.metrics.overview.calculations}</CardDescription>
+              <CardDescription>{tr.dashboard.admin.metrics.overview.calculations}</CardDescription>
               <CardTitle className="mt-1 text-2xl">{overview.total_calculations}</CardTitle>
             </CardHeader>
           </Card>
@@ -105,7 +105,7 @@ export default function AdminMetricsPage() {
       <Card className="animate-fade-up-delay-2">
         <CardHeader>
           <CardDescription>{tr.dashboard.sidebar.liveData.toUpperCase()}</CardDescription>
-          <CardTitle className="mt-1">{tr.admin.metrics.topBonds.title}</CardTitle>
+          <CardTitle className="mt-1">{tr.dashboard.admin.metrics.topBonds.title}</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -116,10 +116,10 @@ export default function AdminMetricsPage() {
                 <thead>
                   <tr className="border-b border-border">
                     {[
-                      tr.admin.metrics.topBonds.table.isin,
-                      tr.admin.metrics.topBonds.table.issuer,
-                      tr.admin.metrics.topBonds.table.views,
-                      tr.admin.metrics.topBonds.table.unique
+                      tr.dashboard.admin.metrics.topBonds.table.isin,
+                      tr.dashboard.admin.metrics.topBonds.table.issuer,
+                      tr.dashboard.admin.metrics.topBonds.table.views,
+                      tr.dashboard.admin.metrics.topBonds.table.unique
                     ].map((h) => (
                       <th key={h} scope="col" className="pb-3 text-label text-muted-foreground font-normal text-left">
                         {h}
@@ -147,7 +147,7 @@ export default function AdminMetricsPage() {
       <Card className="animate-fade-up-delay-3">
         <CardHeader>
           <CardDescription>{tr.dashboard.sidebar.users.toUpperCase()}</CardDescription>
-          <CardTitle className="mt-1">{tr.admin.metrics.topUsers.title}</CardTitle>
+          <CardTitle className="mt-1">{tr.dashboard.admin.metrics.topUsers.title}</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -158,10 +158,10 @@ export default function AdminMetricsPage() {
                 <thead>
                   <tr className="border-b border-border">
                     {[
-                      tr.admin.metrics.topUsers.table.userId,
-                      tr.admin.metrics.topUsers.table.bondViews,
-                      tr.admin.metrics.topUsers.table.apiCalls,
-                      tr.admin.metrics.topUsers.table.calculations
+                      tr.dashboard.admin.metrics.topUsers.table.userId,
+                      tr.dashboard.admin.metrics.topUsers.table.bondViews,
+                      tr.dashboard.admin.metrics.topUsers.table.apiCalls,
+                      tr.dashboard.admin.metrics.topUsers.table.calculations
                     ].map((h) => (
                       <th key={h} scope="col" className="pb-3 text-label text-muted-foreground font-normal text-left">
                         {h}

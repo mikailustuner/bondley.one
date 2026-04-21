@@ -64,7 +64,7 @@ export function UserForm({ open, onOpenChange, onSubmit, initialData, mode }: Us
 
     try {
       if (mode === "create" && !formData.password) {
-        setError(tr.admin.users.form.passwordRequired);
+        setError(tr.dashboard.admin.users.form.passwordRequired);
         setLoading(false);
         return;
       }
@@ -80,7 +80,7 @@ export function UserForm({ open, onOpenChange, onSubmit, initialData, mode }: Us
         role: "free_user",
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : tr.admin.users.errors.generic);
+      setError(err instanceof Error ? err.message : tr.dashboard.admin.users.errors.generic);
     } finally {
       setLoading(false);
     }
@@ -90,11 +90,11 @@ export function UserForm({ open, onOpenChange, onSubmit, initialData, mode }: Us
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{mode === "create" ? tr.admin.users.form.new : tr.admin.users.form.edit}</DialogTitle>
+          <DialogTitle>{mode === "create" ? tr.dashboard.admin.users.form.new : tr.dashboard.admin.users.form.edit}</DialogTitle>
           <DialogDescription>
             {mode === "create"
-              ? tr.admin.users.form.newDesc
-              : tr.admin.users.form.editDesc}
+              ? tr.dashboard.admin.users.form.newDesc
+              : tr.dashboard.admin.users.form.editDesc}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -148,7 +148,7 @@ export function UserForm({ open, onOpenChange, onSubmit, initialData, mode }: Us
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="role">{tr.admin.users.table.cols.role}</Label>
+              <Label htmlFor="role">{tr.dashboard.admin.users.table.cols.role}</Label>
               <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
                 <SelectTrigger>
                   <SelectValue />

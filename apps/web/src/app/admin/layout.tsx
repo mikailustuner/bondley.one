@@ -32,14 +32,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
               <div className="hidden md:flex items-center gap-1">
                 {[
-                  { href: "/admin", label: tr.admin.sidebar.overview },
-                  { href: "/admin/bonds", label: tr.admin.sidebar.bonds },
-                  { href: "/admin/users", label: tr.admin.sidebar.users },
-                  { href: "/admin/logs", label: tr.admin.sidebar.logs },
-                  { href: "/admin/metrics", label: tr.admin.sidebar.metrics },
-                  { href: "/admin/notifications", label: tr.admin.sidebar.notifications },
-                  { href: "/admin/import", label: tr.admin.sidebar.import },
-                  { href: "/admin/sentry-debug", label: tr.admin.sidebar.sentry },
+                  { href: "/admin", label: tr.dashboard.admin.sidebar.overview },
+                  { href: "/admin/bonds", label: tr.dashboard.admin.sidebar.bonds },
+                  { href: "/admin/users", label: tr.dashboard.admin.sidebar.users },
+                  { href: "/admin/logs", label: tr.dashboard.admin.sidebar.logs },
+                  { href: "/admin/metrics", label: tr.dashboard.admin.sidebar.metrics },
+                  { href: "/admin/notifications", label: tr.dashboard.admin.sidebar.notifications },
+                  { href: "/admin/import", label: tr.dashboard.admin.sidebar.import },
+                  { href: "/admin/sentry-debug", label: tr.dashboard.admin.sidebar.sentry },
                 ].map((item) => (
                   <Link
                     key={item.href}

@@ -52,7 +52,7 @@ export default function AdminUsersPage() {
       const data = await api.auth.usersList(token);
       setUsers(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : tr.admin.users.errors.load);
+      setError(e instanceof Error ? e.message : tr.dashboard.admin.users.errors.load);
     } finally {
       setLoading(false);
     }
@@ -66,10 +66,10 @@ export default function AdminUsersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between animate-fade-up">
         <div>
-          <h1 className="font-display text-display-md text-foreground">{tr.admin.users.title}</h1>
-          <p className="text-data-sm text-muted-foreground mt-1">{tr.admin.users.description}</p>
+          <h1 className="font-display text-display-md text-foreground">{tr.dashboard.admin.users.title}</h1>
+          <p className="text-data-sm text-muted-foreground mt-1">{tr.dashboard.admin.users.description}</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>{tr.admin.users.form.new}</Button>
+        <Button onClick={() => setShowCreateModal(true)}>{tr.dashboard.admin.users.form.new}</Button>
       </div>
 
       <Card className="animate-fade-up-delay-1">
@@ -77,7 +77,7 @@ export default function AdminUsersPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardDescription>{tr.dashboard.sidebar.liveData.toUpperCase()}</CardDescription>
-              <CardTitle className="mt-1">{tr.admin.users.listTitle}</CardTitle>
+              <CardTitle className="mt-1">{tr.dashboard.admin.users.listTitle}</CardTitle>
             </div>
             <span className="text-label text-muted-foreground">{users.length} {tr.dashboard.overview.table.count.split(" ")[1].toUpperCase()}</span>
           </div>
@@ -92,13 +92,13 @@ export default function AdminUsersPage() {
                 <thead>
                   <tr className="border-b border-border">
                     {[
-                      tr.admin.users.table.cols.id,
-                      tr.admin.users.table.cols.email,
-                      tr.admin.users.table.cols.name,
-                      tr.admin.users.table.cols.company,
-                      tr.admin.users.table.cols.role,
-                      tr.admin.users.table.cols.status,
-                      tr.admin.users.table.cols.actions
+                      tr.dashboard.admin.users.table.cols.id,
+                      tr.dashboard.admin.users.table.cols.email,
+                      tr.dashboard.admin.users.table.cols.name,
+                      tr.dashboard.admin.users.table.cols.company,
+                      tr.dashboard.admin.users.table.cols.role,
+                      tr.dashboard.admin.users.table.cols.status,
+                      tr.dashboard.admin.users.table.cols.actions
                     ].map((h, i) => (
                       <th
                         key={h}
@@ -124,7 +124,7 @@ export default function AdminUsersPage() {
                       </td>
                       <td className="py-3">
                         <Badge variant={user.is_active ? "default" : "secondary"}>
-                          {user.is_active ? tr.admin.users.status.active : tr.admin.users.status.passive}
+                          {user.is_active ? tr.dashboard.admin.users.status.active : tr.dashboard.admin.users.status.passive}
                         </Badge>
                       </td>
                       <td className="py-3 text-right">
@@ -136,7 +136,7 @@ export default function AdminUsersPage() {
                             onClick={() => setViewingUser(user)}
                           >
                             <Eye className="w-4 h-4 mr-2" />
-                            {tr.admin.users.actions.examine}
+                            {tr.dashboard.admin.users.actions.examine}
                           </Button>
                           <Button
                             size="sm"
@@ -153,7 +153,7 @@ export default function AdminUsersPage() {
                               });
                             }}
                           >
-                            {tr.admin.users.actions.edit}
+                            {tr.dashboard.admin.users.actions.edit}
                           </Button>
                           <Button
                             size="sm"
@@ -161,18 +161,18 @@ export default function AdminUsersPage() {
                             onClick={async () => {
                               const token = getToken();
                               if (!token) return;
-                               if (confirm(tr.admin.users.table.confirmRoleChange.replace("{email}", user.email))) {
+                               if (confirm(tr.dashboard.admin.users.table.confirmRoleChange.replace("{email}", user.email))) {
                                 try {
                                   const newRole = user.role === "admin" ? "free_user" : user.role === "free_user" ? "premium_user" : user.role === "premium_user" ? "pro_user" : "admin";
                                   await api.admin.updateUserRole(token, user.id, newRole);
                                   await loadUsers();
                                 } catch (e) {
-                                  alert(e instanceof Error ? e.message : tr.admin.users.errors.generic);
+                                  alert(e instanceof Error ? e.message : tr.dashboard.admin.users.errors.generic);
                                 }
                               }
                             }}
                           >
-                            {tr.admin.users.table.actions.changeRole}
+                            {tr.dashboard.admin.users.table.actions.changeRole}
                           </Button>
                           <Button
                             size="sm"
@@ -184,11 +184,11 @@ export default function AdminUsersPage() {
                                 await api.admin.updateUserStatus(token, user.id, !user.is_active);
                                 await loadUsers();
                               } catch (e) {
-                                alert(e instanceof Error ? e.message : tr.admin.users.errors.generic);
+                                alert(e instanceof Error ? e.message : tr.dashboard.admin.users.errors.generic);
                               }
                             }}
                           >
-                            {user.is_active ? tr.admin.users.status.deactivate : tr.admin.users.status.activate}
+                            {user.is_active ? tr.dashboard.admin.users.status.deactivate : tr.dashboard.admin.users.status.activate}
                           </Button>
                           <Button
                             size="sm"
@@ -196,17 +196,17 @@ export default function AdminUsersPage() {
                             onClick={async () => {
                               const token = getToken();
                               if (!token) return;
-                               if (confirm(tr.admin.users.confirmDelete.replace("{email}", user.email))) {
+                               if (confirm(tr.dashboard.admin.users.confirmDelete.replace("{email}", user.email))) {
                                 try {
                                   await api.admin.deleteUser(token, user.id);
                                   await loadUsers();
                                 } catch (e) {
-                                  alert(e instanceof Error ? e.message : tr.admin.users.errors.generic);
+                                  alert(e instanceof Error ? e.message : tr.dashboard.admin.users.errors.generic);
                                 }
                               }
                             }}
                           >
-                            {tr.admin.users.status.delete}
+                            {tr.dashboard.admin.users.status.delete}
                           </Button>
                         </div>
                       </td>
@@ -224,7 +224,7 @@ export default function AdminUsersPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-background p-6 rounded-lg max-w-md w-full mx-4">
             <h2 className="text-lg font-semibold mb-4">
-              {editingUser ? tr.admin.users.form.edit : tr.admin.users.form.new}
+              {editingUser ? tr.dashboard.admin.users.form.edit : tr.dashboard.admin.users.form.new}
             </h2>
             <form
               onSubmit={async (e) => {
@@ -270,7 +270,7 @@ export default function AdminUsersPage() {
                   });
                   await loadUsers();
                 } catch (e) {
-                  alert(e instanceof Error ? e.message : tr.admin.users.errors.generic);
+                  alert(e instanceof Error ? e.message : tr.dashboard.admin.users.errors.generic);
                 }
               }}
               className="space-y-4"
@@ -319,7 +319,7 @@ export default function AdminUsersPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">{tr.admin.users.table.cols.role}</label>
+                <label className="block text-sm font-medium mb-1">{tr.dashboard.admin.users.table.cols.role}</label>
                 <select
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
@@ -350,7 +350,7 @@ export default function AdminUsersPage() {
                 >
                   {tr.common.cancel}
                 </Button>
-                <Button type="submit">{editingUser ? tr.common.save : tr.admin.users.table.actions.view}</Button>
+                <Button type="submit">{editingUser ? tr.common.save : tr.dashboard.admin.users.table.actions.view}</Button>
               </div>
             </form>
           </div>
@@ -367,7 +367,7 @@ export default function AdminUsersPage() {
                   <User className="w-6 h-6" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold tracking-tight text-foreground">{tr.admin.users.details.title}</h2>
+                  <h2 className="text-xl font-bold tracking-tight text-foreground">{tr.dashboard.admin.users.details.title}</h2>
                   <p className="text-xs font-medium text-muted-foreground mt-0.5">{viewingUser.email}</p>
                 </div>
               </div>
@@ -384,27 +384,27 @@ export default function AdminUsersPage() {
               <div className="flex items-center gap-3">
                 <Badge variant={viewingUser.profile_completed ? "default" : "secondary"} className="rounded-full px-4 py-1 text-[10px] font-bold tracking-wider">
                   <Info className="w-3 h-3 mr-1.5" />
-                  {viewingUser.profile_completed ? tr.admin.users.status.profileCompleted : tr.admin.users.status.onboardingPending}
+                  {viewingUser.profile_completed ? tr.dashboard.admin.users.status.profileCompleted : tr.dashboard.admin.users.status.onboardingPending}
                 </Badge>
               </div>
 
               {/* Grid Section */}
               <div className="grid grid-cols-2 gap-x-12 gap-y-8">
                 <div className="space-y-1.5">
-                  <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">{tr.admin.users.table.cols.name}</p>
+                  <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">{tr.dashboard.admin.users.table.cols.name}</p>
                   <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                     {viewingUser.full_name || "—"}
                   </p>
                 </div>
                 <div className="space-y-1.5">
-                  <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">{tr.admin.users.details.registrationDate}</p>
+                  <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">{tr.dashboard.admin.users.details.registrationDate}</p>
                   <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-muted-foreground/40" />
                     {new Date(viewingUser.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </p>
                 </div>
                 <div className="space-y-1.5">
-                  <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">{tr.admin.users.table.cols.company}</p>
+                  <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">{tr.dashboard.admin.users.table.cols.company}</p>
                   <p className="text-sm font-semibold text-foreground">{viewingUser.company || "—"}</p>
                 </div>
                 <div className="space-y-1.5">
@@ -421,32 +421,32 @@ export default function AdminUsersPage() {
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2">
                       <Briefcase className="w-4 h-4 text-primary/60" />
-                      <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">{tr.admin.users.details.department}</p>
+                      <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">{tr.dashboard.admin.users.details.department}</p>
                     </div>
                     <p className="text-sm font-semibold text-foreground pl-6">{viewingUser.department || "—"}</p>
                   </div>
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 text-primary/60" />
-                      <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">{tr.admin.users.details.jobTitle}</p>
+                      <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">{tr.dashboard.admin.users.details.jobTitle}</p>
                     </div>
                     <p className="text-sm font-semibold text-foreground pl-6">{viewingUser.job_title || "—"}</p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] mb-3">{tr.admin.users.details.usagePurpose}</p>
+                  <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] mb-3">{tr.dashboard.admin.users.details.usagePurpose}</p>
                   <div className="bg-secondary/40 p-5 rounded-[24px] border border-border/10">
                     <p className="text-sm leading-relaxed text-muted-foreground italic font-serif">
-                      "{viewingUser.usage_purpose || tr.admin.users.details.notSpecified}"
+                      "{viewingUser.usage_purpose || tr.dashboard.admin.users.details.notSpecified}"
                     </p>
                   </div>
                 </div>
 
                 <div className="bg-primary/5 p-4 rounded-2xl flex items-center justify-between border border-primary/10">
-                  <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">{tr.admin.users.details.estimatedDailyViews}</p>
+                  <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">{tr.dashboard.admin.users.details.estimatedDailyViews}</p>
                   <p className="text-sm font-bond-nums font-bold text-primary">
-                    {viewingUser.estimated_daily_views ? viewingUser.estimated_daily_views.toLocaleString() : "0"} {tr.admin.users.details.views}
+                    {viewingUser.estimated_daily_views ? viewingUser.estimated_daily_views.toLocaleString() : "0"} {tr.dashboard.admin.users.details.views}
                   </p>
                 </div>
               </div>
@@ -457,7 +457,7 @@ export default function AdminUsersPage() {
                 onClick={() => setViewingUser(null)}
                 className="rounded-full px-10 py-6 h-auto text-sm font-bold shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
               >
-                {tr.admin.users.details.close}
+                {tr.dashboard.admin.users.details.close}
               </Button>
             </div>
           </div>

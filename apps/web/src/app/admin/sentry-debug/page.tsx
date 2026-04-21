@@ -14,7 +14,7 @@ export default function SentryDebugPage() {
   const [result, setResult] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const triggerFrontendError = () => {
-    setResult({ type: "success", message: tr.admin.sentry.frontend.success });
+    setResult({ type: "success", message: tr.dashboard.admin.sentry.frontend.success });
     // @ts-ignore - Intentionally calling an undefined function to trigger a ReferenceError
     myUndefinedFunction();
   };
@@ -24,13 +24,13 @@ export default function SentryDebugPage() {
     setResult(null);
     try {
       const token = getToken();
-      if (!token) throw new Error(tr.admin.overview.operations.noSession);
+      if (!token) throw new Error(tr.dashboard.admin.overview.operations.noSession);
       
       await api.admin.triggerSentryError(token);
     } catch (err: any) {
       setResult({ 
         type: "success", 
-        message: tr.admin.sentry.backend.success 
+        message: tr.dashboard.admin.sentry.backend.success 
       });
       console.log("Backend error expected and caught locally:", err.message);
     } finally {
@@ -45,10 +45,10 @@ export default function SentryDebugPage() {
           <div className="w-10 h-10 rounded-2xl bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/20 shadow-sm">
             <Activity className="w-5 h-5" />
           </div>
-          <h1 className="font-display text-display-md text-foreground tracking-tight">{tr.admin.sentry.title}</h1>
+          <h1 className="font-display text-display-md text-foreground tracking-tight">{tr.dashboard.admin.sentry.title}</h1>
         </div>
         <p className="text-data-sm text-muted-foreground ml-13">
-          {tr.admin.sentry.description}
+          {tr.dashboard.admin.sentry.description}
         </p>
       </div>
 
@@ -58,20 +58,20 @@ export default function SentryDebugPage() {
           <CardHeader className="bg-secondary/10 pb-4">
             <div className="flex items-center gap-3">
               <Terminal className="w-5 h-5 text-primary" />
-              <CardTitle className="text-lg">{tr.admin.sentry.frontend.title}</CardTitle>
+              <CardTitle className="text-lg">{tr.dashboard.admin.sentry.frontend.title}</CardTitle>
             </div>
-            <CardDescription>{tr.admin.sentry.frontend.desc}</CardDescription>
+            <CardDescription>{tr.dashboard.admin.sentry.frontend.desc}</CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-              {tr.admin.sentry.frontend.info}
+              {tr.dashboard.admin.sentry.frontend.info}
             </p>
             <Button 
               variant="outline" 
               className="w-full rounded-full border-primary/20 hover:bg-primary/5 text-primary font-semibold"
               onClick={triggerFrontendError}
             >
-              {tr.admin.sentry.frontend.button}
+              {tr.dashboard.admin.sentry.frontend.button}
             </Button>
           </CardContent>
         </Card>
@@ -81,13 +81,13 @@ export default function SentryDebugPage() {
           <CardHeader className="bg-secondary/10 pb-4">
             <div className="flex items-center gap-3">
               <ShieldCheck className="w-5 h-5 text-primary" />
-              <CardTitle className="text-lg">{tr.admin.sentry.backend.title}</CardTitle>
+              <CardTitle className="text-lg">{tr.dashboard.admin.sentry.backend.title}</CardTitle>
             </div>
-            <CardDescription>{tr.admin.sentry.backend.desc}</CardDescription>
+            <CardDescription>{tr.dashboard.admin.sentry.backend.desc}</CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-              {tr.admin.sentry.backend.info}
+              {tr.dashboard.admin.sentry.backend.info}
             </p>
             <Button 
               variant="default" 
@@ -95,7 +95,7 @@ export default function SentryDebugPage() {
               className="w-full rounded-full font-bold shadow-lg shadow-primary/20"
               onClick={triggerBackendError}
             >
-              {loading ? tr.admin.sentry.backend.triggering : tr.admin.sentry.backend.button}
+              {loading ? tr.dashboard.admin.sentry.backend.triggering : tr.dashboard.admin.sentry.backend.button}
             </Button>
           </CardContent>
         </Card>
@@ -111,13 +111,13 @@ export default function SentryDebugPage() {
       )}
 
       <div className="bg-secondary/20 p-8 rounded-[32px] border border-border/30 space-y-4">
-        <h3 className="font-bold text-sm tracking-widest text-muted-foreground uppercase">{tr.admin.sentry.steps.title}</h3>
+        <h3 className="font-bold text-sm tracking-widest text-muted-foreground uppercase">{tr.dashboard.admin.sentry.steps.title}</h3>
         <ul className="space-y-3">
           {[
-            { step: "1", text: tr.admin.sentry.steps.step1 },
-            { step: "2", text: tr.admin.sentry.steps.step2 },
-            { step: "3", text: tr.admin.sentry.steps.step3 },
-            { step: "4", text: tr.admin.sentry.steps.step4 }
+            { step: "1", text: tr.dashboard.admin.sentry.steps.step1 },
+            { step: "2", text: tr.dashboard.admin.sentry.steps.step2 },
+            { step: "3", text: tr.dashboard.admin.sentry.steps.step3 },
+            { step: "4", text: tr.dashboard.admin.sentry.steps.step4 }
           ].map((item) => (
             <li key={item.step} className="flex items-start gap-4 text-sm text-muted-foreground">
               <span className="bg-background w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border border-border/50 shrink-0">

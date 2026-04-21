@@ -24,7 +24,7 @@ export default function AdminBondsPage() {
     const token = getToken();
     if (!token) {
       setLoading(false);
-      setError(tr.admin.overview.operations.noSession);
+      setError(tr.dashboard.admin.overview.operations.noSession);
       return;
     }
     setLoading(true);
@@ -50,7 +50,7 @@ export default function AdminBondsPage() {
     try {
       const result = await api.bonds.sync(token);
       if (result.status === "success") {
-        setSyncMsg(tr.admin.overview.operations.bondsSuccess
+        setSyncMsg(tr.dashboard.admin.overview.operations.bondsSuccess
           .replace("{upserted}", result.bonds_upserted.toString())
           .replace("{deactivated}", result.bonds_deactivated.toString()));
         fetchBonds();
@@ -58,7 +58,7 @@ export default function AdminBondsPage() {
         setSyncMsg(`${tr.common.error}: ${(result as any).error || "Bilinmeyen"}`);
       }
     } catch (e) {
-      setSyncMsg(e instanceof Error ? e.message : tr.admin.overview.operations.syncError);
+      setSyncMsg(e instanceof Error ? e.message : tr.dashboard.admin.overview.operations.syncError);
     } finally {
       setSyncing(false);
     }
@@ -76,13 +76,13 @@ export default function AdminBondsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between animate-fade-up">
         <div>
-          <h1 className="font-display text-display-md text-foreground">{tr.admin.bonds.title}</h1>
+          <h1 className="font-display text-display-md text-foreground">{tr.dashboard.admin.bonds.title}</h1>
           <p className="text-data-sm text-muted-foreground mt-1">
-            {tr.admin.bonds.description}
+            {tr.dashboard.admin.bonds.description}
           </p>
         </div>
         <Button onClick={handleSync} disabled={syncing}>
-          {syncing ? tr.admin.overview.operations.syncing : tr.admin.bonds.syncButton}
+          {syncing ? tr.dashboard.admin.overview.operations.syncing : tr.dashboard.admin.bonds.syncButton}
         </Button>
       </div>
 
@@ -92,7 +92,7 @@ export default function AdminBondsPage() {
 
       <div className="w-64 animate-fade-up">
         <Input
-          placeholder={tr.admin.bonds.searchPlaceholder}
+          placeholder={tr.dashboard.admin.bonds.searchPlaceholder}
           className="font-mono-data"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -103,13 +103,13 @@ export default function AdminBondsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardDescription>{tr.admin.bonds.card.label}</CardDescription>
-              <CardTitle className="mt-1">{tr.admin.bonds.card.title}</CardTitle>
+              <CardDescription>{tr.dashboard.admin.bonds.card.label}</CardDescription>
+              <CardTitle className="mt-1">{tr.dashboard.admin.bonds.card.title}</CardTitle>
             </div>
             {!loading && (
               <span className="text-label text-muted-foreground">
                 {search ? `${filtered.length} / ` : ""}
-                {total} {tr.admin.bonds.card.records}
+                {total} {tr.dashboard.admin.bonds.card.records}
               </span>
             )}
           </div>
@@ -125,13 +125,13 @@ export default function AdminBondsPage() {
                 <thead className="sticky top-0 bg-card z-10">
                   <tr className="border-b border-border">
                     {[
-                      tr.admin.bonds.table.isin,
-                      tr.admin.bonds.table.issuer,
-                      tr.admin.bonds.table.type,
-                      tr.admin.bonds.table.currency,
-                      tr.admin.bonds.table.maturity,
-                      tr.admin.bonds.table.yield,
-                      tr.admin.bonds.table.status
+                      tr.dashboard.admin.bonds.table.isin,
+                      tr.dashboard.admin.bonds.table.issuer,
+                      tr.dashboard.admin.bonds.table.type,
+                      tr.dashboard.admin.bonds.table.currency,
+                      tr.dashboard.admin.bonds.table.maturity,
+                      tr.dashboard.admin.bonds.table.yield,
+                      tr.dashboard.admin.bonds.table.status
                     ].map(
                       (h) => (
                         <th
@@ -177,7 +177,7 @@ export default function AdminBondsPage() {
                       </td>
                       <td className="py-3">
                         <Badge variant={bond.is_active ? "default" : "destructive"}>
-                          {bond.is_active ? tr.admin.users.status.active : tr.admin.users.status.passive}
+                          {bond.is_active ? tr.dashboard.admin.users.status.active : tr.dashboard.admin.users.status.passive}
                         </Badge>
                       </td>
                     </tr>
@@ -186,7 +186,7 @@ export default function AdminBondsPage() {
               </table>
               {filtered.length === 0 && (
                 <p className="text-data-sm text-muted-foreground py-6 text-center">
-                  {tr.admin.bonds.card.notFound}
+                  {tr.dashboard.admin.bonds.card.notFound}
                 </p>
               )}
             </div>
