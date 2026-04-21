@@ -146,7 +146,7 @@ export default function AdminMetricsPage() {
       {/* Top Users */}
       <Card className="animate-fade-up-delay-3">
         <CardHeader>
-          <CardDescription>{tr.dashboard.sidebar.users.toUpperCase()}</CardDescription>
+          <CardDescription>{tr.dashboard.admin.sidebar.users.toUpperCase()}</CardDescription>
           <CardTitle className="mt-1">{tr.dashboard.admin.metrics.topUsers.title}</CardTitle>
         </CardHeader>
         <CardContent>
