@@ -266,7 +266,7 @@ export default function AdminPage() {
       setMaintenanceMode(res.maintenance_mode);
       toast.success(res.message);
     } catch (error: any) {
-      toast.error(tr.components.maintenanceGuard.title, {
+      toast.error(tr.common.error, {
         description: error.message || tr.common.error
       });
       // Revert optimism
