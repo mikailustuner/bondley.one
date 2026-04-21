@@ -128,14 +128,14 @@ export default function DashboardPage() {
           </p>
         </div>
         <div ref={quickSearchRef} className="relative w-full md:w-[460px]">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-[16px] w-[16px] pointer-events-none text-muted-foreground/50" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-[18px] w-[18px] pointer-events-none text-muted-foreground/70" />
           <Input
             type="search"
             placeholder={tr.dashboard.overview.search.placeholder}
             value={quickSearchQuery}
             onChange={(e) => setQuickSearchQuery(e.target.value)}
             onFocus={() => quickSearchResults.length > 0 && setQuickSearchOpen(true)}
-            className="pl-10 h-10 rounded-2xl bg-secondary/30 border-border/60 hover:bg-secondary/50 focus-visible:bg-card focus-visible:border-primary/50 text-[14px] transition-all shadow-sm"
+            className="pl-11 h-12 rounded-full bg-background border-border hover:border-primary/50 focus-visible:ring-4 focus-visible:ring-primary/10 focus-visible:border-primary text-[15px] transition-all shadow-md"
             aria-label={tr.dashboard.overview.search.ariaLabel}
             autoComplete="off"
           />

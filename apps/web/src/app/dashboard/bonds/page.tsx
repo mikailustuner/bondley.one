@@ -245,10 +245,10 @@ export default function BondsListPage() {
       {/* Search & Filters */}
       <div className="flex flex-wrap gap-3 animate-fade-up-delay-1">
         <div className="flex-1 min-w-[200px] relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-[18px] w-[18px] pointer-events-none text-muted-foreground/60" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-[18px] w-[18px] pointer-events-none text-muted-foreground/70" />
           <Input
             placeholder={tr.dashboard.bonds.filters.searchPlaceholder}
-            className="pl-11 h-11 rounded-2xl bg-secondary/50 border-transparent hover:bg-secondary/80 focus-visible:bg-card focus-visible:border-border"
+            className="pl-11 h-12 rounded-full bg-background border-border shadow-md hover:border-primary/50 focus-visible:ring-4 focus-visible:ring-primary/10 focus-visible:border-primary text-[15px] transition-all"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />

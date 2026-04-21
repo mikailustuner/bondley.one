@@ -423,8 +423,8 @@ export const tr = {
                 backToList: "Listeye dön",
             },
             topMetrics: {
-                lastPrice: "Son İhraç Fiyatı",
-                lastYield: "Son İhraç Getirisi",
+                lastPrice: "İhraç Fiyatı",
+                lastYield: "İhraç Getirisi",
                 maturity: "Vadeye Kalan",
                 nextCoupon: "Kupon Ödemesine Kalan",
                 days: "{count} gün",
