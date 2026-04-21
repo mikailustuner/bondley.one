@@ -51,8 +51,8 @@ export default function AdminBondsPage() {
       const result = await api.bonds.sync(token);
       if (result.status === "success") {
         setSyncMsg(tr.dashboard.admin.overview.operations.bondsSuccess
-          .replace("{upserted}", result.bonds_upserted.toString())
-          .replace("{deactivated}", result.bonds_deactivated.toString()));
+          .replace("{upserted}", (result.bonds_upserted ?? 0).toString())
+          .replace("{deactivated}", (result.bonds_deactivated ?? 0).toString()));
         fetchBonds();
       } else {
         setSyncMsg(`${tr.common.error}: ${(result as any).error || "Bilinmeyen"}`);
