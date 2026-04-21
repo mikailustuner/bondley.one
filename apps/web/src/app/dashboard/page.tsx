@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { TlrefIndexChart } from "@/components/charts/tlref-index-chart";
-import { TlrefRateChart } from "@/components/charts/tlref-rate-chart";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton-components";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTlrefHistory } from "@/hooks/use-tlref-history";
@@ -112,7 +111,7 @@ export default function DashboardPage() {
       .catch(() => { });
   }, []);
 
-  const { history, indexData, rateData, stats, bondStats, loading, error } = useTlrefHistory();
+  const { history, indexData, stats, bondStats, loading, error } = useTlrefHistory();
   const { summary: usageSummary } = useUsageSummary();
 
   return (
@@ -425,21 +424,6 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <TlrefIndexChart data={indexData} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardDescription>{tr.dashboard.overview.charts.rate.desc}</CardDescription>
-                <CardTitle className="mt-1">{tr.dashboard.overview.charts.rate.title}</CardTitle>
-              </div>
-              <Badge variant="outline" className="rounded-xl">{tr.dashboard.overview.charts.rate.badge}</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <TlrefRateChart data={rateData} />
           </CardContent>
         </Card>
       </div>
