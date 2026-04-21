@@ -6,6 +6,7 @@ import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api-client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { tr } from "@/locales/tr";
 
 function VerifyEmailContent() {
     const searchParams = useSearchParams();
@@ -17,7 +18,7 @@ function VerifyEmailContent() {
     useEffect(() => {
         if (!token) {
             setStatus("error");
-            setErrorMessage("Doğrulama bağlantısı eksik veya geçersiz.");
+            setErrorMessage(tr.auth.verifyEmail.missingToken);
             return;
         }
 
@@ -27,7 +28,7 @@ function VerifyEmailContent() {
                 setStatus("success");
             } catch (err: any) {
                 setStatus("error");
-                setErrorMessage(err.message || "E-posta doğrulanamadı.");
+                setErrorMessage(err.message || tr.auth.verifyEmail.genericError);
             }
         };
 
@@ -42,15 +43,15 @@ function VerifyEmailContent() {
                         {status === "loading" && <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />}
                         {status === "success" && <CheckCircle2 className="h-8 w-8 text-green-500" />}
                         {status === "error" && <XCircle className="h-8 w-8 text-destructive" />}
-                        <span>
-                            {status === "loading" && "Doğrulanıyor..."}
-                            {status === "success" && "E-posta Doğrulandı!"}
-                            {status === "error" && "Doğrulama Başarısız"}
+                         <span>
+                            {status === "loading" && tr.auth.verifyEmail.loading}
+                            {status === "success" && tr.auth.verifyEmail.title}
+                            {status === "error" && tr.auth.verifyEmail.error}
                         </span>
                     </CardTitle>
-                    <CardDescription>
-                        {status === "loading" && "Lütfen bekleyin, bağlantınız kontrol ediliyor."}
-                        {status === "success" && "E-posta adresiniz başarıyla doğrulandı. Artık hesabınızı güvenle kullanabilirsiniz."}
+                     <CardDescription>
+                        {status === "loading" && tr.auth.verifyEmail.waitMessage}
+                        {status === "success" && tr.auth.verifyEmail.successMessage}
                         {status === "error" && errorMessage}
                     </CardDescription>
                 </CardHeader>
@@ -60,16 +61,16 @@ function VerifyEmailContent() {
                 <CardFooter className="flex justify-center flex-col gap-2">
                     {status === "success" && (
                         <Button className="w-full" onClick={() => router.push("/dashboard")}>
-                            Panele Git
+                            {tr.auth.verifyEmail.goToDashboard}
                         </Button>
                     )}
                     {status === "error" && (
                         <div className="flex w-full flex-col gap-2">
                             <Button className="w-full" variant="outline" onClick={() => router.push("/login")}>
-                                Giriş Yap
+                                {tr.auth.login.submit}
                             </Button>
                             <p className="text-xs text-center text-muted-foreground mt-2">
-                                Bağlantınızın süresi dolmuş olabilir. Giriş yaptıktan sonra yeni bir bağlantı talep edebilirsiniz.
+                                {tr.auth.verifyEmail.expiredLink}
                             </p>
                         </div>
                     )}

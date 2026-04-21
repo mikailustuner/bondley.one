@@ -16,13 +16,14 @@ import { useUsageSummary } from "@/hooks/use-usage-summary";
 import { api, BondListItem } from "@/lib/api-client";
 import { getToken, getUser } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
+import { tr } from "@/locales/tr";
 
 function getGreeting(): string {
   const h = new Date().getHours();
-  if (h < 6) return "İyi geceler";
-  if (h < 12) return "Günaydın";
-  if (h < 18) return "İyi günler";
-  return "İyi akşamlar";
+  if (h < 6) return tr.dashboard.overview.greetings.night;
+  if (h < 12) return tr.dashboard.overview.greetings.morning;
+  if (h < 18) return tr.dashboard.overview.greetings.day;
+  return tr.dashboard.overview.greetings.evening;
 }
 
 function getTodayText(): string {
@@ -47,9 +48,9 @@ export default function DashboardPage() {
   const userName = getUser()?.full_name || "User";
 
   useEffect(() => {
-    document.title = "Dashboard — Bondley";
+    document.title = `Dashboard — ${tr.common.brand}`;
     return () => {
-      document.title = "Bondley";
+      document.title = tr.common.brand;
     };
   }, []);
 
@@ -130,18 +131,18 @@ export default function DashboardPage() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-[16px] w-[16px] pointer-events-none text-muted-foreground/50" />
           <Input
             type="search"
-            placeholder="Araç ara..."
+            placeholder={tr.dashboard.overview.search.placeholder}
             value={quickSearchQuery}
             onChange={(e) => setQuickSearchQuery(e.target.value)}
             onFocus={() => quickSearchResults.length > 0 && setQuickSearchOpen(true)}
             className="pl-10 h-10 rounded-2xl bg-secondary/50 border-transparent hover:bg-secondary/80 focus-visible:bg-card focus-visible:border-border text-[14px]"
-            aria-label="Borçlanma aracı ara"
+            aria-label={tr.dashboard.overview.search.ariaLabel}
             autoComplete="off"
           />
           {quickSearchOpen && (
             <ul className="absolute top-full left-0 right-0 z-50 mt-2 max-h-64 overflow-auto rounded-2xl border border-border bg-card py-1.5 shadow-lg">
               {quickSearchLoading && (
-                <li className="px-4 py-3 text-[13px] text-muted-foreground">Aranıyor...</li>
+                <li className="px-4 py-3 text-[13px] text-muted-foreground">{tr.dashboard.overview.search.searching}</li>
               )}
               {!quickSearchLoading &&
                 quickSearchResults.map((b) => (
@@ -165,7 +166,7 @@ export default function DashboardPage() {
                   </li>
                 ))}
               {!quickSearchLoading && quickSearchResults.length === 0 && quickSearchQuery.trim().length >= 2 && (
-                <li className="px-4 py-3 text-[13px] text-muted-foreground">Sonuç bulunamadı</li>
+                <li className="px-4 py-3 text-[13px] text-muted-foreground">{tr.dashboard.overview.search.noResults}</li>
               )}
             </ul>
           )}
@@ -197,7 +198,7 @@ export default function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 animate-fade-up">
           {/* TLREF Endeks — highlight */}
           <div className="widget-blue rounded-3xl border border-primary/10 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="text-[12px] font-semibold text-primary/70 uppercase tracking-wider mb-3">TLREF Endeks</div>
+            <div className="text-[12px] font-semibold text-primary/70 uppercase tracking-wider mb-3">{tr.dashboard.overview.widgets.tlrefIndex}</div>
             <div className="font-mono-data text-[2.25rem] font-bold text-primary leading-none tracking-tight">
               {formatDecimal(stats.latest_index, 2)}
             </div>
@@ -208,32 +209,34 @@ export default function DashboardPage() {
 
           {/* Günlük Oran */}
           <div className="widget-green rounded-3xl border border-border p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">Günlük Oran</div>
+            <div className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">{tr.dashboard.overview.widgets.dailyRate}</div>
             <div className="font-mono-data text-[2.25rem] font-bold text-positive leading-none tracking-tight">
               {formatPercentFromDecimal(stats.latest_daily_rate, 4)}
             </div>
-            <div className="text-[13px] text-muted-foreground mt-2.5">Son iş günü</div>
+            <div className="text-[13px] text-muted-foreground mt-2.5">{tr.dashboard.overview.widgets.dailyRateDesc}</div>
           </div>
 
           {/* Yıllık Oran */}
           <div className="widget-purple rounded-3xl border border-border p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">Yıllık Bileşik</div>
+            <div className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">{tr.dashboard.overview.widgets.annualizedRate}</div>
             <div className="font-mono-data text-[2.25rem] font-bold text-foreground leading-none tracking-tight">
               {stats.annualized_rate_pct != null ? formatPercent(stats.annualized_rate_pct) : "—"}
             </div>
-            <div className="text-[13px] text-muted-foreground mt-2.5">Bileşik yıllık oran</div>
+            <div className="text-[13px] text-muted-foreground mt-2.5">{tr.dashboard.overview.widgets.annualizedRateDesc}</div>
           </div>
 
           {/* Aktif Araç */}
           <Link href="/dashboard/bonds">
             <div className="widget-orange rounded-3xl border border-border p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] cursor-pointer hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] hover:border-border transition-all group">
-              <div className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">Aktif Araç</div>
+              <div className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">{tr.dashboard.overview.widgets.activeBonds}</div>
               <div className="font-mono-data text-[2.25rem] font-bold text-foreground leading-none tracking-tight">
                 {bondStats ? formatDecimal(bondStats.total_bonds, 0) : "—"}
               </div>
               <div className="flex items-center gap-1.5 mt-2.5">
                 <span className="text-[13px] text-muted-foreground">
-                  {bondStats?.avg_days_to_maturity ? `Ort. vade: ${Math.round(bondStats.avg_days_to_maturity)} gün` : "Borçlanma araçları"}
+                  {bondStats?.avg_days_to_maturity 
+                    ? tr.dashboard.overview.widgets.avgMaturity.replace("{days}", Math.round(bondStats.avg_days_to_maturity).toString()) 
+                    : tr.dashboard.overview.widgets.bondsDesc}
                 </span>
                 <ArrowRight className="h-3 w-3 text-muted-foreground/40 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
               </div>
@@ -246,7 +249,7 @@ export default function DashboardPage() {
       {bondStats?.by_maturity_bucket && (bondStats.by_maturity_bucket.short + bondStats.by_maturity_bucket.medium + bondStats.by_maturity_bucket.long) > 0 && (
         <div className="animate-fade-up-delay-1">
           <div className="rounded-3xl border border-border bg-card p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="text-[13px] font-medium text-muted-foreground mb-4">Vade Dağılımı</div>
+            <div className="text-[13px] font-medium text-muted-foreground mb-4">{tr.dashboard.overview.maturity.title}</div>
             <div className="flex rounded-full overflow-hidden h-3 bg-secondary">
               {(() => {
                 const total = bondStats.by_maturity_bucket.short + bondStats.by_maturity_bucket.medium + bondStats.by_maturity_bucket.long;
@@ -262,15 +265,15 @@ export default function DashboardPage() {
             <div className="flex justify-between mt-3 text-[12px] text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-primary" />
-                Kısa &lt;1y ({formatDecimal(bondStats.by_maturity_bucket.short, 0)})
+                {tr.dashboard.overview.maturity.short.replace("{count}", formatDecimal(bondStats.by_maturity_bucket.short, 0))}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-primary/50" />
-                Orta 1-5y ({formatDecimal(bondStats.by_maturity_bucket.medium, 0)})
+                {tr.dashboard.overview.maturity.medium.replace("{count}", formatDecimal(bondStats.by_maturity_bucket.medium, 0))}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-primary/20" />
-                Uzun 5y+ ({formatDecimal(bondStats.by_maturity_bucket.long, 0)})
+                {tr.dashboard.overview.maturity.long.replace("{count}", formatDecimal(bondStats.by_maturity_bucket.long, 0))}
               </span>
             </div>
           </div>
@@ -285,9 +288,9 @@ export default function DashboardPage() {
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-[15px]">Vadesi Yaklaşan</CardTitle>
+                  <CardTitle className="text-[15px]">{tr.dashboard.overview.lists.soonMaturing.title}</CardTitle>
                 </div>
-                <CardDescription>90 gün içinde vadesi dolan araçlar</CardDescription>
+                <CardDescription>{tr.dashboard.overview.lists.soonMaturing.desc}</CardDescription>
               </CardHeader>
               <CardContent className="pt-2">
                 <div className="space-y-0">
@@ -318,9 +321,9 @@ export default function DashboardPage() {
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-positive" />
-                  <CardTitle className="text-[15px]">Yüksek Getirili</CardTitle>
+                  <CardTitle className="text-[15px]">{tr.dashboard.overview.lists.highYield.title}</CardTitle>
                 </div>
-                <CardDescription>Son ihraç getirisi yüksek araçlar</CardDescription>
+                <CardDescription>{tr.dashboard.overview.lists.highYield.desc}</CardDescription>
               </CardHeader>
               <CardContent className="pt-2">
                 <div className="space-y-0">
@@ -355,7 +358,7 @@ export default function DashboardPage() {
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
               <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-              <CardTitle className="text-[15px]">Favorilerim</CardTitle>
+              <CardTitle className="text-[15px]">{tr.dashboard.overview.lists.favorites}</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="pt-2">
@@ -381,10 +384,10 @@ export default function DashboardPage() {
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-[15px]">Bu Ay</CardTitle>
+              <CardTitle className="text-[15px]">{tr.dashboard.overview.lists.usage.title}</CardTitle>
             </div>
             <CardDescription>
-              {usageSummary.this_month_bonds_viewed} borçlanma aracı incelediniz
+              {tr.dashboard.overview.lists.usage.desc.replace("{count}", usageSummary.this_month_bonds_viewed.toString())}
             </CardDescription>
           </CardHeader>
           {usageSummary.most_viewed_bonds.length > 0 && (
@@ -412,10 +415,12 @@ export default function DashboardPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardDescription>BIST TLREF Endeksi</CardDescription>
-                <CardTitle className="mt-1">Tarihsel Endeks Değeri</CardTitle>
+                <CardDescription>{tr.dashboard.overview.charts.index.desc}</CardDescription>
+                <CardTitle className="mt-1">{tr.dashboard.overview.charts.index.title}</CardTitle>
               </div>
-              <Badge variant="outline" className="rounded-xl">{history.length} Gün</Badge>
+              <Badge variant="outline" className="rounded-xl">
+                {tr.dashboard.overview.charts.index.badge.replace("{count}", history.length.toString())}
+              </Badge>
             </div>
           </CardHeader>
           <CardContent>
@@ -427,10 +432,10 @@ export default function DashboardPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardDescription>Günlük Oran Değişimi</CardDescription>
-                <CardTitle className="mt-1">Günlük TLREF Oranı (%)</CardTitle>
+                <CardDescription>{tr.dashboard.overview.charts.rate.desc}</CardDescription>
+                <CardTitle className="mt-1">{tr.dashboard.overview.charts.rate.title}</CardTitle>
               </div>
-              <Badge variant="outline" className="rounded-xl">Hesaplanan</Badge>
+              <Badge variant="outline" className="rounded-xl">{tr.dashboard.overview.charts.rate.badge}</Badge>
             </div>
           </CardHeader>
           <CardContent>
@@ -445,10 +450,12 @@ export default function DashboardPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardDescription>Son Veriler</CardDescription>
-                <CardTitle className="mt-1">TLREF Endeks Kayıtları</CardTitle>
+                <CardDescription>{tr.dashboard.overview.table.desc}</CardDescription>
+                <CardTitle className="mt-1">{tr.dashboard.overview.table.title}</CardTitle>
               </div>
-              <span className="text-[13px] font-medium text-muted-foreground">{history.length} Kayıt</span>
+              <span className="text-[13px] font-medium text-muted-foreground">
+                {tr.dashboard.overview.table.count.replace("{count}", history.length.toString())}
+              </span>
             </div>
           </CardHeader>
           <CardContent>
@@ -456,9 +463,9 @@ export default function DashboardPage() {
               <table className="w-full">
                 <thead className="sticky top-0 bg-card">
                   <tr className="border-b border-border">
-                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">Tarih</th>
-                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">Endeks</th>
-                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">Günlük Oran</th>
+                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.overview.table.cols.date}</th>
+                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">{tr.dashboard.overview.table.cols.index}</th>
+                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">{tr.dashboard.overview.table.cols.rate}</th>
                   </tr>
                 </thead>
                 <tbody>

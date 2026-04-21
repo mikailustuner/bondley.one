@@ -11,6 +11,8 @@ import {
   Cell,
 } from "recharts";
 
+import { tr } from "@/locales/tr";
+
 const EMERALD = "hsl(160, 84%, 39%)";
 const CORAL = "hsl(0, 72%, 51%)";
 
@@ -22,7 +24,7 @@ export function TlrefRateChart({ data }: Props) {
   if (!data.length) {
     return (
       <p className="text-data-sm text-muted-foreground py-8 text-center">
-        Oran verisi bulunmuyor
+        {tr.dashboard.overview.widgets.noRateData}
       </p>
     );
   }
@@ -56,7 +58,7 @@ export function TlrefRateChart({ data }: Props) {
             fontFamily: "var(--font-jetbrains-mono)",
             color: "hsl(40, 10%, 92%)",
           }}
-          formatter={(value: number) => [`%${value.toFixed(5)}`, "Günlük Oran"]}
+          formatter={(value: number) => [`%${value.toFixed(5)}`, tr.dashboard.overview.widgets.dailyRate]}
           labelStyle={{ color: "hsl(220, 10%, 52%)", fontSize: "10px", marginBottom: "4px" }}
         />
         <Bar dataKey="rate" radius={[2, 2, 0, 0]} maxBarSize={6}>

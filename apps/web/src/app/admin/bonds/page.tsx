@@ -9,6 +9,8 @@ import { api, BondListItem } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatPercent } from "@/lib/utils";
 
+import { tr } from "@/locales/tr";
+
 export default function AdminBondsPage() {
   const [bonds, setBonds] = useState<BondListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -22,7 +24,7 @@ export default function AdminBondsPage() {
     const token = getToken();
     if (!token) {
       setLoading(false);
-      setError("Oturum gerekli");
+      setError(tr.admin.overview.operations.noSession);
       return;
     }
     setLoading(true);
@@ -32,7 +34,7 @@ export default function AdminBondsPage() {
         setBonds(res.items || []);
         setTotal(res.total ?? 0);
       })
-      .catch((err) => setError(err?.message || "Veri yuklenemedi"))
+      .catch((err) => setError(err?.message || tr.dashboard.overview.widgets.noRateData))
       .finally(() => setLoading(false));
   }
 
@@ -48,13 +50,15 @@ export default function AdminBondsPage() {
     try {
       const result = await api.bonds.sync(token);
       if (result.status === "success") {
-        setSyncMsg(`${result.bonds_upserted} tahvil güncellendi, ${result.bonds_deactivated} deaktive edildi.`);
+        setSyncMsg(tr.admin.overview.operations.bondsSuccess
+          .replace("{upserted}", result.bonds_upserted.toString())
+          .replace("{deactivated}", result.bonds_deactivated.toString()));
         fetchBonds();
       } else {
-        setSyncMsg(`Hata: ${(result as any).error || "Bilinmeyen"}`);
+        setSyncMsg(`${tr.common.error}: ${(result as any).error || "Bilinmeyen"}`);
       }
     } catch (e) {
-      setSyncMsg(e instanceof Error ? e.message : "Sync başarısız");
+      setSyncMsg(e instanceof Error ? e.message : tr.admin.overview.operations.syncError);
     } finally {
       setSyncing(false);
     }
@@ -72,13 +76,13 @@ export default function AdminBondsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between animate-fade-up">
         <div>
-          <h1 className="font-display text-display-md text-foreground">Tahvil Yönetimi</h1>
+          <h1 className="font-display text-display-md text-foreground">{tr.admin.bonds.title}</h1>
           <p className="text-data-sm text-muted-foreground mt-1">
-            BIST borçlanma araçları — sadece listeleme ve sync
+            {tr.admin.bonds.description}
           </p>
         </div>
         <Button onClick={handleSync} disabled={syncing}>
-          {syncing ? "Güncelleniyor…" : "Tahvil Listesi Güncelle"}
+          {syncing ? tr.admin.overview.operations.syncing : tr.admin.bonds.syncButton}
         </Button>
       </div>
 
@@ -88,7 +92,7 @@ export default function AdminBondsPage() {
 
       <div className="w-64 animate-fade-up">
         <Input
-          placeholder="ISIN veya ihraççıyla ara..."
+          placeholder={tr.admin.bonds.searchPlaceholder}
           className="font-mono-data"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -99,20 +103,20 @@ export default function AdminBondsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardDescription>VERITABANI</CardDescription>
-              <CardTitle className="mt-1">Kayıtlı Tahviller</CardTitle>
+              <CardDescription>{tr.admin.bonds.card.label}</CardDescription>
+              <CardTitle className="mt-1">{tr.admin.bonds.card.title}</CardTitle>
             </div>
             {!loading && (
               <span className="text-label text-muted-foreground">
                 {search ? `${filtered.length} / ` : ""}
-                {total} KAYIT
+                {total} {tr.admin.bonds.card.records}
               </span>
             )}
           </div>
         </CardHeader>
         <CardContent>
           {loading && (
-            <p className="text-data-sm text-muted-foreground py-4">Yukleniyor...</p>
+            <p className="text-data-sm text-muted-foreground py-4">{tr.common.loading}</p>
           )}
           {error && <p className="text-data-sm text-destructive py-4">{error}</p>}
           {!loading && !error && (
@@ -120,7 +124,15 @@ export default function AdminBondsPage() {
               <table className="w-full">
                 <thead className="sticky top-0 bg-card z-10">
                   <tr className="border-b border-border">
-                    {["ISIN", "IHRACÇI", "TUR", "DOVIZ", "VADE (GUN)", "GETIRI %", "DURUM"].map(
+                    {[
+                      tr.admin.bonds.table.isin,
+                      tr.admin.bonds.table.issuer,
+                      tr.admin.bonds.table.type,
+                      tr.admin.bonds.table.currency,
+                      tr.admin.bonds.table.maturity,
+                      tr.admin.bonds.table.yield,
+                      tr.admin.bonds.table.status
+                    ].map(
                       (h) => (
                         <th
                           key={h}
@@ -165,7 +177,7 @@ export default function AdminBondsPage() {
                       </td>
                       <td className="py-3">
                         <Badge variant={bond.is_active ? "default" : "destructive"}>
-                          {bond.is_active ? "AKTIF" : "PASIF"}
+                          {bond.is_active ? tr.admin.users.status.active : tr.admin.users.status.passive}
                         </Badge>
                       </td>
                     </tr>
@@ -174,7 +186,7 @@ export default function AdminBondsPage() {
               </table>
               {filtered.length === 0 && (
                 <p className="text-data-sm text-muted-foreground py-6 text-center">
-                  Tahvil bulunamadi
+                  {tr.admin.bonds.card.notFound}
                 </p>
               )}
             </div>

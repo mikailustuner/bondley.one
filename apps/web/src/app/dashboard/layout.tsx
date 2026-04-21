@@ -24,21 +24,22 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
+import { tr } from "@/locales/tr";
 
 const NAV_SECTIONS = [
   {
     title: null,
     items: [
-      { href: "/dashboard", label: "Genel Bakış", icon: LayoutDashboard },
-      { href: "/dashboard/bonds", label: "Borçlanma Araçları", icon: List },
-      { href: "/dashboard/alerts", label: "Uyarılar", icon: Bell },
-      { href: "/dashboard/analytics", label: "Analiz", icon: BarChart3 },
+      { href: "/dashboard", label: tr.dashboard.nav.overview, icon: LayoutDashboard },
+      { href: "/dashboard/bonds", label: tr.dashboard.nav.bonds, icon: List },
+      { href: "/dashboard/alerts", label: tr.dashboard.nav.alerts, icon: Bell },
+      { href: "/dashboard/analytics", label: tr.dashboard.nav.analytics, icon: BarChart3 },
     ],
   },
   {
-    title: "Hesap",
+    title: tr.dashboard.nav.account,
     items: [
-      { href: "/dashboard/settings", label: "Ayarlar", icon: Settings },
+      { href: "/dashboard/settings", label: tr.dashboard.nav.settings, icon: Settings },
     ],
   },
 ];
@@ -94,13 +95,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setIsResending(true);
     try {
       await api.auth.resendVerification(user.email);
-      toast.success("Doğrulama maili gönderildi!", {
-        description: "Lütfen e-posta kutunuzu (ve spam klasörünü) kontrol edin.",
+      toast.success(tr.dashboard.verification.toastSuccess, {
+        description: tr.dashboard.verification.toastSuccessDesc,
         icon: <CheckCircle2 className="h-4 w-4 text-green-500" />,
       });
     } catch (error: any) {
-      toast.error("Mail gönderilemedi", {
-        description: error.message || "Lütfen daha sonra tekrar deneyin.",
+      toast.error(tr.dashboard.verification.toastError, {
+        description: error.message || tr.dashboard.verification.toastErrorDesc,
       });
     } finally {
       setIsResending(false);
@@ -125,7 +126,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           priority
         />
         <span className="font-semibold text-[16px] tracking-tight text-foreground">
-          Bondley
+          {tr.common.brand}
         </span>
       </div>
 
@@ -158,7 +159,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="px-3 pb-4 pt-2 border-t border-border/30 space-y-2">
         <div className="flex items-center gap-2 px-3 py-1">
           <span className="h-1.5 w-1.5 rounded-full bg-positive live-indicator" />
-          <span className="text-[11px] font-medium text-muted-foreground">Canlı Veri</span>
+          <span className="text-[11px] font-medium text-muted-foreground">{tr.dashboard.sidebar.liveData}</span>
         </div>
         <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-1">
@@ -194,7 +195,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <button
           onClick={() => setSidebarOpen(false)}
           className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-secondary/60 text-muted-foreground"
-          aria-label="Menüyü kapat"
+          aria-label={tr.dashboard.sidebar.closeMenu}
         >
           <X className="h-5 w-5" />
         </button>
@@ -208,7 +209,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 -ml-2 rounded-lg hover:bg-secondary/60 text-muted-foreground"
-            aria-label="Menüyü aç"
+            aria-label={tr.dashboard.sidebar.openMenu}
           >
             <Menu className="h-5 w-5" />
           </button>
@@ -220,7 +221,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               height={22}
               className="h-[22px] w-[22px] object-contain"
             />
-            <span className="font-semibold text-[15px] text-foreground">Bondley</span>
+            <span className="font-semibold text-[15px] text-foreground">{tr.common.brand}</span>
           </Link>
           <div className="flex items-center gap-1">
             <NotificationBell />
@@ -234,9 +235,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="flex items-center gap-3">
                 <Mail className="h-5 w-5" />
                 <div>
-                  <AlertTitle>E-posta adresiniz doğrulanmadı</AlertTitle>
+                  <AlertTitle>{tr.dashboard.verification.alertTitle}</AlertTitle>
                   <AlertDescription>
-                    Hesabınızın güvenliği ve tüm özelliklere erişebilmek için lütfen e-postanızı doğrulayın.
+                    {tr.dashboard.verification.alertDescription}
                   </AlertDescription>
                 </div>
               </div>
@@ -248,7 +249,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 disabled={isResending}
               >
                 {isResending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Yeniden Gönder
+                {tr.dashboard.verification.resendButton}
               </Button>
             </Alert>
           )}

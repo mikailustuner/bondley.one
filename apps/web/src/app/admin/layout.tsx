@@ -5,6 +5,7 @@ import Image from "next/image";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AdminGuard } from "@/components/admin-guard";
 import { UserMenu } from "@/components/user-menu";
+import { tr } from "@/locales/tr";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -17,13 +18,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Link href="/admin" className="flex items-center gap-2.5">
                 <Image
                   src="/logo.png"
-                  alt="Bondley Logo"
+                  alt={`${tr.common.brand} Logo`}
                   width={24}
                   height={24}
                   className="h-6 w-6 object-contain"
                   priority
                 />
-                <span className="font-semibold text-[14px] tracking-tight">Bondley</span>
+                <span className="font-semibold text-[14px] tracking-tight">{tr.common.brand}</span>
                 <Badge className="ml-1">ADMIN</Badge>
               </Link>
 
@@ -31,14 +32,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
               <div className="hidden md:flex items-center gap-1">
                 {[
-                  { href: "/admin", label: "Genel" },
-                  { href: "/admin/bonds", label: "Borçlanma Araçları" },
-                  { href: "/admin/users", label: "Kullanıcılar" },
-                  { href: "/admin/logs", label: "Loglar" },
-                  { href: "/admin/metrics", label: "Metrikler" },
-                  { href: "/admin/notifications", label: "Duyurular" },
-                  { href: "/admin/import", label: "Veri Aktarımı" },
-                  { href: "/admin/sentry-debug", label: "Sentry" },
+                  { href: "/admin", label: tr.admin.sidebar.overview },
+                  { href: "/admin/bonds", label: tr.admin.sidebar.bonds },
+                  { href: "/admin/users", label: tr.admin.sidebar.users },
+                  { href: "/admin/logs", label: tr.admin.sidebar.logs },
+                  { href: "/admin/metrics", label: tr.admin.sidebar.metrics },
+                  { href: "/admin/notifications", label: tr.admin.sidebar.notifications },
+                  { href: "/admin/import", label: tr.admin.sidebar.import },
+                  { href: "/admin/sentry-debug", label: tr.admin.sidebar.sentry },
                 ].map((item) => (
                   <Link
                     key={item.href}
@@ -56,7 +57,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 href="/dashboard"
                 className="text-[14px] text-muted-foreground hover:text-primary transition-colors"
               >
-                Dashboard
+                {tr.common.dashboard}
               </Link>
               <ThemeToggle />
               <UserMenu />

@@ -92,11 +92,25 @@ def annual_reference_rate(
     return rate.quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
 
 
+def _spread_to_decimal(spread: Decimal | None) -> Decimal:
+    """
+    Spread'i ondaliga cevirir. DB'de yuzde olarak saklanabilir (2.5 = %2.5);
+    |spread| > 1 ise yuzde kabul edilip 100'e bolunur, aksi halde ondalik varsayilir.
+    """
+    if spread is None:
+        return Decimal("0")
+    s = Decimal(str(spread))
+    if abs(s) > 1:
+        return s / Decimal("100")
+    return s
+
+
 def annual_coupon_rate(annual_reference: Decimal | None, spread: Decimal | None) -> Decimal | None:
-    """Yillik Kupon Faiz Orani = Yillik Gosterge + Yillik Basit Ek Getiri (spread)."""
+    """Yillik Kupon Faiz Orani = Yillik Gosterge + Yillik Basit Ek Getiri (spread).
+    annual_reference ondalik; spread DB'de yuzde olabileceginden normalize edilir."""
     if annual_reference is None:
         return None
-    spread_val = spread if spread is not None else Decimal("0")
+    spread_val = _spread_to_decimal(spread)
     return (annual_reference + spread_val).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
 
 

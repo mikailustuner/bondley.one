@@ -6,6 +6,7 @@ import { Bell, Check, Trash2, Info, AlertTriangle, CheckCircle2, XCircle, MoreVe
 import { api, NotificationRecord } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { tr } from "@/locales/tr";
 
 /* --- Native time formatting --- */
 function formatDistanceToNowNative(dateStr: string): string {
@@ -17,10 +18,10 @@ function formatDistanceToNowNative(dateStr: string): string {
   const diffHour = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHour / 24);
 
-  if (diffSec < 60) return "az önce";
-  if (diffMin < 60) return `${diffMin} dakika önce`;
-  if (diffHour < 24) return `${diffHour} saat önce`;
-  if (diffDay < 30) return `${diffDay} gün önce`;
+  if (diffSec < 60) return tr.components.notificationBell.timeAgo.justNow;
+  if (diffMin < 60) return tr.components.notificationBell.timeAgo.minutes.replace("{count}", diffMin.toString());
+  if (diffHour < 24) return tr.components.notificationBell.timeAgo.hours.replace("{count}", diffHour.toString());
+  if (diffDay < 30) return tr.components.notificationBell.timeAgo.days.replace("{count}", diffDay.toString());
   return date.toLocaleDateString("tr-TR");
 }
 
@@ -161,7 +162,7 @@ export function NotificationBell() {
           "active:scale-95",
           isOpen && "bg-secondary"
         )}
-        aria-label="Bildirimler"
+        aria-label={tr.dashboard.nav.alerts}
       >
         <Bell className={cn("h-5 w-5 text-muted-foreground", unreadCount > 0 && "text-foreground")} />
         
@@ -184,7 +185,7 @@ export function NotificationBell() {
             )}
           >
             <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-muted/30">
-              <h3 className="text-sm font-semibold">Bildirimler</h3>
+              <h3 className="text-sm font-semibold">{tr.dashboard.nav.alerts}</h3>
               {unreadCount > 0 && (
                 <button
                   onClick={(e) => {
@@ -193,7 +194,7 @@ export function NotificationBell() {
                   }}
                   className="text-[11px] text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
                 >
-                  <Check className="h-3 w-3" /> Tümü okundu
+                  <Check className="h-3 w-3" /> {tr.components.notificationBell.markAllRead}
                 </button>
               )}
             </div>
@@ -202,7 +203,7 @@ export function NotificationBell() {
               {notifications.length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground">
                   <Bell className="h-8 w-8 mx-auto mb-3 opacity-20" />
-                  <p className="text-sm">Henüz bildiriminiz yok.</p>
+                  <p className="text-sm">{tr.components.notificationBell.empty}</p>
                 </div>
               ) : (
                 <div className="divide-y divide-border/40">
@@ -241,7 +242,7 @@ export function NotificationBell() {
                               handleMarkAsRead(notif.id);
                             }}
                             className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary"
-                            title="Okundu olarak işaretle"
+                            title={tr.components.notificationBell.markRead}
                           >
                             <Check className="h-3.5 w-3.5" />
                           </button>

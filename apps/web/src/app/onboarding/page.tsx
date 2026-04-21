@@ -30,21 +30,22 @@ import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 import { updateLocalUser, getToken } from "@/lib/auth";
 import Image from "next/image";
+import { tr } from "@/locales/tr";
 
 const formSchema = z.object({
     department: z.string().min(2, {
-        message: "Departman ismi en az 2 karakter olmalıdır.",
+        message: tr.onboarding.form.department.validation,
     }),
     job_title: z.string().min(2, {
-        message: "Unvan en az 2 karakter olmalıdır.",
+        message: tr.onboarding.form.jobTitle.validation,
     }),
     usage_purpose: z.string().min(10, {
-        message: "Lütfen platformu ne amaçla kullanacağınızı kısaca açıklayın (en az 10 karakter).",
+        message: tr.onboarding.form.usagePurpose.validation,
     }),
     estimated_daily_views: z.string().refine((val) => {
         const parsed = parseInt(val, 10);
         return !isNaN(parsed) && parsed >= 1 && parsed <= 10000;
-    }, { message: "Günlük tahmini inceleme sayısı 1 ile 10000 arasında geçerli bir sayı olmalıdır." }),
+    }, { message: tr.onboarding.form.dailyViews.validation }),
 });
 
 export default function OnboardingPage() {
@@ -76,8 +77,8 @@ export default function OnboardingPage() {
             // Update local storage user data to reflect profile_completed = true
             updateLocalUser(response);
 
-            toast.success("Profiliniz başarıyla tamamlandı!", {
-                description: "Bondley platformuna hoş geldiniz.",
+            toast.success(tr.onboarding.successTitle, {
+                description: tr.onboarding.successDescription,
             });
 
             // Redirect to main dashboard
@@ -85,8 +86,8 @@ export default function OnboardingPage() {
             router.refresh();
 
         } catch (error: any) {
-            toast.error("Bir hata oluştu", {
-                description: error.message || "Profil güncellenemedi, lütfen tekrar deneyin.",
+            toast.error(tr.common.error, {
+                description: error.message || tr.onboarding.errorDescription,
             });
         } finally {
             setIsLoading(false);
@@ -111,10 +112,10 @@ export default function OnboardingPage() {
                 <div className="max-w-[440px] w-full mt-24 lg:mt-0">
                     <div className="mb-10 animate-fade-in" style={{ animationDelay: "100ms" }}>
                         <h1 className="text-3xl font-display font-medium tracking-tight mb-3">
-                            Hoş Geldiniz
+                            {tr.onboarding.title}
                         </h1>
                         <p className="text-muted-foreground text-sm leading-relaxed">
-                            Deneyiminizi kişiselleştirmemiz ve size en uygun finansal araçları sunabilmemiz için birkaç kısa bilgiye ihtiyacımız var.
+                            {tr.onboarding.description}
                         </p>
                     </div>
 
@@ -130,22 +131,22 @@ export default function OnboardingPage() {
                                             <FormItem>
                                                 <FormLabel className="flex items-center gap-2 text-data-sm text-muted-foreground">
                                                     <Building2 className="h-3.5 w-3.5" />
-                                                    Departman
+                                                    {tr.onboarding.form.department.label}
                                                 </FormLabel>
                                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                     <FormControl>
                                                         <SelectTrigger className="h-11 bg-secondary/30">
-                                                            <SelectValue placeholder="Departmanınızı seçin" />
+                                                            <SelectValue placeholder={tr.onboarding.form.department.placeholder} />
                                                         </SelectTrigger>
                                                     </FormControl>
                                                     <SelectContent>
-                                                        <SelectItem value="Hazine">Hazine (Treasury)</SelectItem>
-                                                        <SelectItem value="Portföy Yönetimi">Portföy Yönetimi</SelectItem>
-                                                        <SelectItem value="Risk Yönetimi">Risk Yönetimi</SelectItem>
-                                                        <SelectItem value="Araştırma / Strateji">Araştırma / Strateji</SelectItem>
-                                                        <SelectItem value="Kurumsal Finansman">Kurumsal Finansman</SelectItem>
-                                                        <SelectItem value="Bireysel Yatırımcı">Bireysel Yatırımcı</SelectItem>
-                                                        <SelectItem value="Diğer">Diğer</SelectItem>
+                                                        <SelectItem value="Hazine">{tr.onboarding.form.department.options.treasury}</SelectItem>
+                                                        <SelectItem value="Portföy Yönetimi">{tr.onboarding.form.department.options.portfolio}</SelectItem>
+                                                        <SelectItem value="Risk Yönetimi">{tr.onboarding.form.department.options.risk}</SelectItem>
+                                                        <SelectItem value="Araştırma / Strateji">{tr.onboarding.form.department.options.research}</SelectItem>
+                                                        <SelectItem value="Kurumsal Finansman">{tr.onboarding.form.department.options.corporate}</SelectItem>
+                                                        <SelectItem value="Bireysel Yatırımcı">{tr.onboarding.form.department.options.retail}</SelectItem>
+                                                        <SelectItem value="Diğer">{tr.onboarding.form.department.options.other}</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                                 <FormMessage />
@@ -161,11 +162,11 @@ export default function OnboardingPage() {
                                             <FormItem>
                                                 <FormLabel className="flex items-center gap-2 text-data-sm text-muted-foreground">
                                                     <Briefcase className="h-3.5 w-3.5" />
-                                                    Unvan / Pozisyon
+                                                    {tr.onboarding.form.jobTitle.label}
                                                 </FormLabel>
                                                 <FormControl>
                                                     <Input
-                                                        placeholder="Örn: Portföy Yöneticisi, Analist..."
+                                                        placeholder={tr.onboarding.form.jobTitle.placeholder}
                                                         className="h-11 bg-secondary/30"
                                                         {...field}
                                                     />
@@ -183,11 +184,11 @@ export default function OnboardingPage() {
                                             <FormItem>
                                                 <FormLabel className="flex items-center gap-2 text-data-sm text-muted-foreground">
                                                     <Target className="h-3.5 w-3.5" />
-                                                    Kullanım Amacı
+                                                    {tr.onboarding.form.usagePurpose.label}
                                                 </FormLabel>
                                                 <FormControl>
                                                     <Textarea
-                                                        placeholder="Platformu ağırlıklı olarak hangi amaçla (fiyatlama, portföy takibi, raporlama vb.) kullanacaksınız?"
+                                                        placeholder={tr.onboarding.form.usagePurpose.placeholder}
                                                         className="min-h-[100px] bg-secondary/30 resize-none"
                                                         {...field}
                                                     />
@@ -205,7 +206,7 @@ export default function OnboardingPage() {
                                             <FormItem>
                                                 <FormLabel className="flex items-center gap-2 text-data-sm text-muted-foreground">
                                                     <Eye className="h-3.5 w-3.5" />
-                                                    Günlük Tahmini İşlem/İnceleme
+                                                    {tr.onboarding.form.dailyViews.label}
                                                 </FormLabel>
                                                 <FormControl>
                                                     <Input
@@ -217,7 +218,7 @@ export default function OnboardingPage() {
                                                     />
                                                 </FormControl>
                                                 <FormDescription className="text-xs">
-                                                    Günde ortalama kaç farklı borçlanma aracı inceleyeceğinizi tahmin ediyorsunuz?
+                                                    {tr.onboarding.form.dailyViews.description}
                                                 </FormDescription>
                                                 <FormMessage />
                                             </FormItem>
@@ -234,10 +235,10 @@ export default function OnboardingPage() {
                                         {isLoading ? (
                                             <>
                                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                Kaydediliyor...
+                                                {tr.common.saving}
                                             </>
                                         ) : (
-                                            "Profilimi Tamamla ve Başla"
+                                            tr.onboarding.form.submit
                                         )}
                                     </Button>
                                 </div>
@@ -259,10 +260,10 @@ export default function OnboardingPage() {
                 <div className="relative z-10 max-w-lg text-center animate-fade-in" style={{ animationDelay: "300ms" }}>
                     <div className="glass-panel p-8 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md mb-8">
                         <h2 className="text-2xl font-display font-medium text-white mb-4">
-                            Kurumsal Borçlanma Araçları Platformu
+                            {tr.onboarding.hero.title}
                         </h2>
                         <p className="text-white/60 text-sm leading-relaxed">
-                            Tahvil, bono, kira sertifikası ve VDMK piyasalarındaki tüm gelişmeleri anlık takip edin. Yapay zeka destekli fiyatlama modelleri ve kurumsal arayüzler ile risklerinizi yönetin.
+                            {tr.onboarding.hero.description}
                         </p>
                     </div>
 

@@ -2,8 +2,8 @@
 Turk Devlet Tahvilleri icin finansal hesaplama motoru.
 
 - Tum hesaplamalarda Decimal aritmetigi kullanilir.
-- float donusumu yalnizca numpy_financial.irr() cagrisi icin yapilir; sonuc hemen Decimal'e cevirilir.
-- YTM: Bond Equivalent Yield (BEY), yani periyodik IRR * kupon frekansi.
+- float donusumu yalnizca YTM bisection cozumu ve durasyon icin yapilir; sonuclar Decimal'e cevrilir.
+- YTM: Bond Equivalent Yield (BEY); donem ici settlement'ta kesirli donem DCF ile bisection kullanilir.
 - Birikmis faiz ve kupon donemi: Act/Act (gercek gun sayimi). day_count_convention (30/360 vb.) su an uygulanmaz.
 - Spread: Ondalik doner (0.01 = %1 = 100 bp). Baz puan icin 10000 ile carpin.
 """
@@ -11,9 +11,6 @@ Turk Devlet Tahvilleri icin finansal hesaplama motoru.
 from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
-
-import numpy_financial as npf
-
 
 @dataclass
 class BondCashFlow:
@@ -168,34 +165,71 @@ class BondCalculator:
 
     def yield_to_maturity(self, clean_price: Decimal, settlement_date: date) -> Decimal:
         """
-        Ic Verim Orani (IRR / Yield to Maturity).
-        Sonuc Bond Equivalent Yield (BEY): periyodik IRR * frekans.
+        Ic Verim Orani / Yield to Maturity (BEY).
+        Bisection ile DCF denkleminin kokunu bulur:
 
-        Nakit akis dizisi: [-Kirli_Fiyat, Kupon1, Kupon2, ..., KuponN + Anapara]
-        numpy_financial.irr() ile hesaplanir.
+            P_dirty = sum_i CF_i / (1 + y/k)^{d_i / period_days}
+
+        d_i: settlement'dan CF_i'ye gun sayisi, k: kupon frekansi.
+        Donus BEY: y (yillik, ondalik). Donem ici settlement icin
+        kesirli donem ustellendirmesi kullanildigindan numpy_financial.irr'nin
+        esit aralik varsayimindaki onyargi ortadan kalkar.
         """
         self._validate_settlement(settlement_date)
         self._validate_clean_price(clean_price)
-        d_price = self.dirty_price(clean_price, settlement_date)
+        d_price = float(self.dirty_price(clean_price, settlement_date))
         cash_flows = self.generate_cash_flows(settlement_date)
 
-        if not cash_flows:
+        if not cash_flows or d_price <= 0:
             return Decimal("0")
 
-        cf_values = [-float(d_price)] + [float(cf.amount) for cf in cash_flows]
+        k = self.coupon_frequency
+        period_days = self._period_days()
 
-        period_irr = npf.irr(cf_values)
+        times = [
+            (cf.payment_date - settlement_date).days / period_days
+            for cf in cash_flows
+        ]
+        amounts = [float(cf.amount) for cf in cash_flows]
 
-        if period_irr is None or period_irr != period_irr:  # NaN check
+        def npv(y: float) -> float:
+            factor = 1.0 + y / k
+            if factor <= 0:
+                return float("inf")
+            return sum(a / (factor ** t) for a, t in zip(amounts, times)) - d_price
+
+        lo, hi = -0.99, 10.0  # -99% ile +1000% arasi makul aralik
+        f_lo = npv(lo)
+        f_hi = npv(hi)
+        if f_lo * f_hi > 0:
+            # Kok bu aralikta degil; fiyat geri donsun.
             return Decimal("0")
 
-        annual_yield = Decimal(str(period_irr)) * Decimal(str(self.coupon_frequency))
-        return annual_yield.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
+        for _ in range(200):
+            mid = 0.5 * (lo + hi)
+            f_mid = npv(mid)
+            if abs(f_mid) < 1e-10 or (hi - lo) < 1e-12:
+                lo = hi = mid
+                break
+            if f_lo * f_mid <= 0:
+                hi = mid
+                f_hi = f_mid
+            else:
+                lo = mid
+                f_lo = f_mid
+
+        ytm = 0.5 * (lo + hi)
+        return Decimal(str(ytm)).quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
 
     def spread(self, bond_yield: Decimal, tlref_yield: Decimal) -> Decimal:
         """
-        Spread = Yield_Bond - Yield_Benchmark (TLREF).
+        Piyasa ima spread'i: Spread = YTM(BEY) - TLREF(yillik basit).
         Sonuc ondalik (0.01 = %1 = 100 bp). Baz puan icin 10000 ile carpin.
+
+        Not: BEY ve simple annual yillari farkli annualize eder; teorik olarak
+        negatif cikabilir (fiyat yuksek, tahvil TLREF'in altinda getiri veriyor).
+        Sozlesmesel spread icin Bond.spread (ihracta sabitlenen ek getiri) kullanilir;
+        bu deger her zaman >= 0 olacak sekilde girilir.
         """
         s = Decimal(str(bond_yield)) - Decimal(str(tlref_yield))
         return s.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)

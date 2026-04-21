@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { getUser } from "@/lib/auth";
 import { AlertCircle } from "lucide-react";
+import { tr } from "@/locales/tr";
 
 export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
     const router = useRouter();
@@ -54,7 +55,7 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
             {isMaintenance && isAdmin && pathname !== "/maintenance" && (
                 <div className="bg-red-500 text-white p-2 text-center text-sm font-medium flex items-center justify-center gap-2 z-[100] relative">
                     <AlertCircle className="w-4 h-4" />
-                    DİKKAT: Site şu anda Bakım Modunda (Sadece Adminler girebilir).
+                    {tr.components.maintenance.message}
                 </div>
             )}
             {children}

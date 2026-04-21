@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { api, BondListItem, BondStats, TLREFRecord } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
+import { tr } from "@/locales/tr";
 
 const CURRENCY_COLORS: Record<string, string> = {
   TRY: "default",
@@ -21,9 +22,9 @@ const CURRENCY_COLORS: Record<string, string> = {
 
 export default function BondsListPage() {
   useEffect(() => {
-    document.title = "Borçlanma Araçları — Bondley";
+    document.title = `${tr.dashboard.bonds.title} — ${tr.common.brand}`;
     return () => {
-      document.title = "Bondley";
+      document.title = tr.common.brand;
     };
   }, []);
   const [bonds, setBonds] = useState<BondListItem[]>([]);
@@ -43,7 +44,7 @@ export default function BondsListPage() {
   useEffect(() => {
     const token = getToken();
     if (!token) {
-      setError("Giriş yapmanız gerekiyor");
+      setError(tr.dashboard.bonds.errors.loginRequired);
       setLoading(false);
       return;
     }
@@ -73,7 +74,7 @@ export default function BondsListPage() {
           .finally(() => setFullListLoading(false));
       })
       .catch((e) => {
-        setError(e?.message || "Veri yüklenemedi");
+        setError(e?.message || tr.dashboard.bonds.errors.loadFailed);
         setLoading(false);
       });
   }, []);
@@ -140,9 +141,9 @@ export default function BondsListPage() {
       {/* Header */}
       <div className="flex items-center justify-between animate-fade-up">
         <div>
-          <h1 className="text-display-md text-foreground">Borçlanma Araçları</h1>
+          <h1 className="text-display-md text-foreground">{tr.dashboard.bonds.title}</h1>
           <p className="text-[15px] text-muted-foreground mt-1.5">
-            Tahvil, Bono, Kira Sertifikası, VDMK ve türevleri — {formatDecimal(total, 0)} aktif kayıt
+            {tr.dashboard.bonds.description.replace("{count}", formatDecimal(total, 0))}
           </p>
         </div>
       </div>
@@ -162,40 +163,38 @@ export default function BondsListPage() {
       {stats && !loading && (
         <div className="grid gap-4 md:grid-cols-4 animate-fade-up">
           <div className="bg-card rounded-3xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="text-[13px] font-medium text-muted-foreground mb-2">Toplam Araç</div>
+            <div className="text-[13px] font-medium text-muted-foreground mb-2">{tr.dashboard.bonds.stats.total}</div>
             <div className="font-mono-data text-stat text-primary">
               {formatDecimal(stats.total_bonds, 0)}
             </div>
-            <div className="text-[13px] text-muted-foreground mt-1.5">Aktif kayıt</div>
+            <div className="text-[13px] text-muted-foreground mt-1.5">{tr.dashboard.bonds.stats.totalDesc}</div>
           </div>
           <div className="bg-card rounded-3xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="text-[13px] font-medium text-muted-foreground mb-2">Ort. Vade</div>
+            <div className="text-[13px] font-medium text-muted-foreground mb-2">{tr.dashboard.bonds.stats.avgMaturity}</div>
             <div className="font-mono-data text-stat text-foreground">
               {stats.avg_days_to_maturity != null
                 ? `${Math.round(stats.avg_days_to_maturity)} gün`
                 : "—"}
             </div>
-            <div className="text-[13px] text-muted-foreground mt-1.5">Kalan gün</div>
+            <div className="text-[13px] text-muted-foreground mt-1.5">{tr.dashboard.bonds.stats.avgMaturityDesc}</div>
           </div>
           <div className="bg-card rounded-3xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="text-[13px] font-medium text-muted-foreground mb-2">Para Birimi</div>
+            <div className="text-[13px] font-medium text-muted-foreground mb-2">{tr.dashboard.bonds.stats.currency}</div>
             <div className="font-mono-data text-stat text-foreground">
               {Object.keys(stats.by_currency).length}
             </div>
             <div className="text-[13px] text-muted-foreground mt-1.5">
-              {Object.entries(stats.by_currency)
-                .sort(([, a], [, b]) => b - a)
-                .slice(0, 3)
-                .map(([k, v]) => `${k}: ${v}`)
-                .join(", ")}
+              {tr.dashboard.bonds.stats.currencyDesc.replace("{count}", Object.keys(stats.by_currency).length.toString())}
             </div>
           </div>
           <div className="bg-card rounded-3xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="text-[13px] font-medium text-muted-foreground mb-2">Araç Türü</div>
+            <div className="text-[13px] font-medium text-muted-foreground mb-2">{tr.dashboard.bonds.stats.securityType}</div>
             <div className="font-mono-data text-stat text-foreground">
               {Object.keys(stats.by_security_type).length}
             </div>
-            <div className="text-[13px] text-muted-foreground mt-1.5">Farklı tür</div>
+            <div className="text-[13px] text-muted-foreground mt-1.5">
+              {tr.dashboard.bonds.stats.securityTypeDesc.replace("{count}", Object.keys(stats.by_security_type).length.toString())}
+            </div>
           </div>
         </div>
       )}
@@ -203,17 +202,17 @@ export default function BondsListPage() {
       {!loading && tlrefLatest && (
         <Card className="animate-fade-up">
           <CardHeader>
-            <CardDescription>TLREF Referansı</CardDescription>
-            <CardTitle className="mt-1">Son Oran ve Endeks</CardTitle>
+            <CardDescription>{tr.dashboard.bonds.tlref.title}</CardDescription>
+            <CardTitle className="mt-1">{tr.dashboard.bonds.tlref.subtitle}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full text-[13px]">
                 <thead>
                   <tr className="border-b border-border/50">
-                    <th className="text-left py-2.5 text-muted-foreground font-medium">Tarih</th>
-                    <th className="text-right py-2.5 text-muted-foreground font-medium">TLREF (Gecelik Faiz) %</th>
-                    <th className="text-right py-2.5 text-muted-foreground font-medium">TLREFK (Endeks)</th>
+                    <th className="text-left py-2.5 text-muted-foreground font-medium">{tr.dashboard.bonds.tlref.date}</th>
+                    <th className="text-right py-2.5 text-muted-foreground font-medium">{tr.dashboard.bonds.tlref.rate}</th>
+                    <th className="text-right py-2.5 text-muted-foreground font-medium">{tr.dashboard.bonds.tlref.index}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -239,12 +238,12 @@ export default function BondsListPage() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
-                <CardDescription>Son Güncellenen</CardDescription>
-                <CardTitle className="mt-1">Son Güncellenen İhraçlar</CardTitle>
+                <CardDescription>{tr.dashboard.bonds.recent.title}</CardDescription>
+                <CardTitle className="mt-1">{tr.dashboard.bonds.recent.subtitle}</CardTitle>
               </div>
               {fullListLoading && (
                 <span className="text-[13px] text-muted-foreground animate-pulse">
-                  Tam liste yükleniyor…
+                  {tr.dashboard.bonds.recent.loadingFull}
                 </span>
               )}
             </div>
@@ -281,7 +280,7 @@ export default function BondsListPage() {
         <div className="flex-1 min-w-[200px] relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-[18px] w-[18px] pointer-events-none text-muted-foreground/60" />
           <Input
-            placeholder="ISIN veya ihraççıyla ara..."
+            placeholder={tr.dashboard.bonds.filters.searchPlaceholder}
             className="pl-11 h-11 rounded-2xl bg-secondary/50 border-transparent hover:bg-secondary/80 focus-visible:bg-card focus-visible:border-border"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -292,7 +291,7 @@ export default function BondsListPage() {
           value={currencyFilter}
           onChange={(e) => setCurrencyFilter(e.target.value)}
         >
-          <option value="">Tüm Para Birimleri</option>
+          <option value="">{tr.dashboard.bonds.filters.allCurrencies}</option>
           {currencies.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
@@ -302,7 +301,7 @@ export default function BondsListPage() {
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
         >
-          <option value="">Tüm Araç Türleri</option>
+          <option value="">{tr.dashboard.bonds.filters.allTypes}</option>
           {securityTypes.map((t) => (
             <option key={t} value={t}>
               {t.length > 40 ? t.substring(0, 40) + "…" : t}
@@ -316,15 +315,15 @@ export default function BondsListPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardDescription>Borçlanma Araçları</CardDescription>
-              <CardTitle className="mt-1">Borçlanma Araçları Listesi</CardTitle>
+              <CardDescription>{tr.dashboard.bonds.table.subtitle}</CardDescription>
+              <CardTitle className="mt-1">{tr.dashboard.bonds.table.title}</CardTitle>
             </div>
             <span className="text-[13px] font-medium text-muted-foreground">
               {fullListLoading
-                ? `${total} kayıt yükleniyor…`
+                ? tr.dashboard.bonds.table.loadingCount.replace("{count}", total.toString())
                 : search || currencyFilter || typeFilter
-                  ? `${filtered.length} / ${total} Kayıt`
-                  : `${total} Kayıt`
+                  ? tr.dashboard.bonds.table.filteredCount.replace("{count}", filtered.length.toString()).replace("{total}", total.toString())
+                  : tr.dashboard.bonds.table.count.replace("{count}", total.toString())
               }
             </span>
           </div>
@@ -336,14 +335,14 @@ export default function BondsListPage() {
                 <thead className="sticky top-0 z-10 bg-card">
                   <tr className="border-b border-border">
                     <th scope="col" className="w-10 pb-3" />
-                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">ISIN</th>
-                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">İhraççı</th>
-                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">Tür</th>
-                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">Getiri Türü</th>
-                    <th scope="col" className="pb-3 text-center text-[13px] font-medium text-muted-foreground">Döviz</th>
-                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">Vade</th>
-                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">Son Fiyat</th>
-                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">Getiri %</th>
+                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.isin}</th>
+                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.issuer}</th>
+                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.type}</th>
+                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.yieldType}</th>
+                    <th scope="col" className="pb-3 text-center text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.currency}</th>
+                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.maturity}</th>
+                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.lastPrice}</th>
+                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.yield}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -367,29 +366,29 @@ export default function BondsListPage() {
           {error && !loading && (
             <EmptyState
               variant="error"
-              title="Veri yüklenemedi"
+              title={tr.dashboard.bonds.errors.loadFailed}
               description={error}
               icon={<AlertCircle className="h-7 w-7" />}
-              action={{ label: "Yenile", onClick: () => window.location.reload() }}
+              action={{ label: tr.dashboard.bonds.empty.refresh, onClick: () => window.location.reload() }}
             />
           )}
           {!loading && !error && filtered.length === 0 && (
             <EmptyState
               title={
                 search || currencyFilter || typeFilter
-                  ? "Filtreyle eşleşen borçlanma aracı yok"
-                  : "Henüz borçlanma aracı yok"
+                  ? tr.dashboard.bonds.empty.noMatches
+                  : tr.dashboard.bonds.empty.noBonds
               }
               description={
                 search || currencyFilter || typeFilter
-                  ? "Arama veya filtreleri değiştirerek tekrar deneyin."
-                  : "Admin panelden borçlanma araçları listesini güncelleyebilirsiniz."
+                  ? tr.dashboard.bonds.empty.noMatchesDesc
+                  : tr.dashboard.bonds.empty.noBondsDesc
               }
               icon={<Inbox className="h-7 w-7" />}
               action={
                 search || currencyFilter || typeFilter
                   ? {
-                    label: "Filtreleri temizle",
+                    label: tr.dashboard.bonds.empty.clearFilters,
                     onClick: () => {
                       setSearch("");
                       setCurrencyFilter("");
@@ -429,7 +428,7 @@ export default function BondsListPage() {
                           className="h-8 w-8 shrink-0"
                           onClick={(e) => toggleFavorite(e, bond.isin_code)}
                           disabled={favoriteToggling === bond.isin_code}
-                          aria-label={favoriteIsins.has(bond.isin_code) ? "Favorilerden çıkar" : "Favorilere ekle"}
+                          aria-label={favoriteIsins.has(bond.isin_code) ? tr.dashboard.bonds.table.cols.favorite : tr.dashboard.bonds.table.cols.favorite}
                         >
                           <Star
                             className={`h-4 w-4 ${favoriteIsins.has(bond.isin_code) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`}
@@ -476,16 +475,16 @@ export default function BondsListPage() {
                   <thead className="sticky top-0 z-10 bg-card">
                     <tr className="border-b border-border">
                       <th scope="col" className="w-10 text-center pb-3 text-[13px] font-medium text-muted-foreground">
-                        <span className="sr-only">Favori</span>
+                        <span className="sr-only">{tr.dashboard.bonds.table.cols.favorite}</span>
                       </th>
-                      <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">ISIN</th>
-                      <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">İhraççı</th>
-                      <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">Tür</th>
-                      <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">Getiri Türü</th>
-                      <th scope="col" className="pb-3 text-center text-[13px] font-medium text-muted-foreground">Döviz</th>
-                      <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">Vade</th>
-                      <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">Son Fiyat</th>
-                      <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">Getiri %</th>
+                      <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.isin}</th>
+                      <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.issuer}</th>
+                      <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.type}</th>
+                      <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.yieldType}</th>
+                      <th scope="col" className="pb-3 text-center text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.currency}</th>
+                      <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.maturity}</th>
+                      <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.lastPrice}</th>
+                      <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.yield}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -501,7 +500,7 @@ export default function BondsListPage() {
                             className="h-8 w-8"
                             onClick={(e) => toggleFavorite(e, bond.isin_code)}
                             disabled={favoriteToggling === bond.isin_code}
-                            aria-label={favoriteIsins.has(bond.isin_code) ? "Favorilerden çıkar" : "Favorilere ekle"}
+                            aria-label={favoriteIsins.has(bond.isin_code) ? tr.dashboard.bonds.table.cols.favorite : tr.dashboard.bonds.table.cols.favorite}
                           >
                             <Star
                               className={`h-4 w-4 ${favoriteIsins.has(bond.isin_code) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`}

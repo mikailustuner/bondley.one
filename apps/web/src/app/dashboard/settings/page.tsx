@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api-client";
 import { getToken, getRefreshToken, getUser, setAuth } from "@/lib/auth";
+import { tr } from "@/locales/tr";
 
 export default function SettingsPage() {
   useEffect(() => {
-    document.title = "Hesap Ayarları — Bondley";
+    document.title = `${tr.settings.title} — ${tr.common.brand}`;
     return () => {
-      document.title = "Bondley";
+      document.title = tr.common.brand;
     };
   }, []);
   const [loading, setLoading] = useState(false);
@@ -73,9 +74,9 @@ export default function SettingsPage() {
       const updated = await api.auth.updateProfile(token, profileData);
       const refreshToken = getRefreshToken() || "";
       setAuth(token, refreshToken, updated);
-      setSuccess("Profil başarıyla güncellendi");
+      setSuccess(tr.settings.success.profile);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Profil güncellenemedi");
+      setError(e instanceof Error ? e.message : tr.settings.errors.profile);
     } finally {
       setLoading(false);
     }
@@ -87,12 +88,12 @@ export default function SettingsPage() {
     if (!token) return;
 
     if (passwordData.new_password !== passwordData.confirm_password) {
-      setError("Yeni şifreler eşleşmiyor");
+      setError(tr.settings.errors.passwordMismatch);
       return;
     }
 
     if (passwordData.new_password.length < 8) {
-      setError("Şifre en az 8 karakter olmalıdır");
+      setError(tr.settings.errors.passwordTooShort);
       return;
     }
 
@@ -105,14 +106,14 @@ export default function SettingsPage() {
         current_password: passwordData.current_password,
         new_password: passwordData.new_password,
       });
-      setSuccess("Şifre başarıyla değiştirildi");
+      setSuccess(tr.settings.success.password);
       setPasswordData({
         current_password: "",
         new_password: "",
         confirm_password: "",
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Şifre değiştirilemedi");
+      setError(e instanceof Error ? e.message : tr.settings.errors.passwordChange);
     } finally {
       setLoading(false);
     }
@@ -131,9 +132,9 @@ export default function SettingsPage() {
       const updated = await api.auth.changeEmail(token, emailData);
       const refreshToken = getRefreshToken() || "";
       setAuth(token, refreshToken, updated);
-      setSuccess("E-posta başarıyla değiştirildi");
+      setSuccess(tr.settings.success.email);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "E-posta değiştirilemedi");
+      setError(e instanceof Error ? e.message : tr.settings.errors.emailChange);
     } finally {
       setLoading(false);
     }
@@ -158,7 +159,7 @@ export default function SettingsPage() {
       }
       setMfaSetupStep("qr");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "2FA kurulumu başlatılamadı");
+      setError(e instanceof Error ? e.message : tr.settings.errors.mfaSetup);
     } finally {
       setLoading(false);
     }
@@ -177,7 +178,7 @@ export default function SettingsPage() {
       setMfaEnabled(true);
       setMfaConfirmCode("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Kod geçersiz");
+      setError(e instanceof Error ? e.message : tr.settings.errors.invalidCode);
     } finally {
       setLoading(false);
     }
@@ -194,9 +195,9 @@ export default function SettingsPage() {
       await api.auth.mfaDisable(token, mfaDisablePassword);
       setMfaEnabled(false);
       setMfaDisablePassword("");
-      setSuccess("İki adımlı doğrulama kapatıldı");
+      setSuccess(tr.settings.success.mfaDisabled);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Şifre yanlış veya işlem başarısız");
+      setError(e instanceof Error ? e.message : tr.settings.errors.mfaDisable);
     } finally {
       setLoading(false);
     }
@@ -205,8 +206,8 @@ export default function SettingsPage() {
   return (
     <div className="space-y-8 max-w-2xl">
       <div className="animate-fade-up">
-        <h1 className="text-display-md text-foreground">Hesap Ayarları</h1>
-        <p className="text-[15px] text-muted-foreground mt-1.5">Hesap bilgilerinizi yönetin</p>
+        <h1 className="text-display-md text-foreground">{tr.settings.title}</h1>
+        <p className="text-[15px] text-muted-foreground mt-1.5">{tr.settings.desc}</p>
       </div>
 
       {error && (
@@ -224,34 +225,34 @@ export default function SettingsPage() {
       {/* Profile Update */}
       <Card className="animate-fade-up-delay-1">
         <CardHeader>
-          <CardDescription>Profil</CardDescription>
-          <CardTitle className="mt-1">Profil Bilgileri</CardTitle>
+          <CardDescription>{tr.settings.profile.desc}</CardDescription>
+          <CardTitle className="mt-1">{tr.settings.profile.title}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleProfileUpdate} className="space-y-4">
             <div>
-              <label className="block text-[15px] font-medium text-foreground mb-1.5">Ad Soyad</label>
+              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.settings.profile.name}</label>
               <Input
                 value={profileData.full_name}
                 onChange={(e) => setProfileData({ ...profileData, full_name: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-[15px] font-medium text-foreground mb-1.5">Şirket</label>
+              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.settings.profile.company}</label>
               <Input
                 value={profileData.company}
                 onChange={(e) => setProfileData({ ...profileData, company: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-[15px] font-medium text-foreground mb-1.5">Konum</label>
+              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.settings.profile.location}</label>
               <Input
                 value={profileData.location}
                 onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
               />
             </div>
             <Button type="submit" disabled={loading}>
-              {loading ? "Kaydediliyor..." : "Güncelle"}
+              {loading ? tr.settings.profile.saving : tr.settings.profile.update}
             </Button>
           </form>
         </CardContent>
@@ -260,13 +261,13 @@ export default function SettingsPage() {
       {/* Password Change */}
       <Card className="animate-fade-up-delay-2">
         <CardHeader>
-          <CardDescription>Güvenlik</CardDescription>
-          <CardTitle className="mt-1">Şifre Değiştir</CardTitle>
+          <CardDescription>{tr.settings.password.desc}</CardDescription>
+          <CardTitle className="mt-1">{tr.settings.password.title}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handlePasswordChange} className="space-y-4">
             <div>
-              <label className="block text-[15px] font-medium text-foreground mb-1.5">Mevcut Şifre</label>
+              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.settings.password.current}</label>
               <Input
                 type="password"
                 value={passwordData.current_password}
@@ -275,7 +276,7 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="block text-[15px] font-medium text-foreground mb-1.5">Yeni Şifre</label>
+              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.settings.password.new}</label>
               <Input
                 type="password"
                 value={passwordData.new_password}
@@ -285,7 +286,7 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="block text-[15px] font-medium text-foreground mb-1.5">Yeni Şifre (Tekrar)</label>
+              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.settings.password.confirm}</label>
               <Input
                 type="password"
                 value={passwordData.confirm_password}
@@ -295,7 +296,7 @@ export default function SettingsPage() {
               />
             </div>
             <Button type="submit" disabled={loading}>
-              {loading ? "Değiştiriliyor..." : "Şifreyi Değiştir"}
+              {loading ? tr.settings.password.changing : tr.settings.password.update}
             </Button>
           </form>
         </CardContent>
@@ -304,13 +305,13 @@ export default function SettingsPage() {
       {/* Email Change */}
       <Card className="animate-fade-up-delay-3">
         <CardHeader>
-          <CardDescription>E-posta</CardDescription>
-          <CardTitle className="mt-1">E-posta Değiştir</CardTitle>
+          <CardDescription>{tr.settings.email.desc}</CardDescription>
+          <CardTitle className="mt-1">{tr.settings.email.title}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleEmailChange} className="space-y-4">
             <div>
-              <label className="block text-[15px] font-medium text-foreground mb-1.5">Yeni E-posta</label>
+              <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.settings.email.new}</label>
               <Input
                 type="email"
                 value={emailData.new_email}
@@ -319,7 +320,7 @@ export default function SettingsPage() {
               />
             </div>
             <Button type="submit" disabled={loading}>
-              {loading ? "Değiştiriliyor..." : "E-postayı Değiştir"}
+              {loading ? tr.settings.email.changing : tr.settings.email.update}
             </Button>
           </form>
         </CardContent>
@@ -328,54 +329,54 @@ export default function SettingsPage() {
       {/* Two-Factor Authentication */}
       <Card>
         <CardHeader>
-          <CardDescription>Güvenlik</CardDescription>
-          <CardTitle className="mt-1">İki Adımlı Doğrulama (2FA)</CardTitle>
+          <CardDescription>{tr.settings.mfa.desc}</CardDescription>
+          <CardTitle className="mt-1">{tr.settings.mfa.title}</CardTitle>
           <p className="text-[15px] text-muted-foreground mt-1.5">
-            Durum: {mfaEnabled === null ? "..." : mfaEnabled ? "Açık" : "Kapalı"}
+            {tr.settings.mfa.status.replace("{status}", mfaEnabled === null ? "..." : mfaEnabled ? tr.settings.mfa.on : tr.settings.mfa.off)}
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
           {mfaSetupStep === "backup" && mfaBackupCodes && (
             <div className="p-5 rounded-xl border border-yellow-500/20 bg-yellow-500/5 space-y-3">
-              <p className="text-[15px] font-medium text-foreground">Yedek kodlarınızı güvenli bir yere kaydedin. Bu kodlar tekrar gösterilmez.</p>
+              <p className="text-[15px] font-medium text-foreground">{tr.settings.mfa.backupTitle}</p>
               <pre className="text-[13px] font-mono break-all bg-background/50 p-3 rounded-lg">
                 {mfaBackupCodes.join(" ")}
               </pre>
               <Button type="button" onClick={() => { setMfaSetupStep("idle"); setMfaBackupCodes(null); setMfaSetupSecret(null); setMfaQrUri(null); setMfaQrDataUrl(null); }}>
-                Tamam
+                {tr.settings.mfa.ok}
               </Button>
             </div>
           )}
           {mfaSetupStep === "qr" && mfaSetupSecret && (
             <form onSubmit={handleMfaConfirm} className="space-y-4">
               <p className="text-[15px] text-muted-foreground">
-                Authenticator uygulamanıza (Google Authenticator, Authy vb.) QR kodu tarayın veya secret ile manuel ekleyin.
+                {tr.settings.mfa.qrTitle}
               </p>
               {mfaQrDataUrl && (
                 <div className="flex justify-center p-4 bg-white rounded-xl border border-border inline-block">
                   <img src={mfaQrDataUrl} alt="2FA QR kodu" width={200} height={200} className="rounded-lg" />
                 </div>
               )}
-              <p className="text-[12px] text-muted-foreground">Manuel giriş için secret:</p>
+              <p className="text-[12px] text-muted-foreground">{tr.settings.mfa.secretLabel}</p>
               <p className="text-[13px] font-mono break-all bg-secondary/50 p-3 rounded-lg">{mfaSetupSecret}</p>
               <div>
-                <label className="block text-[15px] font-medium text-foreground mb-1.5">Doğrulama kodu (6 hane)</label>
+                <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.settings.mfa.codeLabel}</label>
                 <Input
                   type="text"
                   inputMode="numeric"
                   maxLength={6}
                   value={mfaConfirmCode}
                   onChange={(e) => setMfaConfirmCode(e.target.value.replace(/\D/g, ""))}
-                  placeholder="000000"
+                  placeholder={tr.settings.mfa.placeholder}
                   className="font-mono w-32"
                 />
               </div>
               <div className="flex gap-3">
                 <Button type="submit" disabled={loading || mfaConfirmCode.length !== 6}>
-                  {loading ? "Doğrulanıyor..." : "Etkinleştir"}
+                  {loading ? tr.settings.mfa.verifying : tr.settings.mfa.enabling}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => { setMfaSetupStep("idle"); setMfaSetupSecret(null); setMfaQrUri(null); setMfaQrDataUrl(null); setMfaConfirmCode(""); }}>
-                  İptal
+                  {tr.settings.mfa.cancel}
                 </Button>
               </div>
             </form>
@@ -384,19 +385,19 @@ export default function SettingsPage() {
             <>
               {!mfaEnabled ? (
                 <Button onClick={handleMfaSetupStart} disabled={loading}>
-                  {loading ? "Hazırlanıyor..." : "İki Adımlı Doğrulamayı Etkinleştir"}
+                  {loading ? tr.settings.mfa.preparing : tr.settings.mfa.enable}
                 </Button>
               ) : (
                 <form onSubmit={handleMfaDisable} className="space-y-4">
-                  <p className="text-[15px] text-muted-foreground">2FA'yı kapatmak için mevcut şifrenizi girin.</p>
+                  <p className="text-[15px] text-muted-foreground">{tr.settings.mfa.mfaDisableDesc}</p>
                   <Input
                     type="password"
-                    placeholder="Mevcut şifre"
+                    placeholder={tr.settings.mfa.currentPassword}
                     value={mfaDisablePassword}
                     onChange={(e) => setMfaDisablePassword(e.target.value)}
                   />
                   <Button type="submit" disabled={loading || !mfaDisablePassword}>
-                    {loading ? "Kapatılıyor..." : "İki Adımlı Doğrulamayı Kapat"}
+                    {loading ? tr.settings.mfa.disabling : tr.settings.mfa.disable}
                   </Button>
                 </form>
               )}

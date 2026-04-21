@@ -8,6 +8,7 @@ import { Settings, LogOut, ChevronDown } from "lucide-react";
 import { getUser, clearAuth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { tr } from "@/locales/tr";
 
 export function UserMenu() {
   const [isOpen, setIsOpen] = useState(false);
@@ -119,7 +120,7 @@ export function UserMenu() {
           "active:scale-[0.98]",
           isOpen && "bg-secondary"
         )}
-        aria-label="Kullanıcı menüsü"
+        aria-label={tr.components.userMenu.ariaLabel}
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
@@ -204,7 +205,7 @@ export function UserMenu() {
                 role="menuitem"
               >
                 <Settings className="h-4 w-4 text-muted-foreground" />
-                <span>Hesap ve Ayarlar</span>
+                <span>{tr.dashboard.nav.settings}</span>
               </Link>
             </div>
 
@@ -223,7 +224,7 @@ export function UserMenu() {
                 role="menuitem"
               >
                 <LogOut className="h-4 w-4" />
-                <span>Çıkış</span>
+                <span>{tr.components.userMenu.logout}</span>
               </button>
             </div>
           </div>

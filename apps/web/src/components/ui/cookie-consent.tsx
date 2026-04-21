@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { tr } from "@/locales/tr";
 
 type CookiePreferences = {
   essential: boolean;
@@ -81,7 +82,7 @@ export function CookieConsentBanner() {
       <div
         className="fixed bottom-0 left-0 right-0 z-[9999] animate-slide-up"
         role="dialog"
-        aria-label="Çerez İzin Yönetimi"
+        aria-label={tr.components.cookieConsent.title}
       >
         <div className="mx-auto max-w-4xl px-4 pb-6">
           <div
@@ -113,17 +114,16 @@ export function CookieConsentBanner() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-[15px] font-semibold text-foreground">
-                    Çerez Tercihleriniz
+                    {tr.components.cookieConsent.title}
                   </h3>
                   <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
-                    Deneyiminizi kişiselleştirmek, site trafiğimizi analiz etmek ve
-                    pazarlama çalışmalarımızı iyileştirmek için çerezler kullanıyoruz.
-                    Tercihlerinizi aşağıdan yönetebilirsiniz.{" "}
+                    {tr.components.cookieConsent.description}
+                    {" "}
                     <Link
                       href="/privacy"
                       className="text-primary hover:text-primary/80 underline underline-offset-2 transition-colors"
                     >
-                      Gizlilik Politikası
+                      {tr.components.cookieConsent.privacyPolicy}
                     </Link>
                   </p>
                 </div>
@@ -137,10 +137,10 @@ export function CookieConsentBanner() {
                 <label className="flex items-center justify-between gap-3">
                   <div>
                     <span className="text-[13px] font-medium text-foreground">
-                      Temel Çerezler
+                      {tr.components.cookieConsent.essential.title}
                     </span>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Site işlevselliği için zorunludur. Devre dışı bırakılamaz.
+                      {tr.components.cookieConsent.essential.description}
                     </p>
                   </div>
                   <div className="relative">
@@ -160,10 +160,10 @@ export function CookieConsentBanner() {
                 <label className="flex items-center justify-between gap-3 cursor-pointer">
                   <div>
                     <span className="text-[13px] font-medium text-foreground">
-                      Analiz Çerezleri
+                      {tr.components.cookieConsent.analytics.title}
                     </span>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Anonim istatistikler ile sitemizi geliştirmemize yardımcı olur.
+                      {tr.components.cookieConsent.analytics.description}
                     </p>
                   </div>
                   <button
@@ -194,10 +194,10 @@ export function CookieConsentBanner() {
                 <label className="flex items-center justify-between gap-3 cursor-pointer">
                   <div>
                     <span className="text-[13px] font-medium text-foreground">
-                      Pazarlama Çerezleri
+                      {tr.components.cookieConsent.marketing.title}
                     </span>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Kişiselleştirilmiş içerik ve reklamlar sunmamıza olanak tanır.
+                      {tr.components.cookieConsent.marketing.description}
                     </p>
                   </div>
                   <button
@@ -232,7 +232,7 @@ export function CookieConsentBanner() {
                 onClick={() => setShowDetails(!showDetails)}
                 className="order-3 sm:order-1 text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2"
               >
-                {showDetails ? "Gizle" : "Tercihleri Yönet"}
+                {showDetails ? tr.components.cookieConsent.hide : tr.components.cookieConsent.manage}
               </button>
               <div className="flex-1" />
               {showDetails ? (
@@ -240,7 +240,7 @@ export function CookieConsentBanner() {
                   onClick={handleSavePreferences}
                   className="order-2 rounded-xl bg-primary px-5 py-2.5 text-[13px] font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
                 >
-                  Tercihlerimi Kaydet
+                  {tr.common.save}
                 </button>
               ) : (
                 <>
@@ -248,13 +248,13 @@ export function CookieConsentBanner() {
                     onClick={handleAcceptEssential}
                     className="order-2 sm:order-2 rounded-xl border border-border px-5 py-2.5 text-[13px] font-semibold text-foreground hover:bg-muted/50 transition-colors"
                   >
-                    Sadece Gerekli
+                    {tr.components.cookieConsent.onlyEssential}
                   </button>
                   <button
                     onClick={handleAcceptAll}
                     className="order-1 sm:order-3 rounded-xl bg-primary px-5 py-2.5 text-[13px] font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
                   >
-                    Tümünü Kabul Et
+                    {tr.components.cookieConsent.acceptAll}
                   </button>
                 </>
               )}

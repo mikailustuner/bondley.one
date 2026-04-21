@@ -31,6 +31,7 @@ import {
   formatPercent,
   formatDate,
 } from "@/lib/utils";
+import { tr } from "@/locales/tr";
 
 export default function LandingPage() {
   const [summary, setSummary] = useState<PublicSummary | null>(null);
@@ -46,7 +47,7 @@ export default function LandingPage() {
     api.admin
       .publicSummary()
       .then(setSummary)
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   return (
@@ -64,7 +65,7 @@ export default function LandingPage() {
               priority
             />
             <span className="font-semibold text-[16px] tracking-tight text-foreground">
-              Bondley
+              {tr.common.brand}
             </span>
           </Link>
           <div className="flex items-center gap-3">
@@ -74,7 +75,7 @@ export default function LandingPage() {
                   href="/dashboard"
                   className="text-[14px] text-muted-foreground hover:text-primary transition-colors font-medium"
                 >
-                  Dashboard
+                  {tr.landing.nav.dashboard}
                 </Link>
                 <ThemeToggle />
                 <UserMenu />
@@ -84,12 +85,12 @@ export default function LandingPage() {
                 <ThemeToggle />
                 <Link href="/login">
                   <Button variant="ghost" size="sm" className="text-[14px]">
-                    Giriş Yap
+                    {tr.landing.nav.login}
                   </Button>
                 </Link>
                 <Link href="/signup">
                   <Button size="sm" className="text-[14px]">
-                    Ücretsiz Başlat
+                    {tr.landing.nav.signup}
                   </Button>
                 </Link>
               </>
@@ -110,28 +111,26 @@ export default function LandingPage() {
             <div className="inline-flex items-center gap-2.5 rounded-full border border-primary/15 bg-primary/5 px-5 py-2 mb-10">
               <span className="h-1.5 w-1.5 rounded-full bg-positive live-indicator" />
               <span className="text-[13px] font-medium text-primary">
-                Canlı Veri Akışı
+                {tr.landing.hero.badge}
               </span>
               <ChevronRight className="h-3.5 w-3.5 text-primary/50" />
             </div>
           </div>
 
           <h1 className="text-display-xl md:text-[4.5rem] md:leading-[1.04] lg:text-[5.5rem] lg:leading-[1.02] text-foreground tracking-tight max-w-4xl mx-auto animate-fade-up">
-            Tahvil değerleme.
+            {tr.landing.hero.titleLine1}
             <br />
-            <span className="text-primary">Yeniden tanımlandı.</span>
+            <span className="text-primary">{tr.landing.hero.titleLine2}</span>
           </h1>
 
           <p className="text-body-lg md:text-[1.25rem] md:leading-[1.6] text-muted-foreground max-w-2xl mx-auto mt-8 animate-fade-up-delay-1">
-            Borsa İstanbul borçlanma araçlarını gerçek zamanlı takip edin.
-            TLREF endeks, getiri analizi ve risk hesaplamalarını
-            tek bir platformda birleştirdik.
+            {tr.landing.hero.description}
           </p>
 
           <div className="flex items-center justify-center gap-4 mt-10 animate-fade-up-delay-2">
             <Link href="/signup">
               <Button size="lg" className="px-8 text-[17px] h-14 rounded-2xl shadow-md hover:shadow-lg">
-                Ücretsiz Başlat
+                {tr.landing.hero.ctaStart}
                 <ArrowRight className="h-5 w-5 ml-1" />
               </Button>
             </Link>
@@ -141,7 +140,7 @@ export default function LandingPage() {
                 variant="outline"
                 className="px-8 text-[17px] h-14 rounded-2xl"
               >
-                Giriş Yap
+                {tr.landing.hero.ctaLogin}
               </Button>
             </Link>
           </div>
@@ -156,7 +155,7 @@ export default function LandingPage() {
               <div className="flex items-center gap-3">
                 <span className="h-2 w-2 rounded-full bg-positive live-indicator" />
                 <span className="text-[15px] font-semibold text-foreground">
-                  Canlı Piyasa Verisi
+                  {tr.landing.ticker.title}
                 </span>
               </div>
               <span className="text-[13px] text-muted-foreground">
@@ -166,41 +165,41 @@ export default function LandingPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
               {[
                 {
-                  label: "TLREF Endeks",
+                  label: tr.landing.ticker.labels.tlrefIndex,
                   value: formatDecimal(summary?.tlref_index, 2),
                   highlight: true,
                   large: true,
                 },
                 ...(summary?.tlref_index_change_pct != null
                   ? [
-                      {
-                        label: "Düne Göre",
-                        value: `${summary!.tlref_index_change_pct >= 0 ? "+" : ""}${summary!.tlref_index_change_pct}%`,
-                        positive: summary!.tlref_index_change_pct >= 0,
-                      },
-                    ]
-                  : [{ label: "Düne Göre", value: "—" }]),
+                    {
+                      label: tr.landing.ticker.labels.comparedToYesterday,
+                      value: `${summary!.tlref_index_change_pct >= 0 ? "+" : ""}${summary!.tlref_index_change_pct}%`,
+                      positive: summary!.tlref_index_change_pct >= 0,
+                    },
+                  ]
+                  : [{ label: tr.landing.ticker.labels.comparedToYesterday, value: "—" }]),
                 {
-                  label: "Günlük Oran",
+                  label: tr.landing.ticker.labels.dailyRate,
                   value: formatPercentFromDecimal(summary?.tlref_daily_rate, 4),
                   positive: true,
                 },
                 {
-                  label: "Yıllık Oran",
+                  label: tr.landing.ticker.labels.annualizedRate,
                   value:
                     summary?.tlref_annualized_rate != null
                       ? formatPercent(summary.tlref_annualized_rate)
                       : "—",
                 },
                 {
-                  label: "Aktif Araç",
+                  label: tr.landing.ticker.labels.totalBonds,
                   value: formatDecimal(summary?.total_bonds, 0),
                 },
                 {
-                  label: "TLREF Kayıt",
+                  label: tr.landing.ticker.labels.totalRecords,
                   value: formatDecimal(summary?.total_tlref_records, 0),
                 },
-                { label: "Son Tarih", value: formatDate(summary?.tlref_date) },
+                { label: tr.landing.ticker.labels.lastDate, value: formatDate(summary?.tlref_date) },
               ].map((item, i) => (
                 <div
                   key={i}
@@ -210,17 +209,15 @@ export default function LandingPage() {
                     {item.label}
                   </span>
                   <span
-                    className={`font-mono-data ${
-                      (item as any).large
-                        ? "text-[1.75rem] font-bold leading-none"
-                        : "text-[1.125rem] font-semibold leading-tight"
-                    } ${
-                      (item as any).highlight
+                    className={`font-mono-data ${(item as any).large
+                      ? "text-[1.75rem] font-bold leading-none"
+                      : "text-[1.125rem] font-semibold leading-tight"
+                      } ${(item as any).highlight
                         ? "text-primary"
                         : (item as any).positive
                           ? "text-positive"
                           : "text-foreground"
-                    }`}
+                      }`}
                   >
                     {item.value}
                   </span>
@@ -236,52 +233,37 @@ export default function LandingPage() {
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <span className="text-[13px] font-medium text-primary uppercase tracking-wider">
-              Nasıl Çalışır
+              {tr.landing.howItWorks.badge}
             </span>
             <h2 className="text-display-lg md:text-[2.75rem] text-foreground mt-3 tracking-tight">
-              Üç adımda başlayın.
+              {tr.landing.howItWorks.title}
             </h2>
           </div>
           <div className="grid md:grid-cols-3 gap-8 lg:gap-14">
             {[
-              {
-                icon: UserPlus,
-                step: "01",
-                title: "Kayıt olun",
-                desc: "Ücretsiz hesap oluşturun. E-posta doğrulamasından sonra tüm verilere erişebilirsiniz.",
-              },
-              {
-                icon: Search,
-                step: "02",
-                title: "Araç keşfedin",
-                desc: "ISIN kodu veya ihraççıya göre arama yapın. 2.100+ borçlanma aracını filtreleyin, karşılaştırın.",
-              },
-              {
-                icon: BarChart3,
-                step: "03",
-                title: "Analiz edin",
-                desc: "Vadeye getiri, kirli fiyat, modifiye durasyon ve senaryo analizi ile riskinizi ölçün.",
-              },
-            ].map((item) => (
-              <div
-                key={item.step}
-                className="group relative bg-card rounded-3xl border border-border p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all duration-300"
-              >
-                <span className="text-[4rem] font-bold text-border/70 leading-none absolute top-6 right-8 select-none pointer-events-none">
-                  {item.step}
-                </span>
-                <div className="relative z-10">
-                  <div className="rounded-2xl bg-primary/8 w-14 h-14 flex items-center justify-center mb-6">
-                    <item.icon className="h-6 w-6 text-primary" />
-                  </div>
-                  <h3 className="font-semibold text-[20px] text-foreground mb-3 tracking-tight">
-                    {item.title}
-                  </h3>
-                  <p className="text-[15px] text-muted-foreground leading-relaxed">
-                    {item.desc}
-                  </p>
+              { step: "01", icon: UserPlus },
+              { step: "02", icon: Search },
+              { step: "03", icon: BarChart3 },
+            ].map((item, i) => (
+            <div
+              key={item.step}
+              className="group relative bg-card rounded-3xl border border-border p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all duration-300"
+            >
+              <span className="text-[4rem] font-bold text-border/70 leading-none absolute top-6 right-8 select-none pointer-events-none">
+                {item.step}
+              </span>
+              <div className="relative z-10">
+                <div className="rounded-2xl bg-primary/8 w-14 h-14 flex items-center justify-center mb-6">
+                  <item.icon className="h-6 w-6 text-primary" />
                 </div>
+                <h3 className="font-semibold text-[20px] text-foreground mb-3 tracking-tight">
+                  {tr.landing.howItWorks.steps[i].title}
+                </h3>
+                <p className="text-[15px] text-muted-foreground leading-relaxed">
+                  {tr.landing.howItWorks.steps[i].desc}
+                </p>
               </div>
+            </div>
             ))}
           </div>
         </div>
@@ -292,50 +274,35 @@ export default function LandingPage() {
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <span className="text-[13px] font-medium text-primary uppercase tracking-wider">
-              Rakamlarla Bondley
+              {tr.landing.stats.badge}
             </span>
             <h2 className="text-display-lg md:text-[2.75rem] text-foreground mt-3 tracking-tight">
-              Piyasayı yakından takip edin.
+              {tr.landing.stats.title}
             </h2>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              {
-                number: "2.100+",
-                label: "Borçlanma Aracı",
-                desc: "Devlet tahvili, hazine bonosu, özel sektör tahvili, kira sertifikası ve VDMK.",
-                icon: List,
-              },
-              {
-                number: "1.679+",
-                label: "TLREF Kayıt",
-                desc: "Haziran 2019'dan bugüne, tüm BIST TLREF Endeks verilerinin tarihsel arşivi.",
-                icon: LineChart,
-              },
-              {
-                number: "18:30",
-                label: "Otomatik Güncelleme",
-                desc: "Her iş günü Borsa İstanbul'dan otomatik veri çekimi ve dağıtım.",
-                icon: RefreshCw,
-              },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="bg-card rounded-3xl border border-border p-10 shadow-[0_1px_3px_rgba(0,0,0,0.04)] text-center hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-shadow"
-              >
-                <div className="rounded-2xl bg-primary/8 w-14 h-14 flex items-center justify-center mx-auto mb-6">
-                  <item.icon className="h-6 w-6 text-primary" />
-                </div>
-                <div className="font-mono-data text-[2.5rem] font-bold text-primary leading-none mb-3 tracking-tight">
-                  {item.number}
-                </div>
-                <div className="text-[15px] font-semibold text-foreground mb-3">
-                  {item.label}
-                </div>
-                <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs mx-auto">
-                  {item.desc}
-                </p>
+              { label: "bonds", number: "2.100+", icon: TrendingUp },
+              { label: "tlref", number: "1.700+", icon: LineChart },
+              { label: "update", number: "Her Gün", icon: RefreshCw },
+            ].map((item, i) => (
+            <div
+              key={item.label}
+              className="bg-card rounded-3xl border border-border p-10 shadow-[0_1px_3px_rgba(0,0,0,0.04)] text-center hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-shadow"
+            >
+              <div className="rounded-2xl bg-primary/8 w-14 h-14 flex items-center justify-center mx-auto mb-6">
+                <item.icon className="h-6 w-6 text-primary" />
               </div>
+              <div className="font-mono-data text-[2.5rem] font-bold text-primary leading-none mb-3 tracking-tight">
+                {item.number}
+              </div>
+              <div className="text-[15px] font-semibold text-foreground mb-3">
+                {tr.landing.stats.items[i].label}
+              </div>
+              <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs mx-auto">
+                {tr.landing.stats.items[i].desc}
+              </p>
+            </div>
             ))}
           </div>
         </div>
@@ -346,62 +313,38 @@ export default function LandingPage() {
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <span className="text-[13px] font-medium text-primary uppercase tracking-wider">
-              Özellikler
+              {tr.landing.features.badge}
             </span>
             <h2 className="text-display-lg md:text-[2.75rem] text-foreground mt-3 tracking-tight">
-              Her ihtiyacınız için.
+              {tr.landing.features.title}
             </h2>
             <p className="text-[17px] text-muted-foreground mt-4 max-w-xl mx-auto">
-              Profesyonel yatırımcılar için tasarlanmış kapsamlı araç seti.
+              {tr.landing.features.description}
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              {
-                icon: List,
-                title: "Borçlanma Araçları",
-                desc: "Para birimi, vade, getiri türü ve ihraççıya göre gelişmiş filtreleme. 2.100+ aktif araç.",
-              },
-              {
-                icon: LineChart,
-                title: "TLREF Grafikleri",
-                desc: "Tarihsel endeks değeri ve günlük oran grafikleri. İnteraktif ve dışa aktarılabilir.",
-              },
-              {
-                icon: Star,
-                title: "Favoriler & Watchlist",
-                desc: "Sık takip ettiğiniz araçları favorilere ekleyin. Dashboard'dan tek tıkla erişin.",
-              },
-              {
-                icon: Bell,
-                title: "Akıllı Uyarılar",
-                desc: "YTM eşiği, TLREF oran değişimi veya vadeye kalan gün koşuluna göre e-posta bildirimleri.",
-              },
-              {
-                icon: Calculator,
-                title: "Getiri & Risk",
-                desc: "Vadeye getiri (YTM), kirli fiyat, modifiye durasyon, konveksite ve senaryo analizi.",
-              },
-              {
-                icon: TrendingUp,
-                title: "Piyasa Verisi",
-                desc: "Temiz fiyat, kirli fiyat, kupon ödeme planı ve KAP bildirim verileri tek ekranda.",
-              },
-            ].map((item) => (
-              <div
-                key={item.title}
-                className="group rounded-3xl border border-border bg-card p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all duration-300"
-              >
-                <div className="rounded-2xl bg-primary/8 w-12 h-12 flex items-center justify-center mb-5 group-hover:bg-primary/12 transition-colors">
-                  <item.icon className="h-5 w-5 text-primary" />
-                </div>
-                <h3 className="font-semibold text-[17px] text-foreground mb-2 tracking-tight">
-                  {item.title}
-                </h3>
-                <p className="text-[15px] text-muted-foreground leading-relaxed">
-                  {item.desc}
-                </p>
+              { title: "bonds", icon: List },
+              { title: "tlref", icon: LineChart },
+              { title: "favorites", icon: Star },
+              { title: "alerts", icon: Bell },
+              { title: "yield", icon: Calculator },
+              { title: "market", icon: Shield },
+            ].map((item, i) => (
+            <div
+              key={item.title}
+              className="group rounded-3xl border border-border bg-card p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all duration-300"
+            >
+              <div className="rounded-2xl bg-primary/8 w-12 h-12 flex items-center justify-center mb-5 group-hover:bg-primary/12 transition-colors">
+                <item.icon className="h-5 w-5 text-primary" />
               </div>
+              <h3 className="font-semibold text-[17px] text-foreground mb-2 tracking-tight">
+                {tr.landing.features.items[i].title}
+              </h3>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">
+                {tr.landing.features.items[i].desc}
+              </p>
+            </div>
             ))}
           </div>
         </div>
@@ -416,16 +359,15 @@ export default function LandingPage() {
             <div className="relative z-10">
               <Zap className="h-10 w-10 text-primary mx-auto mb-6" />
               <h2 className="text-display-lg md:text-[2.75rem] text-foreground tracking-tight mb-4">
-                Hemen başlayın.
+                {tr.landing.cta.title}
               </h2>
               <p className="text-[17px] text-muted-foreground max-w-lg mx-auto mb-10">
-                Ücretsiz hesap oluşturun ve Türkiye borçlanma araçları
-                piyasasını profesyonel araçlarla analiz etmeye başlayın.
+                {tr.landing.cta.description}
               </p>
               <div className="flex items-center justify-center gap-4">
                 <Link href="/signup">
                   <Button size="lg" className="px-8 text-[17px] h-14 rounded-2xl shadow-md">
-                    Ücretsiz Hesap Oluştur
+                    {tr.landing.cta.button}
                     <ArrowRight className="h-5 w-5 ml-1" />
                   </Button>
                 </Link>
@@ -439,9 +381,9 @@ export default function LandingPage() {
       <section className="container mx-auto pb-20">
         <div className="flex flex-wrap justify-center gap-x-16 gap-y-6">
           {[
-            { icon: Shield, text: "BIST resmî veri kaynağı" },
-            { icon: RefreshCw, text: "Her iş günü otomatik güncelleme" },
-            { icon: Lock, text: "Güvenli hesap & 2FA desteği" },
+            { icon: Shield, text: tr.landing.trust[0] },
+            { icon: RefreshCw, text: tr.landing.trust[1] },
+            { icon: Lock, text: tr.landing.trust[2] },
           ].map((item) => (
             <div key={item.text} className="flex items-center gap-3">
               <item.icon className="h-5 w-5 text-primary/70 shrink-0" />
@@ -474,23 +416,23 @@ export default function LandingPage() {
                 href="/gizlilik"
                 className="hover:text-primary transition-colors"
               >
-                Gizlilik
+                {tr.landing.footer.privacy}
               </Link>
               <Link
                 href="/kullanim-sartlari"
                 className="hover:text-primary transition-colors"
               >
-                Kullanım Şartları
+                {tr.landing.footer.terms}
               </Link>
               <Link
                 href="/iletisim"
                 className="hover:text-primary transition-colors"
               >
-                İletişim
+                {tr.landing.footer.contact}
               </Link>
             </div>
             <span className="text-[13px] text-muted-foreground/50">
-              İstanbul, Türkiye
+              {tr.landing.footer.location}
             </span>
           </div>
         </div>

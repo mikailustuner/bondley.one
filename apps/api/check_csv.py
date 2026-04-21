@@ -19,10 +19,3 @@ async def check():
 
 if __name__ == "__main__":
     asyncio.run(check())
-
-
-
-
-docker exec -it fincalc-postgres psql -U bondley -d bondley -c "UPDATE tlref_rates SET index_value = 5714.02026 WHERE rate_date = '2026-04-16';"
-docker exec -it fincalc-postgres psql -U fincalc -d fincalc -c "SELECT rate_date, index_value, daily_rate FROM tlref_rates ORDER BY rate_date DESC LIMIT 10;"
-docker exec -it fincalc-postgres psql -U bondley -d bondley -c "SELECT rate_date, index_value, daily_rate FROM tlref_rates ORDER BY rate_date DESC LIMIT 10;"

@@ -10,13 +10,14 @@ import { AlertCircle, Bell, Plus, Pencil, Trash2 } from "lucide-react";
 import { api, AlertRecord, BondListItem } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
+import { tr } from "@/locales/tr";
 
 const ALERT_TYPES: { value: string; label: string }[] = [
-  { value: "ytm_above", label: "YTM şu değerin üzerinde" },
-  { value: "ytm_below", label: "YTM şu değerin altında" },
-  { value: "tlref_daily_above", label: "TLREF günlük oran şu değerin üzerinde (%)" },
-  { value: "tlref_daily_below", label: "TLREF günlük oran şu değerin altında (%)" },
-  { value: "days_to_maturity", label: "Vadeye X gün kala" },
+  { value: "ytm_above", label: tr.alerts.types.ytm_above },
+  { value: "ytm_below", label: tr.alerts.types.ytm_below },
+  { value: "tlref_daily_above", label: tr.alerts.types.tlref_daily_above },
+  { value: "tlref_daily_below", label: tr.alerts.types.tlref_daily_below },
+  { value: "days_to_maturity", label: tr.alerts.types.days_to_maturity },
 ];
 
 export default function AlertsPage() {
@@ -36,7 +37,7 @@ export default function AlertsPage() {
   function load() {
     const token = getToken();
     if (!token) {
-      setError("Giriş yapmanız gerekiyor");
+      setError(tr.alerts.errors.notLoggedIn);
       setLoading(false);
       return;
     }
@@ -52,7 +53,7 @@ export default function AlertsPage() {
         setTriggered(trig);
         setBonds(bondList.items || []);
       })
-      .catch(() => setError("Uyarılar yüklenemedi"))
+      .catch(() => setError(tr.alerts.errors.load))
       .finally(() => setLoading(false));
   }
 
@@ -61,9 +62,9 @@ export default function AlertsPage() {
   }, []);
 
   useEffect(() => {
-    document.title = "Uyarılarım — Bondley";
+    document.title = `${tr.alerts.title} — ${tr.common.brand}`;
     return () => {
-      document.title = "Bondley";
+      document.title = tr.common.brand;
     };
   }, []);
 
@@ -109,18 +110,18 @@ export default function AlertsPage() {
         setFormOpen(false);
         load();
       })
-      .catch(() => setError("Kaydetme başarısız"))
+      .catch(() => setError(tr.alerts.errors.save))
       .finally(() => setSubmitting(false));
   }
 
   function deleteAlert(id: number) {
     const token = getToken();
     if (!token) return;
-    if (!confirm("Bu uyarıyı silmek istediğinize emin misiniz?")) return;
+    if (!confirm(tr.alerts.form.deleteConfirm)) return;
     api.alerts
       .delete(token, id)
       .then(() => load())
-      .catch(() => setError("Silme başarısız"));
+      .catch(() => setError(tr.alerts.errors.delete));
   }
 
   const typeLabel = (t: string) => ALERT_TYPES.find((x) => x.value === t)?.label ?? t;
@@ -132,24 +133,24 @@ export default function AlertsPage() {
     return (
       <EmptyState
         variant="error"
-        title="Giriş gerekli"
-        description="Uyarıları görüntülemek için giriş yapın."
-        action={{ label: "Giriş yap", href: "/login" }}
+        title={tr.alerts.errors.loginRequired}
+        description={tr.alerts.errors.loginDesc}
+        action={{ label: tr.alerts.errors.login, href: "/login" }}
         icon={<AlertCircle className="h-7 w-7" />}
       />
     );
 
   if (loading)
     return (
-      <div className="py-12 text-center text-muted-foreground text-[15px]">Yükleniyor...</div>
+      <div className="py-12 text-center text-muted-foreground text-[15px]">{tr.alerts.loading}</div>
     );
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-display-md text-foreground">Uyarılarım</h1>
+        <h1 className="text-display-md text-foreground">{tr.alerts.title}</h1>
         <p className="text-[15px] text-muted-foreground mt-1.5">
-          YTM, TLREF veya vadeye kalan güne göre özel uyarılar tanımlayın.
+          {tr.alerts.desc}
         </p>
       </div>
 
@@ -164,10 +165,10 @@ export default function AlertsPage() {
       {triggered.length > 0 && (
         <Card>
           <CardHeader>
-            <CardDescription>Tetiklenen Uyarılar</CardDescription>
+            <CardDescription>{tr.alerts.triggered.title}</CardDescription>
             <CardTitle className="mt-1 flex items-center gap-2">
               <Bell className="h-5 w-5" />
-              Son tetiklenen uyarılar
+              {tr.alerts.triggered.subtitle}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -186,14 +187,14 @@ export default function AlertsPage() {
                     )}
                     {a.last_triggered_at && (
                       <p className="text-[12px] text-muted-foreground mt-1">
-                        Tetiklenme: {formatDate(a.last_triggered_at)}
+                        {tr.alerts.triggered.label.replace("{date}", formatDate(a.last_triggered_at))}
                         {a.triggered_value_snapshot &&
                           ` — ${JSON.stringify(a.triggered_value_snapshot)}`}
                       </p>
                     )}
                   </div>
                   <Link href={`/dashboard/bonds/${(a.parameters as Record<string, string>)?.isin || ""}`}>
-                    <Button variant="outline" size="sm">Tahvil</Button>
+                    <Button variant="outline" size="sm">{tr.alerts.triggered.bond}</Button>
                   </Link>
                 </li>
               ))}
@@ -206,12 +207,12 @@ export default function AlertsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardDescription>Uyarılarım</CardDescription>
-              <CardTitle className="mt-1">Tüm uyarılar</CardTitle>
+              <CardDescription>{tr.alerts.list.desc}</CardDescription>
+              <CardTitle className="mt-1">{tr.alerts.list.title}</CardTitle>
             </div>
             <Button onClick={openAdd} className="gap-2">
               <Plus className="h-4 w-4" />
-              Uyarı ekle
+              {tr.alerts.list.add}
             </Button>
           </div>
         </CardHeader>
@@ -219,10 +220,10 @@ export default function AlertsPage() {
           {formOpen && (
             <div className="mb-6 rounded-xl border border-border bg-secondary/20 p-5 space-y-4">
               <h3 className="font-semibold text-[17px] text-foreground">
-                {editingId ? "Uyarıyı düzenle" : "Yeni uyarı"}
+                {editingId ? tr.alerts.form.edit : tr.alerts.form.new}
               </h3>
               <div>
-                <label className="block text-[15px] font-medium text-foreground mb-1.5">Tür</label>
+                <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.alerts.form.type}</label>
                 <select
                   value={formType}
                   onChange={(e) => setFormType(e.target.value)}
@@ -237,13 +238,13 @@ export default function AlertsPage() {
               </div>
               {needIsin && (
                 <div>
-                  <label className="block text-[15px] font-medium text-foreground mb-1.5">Tahvil (ISIN)</label>
+                  <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.alerts.form.isin}</label>
                   <select
                     value={formIsin}
                     onChange={(e) => setFormIsin(e.target.value)}
                     className="w-full h-11 rounded-[10px] border border-border bg-card px-4 py-2.5 text-[15px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                   >
-                    <option value="">Seçin</option>
+                    <option value="">{tr.alerts.form.select}</option>
                     {bonds.map((b) => (
                       <option key={b.id} value={b.isin_code}>
                         {b.isin_code} — {b.issuer || ""}
@@ -255,7 +256,7 @@ export default function AlertsPage() {
               {needThreshold && (
                 <div>
                   <label className="block text-[15px] font-medium text-foreground mb-1.5">
-                    Eşik {formType.includes("ytm") ? "(%)" : formType.includes("tlref") ? "(%, örn. 1)" : ""}
+                    {tr.alerts.form.threshold.replace("{unit}", formType.includes("ytm") ? "(%)" : formType.includes("tlref") ? "(%, örn. 1)" : "")}
                   </label>
                   <input
                     type="number"
@@ -269,7 +270,7 @@ export default function AlertsPage() {
               )}
               {needDays && (
                 <div>
-                  <label className="block text-[15px] font-medium text-foreground mb-1.5">Vadeye kalan gün</label>
+                  <label className="block text-[15px] font-medium text-foreground mb-1.5">{tr.alerts.form.days}</label>
                   <input
                     type="number"
                     min="1"
@@ -282,10 +283,10 @@ export default function AlertsPage() {
               )}
               <div className="flex gap-3 pt-1">
                 <Button onClick={() => submitForm()} disabled={submitting}>
-                  {submitting ? "Kaydediliyor..." : "Kaydet"}
+                  {submitting ? tr.alerts.form.saving : tr.alerts.form.save}
                 </Button>
                 <Button variant="outline" onClick={() => setFormOpen(false)}>
-                  İptal
+                  {tr.alerts.form.cancel}
                 </Button>
               </div>
             </div>
@@ -293,7 +294,7 @@ export default function AlertsPage() {
 
           {alerts.length === 0 ? (
             <p className="text-[15px] text-muted-foreground py-4">
-              Henüz uyarı tanımlanmamış. &quot;Uyarı ekle&quot; ile ekleyin.
+              {tr.alerts.empty}
             </p>
           ) : (
             <ul className="space-y-2">
@@ -304,7 +305,7 @@ export default function AlertsPage() {
                 >
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-[15px]">{typeLabel(a.type)}</span>
-                    {!a.is_active && <Badge variant="secondary">Pasif</Badge>}
+                    {!a.is_active && <Badge variant="secondary">{tr.alerts.list.passive}</Badge>}
                     {Boolean((a.parameters as Record<string, unknown>)?.isin) && (
                       <Link
                         href={`/dashboard/bonds/${(a.parameters as Record<string, string>).isin}`}

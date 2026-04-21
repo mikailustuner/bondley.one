@@ -6,6 +6,8 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
+import { tr } from "@/locales/tr";
+
 export default function Error({
   error,
   reset,
@@ -24,7 +26,7 @@ export default function Error({
           <div className="inline-flex h-16 w-16 items-center justify-center mb-6">
             <Image
               src="/logo.png"
-              alt="Bondley Logo"
+              alt={`${tr.common.brand} Logo`}
               width={64}
               height={64}
               className="h-16 w-16 object-contain"
@@ -32,18 +34,18 @@ export default function Error({
             />
           </div>
           <h1 className="text-display-md text-foreground mb-3">
-            Beklenmeyen bir hata oluştu
+            {tr.common.errorPage.title}
           </h1>
           <p className="text-[15px] text-muted-foreground mb-8">
-            Üzgünüz, bir şeyler ters gitti. Lütfen tekrar deneyin.
+            {tr.common.errorPage.description}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button onClick={reset} variant="default" className="w-full sm:w-auto">
-              Yeniden Dene
+              {tr.common.errorPage.retry}
             </Button>
             <Link href="/landing">
               <Button variant="outline" className="w-full sm:w-auto">
-                Ana Sayfaya Dön
+                {tr.common.errorPage.backToHome}
               </Button>
             </Link>
           </div>

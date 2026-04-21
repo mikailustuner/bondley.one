@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { tr } from "@/locales/tr";
 
 type UserFormData = {
   email: string;
@@ -63,7 +64,7 @@ export function UserForm({ open, onOpenChange, onSubmit, initialData, mode }: Us
 
     try {
       if (mode === "create" && !formData.password) {
-        setError("Şifre gereklidir");
+        setError(tr.admin.users.form.passwordRequired);
         setLoading(false);
         return;
       }
@@ -79,7 +80,7 @@ export function UserForm({ open, onOpenChange, onSubmit, initialData, mode }: Us
         role: "free_user",
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Bir hata oluştu");
+      setError(err instanceof Error ? err.message : tr.admin.users.errors.generic);
     } finally {
       setLoading(false);
     }
@@ -89,17 +90,17 @@ export function UserForm({ open, onOpenChange, onSubmit, initialData, mode }: Us
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{mode === "create" ? "Yeni Kullanıcı" : "Kullanıcı Düzenle"}</DialogTitle>
+          <DialogTitle>{mode === "create" ? tr.admin.users.form.new : tr.admin.users.form.edit}</DialogTitle>
           <DialogDescription>
             {mode === "create"
-              ? "Yeni bir kullanıcı hesabı oluşturun"
-              : "Kullanıcı bilgilerini güncelleyin"}
+              ? tr.admin.users.form.newDesc
+              : tr.admin.users.form.editDesc}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="email">E-posta</Label>
+              <Label htmlFor="email">{tr.auth.login.emailLabel}</Label>
               <Input
                 id="email"
                 type="email"
@@ -111,7 +112,7 @@ export function UserForm({ open, onOpenChange, onSubmit, initialData, mode }: Us
             </div>
             {mode === "create" && (
               <div className="space-y-2">
-                <Label htmlFor="password">Şifre</Label>
+                <Label htmlFor="password">{tr.auth.signup.fields.password}</Label>
                 <Input
                   id="password"
                   type="password"
@@ -123,7 +124,7 @@ export function UserForm({ open, onOpenChange, onSubmit, initialData, mode }: Us
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="full_name">Ad Soyad</Label>
+              <Label htmlFor="full_name">{tr.auth.signup.fields.fullName}</Label>
               <Input
                 id="full_name"
                 value={formData.full_name}
@@ -131,7 +132,7 @@ export function UserForm({ open, onOpenChange, onSubmit, initialData, mode }: Us
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="company">Şirket</Label>
+              <Label htmlFor="company">{tr.auth.signup.fields.company}</Label>
               <Input
                 id="company"
                 value={formData.company}
@@ -139,7 +140,7 @@ export function UserForm({ open, onOpenChange, onSubmit, initialData, mode }: Us
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="location">Konum</Label>
+              <Label htmlFor="location">{tr.auth.signup.fields.location}</Label>
               <Input
                 id="location"
                 value={formData.location}
@@ -147,7 +148,7 @@ export function UserForm({ open, onOpenChange, onSubmit, initialData, mode }: Us
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="role">Rol</Label>
+              <Label htmlFor="role">{tr.admin.users.table.cols.role}</Label>
               <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
                 <SelectTrigger>
                   <SelectValue />
@@ -164,10 +165,10 @@ export function UserForm({ open, onOpenChange, onSubmit, initialData, mode }: Us
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-              İptal
+              {tr.common.cancel}
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Kaydediliyor..." : mode === "create" ? "Oluştur" : "Güncelle"}
+              {loading ? tr.common.saving : mode === "create" ? tr.common.create : tr.common.save}
             </Button>
           </DialogFooter>
         </form>

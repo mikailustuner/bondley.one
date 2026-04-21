@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api, type LoginResponse, type UserMe } from "@/lib/api-client";
 import { setAuth } from "@/lib/auth";
+import { tr } from "@/locales/tr";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -36,7 +37,7 @@ export default function LoginPage() {
       setAuth(tokenData.access_token, tokenData.refresh_token, tokenData.user);
       router.push(tokenData.user.role === "admin" ? "/admin" : "/dashboard");
     } catch (err: any) {
-      setError(err.message || "Giriş başarısız");
+      setError(err.message || tr.auth.login.error);
     } finally {
       setLoading(false);
     }
@@ -52,7 +53,7 @@ export default function LoginPage() {
       setAuth(data.access_token, data.refresh_token, data.user);
       router.push(data.user.role === "admin" ? "/admin" : "/dashboard");
     } catch (err: any) {
-      setError(err.message || "Doğrulama kodu geçersiz");
+      setError(err.message || tr.auth.login.mfaError);
     } finally {
       setLoading(false);
     }
@@ -72,27 +73,27 @@ export default function LoginPage() {
               priority
             />
           </div>
-          <h1 className="text-display-md text-foreground">Bondley</h1>
-          <p className="text-[13px] font-medium text-muted-foreground mt-2">Borçlanma Araçları Analiz Platformu</p>
+          <h1 className="text-display-md text-foreground">{tr.common.brand}</h1>
+          <p className="text-[13px] font-medium text-muted-foreground mt-2">{tr.auth.login.subtitle}</p>
         </div>
 
         <Card>
           <CardHeader className="pb-4">
             <CardDescription>
-              {mfaStep ? "İki Adımlı Doğrulama" : "Kimlik Doğrulama"}
+              {mfaStep ? tr.auth.login.mfaSubtitle : tr.auth.login.subtitle}
             </CardDescription>
             <CardTitle className="mt-1">
-              {mfaStep ? "Doğrulama Kodu" : "Giriş Yap"}
+              {mfaStep ? tr.auth.login.mfaTitle : tr.auth.login.title}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {mfaStep ? (
               <form onSubmit={handleMfaSubmit} className="space-y-4">
                 <p className="text-[13px] text-muted-foreground">
-                  Authenticator uygulamanızdan 6 haneli kodu girin (veya yedek kodu).
+                  {tr.auth.login.mfaDescription}
                 </p>
                 <div className="space-y-2">
-                  <label className="text-[15px] font-medium text-foreground">Kod</label>
+                  <label className="text-[15px] font-medium text-foreground">{tr.auth.login.mfaTitle}</label>
                   <Input
                     type="text"
                     inputMode="numeric"
@@ -110,7 +111,7 @@ export default function LoginPage() {
                   </div>
                 )}
                 <Button type="submit" className="w-full" disabled={loading || mfaCode.length < 6}>
-                  {loading ? "Doğrulanıyor..." : "Doğrula"}
+                  {loading ? tr.common.verifying : tr.auth.login.mfaSubmit}
                 </Button>
                 <Button
                   type="button"
@@ -119,26 +120,26 @@ export default function LoginPage() {
                   onClick={() => setMfaStep(null)}
                   disabled={loading}
                 >
-                  Geri
+                  {tr.common.back}
                 </Button>
               </form>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-[15px] font-medium text-foreground">E-posta</label>
+                  <label className="text-[15px] font-medium text-foreground">{tr.auth.login.emailLabel}</label>
                   <Input
                     type="email"
-                    placeholder="ornek@sirket.com"
+                    placeholder={tr.auth.login.emailPlaceholder}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[15px] font-medium text-foreground">Şifre</label>
+                  <label className="text-[15px] font-medium text-foreground">{tr.auth.login.passwordLabel}</label>
                   <Input
                     type="password"
-                    placeholder="••••••••"
+                    placeholder={tr.auth.login.passwordPlaceholder}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -150,19 +151,19 @@ export default function LoginPage() {
                   </div>
                 )}
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Doğrulanıyor..." : "Giriş Yap"}
+                  {loading ? tr.common.verifying : tr.auth.login.submit}
                 </Button>
               </form>
             )}
 
             <div className="mt-6 pt-5 border-t border-border/50 text-center">
               <p className="text-[15px] text-muted-foreground">
-                Hesabınız yok mu?{" "}
+                {tr.auth.login.noAccount}{" "}
                 <Link
                   href="/signup"
                   className="text-primary hover:text-primary/80 font-medium transition-colors"
                 >
-                  Kayıt Ol
+                  {tr.auth.login.signupLink}
                 </Link>
               </p>
             </div>

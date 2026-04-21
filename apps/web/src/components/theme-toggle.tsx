@@ -3,6 +3,7 @@
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { tr } from "@/locales/tr";
 
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
@@ -26,7 +27,7 @@ export function ThemeToggle({ className }: { className?: string }) {
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
         className
       )}
-      aria-label={isDark ? "Açık temaya geç" : "Koyu temaya geç"}
+      aria-label={isDark ? tr.components.themeToggle.toLight : tr.components.themeToggle.toDark}
     >
       <svg
         className={cn(

@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { tr } from "@/locales/tr";
 
 export default function NotFound() {
   return (
@@ -18,19 +19,19 @@ export default function NotFound() {
               priority
             />
           </div>
-          <h1 className="text-display-md text-foreground mb-3">Sayfa bulunamadı</h1>
+           <h1 className="text-display-md text-foreground mb-3">{tr.error.notFound.title}</h1>
           <p className="text-[15px] text-muted-foreground mb-8">
-            Aradığınız sayfa mevcut değil veya taşınmış olabilir.
+            {tr.error.notFound.description}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/landing">
               <Button variant="default" className="w-full sm:w-auto">
-                Ana Sayfaya Dön
+                {tr.error.notFound.backHome}
               </Button>
             </Link>
             <Link href="/dashboard">
               <Button variant="outline" className="w-full sm:w-auto">
-                Dashboard&apos;a Git
+                {tr.error.notFound.goDashboard}
               </Button>
             </Link>
           </div>

@@ -6,6 +6,25 @@ type FetchOptions = RequestInit & { token?: string; skipRefresh?: boolean };
 let isRefreshing = false;
 let refreshPromise: Promise<string | null> | null = null;
 
+const inFlight = new Map<string, Promise<unknown>>();
+
+async function resilientFetch(url: string, init: RequestInit, maxRetries = 2): Promise<Response> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    if (attempt > 0) {
+      const backoff = Math.min(500 * 2 ** (attempt - 1) + Math.random() * 300, 8000);
+      await new Promise((r) => setTimeout(r, backoff));
+    }
+    try {
+      const res = await fetch(url, init);
+      if (res.status >= 500 && attempt < maxRetries) continue;
+      return res;
+    } catch (err) {
+      if (attempt === maxRetries) throw err;
+    }
+  }
+  throw new Error("Max retries exceeded");
+}
+
 async function refreshAccessToken(): Promise<string | null> {
   // If already refreshing, wait for the existing promise
   if (isRefreshing && refreshPromise) {
@@ -50,7 +69,7 @@ async function refreshAccessToken(): Promise<string | null> {
   return refreshPromise;
 }
 
-async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
+async function _apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
   const { token, headers: customHeaders, skipRefresh = false, ...rest } = options;
 
   const headers: Record<string, string> = {
@@ -64,18 +83,15 @@ async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promis
     headers["Authorization"] = `Bearer ${currentToken}`;
   }
 
-  let res = await fetch(`${API_BASE}${endpoint}`, { headers, ...rest });
+  let res = await resilientFetch(`${API_BASE}${endpoint}`, { headers, ...rest });
 
-  // Handle 401 Unauthorized - try to refresh token
   if (res.status === 401 && !skipRefresh && endpoint !== "/auth/refresh" && endpoint !== "/auth/login" && endpoint !== "/auth/signup" && endpoint !== "/auth/mfa/verify") {
     const newToken = await refreshAccessToken();
 
     if (newToken) {
-      // Retry the original request with new token
       headers["Authorization"] = `Bearer ${newToken}`;
-      res = await fetch(`${API_BASE}${endpoint}`, { headers, ...rest });
+      res = await resilientFetch(`${API_BASE}${endpoint}`, { headers, ...rest });
     } else {
-      // Refresh failed, redirect to login
       if (typeof window !== "undefined") {
         window.location.href = "/login";
       }
@@ -98,6 +114,20 @@ async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promis
 
   if (res.status === 204) return undefined as T;
   return res.json();
+}
+
+async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
+  const method = (options.method ?? "GET").toUpperCase();
+  if (method !== "GET") return _apiFetch<T>(endpoint, options);
+
+  const key = `${endpoint}::${options.token ?? ""}`;
+  const existing = inFlight.get(key);
+  if (existing) return existing as Promise<T>;
+
+  const promise = _apiFetch<T>(endpoint, options);
+  inFlight.set(key, promise);
+  promise.finally(() => inFlight.delete(key));
+  return promise;
 }
 
 // --- TLREF Types ---
@@ -136,9 +166,10 @@ export interface PublicSummary {
 }
 
 // --- Bond Types ---
-// API units: last_issue_yield, first_issue_yield = percent (e.g. 44.5 = 44.5%). Display with formatPercent().
-// next_coupon_rate = decimal (e.g. 0.05 = 5%). Display with formatPercentFromDecimal().
-// BondCalculatedMetrics rates (yield_to_maturity, spread, annual_*, periodic_coupon_rate) = decimal. Use formatPercentFromDecimal().
+// API units: last_issue_yield, first_issue_yield, next_coupon_rate, spread (bond root) = percent
+//   (e.g. 44.5 = 44.5%). Display with formatPercent().
+// BondCalculatedMetrics rates (yield_to_maturity, spread, annual_*, periodic_coupon_rate) = decimal
+//   (e.g. 0.05 = 5%). Use formatPercentFromDecimal().
 // rate_change_today_pct = already in percent. Use formatPercent().
 
 export interface BondListItem {

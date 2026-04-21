@@ -7,12 +7,13 @@ import { TlrefIndexChart } from "@/components/charts/tlref-index-chart";
 import { TlrefRateChart } from "@/components/charts/tlref-rate-chart";
 import { useTlrefHistory } from "@/hooks/use-tlref-history";
 import { formatDecimal, formatPercent } from "@/lib/utils";
+import { tr } from "@/locales/tr";
 
 export default function AnalyticsPage() {
   useEffect(() => {
-    document.title = "Analiz — Bondley";
+    document.title = `${tr.analytics.title} — ${tr.common.brand}`;
     return () => {
-      document.title = "Bondley";
+      document.title = tr.common.brand;
     };
   }, []);
   const { history, indexData, rateData, bondStats, loading } = useTlrefHistory();
@@ -20,7 +21,7 @@ export default function AnalyticsPage() {
   if (loading) {
     return (
       <div className="py-12 text-center text-muted-foreground text-[15px]">
-        Analiz verileri yükleniyor...
+        {tr.analytics.loading}
       </div>
     );
   }
@@ -51,19 +52,19 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-8">
       <div className="animate-fade-up">
-        <h1 className="text-display-md text-foreground">Analiz</h1>
+        <h1 className="text-display-md text-foreground">{tr.analytics.title}</h1>
         <p className="text-[15px] text-muted-foreground mt-1.5">
-          BIST TLREF Endeks & Borçlanma Araçları Dağılım Analizi
+          {tr.analytics.desc}
         </p>
       </div>
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4 animate-fade-up">
         {[
-          { label: "Toplam Getiri", value: totalReturnPct != null ? formatPercent(totalReturnPct) : "—", sub: "Kümülatif", highlight: true },
-          { label: "Ort. Günlük", value: avgDailyRatePct != null ? formatPercent(avgDailyRatePct) : "—", sub: "Son 30 gün" },
-          { label: "En Düşük", value: minIndex != null ? formatDecimal(minIndex, 2) : "—", sub: "Endeks" },
-          { label: "En Yüksek", value: maxIndex != null ? formatDecimal(maxIndex, 2) : "—", sub: "Endeks" },
+          { label: tr.analytics.stats.totalReturn, value: totalReturnPct != null ? formatPercent(totalReturnPct) : "—", sub: tr.analytics.stats.cumulative, highlight: true },
+          { label: tr.analytics.stats.avgDaily, value: avgDailyRatePct != null ? formatPercent(avgDailyRatePct) : "—", sub: tr.analytics.stats.last30 },
+          { label: tr.analytics.stats.min, value: minIndex != null ? formatDecimal(minIndex, 2) : "—", sub: tr.analytics.stats.index },
+          { label: tr.analytics.stats.max, value: maxIndex != null ? formatDecimal(maxIndex, 2) : "—", sub: tr.analytics.stats.index },
         ].map((stat) => (
           <div key={stat.label} className="bg-card rounded-3xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <div className="text-[13px] font-medium text-muted-foreground mb-2">{stat.label}</div>
@@ -80,10 +81,10 @@ export default function AnalyticsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardDescription>BIST TLREF Endeksi</CardDescription>
-              <CardTitle className="mt-1">Tarihsel Endeks Grafiği</CardTitle>
+              <CardDescription>{tr.analytics.charts.tlrefIndex}</CardDescription>
+              <CardTitle className="mt-1">{tr.analytics.charts.tlrefIndexTitle}</CardTitle>
             </div>
-            <Badge variant="outline">{history.length} Gün</Badge>
+            <Badge variant="outline">{tr.analytics.charts.days.replace("{count}", history.length.toString())}</Badge>
           </div>
         </CardHeader>
         <CardContent>
@@ -95,10 +96,10 @@ export default function AnalyticsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardDescription>Günlük Oran Değişimi</CardDescription>
-              <CardTitle className="mt-1">Günlük TLREF Oranı (%)</CardTitle>
+              <CardDescription>{tr.analytics.charts.tlrefRate}</CardDescription>
+              <CardTitle className="mt-1">{tr.analytics.charts.tlrefRateTitle}</CardTitle>
             </div>
-            <Badge variant="outline">Son 90 Gün</Badge>
+            <Badge variant="outline">{tr.analytics.charts.last90}</Badge>
           </div>
         </CardHeader>
         <CardContent>
@@ -111,15 +112,15 @@ export default function AnalyticsPage() {
         <>
           <div className="animate-fade-up-delay-2">
             <h2 className="text-display-sm text-foreground mb-6">
-              Borçlanma Araçları Dağılım Analizi
+              {tr.analytics.distribution.title}
             </h2>
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2 animate-fade-up-delay-2">
             <Card>
               <CardHeader>
-                <CardDescription>Araç Türüne Göre</CardDescription>
-                <CardTitle className="mt-1">Menkul Kıymet Türü Dağılımı</CardTitle>
+                <CardDescription>{tr.analytics.distribution.bySecurityType}</CardDescription>
+                <CardTitle className="mt-1">{tr.analytics.distribution.securityTypeDist}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-0">
@@ -159,8 +160,8 @@ export default function AnalyticsPage() {
 
             <Card>
               <CardHeader>
-                <CardDescription>Getiri Türüne Göre</CardDescription>
-                <CardTitle className="mt-1">Getiri Türü Dağılımı</CardTitle>
+                <CardDescription>{tr.analytics.distribution.byYieldType}</CardDescription>
+                <CardTitle className="mt-1">{tr.analytics.distribution.yieldTypeDist}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-0">
@@ -201,8 +202,8 @@ export default function AnalyticsPage() {
 
           <Card className="animate-fade-up-delay-2">
             <CardHeader>
-              <CardDescription>Para Birimine Göre</CardDescription>
-              <CardTitle className="mt-1">Döviz Dağılımı</CardTitle>
+              <CardDescription>{tr.analytics.distribution.byCurrency}</CardDescription>
+              <CardTitle className="mt-1">{tr.analytics.distribution.currencyDist}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-4">

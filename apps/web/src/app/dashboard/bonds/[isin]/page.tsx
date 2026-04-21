@@ -10,6 +10,7 @@ import { FileQuestion, AlertCircle, ChevronLeft, ChevronRight, Star } from "luci
 import { api, BondDetail, TLREFRecord } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate, formatLastIssueDateText } from "@/lib/utils";
+import { tr } from "@/locales/tr";
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -83,13 +84,13 @@ export default function BondDetailPage({
 
   useEffect(() => {
     if (!isin) {
-      setError("Menkul kıymet kodu belirtilmedi");
+      setError(tr.bondDetails.errors.noIsin);
       setLoading(false);
       return;
     }
     const token = getToken();
     if (!token) {
-      setError("Giriş yapmanız gerekiyor");
+      setError(tr.bondDetails.errors.loginRequired);
       setLoading(false);
       return;
     }
@@ -100,7 +101,7 @@ export default function BondDetailPage({
     api.bonds
       .get(token, isin, { settlement_date: selectedDate })
       .then(setBond)
-      .catch((e) => setError(e?.message || "Borçlanma aracı bulunamadı"))
+      .catch((e) => setError(e?.message || tr.bondDetails.errors.notFound))
       .finally(() => {
         setLoading(false);
         setMetricsLoading(false);
@@ -109,9 +110,9 @@ export default function BondDetailPage({
   }, [isin, selectedDate]);
 
   useEffect(() => {
-    document.title = `${isin} — Bondley`;
+    document.title = `${isin} — ${tr.common.brand}`;
     return () => {
-      document.title = "Bondley";
+      document.title = tr.common.brand;
     };
   }, [isin]);
 
@@ -176,115 +177,145 @@ export default function BondDetailPage({
     return (
       <EmptyState
         variant="error"
-        title="Menkul kıymet kodu belirtilmedi"
+        title={tr.bondDetails.errors.noIsin}
         icon={<AlertCircle className="h-7 w-7" />}
-        action={{ label: "Listeye dön", href: "/dashboard/bonds" }}
+        action={{ label: tr.bondDetails.actions.backToList, href: "/dashboard/bonds" }}
       />
     );
   if (loading)
-    return <div className="py-12 text-center text-muted-foreground text-[15px]">Yükleniyor...</div>;
+    return <div className="py-12 text-center text-muted-foreground text-[15px]">{tr.bondDetails.loading}</div>;
   if (error)
     return (
       <EmptyState
         variant="error"
-        title={error === "Giriş yapmanız gerekiyor" ? "Giriş gerekli" : "Hata"}
+        title={error === tr.bondDetails.errors.loginRequired ? tr.bondDetails.errors.loginRequiredTitle : tr.bondDetails.errors.errorTitle}
         description={error}
         icon={<AlertCircle className="h-7 w-7" />}
         action={
-          error === "Giriş yapmanız gerekiyor"
-            ? { label: "Giriş yap", href: "/login" }
-            : { label: "Listeye dön", href: "/dashboard/bonds" }
+          error === tr.bondDetails.errors.loginRequired
+            ? { label: tr.bondDetails.errors.login, href: "/login" }
+            : { label: tr.bondDetails.errors.backToList, href: "/dashboard/bonds" }
         }
       />
     );
   if (!bond)
     return (
       <EmptyState
-        title="Borçlanma aracı bulunamadı"
-        description="Belirtilen ISIN ile bir tahvil kaydı bulunamadı."
+        title={tr.bondDetails.errors.notFound}
+        description={tr.bondDetails.errors.notFoundDesc}
         icon={<FileQuestion className="h-7 w-7" />}
-        action={{ label: "Listeye dön", href: "/dashboard/bonds" }}
+        action={{ label: tr.bondDetails.errors.backToList, href: "/dashboard/bonds" }}
       />
     );
 
+  const daysToNextCoupon = (() => {
+    if (!bond.next_coupon_date) return null;
+    const ncd = new Date(bond.next_coupon_date);
+    const ref = new Date(selectedDate);
+    if (Number.isNaN(ncd.getTime()) || Number.isNaN(ref.getTime())) return null;
+    const MS_PER_DAY = 1000 * 60 * 60 * 24;
+    return Math.round(
+      (Date.UTC(ncd.getFullYear(), ncd.getMonth(), ncd.getDate()) -
+        Date.UTC(ref.getFullYear(), ref.getMonth(), ref.getDate())) /
+      MS_PER_DAY
+    );
+  })();
+
   const topMetrics = [
     {
-      label: "Son İhraç Fiyatı",
+      label: tr.bondDetails.topMetrics.lastPrice,
       value: formatDecimal(bond.last_issue_price, 3),
       highlight: true,
     },
     {
-      label: "Son İhraç Getirisi",
+      label: tr.bondDetails.topMetrics.lastYield,
       value: bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—",
     },
     {
-      label: "Vadeye Kalan",
-      value: bond.days_to_maturity != null ? `${bond.days_to_maturity} gün` : "—",
+      label: tr.bondDetails.topMetrics.maturity,
+      value: bond.days_to_maturity != null ? tr.bondDetails.topMetrics.days.replace("{count}", bond.days_to_maturity.toString()) : "—",
     },
     {
-      label: "Kupon Oranı",
-      value: formatPercentFromDecimal(bond.next_coupon_rate, 4),
+      label: tr.bondDetails.topMetrics.nextCoupon,
+      value:
+        daysToNextCoupon != null
+          ? daysToNextCoupon > 0
+            ? tr.bondDetails.topMetrics.days.replace("{count}", daysToNextCoupon.toString())
+            : daysToNextCoupon === 0
+              ? tr.bondDetails.topMetrics.today
+              : tr.bondDetails.topMetrics.past
+          : "—",
     },
   ];
 
   const generalInfo = [
-    ["ISIN Kodu", bond.isin_code],
-    ["İhraççı", bond.issuer],
-    ...(bond.fund_user ? [["Fon Kullanıcısı", bond.fund_user]] : []),
-    ...(bond.source_institution ? [["Kaynak Kuruluş", bond.source_institution]] : []),
-    ["İhraç Türü", bond.issuance_type],
-    ["Getiri Türü", bond.yield_type],
-    ["MK Türü", bond.security_type],
-    ["Kupon Sıklığı", bond.coupon_frequency],
-    ["Para Birimi", bond.currency],
-    ["Grup Kodu", bond.group_code],
-    ["Detay Tipi", bond.security_type_detail],
-    ["Gün Sayım", bond.day_count_convention],
-    ["Emir Giriş Yöntemi", bond.quotation_method],
+    [tr.bondDetails.infoCards.general.isin, bond.isin_code],
+    [tr.bondDetails.infoCards.general.issuer, bond.issuer],
+    ...(bond.fund_user ? [[tr.bondDetails.infoCards.general.fundUser, bond.fund_user]] : []),
+    ...(bond.source_institution ? [[tr.bondDetails.infoCards.general.sourceInst, bond.source_institution]] : []),
+    [tr.bondDetails.infoCards.general.issuanceType, bond.issuance_type],
+    [tr.bondDetails.infoCards.general.yieldType, bond.yield_type],
+    [tr.bondDetails.infoCards.general.securityType, bond.security_type],
+    [tr.bondDetails.infoCards.general.couponFreq, bond.coupon_frequency],
+    [tr.bondDetails.infoCards.general.currency, bond.currency],
+    [tr.bondDetails.infoCards.general.groupCode, bond.group_code],
+    [tr.bondDetails.infoCards.general.detailType, bond.security_type_detail],
+    [tr.bondDetails.infoCards.general.dayCount, bond.day_count_convention],
+    [tr.bondDetails.infoCards.general.quotation, bond.quotation_method],
   ];
 
   const dateInfo = [
-    ["İlk İhraç Tarihi", formatDate(bond.first_issue_date)],
-    ["İtfa Tarihi", formatDate(bond.maturity_date)],
-    ["Son İhraç Tarihi", formatLastIssueDateText(bond.last_issue_date_text)],
-    ["Sonraki Kupon Tarihi", formatDate(bond.next_coupon_date)],
-    ["Vadeye Kalan Gün", bond.days_to_maturity != null ? `${bond.days_to_maturity}` : "—"],
+    [tr.bondDetails.infoCards.dates.firstIssue, formatDate(bond.first_issue_date)],
+    [tr.bondDetails.infoCards.dates.maturity, formatDate(bond.maturity_date)],
+    [tr.bondDetails.infoCards.dates.lastIssue, formatLastIssueDateText(bond.last_issue_date_text)],
+    [tr.bondDetails.infoCards.dates.nextCoupon, formatDate(bond.next_coupon_date)],
+    [
+      tr.bondDetails.infoCards.dates.daysToCoupon,
+      daysToNextCoupon != null
+        ? daysToNextCoupon > 0
+          ? `${daysToNextCoupon}`
+          : daysToNextCoupon === 0
+            ? tr.bondDetails.topMetrics.today
+            : tr.bondDetails.topMetrics.past
+        : "—",
+    ],
+    [tr.bondDetails.infoCards.dates.daysToMaturity, bond.days_to_maturity != null ? `${bond.days_to_maturity}` : "—"],
   ];
 
   const financialInfo = [
-    ["İlk İhraç Fiyatı", formatDecimal(bond.first_issue_price, 3)],
-    ["Son İhraç Fiyatı", formatDecimal(bond.last_issue_price, 3)],
-    ["İlk İhraç Getirisi %", bond.first_issue_yield != null ? formatPercent(bond.first_issue_yield) : "—"],
-    ["Son İhraç Getirisi %", bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"],
-    ["Sonraki Kupon Oranı %", formatPercentFromDecimal(bond.next_coupon_rate, 4)],
-    ["Spread %", formatPercentFromDecimal(bond.spread, 4)],
+    [tr.bondDetails.infoCards.financial.firstPrice, formatDecimal(bond.first_issue_price, 3)],
+    [tr.bondDetails.infoCards.financial.lastPrice, formatDecimal(bond.last_issue_price, 3)],
+    [tr.bondDetails.infoCards.financial.firstYield, bond.first_issue_yield != null ? formatPercent(bond.first_issue_yield) : "—"],
+    [tr.bondDetails.infoCards.financial.lastYield, bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"],
+    [tr.bondDetails.infoCards.financial.nextCouponRate, bond.next_coupon_rate != null ? formatPercent(bond.next_coupon_rate) : "—"],
+    [tr.bondDetails.infoCards.financial.spread, bond.spread != null ? formatPercent(bond.spread) : "—"],
     [
-      "Son TLREF (Gecelik Faiz) %",
+      tr.bondDetails.infoCards.financial.lastTlref,
       tlrefLatest?.daily_rate != null ? formatPercentFromDecimal(tlrefLatest.daily_rate * 365, 4) : "—",
     ],
     [
-      "Son TLREFK (Endeks)",
+      tr.bondDetails.infoCards.financial.lastTlrefk,
       tlrefLatest?.index_value != null ? formatDecimal(tlrefLatest.index_value, 5, 5) : "—",
     ],
     [
-      "Hesaplamada Kullanılan TLREF Tarihi",
+      tr.bondDetails.infoCards.financial.calcTlrefDate,
       bond.calculated_metrics?.tlref_rate_date ? formatDate(bond.calculated_metrics.tlref_rate_date) : "—",
     ],
     [
-      "Toplam İhraç Tutarı",
+      tr.bondDetails.infoCards.financial.totalIssue,
       bond.total_issue_amount != null
-        ? `${formatDecimal(bond.total_issue_amount, 0)} (x1000 ${bond.currency})`
+        ? tr.bondDetails.infoCards.financial.issueAmountText.replace("{amount}", formatDecimal(bond.total_issue_amount, 0)).replace("{currency}", bond.currency)
         : "—",
     ],
   ];
 
   const formulaInfo = [
-    ["İşlemiş Faiz/Kira", bond.accrued_interest_text],
-    ["Temiz Fiyat", bond.clean_price_text],
-    ["Kirli Fiyat", bond.dirty_price_formula],
-    ["Takas Fiyatı", bond.settlement_price_formula],
-    ["Getiri", bond.yield_formula],
-    ["Bileşik Getiri", bond.compound_yield_formula],
+    [tr.bondDetails.infoCards.methods.accrued, bond.accrued_interest_text],
+    [tr.bondDetails.infoCards.methods.cleanPrice, bond.clean_price_text],
+    [tr.bondDetails.infoCards.methods.dirtyPrice, bond.dirty_price_formula],
+    [tr.bondDetails.infoCards.methods.settlementPrice, bond.settlement_price_formula],
+    [tr.bondDetails.infoCards.methods.yield, bond.yield_formula],
+    [tr.bondDetails.infoCards.methods.compoundYield, bond.compound_yield_formula],
   ];
 
   return (
@@ -295,7 +326,7 @@ export default function BondDetailPage({
           <ol className="flex flex-wrap items-center gap-2 text-[13px]">
             <li>
               <Link href="/dashboard/bonds" className="text-muted-foreground hover:text-primary transition-colors">
-                Borçlanma Araçları
+                {tr.bondDetails.breadcrumb}
               </Link>
             </li>
             <li className="text-muted-foreground/30" aria-hidden>/</li>
@@ -309,15 +340,15 @@ export default function BondDetailPage({
             <div className="flex items-center gap-3">
               <h1 className="text-display-md font-mono-data text-foreground">{bond.isin_code}</h1>
               <Badge>{bond.currency}</Badge>
-              {!bond.is_active && <Badge variant="destructive">Pasif</Badge>}
+              {!bond.is_active && <Badge variant="destructive">{tr.bondDetails.hero.passive}</Badge>}
             </div>
             {bond.fund_user ? (
               <p className="text-[15px] text-muted-foreground mt-1">
-                İhraççı VKŞ: <span className="font-medium text-foreground">{bond.issuer || "Bilinmiyor"}</span> · Fon Kullanıcısı: <span className="font-medium text-foreground">{bond.fund_user}</span>
+                {tr.bondDetails.hero.issuerVksh}: <span className="font-medium text-foreground">{bond.issuer || tr.bondDetails.hero.unknown}</span> · {tr.bondDetails.hero.fundUser}: <span className="font-medium text-foreground">{bond.fund_user}</span>
               </p>
             ) : (
               <p className="text-[15px] text-muted-foreground mt-1">
-                {bond.issuer || "Bilinmiyor"} · {bond.security_type ? bond.security_type.split("/")[0].trim() : "—"}
+                {bond.issuer || tr.bondDetails.hero.unknown} · {bond.security_type ? bond.security_type.split("/")[0].trim() : "—"}
               </p>
             )}
           </div>
@@ -347,10 +378,10 @@ export default function BondDetailPage({
                 }
               }}
               disabled={favoriteToggling}
-              aria-label={isFavorite ? "Favorilerden çıkar" : "Favorilere ekle"}
+              aria-label={isFavorite ? tr.bondDetails.actions.removeFavorite : tr.bondDetails.actions.addFavorite}
             >
               <Star className={`h-4 w-4 ${isFavorite ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
-              {isFavorite ? "Favori" : "Favorilere ekle"}
+              {isFavorite ? tr.bondDetails.actions.favorite : tr.bondDetails.actions.addFavorite}
             </Button>
             <div className="flex items-center gap-1">
               {prevIsin ? (
@@ -387,7 +418,7 @@ export default function BondDetailPage({
       {/* ═══ Date Selector ═══ */}
       <div className="animate-fade-up rounded-3xl border border-border bg-card p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-[13px] font-medium text-muted-foreground">Hesaplama tarihi</span>
+          <span className="text-[13px] font-medium text-muted-foreground">{tr.bondDetails.dateSelector.label}</span>
           <input
             id="bond-settlement-date"
             type="date"
@@ -398,10 +429,10 @@ export default function BondDetailPage({
           />
           <div className="flex flex-wrap gap-1.5">
             {[
-              { label: "Bugün", fn: todayISO },
-              { label: "Son iş günü", fn: lastBusinessDayISO },
-              { label: "1 hafta", fn: weekAgoISO },
-              { label: "1 ay", fn: monthAgoISO },
+              { label: tr.bondDetails.dateSelector.today, fn: todayISO },
+              { label: tr.bondDetails.dateSelector.lastBusinessDay, fn: lastBusinessDayISO },
+              { label: tr.bondDetails.dateSelector.week, fn: weekAgoISO },
+              { label: tr.bondDetails.dateSelector.month, fn: monthAgoISO },
             ].map((btn) => (
               <Button
                 key={btn.label}
@@ -418,11 +449,11 @@ export default function BondDetailPage({
         {!bond.calculated_metrics && !metricsLoading && (
           <div className="flex items-center gap-2 mt-3 text-[13px] text-muted-foreground">
             <AlertCircle className="h-4 w-4" />
-            Bu tarih için piyasa verisi yok
+            {tr.bondDetails.dateSelector.noData}
           </div>
         )}
         {metricsLoading && (
-          <span className="text-[13px] text-muted-foreground mt-3 block">Hesaplanıyor...</span>
+          <span className="text-[13px] text-muted-foreground mt-3 block">{tr.bondDetails.dateSelector.calculating}</span>
         )}
       </div>
 
@@ -430,26 +461,26 @@ export default function BondDetailPage({
       {bond.calculated_metrics && !metricsLoading && (
         <Card className="animate-fade-up border-primary/20 bg-primary/[0.02]">
           <CardHeader>
-            <CardDescription>Hesaplanan Metrikler</CardDescription>
-            <CardTitle className="mt-1">Kirli Fiyat, Getiri ve Risk — {formatDate(selectedDate)}</CardTitle>
+            <CardDescription>{tr.bondDetails.calculatedMetrics.title}</CardDescription>
+            <CardTitle className="mt-1">{tr.bondDetails.calculatedMetrics.subtitle.replace("{date}", formatDate(selectedDate))}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {[
-                { label: "Kirli Fiyat", value: formatDecimal(bond.calculated_metrics.dirty_price, 8, 8), primary: true },
-                { label: "Birikimiş Faiz", value: formatDecimal(bond.calculated_metrics.accrued_interest, 8, 8) },
-                { label: "Oran Değişimi (Günlük %)", value: bond.calculated_metrics.rate_change_today_pct != null ? formatPercent(bond.calculated_metrics.rate_change_today_pct) : "—" },
-                { label: "Temiz Fiyat", value: formatDecimal(bond.calculated_metrics.clean_price_used, 8, 8) },
-                ...(bond.calculated_metrics.annual_reference_rate != null ? [{ label: "Yıllık Gösterge Faiz", value: formatPercentFromDecimal(bond.calculated_metrics.annual_reference_rate, 4) }] : []),
-                ...(bond.calculated_metrics.annual_coupon_rate != null ? [{ label: "Yıllık Kupon Faiz", value: formatPercentFromDecimal(bond.calculated_metrics.annual_coupon_rate, 4) }] : []),
-                ...(bond.calculated_metrics.periodic_coupon_rate != null ? [{ label: "Dönemsel Kupon Faiz", value: formatPercentFromDecimal(bond.calculated_metrics.periodic_coupon_rate, 4) }] : []),
-                ...(bond.calculated_metrics.yield_to_maturity != null ? [{ label: "Vadeye Kadar Getiri (YTM)", value: formatPercentFromDecimal(bond.calculated_metrics.yield_to_maturity, 4) }] : []),
-                ...(bond.calculated_metrics.return_to_date_pct != null ? [{ label: `Başlangıçtan Seçilen Tarihe Getiri`, value: formatPercent(bond.calculated_metrics.return_to_date_pct) }] : []),
-                ...(bond.calculated_metrics.spread != null ? [{ label: "Spread", value: formatPercentFromDecimal(bond.calculated_metrics.spread, 4) }] : []),
-                ...(bond.calculated_metrics.modified_duration != null ? [{ label: "Modifiye Dürasyon", value: formatDecimal(bond.calculated_metrics.modified_duration, 4) }] : []),
-                ...(bond.calculated_metrics.macaulay_duration != null ? [{ label: "Macaulay Dürasyon", value: formatDecimal(bond.calculated_metrics.macaulay_duration, 4) }] : []),
-                ...(bond.calculated_metrics.convexity != null ? [{ label: "Konveksite", value: formatDecimal(bond.calculated_metrics.convexity, 4) }] : []),
-                ...(bond.calculated_metrics.coupon_payment_amount != null ? [{ label: "Kupon Ödeme Tutarı", value: formatDecimal(bond.calculated_metrics.coupon_payment_amount, 4) }] : []),
+                { label: tr.bondDetails.calculatedMetrics.dirtyPrice, value: formatDecimal(bond.calculated_metrics.dirty_price, 8, 8), primary: true },
+                { label: tr.bondDetails.calculatedMetrics.accruedInterest, value: formatDecimal(bond.calculated_metrics.accrued_interest, 8, 8) },
+                { label: tr.bondDetails.calculatedMetrics.rateChange, value: bond.calculated_metrics.rate_change_today_pct != null ? formatPercent(bond.calculated_metrics.rate_change_today_pct) : "—" },
+                { label: tr.bondDetails.calculatedMetrics.cleanPrice, value: formatDecimal(bond.calculated_metrics.clean_price_used, 8, 8) },
+                ...(bond.calculated_metrics.annual_reference_rate != null ? [{ label: tr.bondDetails.calculatedMetrics.annualRefRate, value: formatPercentFromDecimal(bond.calculated_metrics.annual_reference_rate, 4) }] : []),
+                ...(bond.calculated_metrics.annual_coupon_rate != null ? [{ label: tr.bondDetails.calculatedMetrics.annualCouponRate, value: formatPercentFromDecimal(bond.calculated_metrics.annual_coupon_rate, 4) }] : []),
+                ...(bond.calculated_metrics.periodic_coupon_rate != null ? [{ label: tr.bondDetails.calculatedMetrics.periodicCouponRate, value: formatPercentFromDecimal(bond.calculated_metrics.periodic_coupon_rate, 4) }] : []),
+                ...(bond.calculated_metrics.yield_to_maturity != null ? [{ label: tr.bondDetails.calculatedMetrics.ytm, value: formatPercentFromDecimal(bond.calculated_metrics.yield_to_maturity, 4) }] : []),
+                ...(bond.calculated_metrics.return_to_date_pct != null ? [{ label: tr.bondDetails.calculatedMetrics.returnToDate, value: formatPercent(bond.calculated_metrics.return_to_date_pct) }] : []),
+                ...(bond.calculated_metrics.spread != null ? [{ label: tr.bondDetails.calculatedMetrics.spread, value: formatPercentFromDecimal(bond.calculated_metrics.spread, 4) }] : []),
+                ...(bond.calculated_metrics.modified_duration != null ? [{ label: tr.bondDetails.calculatedMetrics.modDuration, value: formatDecimal(bond.calculated_metrics.modified_duration, 4) }] : []),
+                ...(bond.calculated_metrics.macaulay_duration != null ? [{ label: tr.bondDetails.calculatedMetrics.macDuration, value: formatDecimal(bond.calculated_metrics.macaulay_duration, 4) }] : []),
+                ...(bond.calculated_metrics.convexity != null ? [{ label: tr.bondDetails.calculatedMetrics.convexity, value: formatDecimal(bond.calculated_metrics.convexity, 4) }] : []),
+                ...(bond.calculated_metrics.coupon_payment_amount != null ? [{ label: tr.bondDetails.calculatedMetrics.couponAmount, value: formatDecimal(bond.calculated_metrics.coupon_payment_amount, 4) }] : []),
               ].map((item) => (
                 <div key={item.label} className="rounded-2xl border border-border/50 bg-card p-4">
                   <div className="text-[12px] font-medium text-muted-foreground/70 mb-1.5">{item.label}</div>
@@ -461,7 +492,7 @@ export default function BondDetailPage({
             </div>
             {bond.calculated_metrics.return_to_date_used_fallback_price && (
               <p className="text-[12px] text-muted-foreground mt-3">
-                Veri bulunamadığı için 100 olarak kabul edilmiştir.
+                {tr.bondDetails.calculatedMetrics.fallbackNotice}
               </p>
             )}
           </CardContent>
@@ -472,13 +503,13 @@ export default function BondDetailPage({
       {bond.calculated_metrics && !metricsLoading && (
         <Card className="animate-fade-up">
           <CardHeader>
-            <CardDescription>Senaryo Analizi</CardDescription>
-            <CardTitle className="mt-1">TLREF Değişimi</CardTitle>
+            <CardDescription>{tr.bondDetails.scenario.title}</CardDescription>
+            <CardTitle className="mt-1">{tr.bondDetails.scenario.subtitle}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <label className="text-[13px] text-muted-foreground block mb-3">
-                TLREF şoku: <span className="font-mono-data font-semibold text-foreground">{scenarioShockBp > 0 ? "+" : ""}{scenarioShockBp} bp</span>
+                {tr.bondDetails.scenario.shockLabel.replace("{shock}", `${scenarioShockBp > 0 ? "+" : ""}${scenarioShockBp}`)}
               </label>
               <input
                 type="range"
@@ -497,8 +528,8 @@ export default function BondDetailPage({
             </div>
             {baseScenarioMetrics && (
               <div className="rounded-2xl bg-secondary/30 border border-border/30 p-4 text-[13px] text-muted-foreground">
-                <span className="font-medium text-foreground">Anlık önizleme:</span>{" "}
-                Tahmini kirli fiyat{" "}
+                <span className="font-medium text-foreground">{tr.bondDetails.scenario.preview}</span>{" "}
+                {tr.bondDetails.scenario.dirtyPriceApprox}{" "}
                 <span className="font-mono-data text-foreground">
                   {formatDecimal(
                     baseScenarioMetrics.current_dirty_price *
@@ -506,30 +537,29 @@ export default function BondDetailPage({
                     4, 4
                   )}
                 </span>
-                , değişim{" "}
+                , {tr.bondDetails.scenario.change}{" "}
                 <span className={(baseScenarioMetrics.modified_duration ?? 0) * scenarioShockBp <= 0 ? "text-negative" : "text-positive"}>
                   {formatPercent(-((baseScenarioMetrics.modified_duration ?? 0) * (scenarioShockBp / 10000)) * 100)}
                 </span>
-                {" · "}YTM{" "}
+                {" · "}{tr.bondDetails.scenario.ytmApprox}{" "}
                 <span className="font-mono-data text-foreground">
                   {formatPercentFromDecimal(baseScenarioMetrics.current_ytm + scenarioShockBp / 10000, 4)}
                 </span>
               </div>
             )}
             {scenarioLoading && (
-              <p className="text-[13px] text-muted-foreground">Hesaplanıyor...</p>
+              <p className="text-[13px] text-muted-foreground">{tr.bondDetails.scenario.calculating}</p>
             )}
             {!scenarioLoading && scenarioResult && (
               <div className="rounded-2xl border border-border/50 bg-card p-4">
                 <p className="text-[13px] text-foreground">
-                  TLREF {scenarioResult.shock_bp > 0 ? "+" : ""}{scenarioResult.shock_bp} bp → Tahmini
-                  kirli fiyat: <span className="font-mono-data">{formatDecimal(scenarioResult.new_dirty_price_approx, 4, 4)}</span>, değişim:{" "}
+                  TLREF {scenarioResult.shock_bp > 0 ? "+" : ""}{scenarioResult.shock_bp} bp → {tr.bondDetails.scenario.dirtyPriceApprox}: <span className="font-mono-data">{formatDecimal(scenarioResult.new_dirty_price_approx, 4, 4)}</span>, {tr.bondDetails.scenario.change}:{" "}
                   <span className={scenarioResult.price_change_pct >= 0 ? "text-positive" : "text-negative"}>
                     {formatPercent(scenarioResult.price_change_pct)}
                   </span>
                 </p>
                 <p className="text-[12px] text-muted-foreground mt-1">
-                  Tahmini YTM: {formatPercentFromDecimal(scenarioResult.new_ytm_approx, 4)}
+                  {tr.bondDetails.scenario.ytmApprox}: {formatPercentFromDecimal(scenarioResult.new_ytm_approx, 4)}
                 </p>
               </div>
             )}
@@ -541,20 +571,20 @@ export default function BondDetailPage({
       {!bond.calculated_metrics && !metricsLoading && (
         <Card>
           <CardHeader>
-            <CardTitle>Hesaplanan Metrikler</CardTitle>
+            <CardTitle>{tr.bondDetails.noMetrics.title}</CardTitle>
             <CardDescription>
-              {selectedDate === todayISO() ? "Bugün için" : `${formatDate(selectedDate)} tarihi için`}{" "}piyasa verisi bulunamadı
+              {selectedDate === todayISO() ? tr.bondDetails.noMetrics.subtitleToday : tr.bondDetails.noMetrics.subtitle.replace("{date}", formatDate(selectedDate))}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="p-5 bg-secondary/30 border border-border/30 rounded-2xl text-center">
               <p className="text-[14px] text-muted-foreground">
                 {selectedDate === todayISO()
-                  ? "Bugün için piyasa verisi henüz yüklenmemiş veya mevcut değil."
-                  : `${formatDate(selectedDate)} tarihi için piyasa verisi bulunmamaktadır.`}
+                  ? tr.bondDetails.noMetrics.descriptionToday
+                  : tr.bondDetails.noMetrics.description.replace("{date}", formatDate(selectedDate))}
               </p>
               <p className="text-[12px] text-muted-foreground mt-2">
-                Lütfen başka bir tarih seçin veya veri yükleme işlemini bekleyin.
+                {tr.bondDetails.noMetrics.footer}
               </p>
             </div>
           </CardContent>
@@ -564,10 +594,8 @@ export default function BondDetailPage({
       {/* Fallback market data notice */}
       {bond.calculated_metrics?.used_fallback_market_data && bond.calculated_metrics?.market_data_date && (
         <div className="p-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 text-[13px] text-muted-foreground animate-fade-up">
-          <span className="font-medium text-amber-600 dark:text-amber-400">Not:</span>{" "}
-          Seçilen tarih için piyasa verisi henüz mevcut değil.{" "}
-          <span className="font-mono-data">{formatDate(bond.calculated_metrics.market_data_date)}</span>{" "}
-          tarihli en güncel veri kullanılmaktadır.
+          <span className="font-medium text-amber-600 dark:text-amber-400">{tr.bondDetails.fallbackNotice.note}</span>{" "}
+          {tr.bondDetails.fallbackNotice.description.replace("{date}", formatDate(bond.calculated_metrics.market_data_date))}
         </div>
       )}
 
@@ -575,8 +603,8 @@ export default function BondDetailPage({
       <div className="grid gap-5 lg:grid-cols-2 animate-fade-up-delay-1">
         <Card>
           <CardHeader>
-            <CardDescription>Genel Bilgiler</CardDescription>
-            <CardTitle className="mt-1">Genel Detaylar</CardTitle>
+            <CardDescription>{tr.bondDetails.infoCards.general.desc}</CardDescription>
+            <CardTitle className="mt-1">{tr.bondDetails.infoCards.general.title}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-0">
@@ -589,8 +617,8 @@ export default function BondDetailPage({
 
         <Card>
           <CardHeader>
-            <CardDescription>Tarih Bilgileri</CardDescription>
-            <CardTitle className="mt-1">İhraç ve Vade</CardTitle>
+            <CardDescription>{tr.bondDetails.infoCards.dates.desc}</CardDescription>
+            <CardTitle className="mt-1">{tr.bondDetails.infoCards.dates.title}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-0">
@@ -605,8 +633,8 @@ export default function BondDetailPage({
       <div className="grid gap-5 lg:grid-cols-2 animate-fade-up-delay-2">
         <Card>
           <CardHeader>
-            <CardDescription>Finansal Veriler</CardDescription>
-            <CardTitle className="mt-1">Fiyat ve Getiri</CardTitle>
+            <CardDescription>{tr.bondDetails.infoCards.financial.desc}</CardDescription>
+            <CardTitle className="mt-1">{tr.bondDetails.infoCards.financial.title}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-0">
@@ -619,8 +647,8 @@ export default function BondDetailPage({
 
         <Card>
           <CardHeader>
-            <CardDescription>Hesaplama Yöntemleri</CardDescription>
-            <CardTitle className="mt-1">Formül ve Konvansiyon</CardTitle>
+            <CardDescription>{tr.bondDetails.infoCards.methods.desc}</CardDescription>
+            <CardTitle className="mt-1">{tr.bondDetails.infoCards.methods.title}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-0">
@@ -636,8 +664,8 @@ export default function BondDetailPage({
       {bond.remarks && (
         <Card className="animate-fade-up-delay-2">
           <CardHeader>
-            <CardDescription>Notlar</CardDescription>
-            <CardTitle className="mt-1">Açıklamalar</CardTitle>
+            <CardDescription>{tr.bondDetails.infoCards.remarks.desc}</CardDescription>
+            <CardTitle className="mt-1">{tr.bondDetails.infoCards.remarks.title}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="whitespace-pre-wrap text-[14px] text-muted-foreground">{bond.remarks}</p>
@@ -649,18 +677,18 @@ export default function BondDetailPage({
       {bond.data_conflicts && bond.data_conflicts.length > 0 && (
         <Card className="animate-fade-up-delay-2 border-amber-500/20 bg-amber-500/[0.02]">
           <CardHeader>
-            <CardDescription>Veri Uyuşmazlıkları</CardDescription>
-            <CardTitle className="mt-1">tbliste vs KAP Farklılıkları</CardTitle>
+            <CardDescription>{tr.bondDetails.infoCards.conflicts.desc}</CardDescription>
+            <CardTitle className="mt-1">{tr.bondDetails.infoCards.conflicts.title}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full text-[13px]">
                 <thead>
                   <tr className="border-b border-border/50">
-                    <th className="text-left py-2.5 text-muted-foreground font-medium">Alan</th>
-                    <th className="text-left py-2.5 text-muted-foreground font-medium">BIST tbliste</th>
-                    <th className="text-left py-2.5 text-muted-foreground font-medium">KAP</th>
-                    <th className="text-left py-2.5 text-muted-foreground font-medium">Kullanılan</th>
+                    <th className="text-left py-2.5 text-muted-foreground font-medium">{tr.bondDetails.infoCards.conflicts.cols.field}</th>
+                    <th className="text-left py-2.5 text-muted-foreground font-medium">{tr.bondDetails.infoCards.conflicts.cols.tbliste}</th>
+                    <th className="text-left py-2.5 text-muted-foreground font-medium">{tr.bondDetails.infoCards.conflicts.cols.kap}</th>
+                    <th className="text-left py-2.5 text-muted-foreground font-medium">{tr.bondDetails.infoCards.conflicts.cols.used}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -670,7 +698,7 @@ export default function BondDetailPage({
                       <td className={`py-2.5 font-mono-data ${c.resolved_source === 'tbliste' ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>{c.tbliste_value}</td>
                       <td className={`py-2.5 font-mono-data ${c.resolved_source === 'kap' ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>{c.kap_value}</td>
                       <td className="py-2.5">
-                        <Badge variant={c.resolved_source === 'kap' ? 'default' : 'secondary'}>{c.resolved_source === 'kap' ? 'KAP (güncel)' : 'tbliste (güncel)'}</Badge>
+                        <Badge variant={c.resolved_source === 'kap' ? 'default' : 'secondary'}>{c.resolved_source === 'kap' ? tr.bondDetails.infoCards.conflicts.kapBadge : tr.bondDetails.infoCards.conflicts.tblisteBadge}</Badge>
                       </td>
                     </tr>
                   ))}
@@ -685,12 +713,12 @@ export default function BondDetailPage({
       {bond.kap_data && (
         <Card className="animate-fade-up-delay-2">
           <CardHeader>
-            <CardDescription>KAP Bildirim Verileri</CardDescription>
+            <CardDescription>{tr.bondDetails.kap.desc}</CardDescription>
             <CardTitle className="mt-1">
-              İhraç Detayları
+              {tr.bondDetails.kap.title}
               {bond.kap_data.disclosure_url && (
                 <a href={bond.kap_data.disclosure_url} target="_blank" rel="noopener noreferrer" className="ml-3 text-[13px] font-normal text-primary hover:underline">
-                  KAP Bildirimi →
+                  {tr.bondDetails.kap.disclosure}
                 </a>
               )}
             </CardTitle>
@@ -698,39 +726,39 @@ export default function BondDetailPage({
           <CardContent className="space-y-6">
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="space-y-0">
-                <h4 className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">Araç Bilgileri</h4>
+                <h4 className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">{tr.bondDetails.kap.instrument.title}</h4>
                 {[
-                  ["ISIN Kodu", bond.kap_data.isin_code],
-                  ["Araç Tipi", bond.kap_data.instrument_type],
-                  ...(bond.kap_data.fund_user ? [["Fon Kullanıcısı", bond.kap_data.fund_user]] : []),
-                  ...(bond.kap_data.source_institution ? [["Kaynak Kuruluş", bond.kap_data.source_institution]] : []),
-                  ["İtfa Tarihi", bond.kap_data.maturity_date ? formatDate(bond.kap_data.maturity_date) : null],
-                  ["Vade (Gün)", bond.kap_data.maturity_days],
-                  ["Nominal Değer", bond.kap_data.nominal_value ? `${Number(bond.kap_data.nominal_value).toLocaleString('tr-TR')} ${bond.kap_data.currency || 'TRY'}` : null],
-                  ["İhraç Fiyatı", bond.kap_data.issue_price],
-                  ["Faiz Tipi", bond.kap_data.interest_rate_type],
-                  ["Değişken Faiz Ref.", bond.kap_data.floating_rate_reference],
-                  ["Ek Getiri (%)", bond.kap_data.additional_return_pct],
-                  ["Kupon Sayısı", bond.kap_data.coupon_number],
-                  ["Kupon Sıklığı", bond.kap_data.coupon_frequency],
-                  ["Ödeme Tipi", bond.kap_data.payment_type],
+                  [tr.bondDetails.kap.instrument.isin, bond.kap_data.isin_code],
+                  [tr.bondDetails.kap.instrument.type, bond.kap_data.instrument_type],
+                  ...(bond.kap_data.fund_user ? [[tr.bondDetails.kap.instrument.fundUser, bond.kap_data.fund_user]] : []),
+                  ...(bond.kap_data.source_institution ? [[tr.bondDetails.kap.instrument.sourceInst, bond.kap_data.source_institution]] : []),
+                  [tr.bondDetails.kap.instrument.maturity, bond.kap_data.maturity_date ? formatDate(bond.kap_data.maturity_date) : null],
+                  [tr.bondDetails.kap.instrument.days, bond.kap_data.maturity_days],
+                  [tr.bondDetails.kap.instrument.nominal, bond.kap_data.nominal_value ? `${Number(bond.kap_data.nominal_value).toLocaleString('tr-TR')} ${bond.kap_data.currency || 'TRY'}` : null],
+                  [tr.bondDetails.kap.instrument.price, bond.kap_data.issue_price],
+                  [tr.bondDetails.kap.instrument.interestType, bond.kap_data.interest_rate_type],
+                  [tr.bondDetails.kap.instrument.floatingRef, bond.kap_data.floating_rate_reference],
+                  [tr.bondDetails.kap.instrument.additionalReturn, bond.kap_data.additional_return_pct],
+                  [tr.bondDetails.kap.instrument.coupons, bond.kap_data.coupon_number],
+                  [tr.bondDetails.kap.instrument.frequency, bond.kap_data.coupon_frequency],
+                  [tr.bondDetails.kap.instrument.paymentType, bond.kap_data.payment_type],
                 ].map(([label, value]) => (
                   <InfoRow key={label as string} label={label as string} value={value as string} />
                 ))}
               </div>
               <div className="space-y-0">
-                <h4 className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">Satış ve Derecelendirme</h4>
+                <h4 className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">{tr.bondDetails.kap.sale.title}</h4>
                 {[
-                  ["Satış Tipi", bond.kap_data.sale_type],
-                  ["Satış Başlangıç", bond.kap_data.starting_date_sale ? formatDate(bond.kap_data.starting_date_sale) : null],
-                  ["Satış Bitiş", bond.kap_data.ending_date_sale ? formatDate(bond.kap_data.ending_date_sale) : null],
-                  ["Borsada İşlem", bond.kap_data.traded_in_exchange === true ? "Evet" : bond.kap_data.traded_in_exchange === false ? "Hayır" : null],
-                  ["Aracı Kurum", bond.kap_data.intermediary_brokerage],
-                  ["İhraç Tavanı", bond.kap_data.issue_limit ? `${Number(bond.kap_data.issue_limit).toLocaleString('tr-TR')} TRY` : null],
-                  ["Rating Kuruluşu", bond.kap_data.issuer_rating_company],
-                  ["Rating Notu", bond.kap_data.issuer_rating_note],
-                  ["Rating Tarihi", bond.kap_data.issuer_rating_date ? formatDate(bond.kap_data.issuer_rating_date) : null],
-                  ["Yatırım Yapılabilir", bond.kap_data.issuer_rating_investment_grade === true ? "Evet" : bond.kap_data.issuer_rating_investment_grade === false ? "Hayır" : null],
+                  [tr.bondDetails.kap.sale.type, bond.kap_data.sale_type],
+                  [tr.bondDetails.kap.sale.start, bond.kap_data.starting_date_sale ? formatDate(bond.kap_data.starting_date_sale) : null],
+                  [tr.bondDetails.kap.sale.end, bond.kap_data.ending_date_sale ? formatDate(bond.kap_data.ending_date_sale) : null],
+                  [tr.bondDetails.kap.sale.traded, bond.kap_data.traded_in_exchange === true ? tr.bondDetails.kap.sale.yes : bond.kap_data.traded_in_exchange === false ? tr.bondDetails.kap.sale.no : null],
+                  [tr.bondDetails.kap.sale.broker, bond.kap_data.intermediary_brokerage],
+                  [tr.bondDetails.kap.sale.limit, bond.kap_data.issue_limit ? `${Number(bond.kap_data.issue_limit).toLocaleString('tr-TR')} TRY` : null],
+                  [tr.bondDetails.kap.sale.ratingCompany, bond.kap_data.issuer_rating_company],
+                  [tr.bondDetails.kap.sale.ratingNote, bond.kap_data.issuer_rating_note],
+                  [tr.bondDetails.kap.sale.ratingDate, bond.kap_data.issuer_rating_date ? formatDate(bond.kap_data.issuer_rating_date) : null],
+                  [tr.bondDetails.kap.sale.investmentGrade, bond.kap_data.issuer_rating_investment_grade === true ? tr.bondDetails.kap.sale.yes : bond.kap_data.issuer_rating_investment_grade === false ? tr.bondDetails.kap.sale.no : null],
                 ].map(([label, value]) => (
                   <InfoRow key={label as string} label={label as string} value={value as string} />
                 ))}
@@ -740,25 +768,25 @@ export default function BondDetailPage({
             {/* Coupon Payments */}
             {bond.kap_data.coupon_payments && bond.kap_data.coupon_payments.length > 0 && (
               <div>
-                <h4 className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">Kupon Ödeme Planı</h4>
+                <h4 className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">{tr.bondDetails.kap.plan.title}</h4>
                 <div className="overflow-x-auto">
                   <table className="w-full text-[13px]">
                     <thead>
                       <tr className="border-b border-border/50">
-                        <th className="text-left py-2.5 text-muted-foreground font-medium">Kupon</th>
-                        <th className="text-left py-2.5 text-muted-foreground font-medium">Ödeme Tarihi</th>
-                        <th className="text-right py-2.5 text-muted-foreground font-medium">Dönemsel %</th>
-                        <th className="text-right py-2.5 text-muted-foreground font-medium">Yıllık Basit %</th>
-                        <th className="text-right py-2.5 text-muted-foreground font-medium">Yıllık Bileşik %</th>
-                        <th className="text-right py-2.5 text-muted-foreground font-medium">Ödeme Tutarı</th>
-                        <th className="text-center py-2.5 text-muted-foreground font-medium">Ödendi</th>
+                        <th className="text-left py-2.5 text-muted-foreground font-medium">{tr.bondDetails.kap.plan.cols.coupon}</th>
+                        <th className="text-left py-2.5 text-muted-foreground font-medium">{tr.bondDetails.kap.plan.cols.date}</th>
+                        <th className="text-right py-2.5 text-muted-foreground font-medium">{tr.bondDetails.kap.plan.cols.periodic}</th>
+                        <th className="text-right py-2.5 text-muted-foreground font-medium">{tr.bondDetails.kap.plan.cols.simple}</th>
+                        <th className="text-right py-2.5 text-muted-foreground font-medium">{tr.bondDetails.kap.plan.cols.compound}</th>
+                        <th className="text-right py-2.5 text-muted-foreground font-medium">{tr.bondDetails.kap.plan.cols.amount}</th>
+                        <th className="text-center py-2.5 text-muted-foreground font-medium">{tr.bondDetails.kap.plan.cols.paid}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {bond.kap_data.coupon_payments.map((cp: any, idx: number) => (
                         <tr key={idx} className="border-b border-border/20 hover:bg-secondary/30 transition-colors">
                           <td className="py-2.5 font-mono-data text-foreground font-medium">
-                            {cp.coupon_number === "principal" ? "Anapara" : `#${cp.coupon_number}`}
+                            {cp.coupon_number === "principal" ? tr.bondDetails.kap.plan.principal : `#${cp.coupon_number}`}
                           </td>
                           <td className="py-2.5 font-mono-data text-foreground">{cp.payment_date || "—"}</td>
                           <td className="py-2.5 font-mono-data text-foreground text-right">

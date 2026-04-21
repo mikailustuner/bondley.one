@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { tr } from "@/locales/tr";
 
 export const metadata: Metadata = {
-  title: "Gizlilik ve Çerez Politikası – Bondley",
-  description:
-    "Bondley gizlilik politikası, kişisel verilerin korunması, çerez kullanımı ve KVKK uyumluluğu hakkında detaylı bilgi.",
+  title: tr.admin.privacy.meta.title,
+  description: tr.admin.privacy.meta.description,
 };
 
 export default function PrivacyPolicyPage() {
+  const t = tr.admin.privacy;
   return (
     <main className="min-h-screen bg-background">
       {/* Hero */}
@@ -16,15 +17,13 @@ export default function PrivacyPolicyPage() {
         <div className="relative mx-auto max-w-4xl px-6 py-20 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-4 py-1.5 text-[12px] font-medium text-muted-foreground mb-6">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-            Son Güncelleme: 14 Nisan 2026
+            {t.hero.lastUpdate}
           </div>
           <h1 className="text-display-lg text-foreground tracking-tight">
-            Gizlilik ve Çerez Politikası
+            {t.hero.title}
           </h1>
           <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground max-w-2xl mx-auto">
-            Bu gizlilik politikası, <strong className="text-foreground">Bondley</strong> platformu tarafından kişisel verilerinizin nasıl toplandığını,
-            işlendiğini, saklandığını ve korunduğunu ayrıntılı biçimde açıklamaktadır. Platformumuzu
-            kullanarak aşağıda belirtilen koşulları kabul etmiş sayılırsınız.
+            {t.hero.description}
           </p>
         </div>
       </section>

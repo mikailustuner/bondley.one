@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api-client";
 import { setAuth } from "@/lib/auth";
+import { tr } from "@/locales/tr";
 
 interface FormField {
   key: string;
@@ -24,47 +25,47 @@ interface FormField {
   autoComplete?: string;
 }
 
-const FIELDS: FormField[] = [
+const FIELDS = (t: any): FormField[] => [
   {
     key: "full_name",
-    label: "Ad Soyad",
+    label: t.auth.signup.fields.fullName,
     type: "text",
-    placeholder: "Ad Soyad",
+    placeholder: t.auth.signup.placeholders.fullName,
     autoComplete: "name",
   },
   {
     key: "email",
-    label: "Kurumsal E-posta",
+    label: t.auth.signup.fields.email,
     type: "email",
-    placeholder: "ornek@sirket.com",
+    placeholder: t.auth.signup.placeholders.email,
     autoComplete: "email",
   },
   {
     key: "company",
-    label: "Şirket / Kurum Adı",
+    label: t.auth.signup.fields.company,
     type: "text",
-    placeholder: "Şirket veya kurum adı",
+    placeholder: t.auth.signup.placeholders.company,
     autoComplete: "organization",
   },
   {
     key: "location",
-    label: "Konum",
+    label: t.auth.signup.fields.location,
     type: "text",
-    placeholder: "İstanbul, Türkiye",
+    placeholder: t.auth.signup.placeholders.location,
     autoComplete: "address-level1",
   },
   {
     key: "password",
-    label: "Şifre",
+    label: t.auth.signup.fields.password,
     type: "password",
-    placeholder: "En az 8 karakter",
+    placeholder: t.auth.signup.placeholders.password,
     autoComplete: "new-password",
   },
   {
     key: "password_confirm",
-    label: "Şifre Tekrar",
+    label: t.auth.signup.fields.passwordConfirm,
     type: "password",
-    placeholder: "Şifrenizi tekrar girin",
+    placeholder: t.auth.signup.placeholders.passwordConfirm,
     autoComplete: "new-password",
   },
 ];
@@ -94,17 +95,17 @@ export default function SignupPage() {
     setError("");
 
     if (form.password !== form.password_confirm) {
-      setError("Şifreler eşleşmiyor");
+      setError(tr.auth.signup.passwordMismatch);
       return;
     }
 
     if (form.password.length < 8) {
-      setError("Şifre en az 8 karakter olmalı");
+      setError(tr.auth.signup.passwordLength);
       return;
     }
 
     if (!privacyAccepted) {
-      setError("Devam etmek için Gizlilik Politikasını kabul etmelisiniz");
+      setError(tr.auth.signup.privacyRequired);
       return;
     }
 
@@ -126,7 +127,7 @@ export default function SignupPage() {
       setAuth(data.access_token, data.refresh_token, data.user);
       router.push("/onboarding");
     } catch (err: any) {
-      setError(err.message || "Kayıt başarısız");
+      setError(err.message || tr.auth.signup.error);
     } finally {
       setLoading(false);
     }
@@ -147,21 +148,21 @@ export default function SignupPage() {
             />
           </div>
           <h1 className="text-display-md text-foreground">
-            Bondley
+            {tr.common.brand}
           </h1>
           <p className="text-[13px] font-medium text-muted-foreground mt-2">
-            Kurumsal Hesap Oluştur
+            {tr.auth.signup.formTitle}
           </p>
         </div>
 
         <Card>
           <CardHeader className="pb-4">
-            <CardDescription>B2B Kayıt</CardDescription>
-            <CardTitle className="mt-1">Yeni Hesap</CardTitle>
+            <CardDescription>{tr.auth.signup.subtitle}</CardDescription>
+            <CardTitle className="mt-1">{tr.auth.signup.title}</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {FIELDS.map((field) => (
+              {FIELDS(tr).map((field) => (
                 <div key={field.key} className="space-y-1.5">
                   <label className="text-[15px] font-medium text-foreground">
                     {field.label}
@@ -201,15 +202,16 @@ export default function SignupPage() {
                     </div>
                   </div>
                   <span className="text-[13px] leading-relaxed text-muted-foreground">
+                    {tr.auth.signup.privacy.readAndAccept.split("{link}")[0]}
                     <Link
-                      href="/gizlilik"
+                      href="/privacy"
                       target="_blank"
                       className="text-primary hover:text-primary/80 underline underline-offset-2 font-medium transition-colors"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      Gizlilik ve Çerez Politikası
+                      {tr.auth.signup.privacy.link}
                     </Link>
-                    &apos;nı okudum, anladım ve kabul ediyorum.
+                    {tr.auth.signup.privacy.readAndAccept.split("{link}")[1]}
                   </span>
                 </label>
               </div>
@@ -221,18 +223,18 @@ export default function SignupPage() {
               )}
 
               <Button type="submit" className="w-full" disabled={loading || !privacyAccepted}>
-                {loading ? "Hesap oluşturuluyor..." : "Kayıt Ol"}
+                {loading ? tr.auth.signup.loading : tr.auth.signup.submit}
               </Button>
             </form>
 
             <div className="mt-6 pt-5 border-t border-border/50 text-center">
               <p className="text-[15px] text-muted-foreground">
-                Zaten hesabınız var mı?{" "}
+                {tr.auth.signup.alreadyHaveAccount}{" "}
                 <Link
                   href="/login"
                   className="text-primary hover:text-primary/80 font-medium transition-colors"
                 >
-                  Giriş Yap
+                  {tr.auth.signup.loginLink}
                 </Link>
               </p>
             </div>
