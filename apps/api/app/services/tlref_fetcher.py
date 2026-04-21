@@ -317,7 +317,11 @@ class TLREFFetcher:
         Sütun indexleri (0-based): 0=Tarih, 1=Endeks Kodu, 2=TR isim,
         3=EN isim, 4=Kur, 5=Seans, 6=Kapanış, 7=En Düşük, 8=En Yüksek
         """
-        text = content.decode("utf-8-sig", errors="replace")
+        try:
+            text = content.decode("utf-16", errors="replace")
+        except (UnicodeDecodeError, LookupError):
+            text = content.decode("utf-8-sig", errors="replace")
+
         lines = [l.strip() for l in text.strip().splitlines() if l.strip()]
 
         records: list[dict] = []
