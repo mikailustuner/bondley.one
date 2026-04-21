@@ -11,7 +11,7 @@ import { tr } from "@/locales/tr";
 
 export default function AnalyticsPage() {
   useEffect(() => {
-    document.title = `${tr.analytics.title} — ${tr.common.brand}`;
+    document.title = `${tr.dashboard.analytics.title} — ${tr.common.brand}`;
     return () => {
       document.title = tr.common.brand;
     };
@@ -21,7 +21,7 @@ export default function AnalyticsPage() {
   if (loading) {
     return (
       <div className="py-12 text-center text-muted-foreground text-[15px]">
-        {tr.analytics.loading}
+        {tr.dashboard.analytics.loading}
       </div>
     );
   }
@@ -52,19 +52,19 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-8">
       <div className="animate-fade-up">
-        <h1 className="text-display-md text-foreground">{tr.analytics.title}</h1>
+        <h1 className="text-display-md text-foreground">{tr.dashboard.analytics.title}</h1>
         <p className="text-[15px] text-muted-foreground mt-1.5">
-          {tr.analytics.desc}
+          {tr.dashboard.analytics.desc}
         </p>
       </div>
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4 animate-fade-up">
         {[
-          { label: tr.analytics.stats.totalReturn, value: totalReturnPct != null ? formatPercent(totalReturnPct) : "—", sub: tr.analytics.stats.cumulative, highlight: true },
-          { label: tr.analytics.stats.avgDaily, value: avgDailyRatePct != null ? formatPercent(avgDailyRatePct) : "—", sub: tr.analytics.stats.last30 },
-          { label: tr.analytics.stats.min, value: minIndex != null ? formatDecimal(minIndex, 2) : "—", sub: tr.analytics.stats.index },
-          { label: tr.analytics.stats.max, value: maxIndex != null ? formatDecimal(maxIndex, 2) : "—", sub: tr.analytics.stats.index },
+          { label: tr.dashboard.analytics.stats.totalReturn, value: totalReturnPct != null ? formatPercent(totalReturnPct) : "—", sub: tr.dashboard.analytics.stats.cumulative, highlight: true },
+          { label: tr.dashboard.analytics.stats.avgDaily, value: avgDailyRatePct != null ? formatPercent(avgDailyRatePct) : "—", sub: tr.dashboard.analytics.stats.last30 },
+          { label: tr.dashboard.analytics.stats.min, value: minIndex != null ? formatDecimal(minIndex, 2) : "—", sub: tr.dashboard.analytics.stats.index },
+          { label: tr.dashboard.analytics.stats.max, value: maxIndex != null ? formatDecimal(maxIndex, 2) : "—", sub: tr.dashboard.analytics.stats.index },
         ].map((stat) => (
           <div key={stat.label} className="bg-card rounded-3xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <div className="text-[13px] font-medium text-muted-foreground mb-2">{stat.label}</div>
@@ -81,10 +81,10 @@ export default function AnalyticsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardDescription>{tr.analytics.charts.tlrefIndex}</CardDescription>
-              <CardTitle className="mt-1">{tr.analytics.charts.tlrefIndexTitle}</CardTitle>
+              <CardDescription>{tr.dashboard.analytics.charts.tlrefIndex}</CardDescription>
+              <CardTitle className="mt-1">{tr.dashboard.analytics.charts.tlrefIndexTitle}</CardTitle>
             </div>
-            <Badge variant="outline">{tr.analytics.charts.days.replace("{count}", history.length.toString())}</Badge>
+            <Badge variant="outline">{tr.dashboard.analytics.charts.days.replace("{count}", history.length.toString())}</Badge>
           </div>
         </CardHeader>
         <CardContent>
@@ -96,10 +96,10 @@ export default function AnalyticsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardDescription>{tr.analytics.charts.tlrefRate}</CardDescription>
-              <CardTitle className="mt-1">{tr.analytics.charts.tlrefRateTitle}</CardTitle>
+              <CardDescription>{tr.dashboard.analytics.charts.tlrefRate}</CardDescription>
+              <CardTitle className="mt-1">{tr.dashboard.analytics.charts.tlrefRateTitle}</CardTitle>
             </div>
-            <Badge variant="outline">{tr.analytics.charts.last90}</Badge>
+            <Badge variant="outline">{tr.dashboard.analytics.charts.last90}</Badge>
           </div>
         </CardHeader>
         <CardContent>
@@ -112,15 +112,15 @@ export default function AnalyticsPage() {
         <>
           <div className="animate-fade-up-delay-2">
             <h2 className="text-display-sm text-foreground mb-6">
-              {tr.analytics.distribution.title}
+              {tr.dashboard.analytics.distribution.title}
             </h2>
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2 animate-fade-up-delay-2">
             <Card>
               <CardHeader>
-                <CardDescription>{tr.analytics.distribution.bySecurityType}</CardDescription>
-                <CardTitle className="mt-1">{tr.analytics.distribution.securityTypeDist}</CardTitle>
+                <CardDescription>{tr.dashboard.analytics.distribution.bySecurityType}</CardDescription>
+                <CardTitle className="mt-1">{tr.dashboard.analytics.distribution.securityTypeDist}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-0">
@@ -160,8 +160,8 @@ export default function AnalyticsPage() {
 
             <Card>
               <CardHeader>
-                <CardDescription>{tr.analytics.distribution.byYieldType}</CardDescription>
-                <CardTitle className="mt-1">{tr.analytics.distribution.yieldTypeDist}</CardTitle>
+                <CardDescription>{tr.dashboard.analytics.distribution.byYieldType}</CardDescription>
+                <CardTitle className="mt-1">{tr.dashboard.analytics.distribution.yieldTypeDist}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-0">
@@ -202,8 +202,8 @@ export default function AnalyticsPage() {
 
           <Card className="animate-fade-up-delay-2">
             <CardHeader>
-              <CardDescription>{tr.analytics.distribution.byCurrency}</CardDescription>
-              <CardTitle className="mt-1">{tr.analytics.distribution.currencyDist}</CardTitle>
+              <CardDescription>{tr.dashboard.analytics.distribution.byCurrency}</CardDescription>
+              <CardTitle className="mt-1">{tr.dashboard.analytics.distribution.currencyDist}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-4">
