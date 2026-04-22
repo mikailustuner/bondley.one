@@ -32,6 +32,7 @@ import {
   formatDate,
 } from "@/lib/utils";
 import { tr } from "@/locales/tr";
+import { APP_VERSION } from "@/lib/constants";
 
 export default function LandingPage() {
   const [summary, setSummary] = useState<PublicSummary | null>(null);
@@ -447,6 +448,7 @@ export default function LandingPage() {
               <span className="text-[13px] text-muted-foreground">
                 &copy; 2026 Bondley
               </span>
+              <span className="text-[11px] text-muted-foreground/30 font-mono-data">v{APP_VERSION}</span>
             </div>
             <div className="flex items-center gap-8 text-[13px] text-muted-foreground">
               <Link

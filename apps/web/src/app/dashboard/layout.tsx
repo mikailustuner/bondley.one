@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 import { tr } from "@/locales/tr";
+import { APP_VERSION } from "@/lib/constants";
 
 const NAV_SECTIONS = [
   {
@@ -159,9 +160,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Bottom */}
       <div className="px-3 pb-4 pt-2 border-t border-border/30 space-y-2">
-        <div className="flex items-center gap-2 px-3 py-1">
-          <span className="h-1.5 w-1.5 rounded-full bg-positive live-indicator" />
-          <span className="text-[11px] font-medium text-muted-foreground">{tr.dashboard.sidebar.liveData}</span>
+        <div className="flex items-center justify-between px-3 py-1">
+          <div className="flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-positive live-indicator" />
+            <span className="text-[11px] font-medium text-muted-foreground">{tr.dashboard.sidebar.liveData}</span>
+          </div>
+          <span className="text-[10px] font-mono-data text-muted-foreground/40">v{APP_VERSION}</span>
         </div>
         <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-1">
