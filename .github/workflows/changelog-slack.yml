@@ -1,0 +1,150 @@
+name: 📋 Changelog → Slack
+
+on:
+  push:
+    branches: [main]
+    paths: ['CHANGELOG.md']
+
+jobs:
+  notify-slack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Son sürümü CHANGELOG'dan çıkar
+        id: extract
+        run: |
+          # ── 1. İlk ## bloğunu al (ilk ve ikinci ## arası, --- sınırına kadar) ──
+          awk '
+            /^## \[/ {
+              if (found) exit          # ikinci versiyon başlığına gelince dur
+              found=1
+            }
+            /^---$/ && found { exit }  # --- ayıracına gelince dur
+            found { print }
+          ' CHANGELOG.md > /tmp/latest_raw.md
+
+          # Boş mu kontrol et
+          if [ ! -s /tmp/latest_raw.md ]; then
+            echo "⚠️ Changelog'da sürüm bloğu bulunamadı"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+          # ── 2. Versiyon numarasını çıkar (header için) ──
+          VERSION=$(head -1 /tmp/latest_raw.md | grep -oP '\[\K[^\]]+')
+          DATE=$(head -1 /tmp/latest_raw.md | grep -oP '— \K.*')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "date=$DATE" >> "$GITHUB_OUTPUT"
+
+          # ── 3. Markdown → Slack mrkdwn dönüşümü ──
+          cp /tmp/latest_raw.md /tmp/latest.md
+
+          # İlk satırı (## [1.2] — ...) kaldır, header olarak ayrı gönderilecek
+          sed -i '1d' /tmp/latest.md
+
+          # #### Başlıklar → *Kalın* (Slack'te h4 yok)
+          sed -i 's/^#### \(.*\)/*\1*/g' /tmp/latest.md
+
+          # ### Başlıklar → *Kalın* + üstte boşluk
+          sed -i 's/^### \(.*\)/\n*\1*/g' /tmp/latest.md
+
+          # **kalın** → *kalın* (Slack tek yıldız kullanır)
+          sed -i 's/\*\*\([^*]*\)\*\*/\*\1\*/g' /tmp/latest.md
+
+          # Liste: - → •  ve  - (indent) → ◦
+          sed -i 's/^  - /    ◦ /g' /tmp/latest.md
+          sed -i 's/^- /• /g' /tmp/latest.md
+
+          # Backtick code spans Slack'te de çalışır, dokunmuyoruz
+
+          # Boş satırları fazla olanları temizle (3+ boş satır → 1)
+          sed -i '/^$/N;/^\n$/d' /tmp/latest.md
+
+          # ── 4. Slack blok limiti 3000 karakter — gerekirse kırp ──
+          CONTENT=$(cat /tmp/latest.md)
+          CHAR_COUNT=${#CONTENT}
+
+          if [ "$CHAR_COUNT" -gt 2900 ]; then
+            # 2900 karaktere kırp, son tam satırda kes
+            CONTENT=$(echo "$CONTENT" | head -c 2900 | sed '$ s/[^\n]*$//')
+            CONTENT="${CONTENT}
+          
+          _…tam changelog için <https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md|CHANGELOG.md>'ye bakın_"
+          fi
+
+          # ── 5. Multiline output ──
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          {
+            echo "body<<$EOF"
+            echo "$CONTENT"
+            echo "$EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Slack'e gönder
+        if: steps.extract.outputs.skip != 'true'
+        uses: slackapi/slack-github-action@v2.1.0
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "🚀 Bondley v${{ steps.extract.outputs.version }} Yayında!",
+                    "emoji": true
+                  }
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "📅 ${{ steps.extract.outputs.date }}  •  <https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>  •  by ${{ github.actor }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ${{ toJSON(steps.extract.outputs.body) }}
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "📄 Tam Changelog",
+                        "emoji": true
+                      },
+                      "url": "https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md"
+                    },
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "🔗 Commit",
+                        "emoji": true
+                      },
+                      "url": "https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
+                    }
+                  ]
+                }
+              ]
+            }
