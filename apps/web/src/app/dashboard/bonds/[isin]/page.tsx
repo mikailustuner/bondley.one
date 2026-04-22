@@ -289,6 +289,7 @@ export default function BondDetailPage({
     [tr.dashboard.bondDetails.infoCards.financial.lastYield, bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"],
     [tr.dashboard.bondDetails.infoCards.financial.nextCouponRate, bond.next_coupon_rate != null ? formatPercent(bond.next_coupon_rate) : "—"],
     [tr.dashboard.bondDetails.infoCards.financial.spread, bond.spread != null ? formatPercent(bond.spread) : "—"],
+    [tr.dashboard.bondDetails.infoCards.financial.calculatedSpread, bond.calculated_metrics?.spread != null ? formatPercentFromDecimal(bond.calculated_metrics.spread, 4) : "—"],
     [
       tr.dashboard.bondDetails.infoCards.financial.lastTlref,
       tlrefLatest?.daily_rate != null ? formatPercentFromDecimal(tlrefLatest.daily_rate * 365, 4) : "—",

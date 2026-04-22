@@ -536,6 +536,7 @@ export const tr = {
                     lastYield: "Son İhraç Getirisi %",
                     nextCouponRate: "Sonraki Kupon Oranı %",
                     spread: "Sözleşmesel Ek Getiri (Spread) %",
+                    calculatedSpread: "Hesaplanan Spread (YTM − TLREF) %",
                     lastTlref: "Son TLREF (Gecelik Faiz) %",
                     lastTlrefk: "Son TLREFK (Endeks)",
                     calcTlrefDate: "Hesaplamada Kullanılan TLREF Tarihi",
