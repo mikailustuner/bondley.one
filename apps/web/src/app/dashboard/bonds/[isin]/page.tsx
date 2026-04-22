@@ -478,7 +478,7 @@ export default function BondDetailPage({
                 { label: tr.dashboard.bondDetails.calculatedMetrics.accruedInterest, value: formatDecimal(bond.calculated_metrics.accrued_interest, 8, 8) },
                 { label: tr.dashboard.bondDetails.calculatedMetrics.rateChange, value: bond.calculated_metrics.rate_change_today_pct != null ? formatPercent(bond.calculated_metrics.rate_change_today_pct) : "—" },
                 { label: tr.dashboard.bondDetails.calculatedMetrics.cleanPrice, value: formatDecimal(bond.calculated_metrics.clean_price_used, 8, 8) },
-                ...(bond.spread != null ? [{ label: tr.dashboard.bondDetails.infoCards.financial.spread, value: formatPercent(bond.spread) }] : []),
+                { label: tr.dashboard.bondDetails.infoCards.financial.spread, value: bond.spread != null ? formatPercent(bond.spread) : "—" },
                 ...(bond.calculated_metrics.annual_reference_rate != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.annualRefRate, value: formatPercentFromDecimal(bond.calculated_metrics.annual_reference_rate, 4) }] : []),
                 ...(bond.calculated_metrics.annual_coupon_rate != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.annualCouponRate, value: formatPercentFromDecimal(bond.calculated_metrics.annual_coupon_rate, 4) }] : []),
                 ...(bond.calculated_metrics.periodic_coupon_rate != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.periodicCouponRate, value: formatPercentFromDecimal(bond.calculated_metrics.periodic_coupon_rate, 4) }] : []),
