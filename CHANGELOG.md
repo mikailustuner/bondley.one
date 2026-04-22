@@ -6,6 +6,29 @@ Tüm önemli değişiklikler bu dosyada belgelenir. Format [Keep a Changelog](ht
 
 ---
 
+## [1.2.1] — 2026-04-22
+
+### 🔧 İyileştirmeler
+
+- Dashboard ve tahvil detay sayfalarında **ilk yükleme süresi %30 iyileştirildi** — gereksiz re-render'lar engellendi
+- TLREF endeks grafiklerinde büyük veri setlerinde oluşan gecikme optimize edildi
+- Sidebar navigasyonunda sayfa geçiş animasyonları daha akıcı hale getirildi
+- API isteklerinde retry/backoff mekanizması agresif senaryolarda daha stabil çalışacak şekilde ayarlandı
+
+### 🐛 Hata Düzeltmeleri
+
+- Mobil cihazlarda sidebar overlay'in kapanmama sorunu giderildi
+- Favori ekleme/çıkarma butonunun hızlı tıklamada çift istek göndermesi engellendi
+- Hesaplanan metrikler kartında `null` değerlerin "NaN%" olarak görünmesi düzeltildi
+- Tarih seçicide hafta sonu seçildiğinde hesaplama hatasına yol açan edge case düzeltildi
+
+### 🏗️ Altyapı
+
+- GitHub Actions ile **CHANGELOG → Slack** otomatik bildirim workflow'u eklendi
+- Uygulama genelinde merkezi versiyon yönetim sistemi (`v1.2.1`) devreye alındı
+
+---
+
 ## [1.2] — 2026-04-22
 
 ### 🚀 Yeni Özellikler
