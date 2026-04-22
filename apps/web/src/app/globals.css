@@ -120,10 +120,10 @@
 
   .font-mono-data,
   .font-bond-nums {
-    font-family: 'SF Mono', ui-monospace, 'Menlo', 'Cascadia Code', monospace;
+    font-family: var(--font-mono-data), ui-monospace, monospace;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.01em;
-    font-feature-settings: "tnum" 1, "zero" 0;
+    font-feature-settings: "tnum" 1;
   }
 
   .text-positive {

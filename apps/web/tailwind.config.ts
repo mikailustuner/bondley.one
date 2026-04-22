@@ -15,7 +15,7 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ['var(--font-inter)', 'SF Pro Display', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
-        mono: ['SF Mono', 'ui-monospace', 'Menlo', 'Cascadia Code', 'monospace'],
+        mono: ['var(--font-mono-data)', 'ui-monospace', 'monospace'],
       },
       colors: {
         border: "hsl(var(--border))",
