@@ -129,21 +129,23 @@ export default function LandingPage() {
           </p>
 
           <div className="flex items-center justify-center gap-4 mt-10 animate-fade-up-delay-2">
-            <Link href="/signup">
+            <Link href={user ? "/dashboard" : "/signup"}>
               <Button size="lg" className="px-8 text-[17px] h-14 rounded-2xl shadow-md hover:shadow-lg">
-                {tr.landing.hero.ctaStart}
+                {user ? tr.landing.nav.dashboard : tr.landing.hero.ctaStart}
                 <ArrowRight className="h-5 w-5 ml-1" />
               </Button>
             </Link>
-            <Link href="/login">
-              <Button
-                size="lg"
-                variant="outline"
-                className="px-8 text-[17px] h-14 rounded-2xl"
-              >
-                {tr.landing.hero.ctaLogin}
-              </Button>
-            </Link>
+            {!user && (
+              <Link href="/login">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="px-8 text-[17px] h-14 rounded-2xl"
+                >
+                  {tr.landing.hero.ctaLogin}
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </section>
@@ -164,7 +166,7 @@ export default function LandingPage() {
                 {summary.upcoming_bonds.map((b) => (
                   <Link
                     key={b.isin_code}
-                    href="/signup"
+                    href={user ? `/dashboard/bonds/${b.isin_code}` : "/signup"}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-background px-3 py-1.5 text-[13px] border border-border/50 hover:border-primary/40 hover:shadow-sm transition-all"
                     title={b.issuer || b.isin_code}
                   >
@@ -175,7 +177,7 @@ export default function LandingPage() {
                   </Link>
                 ))}
               </div>
-              <Link href="/signup" className="shrink-0">
+              <Link href={user ? "/dashboard/bonds" : "/signup"} className="shrink-0">
                 <Button variant="ghost" size="sm" className="text-[13px] h-8 text-primary hover:text-primary hover:bg-primary/10 transition-colors">
                   {tr.landing.upcoming.seeMore} <ArrowRight className="h-3.5 w-3.5 ml-1" />
                 </Button>
@@ -403,9 +405,9 @@ export default function LandingPage() {
                 {tr.landing.cta.description}
               </p>
               <div className="flex items-center justify-center gap-4">
-                <Link href="/signup">
+                <Link href={user ? "/dashboard" : "/signup"}>
                   <Button size="lg" className="px-8 text-[17px] h-14 rounded-2xl shadow-md">
-                    {tr.landing.cta.button}
+                    {user ? tr.landing.nav.dashboard : tr.landing.cta.button}
                     <ArrowRight className="h-5 w-5 ml-1" />
                   </Button>
                 </Link>

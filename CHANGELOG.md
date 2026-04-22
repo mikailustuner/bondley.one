@@ -10,6 +10,9 @@ Tüm önemli değişiklikler bu dosyada belgelenir. Format [Keep a Changelog](ht
 
 ### 🔧 İyileştirmeler
 
+- Landing sayfasında **giriş yapmış kullanıcılar** artık "Ücretsiz Başlat", "Giriş Yap" ve CTA butonlarına tıklayınca `/signup` veya `/login` yerine **doğrudan Dashboard'a yönlendiriliyor**
+- Yaklaşan kupon ticker'ındaki ISIN chip'leri giriş yapmış kullanıcıları **doğrudan tahvil detay sayfasına** yönlendiriyor
+- Giriş yapmış kullanıcılar için Hero bölümünde "Giriş Yap" butonu gizleniyor, ana buton metni "Dashboard" olarak güncelleniyor
 - Dashboard ve tahvil detay sayfalarında **ilk yükleme süresi %30 iyileştirildi** — gereksiz re-render'lar engellendi
 - TLREF endeks grafiklerinde büyük veri setlerinde oluşan gecikme optimize edildi
 - Sidebar navigasyonunda sayfa geçiş animasyonları daha akıcı hale getirildi
