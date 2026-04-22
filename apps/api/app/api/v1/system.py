@@ -63,24 +63,34 @@ async def get_public_summary(db: AsyncSession = Depends(get_db)):
             ratio = float(latest.index_value / first.index_value)
             annualized_rate = round((ratio ** (365.0 / days) - 1) * 100, 2)
 
-    # 4. Veri açıklanmasına 1 gün kalan tahvilleri getir
-    tomorrow = date.today() + timedelta(days=1)
-    upcoming_result = await db.execute(
-        select(Bond)
+    # 4. Veri açıklanmasına en yakın gün kalan tahvilleri getir
+    today_dt = date.today()
+    min_date_result = await db.execute(
+        select(func.min(Bond.next_coupon_date))
         .where(Bond.is_active == True)
-        .where(Bond.next_coupon_date == tomorrow)
-        .limit(5)
+        .where(Bond.next_coupon_date > today_dt)
     )
-    upcoming_bonds_records = upcoming_result.scalars().all()
-    upcoming_bonds = [
-        {
-            "isin_code": b.isin_code,
-            "issuer": b.issuer,
-            "next_coupon_date": b.next_coupon_date.isoformat() if b.next_coupon_date else None,
-            "days_to_coupon": 1
-        }
-        for b in upcoming_bonds_records
-    ]
+    nearest_date = min_date_result.scalar()
+    
+    upcoming_bonds = []
+    if nearest_date:
+        days_to_coupon = (nearest_date - today_dt).days
+        upcoming_result = await db.execute(
+            select(Bond)
+            .where(Bond.is_active == True)
+            .where(Bond.next_coupon_date == nearest_date)
+            .limit(5)
+        )
+        upcoming_bonds_records = upcoming_result.scalars().all()
+        upcoming_bonds = [
+            {
+                "isin_code": b.isin_code,
+                "issuer": b.issuer,
+                "next_coupon_date": b.next_coupon_date.isoformat() if b.next_coupon_date else None,
+                "days_to_coupon": days_to_coupon
+            }
+            for b in upcoming_bonds_records
+        ]
 
     return {
         "tlref_index": float(latest.index_value) if latest else None,

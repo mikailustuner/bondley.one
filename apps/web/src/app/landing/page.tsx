@@ -156,7 +156,7 @@ export default function LandingPage() {
               <div className="flex items-center gap-2 shrink-0 md:border-r md:border-primary/10 md:pr-4">
                 <Bell className="h-5 w-5 text-primary animate-pulse" />
                 <span className="text-[14px] font-semibold text-primary">
-                  {tr.landing.upcoming.title}
+                  {tr.landing.upcoming.title.replace("{days}", (summary?.upcoming_bonds?.[0]?.days_to_coupon ?? 1).toString())}
                 </span>
               </div>
               <div className="flex-1 flex flex-wrap gap-2 items-center justify-center md:justify-start">

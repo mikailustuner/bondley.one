@@ -245,7 +245,7 @@ export const tr = {
             button: "Ücretsiz Başlayın",
         },
         upcoming: {
-            title: "Veri Açıklanmasına 1 Gün Kalanlar",
+            title: "Veri Açıklanmasına {days} Gün Kalanlar",
             seeMore: "Daha fazlasını gör",
         },
         trust: [
@@ -535,7 +535,7 @@ export const tr = {
                     firstYield: "İlk İhraç Getirisi %",
                     lastYield: "Son İhraç Getirisi %",
                     nextCouponRate: "Sonraki Kupon Oranı %",
-                    spread: "Spread %",
+                    spread: "Sözleşmesel Ek Getiri (Spread) %",
                     lastTlref: "Son TLREF (Gecelik Faiz) %",
                     lastTlrefk: "Son TLREFK (Endeks)",
                     calcTlrefDate: "Hesaplamada Kullanılan TLREF Tarihi",

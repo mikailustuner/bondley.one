@@ -185,7 +185,7 @@ class BondMetricsService:
         """
         result = await self.db.execute(
             select(TLREFRate)
-            .where(TLREFRate.rate_date <= target_date)
+            .where(TLREFRate.rate_date < target_date)
             .order_by(TLREFRate.rate_date.desc())
             .limit(1)
         )
@@ -398,7 +398,9 @@ class BondMetricsService:
                         FACE_VALUE * _coupon_rate_to_decimal(bond.next_coupon_rate) / Decimal(str(coupon_frequency_int))
                     ).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
                 tlref_yield, tlref_rate_date = await self._get_tlref_annual_yield(settlement_date)
-                if tlref_yield is not None:
+                # Fix C: ytm==0 ama nakit akisi varsa hesaplama basarisizdir; spread None kalsin.
+                ytm_valid = ytm != 0 or not calc.generate_cash_flows(settlement_date)
+                if tlref_yield is not None and ytm_valid:
                     spread_bp = calc.spread(ytm, tlref_yield)
                 modified_duration = calc.modified_duration(clean_price, settlement_date)
                 macaulay_duration = calc.macaulay_duration(clean_price, settlement_date)

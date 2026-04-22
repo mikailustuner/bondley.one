@@ -192,6 +192,15 @@ class BondCalculator:
         ]
         amounts = [float(cf.amount) for cf in cash_flows]
 
+        # Fix A: tek nakit akisi icin dogrudan algebraik cozum.
+        # Kisa vadeli tahvillerde bisection araliginin disina cikan YTM degerlerini
+        # (vade ~2 gun, fiyat par'dan uzak) dogru hesaplar.
+        if len(cash_flows) == 1 and times[0] > 0 and d_price > 0:
+            ratio = amounts[0] / d_price
+            if ratio > 0:
+                y = k * (ratio ** (1.0 / times[0]) - 1)
+                return Decimal(str(y)).quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
+
         def npv(y: float) -> float:
             factor = 1.0 + y / k
             if factor <= 0:
