@@ -482,6 +482,7 @@ export default function BondDetailPage({
                 ...(bond.calculated_metrics.annual_coupon_rate != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.annualCouponRate, value: formatPercentFromDecimal(bond.calculated_metrics.annual_coupon_rate, 4) }] : []),
                 ...(bond.calculated_metrics.periodic_coupon_rate != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.periodicCouponRate, value: formatPercentFromDecimal(bond.calculated_metrics.periodic_coupon_rate, 4) }] : []),
                 ...(bond.calculated_metrics.yield_to_maturity != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.ytm, value: formatPercentFromDecimal(bond.calculated_metrics.yield_to_maturity, 4) }] : []),
+                ...(bond.spread != null ? [{ label: tr.dashboard.bondDetails.infoCards.financial.spread, value: formatPercent(bond.spread) }] : []),
                 ...(bond.calculated_metrics.return_to_date_pct != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.returnToDate, value: formatPercent(bond.calculated_metrics.return_to_date_pct) }] : []),
                 ...(bond.calculated_metrics.modified_duration != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.modDuration, value: formatDecimal(bond.calculated_metrics.modified_duration, 4) }] : []),
                 ...(bond.calculated_metrics.macaulay_duration != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.macDuration, value: formatDecimal(bond.calculated_metrics.macaulay_duration, 4) }] : []),
