@@ -116,7 +116,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const sidebarContent = (
     <>
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 py-5">
+      <Link href="/" className="flex items-center gap-2.5 px-5 py-5 hover:opacity-80 transition-opacity">
         <Image
           src="/logo.png"
           alt="Bondley"
@@ -128,7 +128,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <span className="font-semibold text-[16px] tracking-tight text-foreground">
           {tr.common.brand}
         </span>
-      </div>
+      </Link>
 
       {/* Navigation */}
       <nav className="flex-1 px-3 space-y-6 overflow-y-auto">
@@ -213,7 +213,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           >
             <Menu className="h-5 w-5" />
           </button>
-          <Link href="/dashboard" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <Image
               src="/logo.png"
               alt="Bondley"
