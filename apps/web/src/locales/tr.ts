@@ -264,6 +264,7 @@ export const tr = {
         nav: {
             overview: "Genel Bakış",
             bonds: "Borçlanma Araçları",
+            favorites: "Favorilerim",
             alerts: "Uyarılar",
             analytics: "Analiz",
             settings: "Ayarlar",
@@ -273,6 +274,18 @@ export const tr = {
             liveData: "Canlı Veri",
             closeMenu: "Menüyü kapat",
             openMenu: "Menüyü aç",
+        },
+        favorites: {
+            title: "Favorilerim",
+            description: "Takip ettiğiniz favori borçlanma araçları",
+            empty: {
+                noBonds: "Henüz favori aracınız yok",
+                noBondsDesc: "Borçlanma araçları sayfasından takip etmek istediğiniz araçları favorilerinize ekleyebilirsiniz.",
+                noMatches: "Filtreyle eşleşen favori araç yok",
+                noMatchesDesc: "Arama veya filtreleri değiştirerek tekrar deneyin.",
+                clearFilters: "Filtreleri temizle",
+                goBonds: "Araçları Keşfet",
+            }
         },
         verification: {
             alertTitle: "E-posta adresiniz doğrulanmadı",

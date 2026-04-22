@@ -19,6 +19,7 @@ import {
   Mail,
   Loader2,
   CheckCircle2,
+  Star,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ const NAV_SECTIONS = [
     items: [
       { href: "/dashboard", label: tr.dashboard.nav.overview, icon: LayoutDashboard },
       { href: "/dashboard/bonds", label: tr.dashboard.nav.bonds, icon: List },
+      { href: "/dashboard/favorites", label: tr.dashboard.nav.favorites, icon: Star },
       { href: "/dashboard/alerts", label: tr.dashboard.nav.alerts, icon: Bell },
       { href: "/dashboard/analytics", label: tr.dashboard.nav.analytics, icon: BarChart3 },
     ],
