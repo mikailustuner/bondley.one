@@ -48,30 +48,38 @@ class MarketDataService:
 
         result = calculator.full_analysis(clean_price, calc_date, tlref_rate)
 
-        stmt = pg_insert(Calculation).values(
-            bond_id=bond.id,
-            calc_date=calc_date,
-            dirty_price=result["dirty_price"],
-            accrued_interest=result["accrued_interest"],
-            yield_to_maturity=result["yield_to_maturity"],
-            spread=result["spread"],
-            modified_duration=result["modified_duration"],
-            macaulay_duration=result["macaulay_duration"],
-            is_theoretical=is_theoretical,
+        # Sanity check: DB Numeric(10, 6) limits (-9999.999999 to 9999.999999)
+        def cap(val: Decimal | float | None, limit: float = 9999.0) -> Decimal | float | None:
+            if val is None: return None
+            v = float(val)
+            if v > limit: return Decimal(str(limit))
+            if v < -limit: return Decimal(str(-limit))
+            return val
+
+        await self.db.execute(
+            pg_insert(Calculation).values(
+                bond_id=bond.id,
+                calc_date=calc_date,
+                dirty_price=result["dirty_price"],
+                accrued_interest=result["accrued_interest"],
+                yield_to_maturity=cap(result["yield_to_maturity"]),
+                spread=cap(result["spread"]),
+                modified_duration=cap(result["modified_duration"]),
+                macaulay_duration=cap(result["macaulay_duration"]),
+                is_theoretical=is_theoretical,
+            ).on_conflict_do_update(
+                index_elements=["bond_id", "calc_date"],
+                set_={
+                    "dirty_price": pg_insert(Calculation).excluded.dirty_price,
+                    "accrued_interest": pg_insert(Calculation).excluded.accrued_interest,
+                    "yield_to_maturity": pg_insert(Calculation).excluded.yield_to_maturity,
+                    "spread": pg_insert(Calculation).excluded.spread,
+                    "modified_duration": pg_insert(Calculation).excluded.modified_duration,
+                    "macaulay_duration": pg_insert(Calculation).excluded.macaulay_duration,
+                    "is_theoretical": pg_insert(Calculation).excluded.is_theoretical,
+                },
+            )
         )
-        stmt = stmt.on_conflict_do_update(
-            index_elements=["bond_id", "calc_date"],
-            set_={
-                "dirty_price": stmt.excluded.dirty_price,
-                "accrued_interest": stmt.excluded.accrued_interest,
-                "yield_to_maturity": stmt.excluded.yield_to_maturity,
-                "spread": stmt.excluded.spread,
-                "modified_duration": stmt.excluded.modified_duration,
-                "macaulay_duration": stmt.excluded.macaulay_duration,
-                "is_theoretical": stmt.excluded.is_theoretical,
-            },
-        )
-        await self.db.execute(stmt)
 
         return result
 

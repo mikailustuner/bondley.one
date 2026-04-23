@@ -25,7 +25,9 @@ if command -v docker &> /dev/null && docker ps | grep -q fincalc-api; then
 fi
 
 if [ "$USE_DOCKER" = true ]; then
-    log "Script Docker container içine kopyalanıyor..."
+    log "Kodlar Docker container içine senkronize ediliyor..."
+    # Tüm app klasörünü ve scripti kopyala
+    docker cp "$PROJECT_ROOT/apps/api/app" fincalc-api:/app/
     docker cp "$PYTHON_SCRIPT" fincalc-api:/app/sync-tlref-historical.py
 
     log "Script Docker container içinde çalıştırılıyor..."

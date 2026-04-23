@@ -20,7 +20,7 @@ from app.core.database import async_session_factory, engine
 from app.services.market_data_populator import populate_market_data
 from app.services.calculations_populator import populate_calculations
 from app.models.calculation import Calculation
-from sqlalchemy import select, func
+from sqlalchemy import select, func, text
 
 import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -71,19 +71,26 @@ async def run_backfill(start_date: date, end_date: date, force: bool = False):
 
     for d in missing_days:
         logger.info(f"\n--- İşleniyor: {d} ---")
-        try:
-            # 1. Market Data Hazırla
-            logger.info(f"[{d}] Piyasa verileri parse ediliyor...")
-            await populate_market_data(d, dry_run=False)
-            
-            # 2. Hesaplamaları Yap
-            logger.info(f"[{d}] Finansal metrikler hesaplanıyor...")
-            await populate_calculations(d, dry_run=False)
-            
-            logger.info(f"✅ {d} başarıyla tamamlandı.")
-        except Exception as e:
-            logger.error(f"❌ {d} işlenirken hata oluştu: {e}")
-            continue
+        async with async_session_factory() as session:
+            try:
+                # 1. Market Data Hazırla
+                logger.info(f"[{d}] Piyasa verileri parse ediliyor...")
+                await populate_market_data(d, dry_run=False)
+                
+                # 2. Hesaplamaları Yap
+                logger.info(f"[{d}] Finansal metrikler hesaplanıyor...")
+                await populate_calculations(d, dry_run=False)
+                
+                logger.info(f"✅ {d} başarıyla tamamlandı.")
+            except Exception as e:
+                logger.error(f"❌ {d} işlenirken hata oluştu: {e}")
+                await session.rollback()
+                # Transaction'ı temizlemek için basit bir sorgu atalım
+                try:
+                    await session.execute(text("SELECT 1"))
+                except:
+                    pass
+                continue
 
     logger.info("\n" + "=" * 60)
     logger.info("Backfill işlemi tamamlandı.")

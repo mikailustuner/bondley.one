@@ -49,8 +49,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ "$USE_DOCKER" = true ]; then
-    log "Script Docker container içinde çalıştırılıyor..."
+    log "Kodlar Docker container içine senkronize ediliyor..."
+    # Tüm app klasörünü ve scripti kopyala
+    docker cp "$PROJECT_ROOT/apps/api/app" fincalc-api:/app/
     docker cp "$PYTHON_SCRIPT" fincalc-api:/app/recompute-missing-days.py
+    
+    log "Script Docker container içinde çalıştırılıyor..."
     docker exec -it fincalc-api python3 recompute-missing-days.py $ARGS
 else
     log "Lokal Python ortamında çalıştırılıyor..."
