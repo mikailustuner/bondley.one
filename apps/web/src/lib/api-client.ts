@@ -604,6 +604,7 @@ export const api = {
         yield_type?: string;
         order_by?: "maturity_date_asc" | "days_to_maturity_asc" | "last_issue_yield_desc" | "updated_at_desc";
         max_days_to_maturity?: number;
+        with_data_only?: boolean;
       },
     ) => {
       const query = new URLSearchParams();
@@ -617,6 +618,8 @@ export const api = {
       if (params?.order_by) query.set("order_by", params.order_by);
       if (params?.max_days_to_maturity != null)
         query.set("max_days_to_maturity", String(params.max_days_to_maturity));
+      if (params?.with_data_only !== undefined)
+        query.set("with_data_only", String(params.with_data_only));
       return apiFetch<BondListResponse>(`/bonds/?${query}`, { token });
     },
     get: (token: string, isin: string, params?: { settlement_date?: string }) => {
