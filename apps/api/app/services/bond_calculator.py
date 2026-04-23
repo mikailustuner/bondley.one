@@ -36,11 +36,25 @@ class BondCalculator:
         self.maturity_date = maturity_date
         self.coupon_rate = Decimal(str(coupon_rate))
         self.face_value = Decimal(str(face_value))
-        self.coupon_frequency = coupon_frequency
+
+        # Tek odemeli (Bono) veya vadesi kisa olanlar icin frekans duzeltmesi
+        total_days = (maturity_date - issue_date).days
+        if coupon_frequency > 1 and total_days < (365 // coupon_frequency + 30):
+            self.coupon_frequency = 1
+        else:
+            self.coupon_frequency = coupon_frequency
+
         self._next_coupon_date_anchor = next_coupon_date
-        self.coupon_payment = (
-            self.face_value * self.coupon_rate / Decimal(str(self.coupon_frequency))
-        )
+        
+        if self.coupon_frequency == 1:
+            # Yillik basit faiz uzerinden vade sonu faiz tutari
+            self.coupon_payment = (
+                self.face_value * self.coupon_rate * Decimal(str(total_days)) / Decimal("365")
+            )
+        else:
+            self.coupon_payment = (
+                self.face_value * self.coupon_rate / Decimal(str(self.coupon_frequency))
+            )
 
     def _validate_settlement(self, settlement_date: date) -> None:
         """Raises ValueError if settlement is after maturity (YTM/price undefined)."""
@@ -120,13 +134,24 @@ class BondCalculator:
         self._validate_settlement(settlement_date)
         last_coupon = self._last_coupon_date(settlement_date)
         next_coupon = self._next_coupon_date(settlement_date)
+        
+        # Tek odemeli bonolarda last_coupon her zaman issue_date'dir
+        if self.coupon_frequency == 1:
+            last_coupon = self.issue_date
+            next_coupon = self.maturity_date
+
         days_passed = (settlement_date - last_coupon).days
-        days_in_period = (next_coupon - last_coupon).days
-        if days_in_period <= 0:
-            return Decimal("0")
-        accrued = self.coupon_payment * (
-            Decimal(str(days_passed)) / Decimal(str(days_in_period))
-        )
+        
+        if self.coupon_frequency == 1:
+            # Bono icin Birikmis Faiz: Nominal * Oran * (Gecen Gun / 365)
+            accrued = self.face_value * self.coupon_rate * Decimal(str(days_passed)) / Decimal("365")
+        else:
+            days_in_period = (next_coupon - last_coupon).days
+            if days_in_period <= 0:
+                return Decimal("0")
+            accrued = self.coupon_payment * (
+                Decimal(str(days_passed)) / Decimal(str(days_in_period))
+            )
         return accrued.quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
 
     def dirty_price(self, clean_price: Decimal, settlement_date: date) -> Decimal:
