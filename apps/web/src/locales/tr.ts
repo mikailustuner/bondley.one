@@ -366,7 +366,8 @@ export const tr = {
         },
         bonds: {
             title: "Borçlanma Araçları",
-            description: "Tahvil, Bono, Kira Sertifikası, VDMK ve türevleri — {count} aktif kayıt",
+            description: "{total} aktif araç — {count} adet verisi olan listeleniyor",
+            descriptionFull: "{total} aktif araç listeleniyor",
             stats: {
                 total: "Toplam Araç",
                 totalDesc: "Aktif kayıt",

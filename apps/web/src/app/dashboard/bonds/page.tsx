@@ -144,7 +144,11 @@ export default function BondsListPage() {
         <div>
           <h1 className="text-display-md text-foreground">{tr.dashboard.bonds.title}</h1>
           <p className="text-[15px] text-muted-foreground mt-1.5">
-            {tr.dashboard.bonds.description.replace("{count}", formatDecimal(total, 0))}
+            {withDataOnly && stats
+              ? tr.dashboard.bonds.description
+                  .replace("{total}", formatDecimal(stats.total_bonds, 0))
+                  .replace("{count}", formatDecimal(total, 0))
+              : tr.dashboard.bonds.descriptionFull.replace("{total}", formatDecimal(total, 0))}
           </p>
         </div>
       </div>
