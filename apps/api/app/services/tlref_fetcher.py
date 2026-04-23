@@ -295,11 +295,17 @@ class TLREFFetcher:
             d = rec["rate_date"]
             row = by_date.get(d)
             if row is None:
-                # TLREFRate.index_value nullable olmadigi icin index olmayan gunleri atla
-                continue
-            row["daily_rate"] = rec.get("daily_rate")
+                # Eger o gun icin index verisi yoksa bile oran verisini saklayalim
+                by_date[d] = {
+                    "rate_date": d,
+                    "index_value": None,
+                    "daily_rate": rec.get("daily_rate"),
+                    "source": "BIST_DAILY",
+                }
+            else:
+                row["daily_rate"] = rec.get("daily_rate")
 
-        merged = [v for v in by_date.values() if v.get("index_value") is not None]
+        merged = [v for v in by_date.values()]
         logger.info(
             "Daily TLREF merge summary: index=%s rate=%s merged=%s",
             len(index_records),
@@ -409,26 +415,64 @@ class TLREFFetcher:
         return records
 
     async def _upsert_rate_records(self, records: list[dict]) -> int:
-        """Sadece published_annual_rate_pct ve daily_rate'i gunceller; index_value'ya dokunmaz."""
+        """
+        published_annual_rate_pct ve daily_rate'i upsert eder.
+        Eger index_value yoksa, DB'deki mevcut degeri korur. 
+        Eger satır hic yoksa, index_value zorunlu oldugu icin (NOT NULL) 
+        burada dummy/gecici bir degerle (veya bir onceki gunden hesaplayarak) ekleme yapilmalidir.
+        """
         if not records:
             return 0
-        from sqlalchemy import update as sa_update
-
+        
         count = 0
-        for rec in records:
-            await self.db.execute(
-                sa_update(TLREFRate)
-                .where(TLREFRate.rate_date == rec["rate_date"])
-                .values(
-                    published_annual_rate_pct=rec["published_annual_rate_pct"],
-                    daily_rate=rec["daily_rate"],
-                )
+        for i in range(0, len(records), 500):
+            batch = records[i : i + 500]
+            # Not: index_value nullable=False oldugu icin, yeni kayitlarda 0.0 veriyoruz.
+            # Bir sonraki adimda _compute_missing_indices cagrilabilir.
+            stmt = pg_insert(TLREFRate).values([
+                {**r, "index_value": r.get("index_value", Decimal("0"))} for r in batch
+            ])
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["rate_date"],
+                set_={
+                    "published_annual_rate_pct": stmt.excluded.published_annual_rate_pct,
+                    "daily_rate": func.coalesce(stmt.excluded.daily_rate, TLREFRate.daily_rate),
+                    "index_value": func.case(
+                        (TLREFRate.index_value > 0, TLREFRate.index_value),
+                        else_=stmt.excluded.index_value
+                    ),
+                },
             )
-            count += 1
+            await self.db.execute(stmt)
+            count += len(batch)
 
         await self.db.commit()
-        logger.info(f"Updated published_annual_rate_pct for {count} TLREF records")
+        # Eksik kalan endeksleri oranlardan geri hesapla
+        await self._compute_missing_indices()
+        logger.info(f"Upserted and verified {count} TLREF rate records")
         return count
+
+    async def _compute_missing_indices(self) -> int:
+        """
+        Eger elimizde daily_rate var ama index_value 0 ise, 
+        bir onceki gunun endeksinden (prev_idx * (1 + daily_rate)) hesaplar.
+        """
+        result = await self.db.execute(
+            select(TLREFRate).order_by(TLREFRate.rate_date.asc())
+        )
+        all_rates = result.scalars().all()
+        updated = 0
+        for i in range(1, len(all_rates)):
+            prev = all_rates[i-1]
+            curr = all_rates[i]
+            if (curr.index_value is None or curr.index_value <= 0) and curr.daily_rate and prev.index_value > 0:
+                curr.index_value = (prev.index_value * (Decimal("1") + curr.daily_rate)).quantize(
+                    Decimal("0.00001"), rounding=ROUND_HALF_UP
+                )
+                updated += 1
+        if updated > 0:
+            await self.db.commit()
+        return updated
 
     async def _upsert_records(self, records: list[dict]) -> int:
         if not records:
@@ -440,7 +484,7 @@ class TLREFFetcher:
             stmt = stmt.on_conflict_do_update(
                 index_elements=["rate_date"],
                 set_={
-                    "index_value": stmt.excluded.index_value,
+                    "index_value": func.coalesce(stmt.excluded.index_value, TLREFRate.index_value),
                     "daily_rate": func.coalesce(stmt.excluded.daily_rate, TLREFRate.daily_rate),
                     "source": stmt.excluded.source,
                 },
