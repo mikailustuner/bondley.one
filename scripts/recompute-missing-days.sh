@@ -14,6 +14,7 @@ error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
 # Proje kök dizinini bul
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PYTHON_SCRIPT="$SCRIPT_DIR/recompute-missing-days.py"
 
 # Kullanım yardımı
