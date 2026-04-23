@@ -56,10 +56,9 @@ async def list_bonds(
     count_query = select(func.count(Bond.id))
 
     if active_only:
-        today = date.today()
         active_filter = (
             Bond.is_active == True,
-            or_(Bond.maturity_date.is_(None), Bond.maturity_date >= today),
+            Bond.maturity_date >= date.today(),
         )
         query = query.where(*active_filter)
         count_query = count_query.where(*active_filter)
@@ -128,10 +127,9 @@ async def get_bond_stats(
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
-    today = date.today()
     active_filter = (
         Bond.is_active == True,
-        or_(Bond.maturity_date.is_(None), Bond.maturity_date >= today),
+        Bond.maturity_date >= date.today(),
     )
 
     total = (
@@ -212,8 +210,9 @@ async def list_favorites(
         select(Bond)
         .join(UserFavoriteBond, UserFavoriteBond.bond_id == Bond.id)
         .where(
-            UserFavoriteBond.user_id == user.id, Bond.is_active == True,
-            or_(Bond.maturity_date.is_(None), Bond.maturity_date >= date.today()),
+            UserFavoriteBond.user_id == user.id, 
+            Bond.is_active == True,
+            Bond.maturity_date >= date.today(),
         )
         .order_by(Bond.maturity_date.asc().nullslast())
     )

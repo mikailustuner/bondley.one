@@ -53,7 +53,7 @@ async def get_public_summary(db: AsyncSession = Depends(get_db)):
         await db.execute(
             select(func.count(Bond.id)).where(
                 Bond.is_active == True,
-                or_(Bond.maturity_date.is_(None), Bond.maturity_date >= today),
+                Bond.maturity_date >= today,
             )
         )
     ).scalar() or 0
@@ -74,7 +74,7 @@ async def get_public_summary(db: AsyncSession = Depends(get_db)):
     today_dt = date.today()
     min_date_result = await db.execute(
         select(func.min(Bond.next_coupon_date))
-        .where(Bond.is_active == True)
+        .where(Bond.is_active == True, Bond.maturity_date >= today_dt)
         .where(Bond.next_coupon_date > today_dt)
     )
     nearest_date = min_date_result.scalar()
@@ -84,7 +84,7 @@ async def get_public_summary(db: AsyncSession = Depends(get_db)):
         days_to_coupon = (nearest_date - today_dt).days
         upcoming_result = await db.execute(
             select(Bond)
-            .where(Bond.is_active == True)
+            .where(Bond.is_active == True, Bond.maturity_date >= date.today())
             .where(Bond.next_coupon_date == nearest_date)
             .limit(5)
         )

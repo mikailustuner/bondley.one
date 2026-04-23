@@ -29,7 +29,10 @@ async def get_admin_stats(
 ):
     """Sadece admin: genel istatistikler (tahvil, TLREF, kullanici sayisi)."""
     bonds_count = (
-        await db.execute(select(func.count(Bond.id)).where(Bond.is_active == True))
+        await db.execute(
+            select(func.count(Bond.id))
+            .where(Bond.is_active == True, Bond.maturity_date >= date.today())
+        )
     ).scalar() or 0
     tlref_count = (await db.execute(select(func.count(TLREFRate.id)))).scalar() or 0
     users_count = (await db.execute(select(func.count(User.id)))).scalar() or 0
@@ -54,7 +57,7 @@ async def get_data_health(
     query = (
         select(Bond, KapDisclosure.isin_code)
         .outerjoin(KapDisclosure, Bond.isin_code == KapDisclosure.isin_code)
-        .where(Bond.is_active == True)
+        .where(Bond.is_active == True, Bond.maturity_date >= date.today())
     )
     
     result = await db.execute(query)
