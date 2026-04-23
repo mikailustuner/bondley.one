@@ -161,15 +161,15 @@ def bond_to_calculator_inputs(bond: Bond) -> tuple[date, date, Decimal, int] | N
     period_days, freq = parse_coupon_frequency(bond.coupon_frequency)
     raw_rate = _coupon_rate_to_decimal(bond.next_coupon_rate)
     
-    # Düzeltme: Eğer vade 1 yıldan kısaysa ve oran dönemselse yıllıklandır
     total_days = (maturity_date - issue_date).days
-    if total_days > 0 and total_days < 365 and freq == 1:
-        # Eğer oran dönemsel faiz miktarını temsil ediyorsa (örn: %18.41)
-        # Bunu yıllık basit faize (%44.50) çeviriyoruz
+    
+    # Radikal Düzeltme: Vadesi 1 yıldan kısa her şey "Bono" mantığıyla çalışmalı
+    if total_days > 0 and total_days < 365:
+        # Oranı toplam vadeye göre yıllıklandır (%18.41 * 365 / 151 = %44.50)
         coupon_rate = raw_rate * Decimal("365") / Decimal(str(total_days))
+        freq = 1
     else:
-        # Normal kuponlu tahvillerde oran zaten yıllık basit (BEY) varsayılır
-        # Veya frekansla çarpılarak yıllıklandırılır
+        # 1 yıldan uzun standart tahviller
         coupon_rate = raw_rate * Decimal(str(freq))
         
     return (issue_date, maturity_date, coupon_rate, freq)
@@ -493,7 +493,10 @@ class BondMetricsService:
             "convexity": float(convexity) if convexity is not None else None,
             "coupon_payment_amount": float(coupon_payment_amount) if coupon_payment_amount is not None else None,
             "period_days": period_days,
-            "next_coupon_date": bond.next_coupon_date.isoformat() if bond.next_coupon_date else None,
+            "next_coupon_date": (
+                bond.maturity_date.isoformat() if total_days < 365 
+                else (bond.next_coupon_date.isoformat() if bond.next_coupon_date else None)
+            ),
             "return_to_date_pct": return_to_date_pct,
             "return_to_date_used_fallback_price": return_to_date_used_fallback_price,
             "used_fallback_market_data": used_fallback_market_data,
