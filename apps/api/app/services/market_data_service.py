@@ -25,10 +25,12 @@ class MarketDataService:
         self.db = db
 
     async def run_calculations_for_bond(
-        self, bond: Bond, calc_date: date, clean_price: Decimal, is_theoretical: bool = False
+        self, bond: Bond, calc_date: date, clean_price: Decimal, tlref_rate: Decimal | None = None, is_theoretical: bool = False
     ) -> dict:
         """Tek bir tahvil icin tum hesaplamalari calistir ve DB'ye kaydet."""
-        tlref_rate, _ = await get_tlref_annual_yield_for_date(self.db, calc_date)
+        # Use provided tlref_rate if available, otherwise fetch
+        if tlref_rate is None:
+            tlref_rate, _ = await get_tlref_annual_yield_for_date(self.db, calc_date)
         inputs = bond_to_calculator_inputs(bond)
         if not inputs:
             raise ValueError(f"Bond {bond.isin_code}: first_issue_date veya maturity_date eksik")
@@ -151,7 +153,7 @@ class MarketDataService:
 
             try:
                 result = await self.run_calculations_for_bond(
-                    bond, calc_date, clean_price, is_theoretical
+                    bond, calc_date, clean_price, tlref_rate, is_theoretical
                 )
                 results.append(result)
             except Exception as e:

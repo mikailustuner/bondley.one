@@ -18,3 +18,4 @@ async def check():
                 print(f"Error for {url}: {e}")
 
 if __name__ == "__main__":
+    asyncio.run(check())

@@ -47,6 +47,20 @@ Tüm önemli değişiklikler bu dosyada belgelenir. Format [Keep a Changelog](ht
 
 ---
 
+## [1.2.2] — 2026-04-23
+
+### 🐛 Hata Düzeltmeleri
+
+- **Celery Worker Kararlılığı:** Asenkron veritabanı bağlantılarında oluşan `InterfaceError: another operation is in progress` hatası, event loop yönetimi ve engine disposal iyileştirmeleri ile giderildi.
+- `check_csv.py` dosyasındaki asenkron çalıştırma (syntax) hatası düzeltildi.
+
+### 🚀 Performans İyileştirmeleri
+
+- **Toplu Hesaplama Optimizasyonu:** Günlük hesaplamalarda her tahvil için ayrı ayrı yapılan TLREF veri çekme işlemi merkezileştirilerek veritabanı yükü ve işlem süresi azaltıldı.
+- Veritabanı bağlantı havuzu (connection pool) yönetimi asenkron tasklar için optimize edildi.
+
+---
+
 ## [1.2.1] — 2026-04-22
 
 ### 🔧 İyileştirmeler

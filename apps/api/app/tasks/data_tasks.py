@@ -23,11 +23,26 @@ SyncSession = sessionmaker(bind=sync_engine)
 
 
 def _run_async(coro):
+    """
+    Helper to run async code in a sync Celery task.
+    Ensures a clean event loop and disposes the engine pool to avoid 
+    asyncpg 'another operation is in progress' errors due to loop mismatch.
+    """
+    import asyncio
+    from app.core.database import engine
+    
     loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
         return loop.run_until_complete(coro)
     finally:
+        try:
+            # Dispose engine pool so next task in this worker process gets fresh connections
+            loop.run_until_complete(engine.dispose())
+        except Exception:
+            pass
         loop.close()
+        asyncio.set_event_loop(None)
 
 
 @celery_app.task(name="app.tasks.data_tasks.fetch_daily_tlref", bind=True, max_retries=3)
