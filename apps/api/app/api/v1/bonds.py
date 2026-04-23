@@ -3,6 +3,7 @@ from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from datetime import date, timedelta
+import json
 import logging
 
 from app.core.database import get_db
@@ -25,6 +26,7 @@ from app.schemas.bond import (
     AddFavoriteRequest,
 )
 from app.api.deps import get_current_user, get_admin_user
+from app.core.cache import cache_get, cache_set
 from app.services.bond_fetcher import BondFetcher
 from app.services.bond_metrics_service import BondMetricsService
 from app.services.metrics_service import MetricsService
@@ -54,8 +56,13 @@ async def list_bonds(
     count_query = select(func.count(Bond.id))
 
     if active_only:
-        query = query.where(Bond.is_active == True)
-        count_query = count_query.where(Bond.is_active == True)
+        today = date.today()
+        active_filter = (
+            Bond.is_active == True,
+            or_(Bond.maturity_date.is_(None), Bond.maturity_date >= today),
+        )
+        query = query.where(*active_filter)
+        count_query = count_query.where(*active_filter)
 
     if fund_user:
         pattern = f"%{fund_user}%"
@@ -121,27 +128,33 @@ async def get_bond_stats(
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
+    today = date.today()
+    active_filter = (
+        Bond.is_active == True,
+        or_(Bond.maturity_date.is_(None), Bond.maturity_date >= today),
+    )
+
     total = (
-        await db.execute(select(func.count(Bond.id)).where(Bond.is_active == True))
+        await db.execute(select(func.count(Bond.id)).where(*active_filter))
     ).scalar() or 0
 
     sec_rows = await db.execute(
         select(Bond.security_type, func.count(Bond.id))
-        .where(Bond.is_active == True, Bond.security_type.isnot(None))
+        .where(*active_filter, Bond.security_type.isnot(None))
         .group_by(Bond.security_type)
     )
     by_security_type = {row[0]: row[1] for row in sec_rows.all()}
 
     cur_rows = await db.execute(
         select(Bond.currency, func.count(Bond.id))
-        .where(Bond.is_active == True)
+        .where(*active_filter)
         .group_by(Bond.currency)
     )
     by_currency = {row[0]: row[1] for row in cur_rows.all()}
 
     yt_rows = await db.execute(
         select(Bond.yield_type, func.count(Bond.id))
-        .where(Bond.is_active == True, Bond.yield_type.isnot(None))
+        .where(*active_filter, Bond.yield_type.isnot(None))
         .group_by(Bond.yield_type)
     )
     by_yield_type = {row[0]: row[1] for row in yt_rows.all()}
@@ -149,22 +162,21 @@ async def get_bond_stats(
     avg_dtm = (
         await db.execute(
             select(func.avg(Bond.days_to_maturity))
-            .where(Bond.is_active == True, Bond.days_to_maturity.isnot(None))
+            .where(*active_filter, Bond.days_to_maturity.isnot(None))
         )
     ).scalar()
 
-    base = Bond.is_active == True
     short = (
         await db.execute(
             select(func.count(Bond.id)).where(
-                base, Bond.days_to_maturity.isnot(None), Bond.days_to_maturity < 365
+                *active_filter, Bond.days_to_maturity.isnot(None), Bond.days_to_maturity < 365
             )
         )
     ).scalar() or 0
     medium = (
         await db.execute(
             select(func.count(Bond.id)).where(
-                base,
+                *active_filter,
                 Bond.days_to_maturity.isnot(None),
                 Bond.days_to_maturity >= 365,
                 Bond.days_to_maturity <= 1825,
@@ -174,7 +186,7 @@ async def get_bond_stats(
     long_count = (
         await db.execute(
             select(func.count(Bond.id)).where(
-                base, Bond.days_to_maturity.isnot(None), Bond.days_to_maturity > 1825
+                *active_filter, Bond.days_to_maturity.isnot(None), Bond.days_to_maturity > 1825
             )
         )
     ).scalar() or 0
@@ -199,7 +211,10 @@ async def list_favorites(
     q = (
         select(Bond)
         .join(UserFavoriteBond, UserFavoriteBond.bond_id == Bond.id)
-        .where(UserFavoriteBond.user_id == user.id)
+        .where(
+            UserFavoriteBond.user_id == user.id, Bond.is_active == True,
+            or_(Bond.maturity_date.is_(None), Bond.maturity_date >= date.today()),
+        )
         .order_by(Bond.maturity_date.asc().nullslast())
     )
     result = await db.execute(q)
@@ -264,7 +279,10 @@ async def get_bond_scenario(
     _user: User = Depends(get_current_user),
 ):
     """TLREF sok senaryosu: belirtilen bp kadar kaymada tahmini yeni YTM ve kirli fiyat."""
-    result = await db.execute(select(Bond).where(Bond.isin_code == isin_code))
+    result = await db.execute(select(Bond).where(
+        Bond.isin_code == isin_code, Bond.is_active == True,
+        or_(Bond.maturity_date.is_(None), Bond.maturity_date >= date.today()),
+    ))
     bond = result.scalar_one_or_none()
     if not bond:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tahvil bulunamadi")
@@ -329,7 +347,10 @@ async def get_bond(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    result = await db.execute(select(Bond).where(Bond.isin_code == isin_code))
+    result = await db.execute(select(Bond).where(
+        Bond.isin_code == isin_code, Bond.is_active == True,
+        or_(Bond.maturity_date.is_(None), Bond.maturity_date >= date.today()),
+    ))
     bond = result.scalar_one_or_none()
     if not bond:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tahvil bulunamadi")
@@ -434,7 +455,14 @@ async def get_bond(
     else:
         try:
             metrics_svc = BondMetricsService(db)
-            metrics = await metrics_svc.compute_metrics(bond, calc_date)
+            metrics_cache_key = f"bond_metrics:{isin_code}:{calc_date.isoformat()}"
+            cached_metrics = await cache_get(metrics_cache_key)
+            if cached_metrics is not None:
+                metrics = json.loads(cached_metrics)
+            else:
+                metrics = await metrics_svc.compute_metrics(bond, calc_date)
+                if metrics is not None:
+                    await cache_set(metrics_cache_key, json.dumps(metrics), 300)
             if metrics is None:
                 # Belirli tarih icin veri yok - None olarak bırak (frontend'e bildirilecek)
                 base.calculated_metrics = None

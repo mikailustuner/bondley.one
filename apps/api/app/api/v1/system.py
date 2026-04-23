@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from sqlalchemy import or_
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
@@ -47,8 +48,14 @@ async def get_public_summary(db: AsyncSession = Depends(get_db)):
 
     # 3. İstatistiksel Count'ları al
     tlref_count = (await db.execute(select(func.count(TLREFRate.id)))).scalar() or 0
+    today = date.today()
     total_bonds = (
-        await db.execute(select(func.count(Bond.id)).where(Bond.is_active == True))
+        await db.execute(
+            select(func.count(Bond.id)).where(
+                Bond.is_active == True,
+                or_(Bond.maturity_date.is_(None), Bond.maturity_date >= today),
+            )
+        )
     ).scalar() or 0
 
     tlref_index_change_pct = None

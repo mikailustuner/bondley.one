@@ -8,6 +8,7 @@ Bond.day_count_convention (30/360 vb.) su an kullanilmaz; ileride eklenebilir.
 
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
+import json
 import logging
 import re
 
@@ -124,6 +125,17 @@ def periodic_coupon_rate(annual_coupon: Decimal | None, period_days: int) -> Dec
     )
 
 
+def annual_compound_coupon_rate(periodic_coupon: Decimal | None, period_days: int) -> Decimal | None:
+    """Bileşik Getiri = (1 + Donemsel Kupon)^(365 / Donem Gun Sayisi) - 1."""
+    if periodic_coupon is None or period_days <= 0:
+        return None
+    base = float(Decimal("1") + periodic_coupon)
+    if base <= 0:
+        return None
+    compound = base ** (365.0 / period_days) - 1.0
+    return Decimal(str(compound)).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
+
+
 def _coupon_rate_to_decimal(rate: Decimal | None) -> Decimal:
     """
     Kupon oranini kupon tutari formulu icin ondaliga cevirir.
@@ -158,6 +170,15 @@ async def get_tlref_annual_yield_for_date(
     Hedef tarih icin TLREF yillik getiri: daily_rate * 365.
     rate_date <= target_date olan en son kaydin daily_rate'i kullanilir; yoksa None.
     """
+    from app.core.cache import cache_get, cache_set
+    cache_key = f"tlref_annual:{target_date.isoformat()}"
+    cached = await cache_get(cache_key)
+    if cached is not None:
+        data = json.loads(cached)
+        rate = Decimal(data["rate"]) if data["rate"] else None
+        rate_date = date.fromisoformat(data["date"]) if data["date"] else None
+        return rate, rate_date
+
     result = await db.execute(
         select(TLREFRate)
         .where(TLREFRate.rate_date <= target_date)
@@ -168,7 +189,13 @@ async def get_tlref_annual_yield_for_date(
     if row is None:
         return None, None
     if row.daily_rate is not None:
-        return row.daily_rate * Decimal("365"), row.rate_date
+        rate = row.daily_rate * Decimal("365")
+        await cache_set(
+            cache_key,
+            json.dumps({"rate": str(rate), "date": row.rate_date.isoformat()}),
+            3600,
+        )
+        return rate, row.rate_date
     return None, row.rate_date
 
 
@@ -183,6 +210,12 @@ class BondMetricsService:
         target_date icin 'onceki is gunu' TLREF index_value.
         rate_date <= target_date olan en son kayit.
         """
+        from app.core.cache import cache_get, cache_set
+        cache_key = f"tlref_idx:{target_date.isoformat()}"
+        cached = await cache_get(cache_key)
+        if cached is not None:
+            return Decimal(cached)
+
         result = await self.db.execute(
             select(TLREFRate)
             .where(TLREFRate.rate_date < target_date)
@@ -190,10 +223,19 @@ class BondMetricsService:
             .limit(1)
         )
         row = result.scalar_one_or_none()
-        return row.index_value if row else None
+        val = row.index_value if row else None
+        if val is not None:
+            await cache_set(cache_key, str(val), 3600)
+        return val
 
     async def get_latest_daily_rate(self) -> Decimal | None:
         """Son bilinen TLREF gunluk oran (daily_rate), yuzde icin kullanilir."""
+        from app.core.cache import cache_get, cache_set
+        cache_key = "tlref_daily_latest"
+        cached = await cache_get(cache_key)
+        if cached is not None:
+            return Decimal(cached)
+
         result = await self.db.execute(
             select(TLREFRate)
             .where(TLREFRate.daily_rate.isnot(None))
@@ -201,7 +243,10 @@ class BondMetricsService:
             .limit(1)
         )
         row = result.scalar_one_or_none()
-        return row.daily_rate if row else None
+        val = row.daily_rate if row else None
+        if val is not None:
+            await cache_set(cache_key, str(val), 3600)
+        return val
 
     async def get_clean_price(self, bond_id: int, settlement_date: date) -> tuple[Decimal | None, date | None]:
         """Settlement tarihi icin market_data.clean_price; yoksa en son mevcut veriyi kullanir.
@@ -323,10 +368,12 @@ class BondMetricsService:
         annual_ref = None
         annual_coupon = None
         periodic_coupon = None
+        compound_coupon = None
         if tlref_start and tlref_end and period_days > 0:
             annual_ref = annual_reference_rate(tlref_start, tlref_end, period_days)
             annual_coupon = annual_coupon_rate(annual_ref, bond.spread)
             periodic_coupon = periodic_coupon_rate(annual_coupon, period_days)
+            compound_coupon = annual_compound_coupon_rate(periodic_coupon, period_days)
 
         # Birikmis faiz: TLREF'li ise Donemsel Kupon * (gun gecen / period_days) * nominal; degilse sabit kupon
         accrued_interest = None
@@ -443,6 +490,7 @@ class BondMetricsService:
             "annual_reference_rate": float(annual_ref) if annual_ref is not None else None,
             "annual_coupon_rate": float(annual_coupon) if annual_coupon is not None else None,
             "periodic_coupon_rate": float(periodic_coupon) if periodic_coupon is not None else None,
+            "annual_compound_coupon_rate": float(compound_coupon) if compound_coupon is not None else None,
             "accrued_interest": float(accrued_interest),
             "dirty_price": float(dirty_price),
             "clean_price_used": float(clean_price),

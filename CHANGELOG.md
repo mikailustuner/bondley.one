@@ -6,6 +6,47 @@ Tüm önemli değişiklikler bu dosyada belgelenir. Format [Keep a Changelog](ht
 
 ---
 
+## [1.2.2] — 2026-04-23
+
+### 🚀 Yeni Özellikler
+
+- **Yıllık Bileşik Getiri** metriği tahvil detay sayfasına eklendi
+  - Formül: `(1 + Dönemsel Kupon)^(365 / Dönem Gün Sayısı) − 1`
+  - BIST KAP bildirilerindeki "Bileşik Getiri" tanımıyla birebir örtüşüyor
+  - Hesaplanan metrikler kartında "Yıllık Basit Kupon" altında gösteriliyor
+  - "Yıllık Kupon Faiz" etiketi "Yıllık Basit Kupon" olarak güncellendi
+
+### 🔧 İyileştirmeler
+
+- **Dolaşımdan çıkmış araç filtreleme** — Bond listesi, favori listesi, detay sayfası ve senaryo endpoint'i artık `is_active = TRUE AND maturity_date >= bugün` koşulunu birlikte uyguluyor; günlük senkronizasyon döngüleri arasındaki zamanlama boşluğu kapatıldı
+- **Aktif araç sayısı tutarlılığı** — Dashboard overview widget'ı ve landing sayfasındaki araç sayısı, bond listesinde görünen sayıyla artık birebir örtüşüyor; `GET /bonds/stats` ve `GET /system/public-summary` endpoint'lerine vade tarihi filtresi eklendi
+- **Sıfır karakteri görünüm sorunu** — `.font-mono-data` ve `.font-bond-nums` sınıfları `var(--font-inter)` fontuna geçirildi; Cascadia Mono'nun tasarım gereği ortası çizgili sıfır glifi tüm platform ve tarayıcılarda kökten giderildi
+
+### 🏗️ Altyapı
+
+#### Veritabanı Performans İndeksleri (Migration 011)
+
+- `bonds` tablosuna **partial index** eklendi — `WHERE is_active = TRUE` koşuluyla `maturity_date` üzerinde, bond listesi ana sorgusunu doğrudan karşılıyor
+- `bonds.isin_code` ve `bonds.issuer` için **GIN trigram indeksleri** (`pg_trgm`) — `ILIKE '%term%'` arama sorgularında B-tree limitini aşıyor
+- `user_alerts(user_id, is_active)` — her 15 dakikada çalışan Celery uyarı task'ı için composite index
+- `refresh_tokens(user_id)`, `refresh_tokens(token_hash)` — her kimlik doğrulama isteğinde kullanılan sütunlar
+- `bond_views(bond_id)`, `bond_views(user_id)` — analytics sorguları
+- `user_mfa_backup_codes(user_id)` — 2FA akışı
+- `user_metrics(user_id, metric_date)` — kullanım takibi composite index
+
+#### Redis Cache Katmanı
+
+- `app/core/cache.py` oluşturuldu — lazy singleton Redis client; tüm hatalar sessizce yakalanır, Redis çökse bile uygulama çalışmaya devam eder
+- **TLREF verileri** 1 saatlik TTL ile cache'leniyor: `tlref_idx:{tarih}`, `tlref_annual:{tarih}`, `tlref_daily_latest` — günde bir kez değişen bu veriler için her bond hesaplamasında yapılan DB sorguları ortadan kalkıyor
+- **Bond hesaplanan metrikler** 5 dakikalık TTL ile cache'leniyor: `bond_metrics:{isin}:{tarih}` — aynı tahvile aynı gün yapılan tekrar isteklerde `compute_metrics()` çalışmıyor; `is_favorite`, KAP verisi ve görüntüleme takibi her zaman taze çalışıyor
+
+#### Bağlantı Havuzu İyileştirmeleri
+
+- SQLAlchemy engine'e `pool_pre_ping=True` eklendi — kopuk bağlantılar tespit edilip yenileniyor, sürpriz 500 hataları engelleniyor
+- `pool_recycle=1800` eklendi — 30 dakikadan uzun açık kalan bağlantılar kapatılıyor, PostgreSQL `max_connections` baskısı azalıyor
+
+---
+
 ## [1.2.1] — 2026-04-22
 
 ### 🔧 İyileştirmeler

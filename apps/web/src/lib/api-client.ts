@@ -200,6 +200,7 @@ export interface BondCalculatedMetrics {
   annual_reference_rate: number | null;
   annual_coupon_rate: number | null;
   periodic_coupon_rate: number | null;
+  annual_compound_coupon_rate: number | null;
   accrued_interest: number;
   dirty_price: number;
   clean_price_used: number;

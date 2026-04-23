@@ -87,6 +87,7 @@ class BondCalculatedMetrics(BaseModel):
     annual_reference_rate: float | None = None
     annual_coupon_rate: float | None = None
     periodic_coupon_rate: float | None = None
+    annual_compound_coupon_rate: float | None = None
     accrued_interest: float
     dirty_price: float
     clean_price_used: float
