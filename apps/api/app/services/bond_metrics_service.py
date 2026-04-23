@@ -494,7 +494,9 @@ class BondMetricsService:
             "coupon_payment_amount": float(coupon_payment_amount) if coupon_payment_amount is not None else None,
             "period_days": period_days,
             "next_coupon_date": (
-                bond.maturity_date.isoformat() if total_days < 365 
+                bond.maturity_date.isoformat()
+                if bond.maturity_date and bond.first_issue_date
+                and (bond.maturity_date - bond.first_issue_date).days < 365
                 else (bond.next_coupon_date.isoformat() if bond.next_coupon_date else None)
             ),
             "return_to_date_pct": return_to_date_pct,
