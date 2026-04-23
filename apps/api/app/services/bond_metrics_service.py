@@ -152,14 +152,26 @@ def _coupon_rate_to_decimal(rate: Decimal | None) -> Decimal:
 def bond_to_calculator_inputs(bond: Bond) -> tuple[date, date, Decimal, int] | None:
     """
     Bond -> (issue_date, maturity_date, coupon_rate, coupon_frequency_int).
-    Eksik zorunlu alan varsa None. Donus tipi None degilse tarihler kesin dolu.
     """
     issue_date = bond.first_issue_date
     maturity_date = bond.maturity_date
     if not issue_date or not maturity_date:
         return None
+        
     period_days, freq = parse_coupon_frequency(bond.coupon_frequency)
-    coupon_rate = _coupon_rate_to_decimal(bond.next_coupon_rate)
+    raw_rate = _coupon_rate_to_decimal(bond.next_coupon_rate)
+    
+    # Düzeltme: Eğer vade 1 yıldan kısaysa ve oran dönemselse yıllıklandır
+    total_days = (maturity_date - issue_date).days
+    if total_days > 0 and total_days < 365 and freq == 1:
+        # Eğer oran dönemsel faiz miktarını temsil ediyorsa (örn: %18.41)
+        # Bunu yıllık basit faize (%44.50) çeviriyoruz
+        coupon_rate = raw_rate * Decimal("365") / Decimal(str(total_days))
+    else:
+        # Normal kuponlu tahvillerde oran zaten yıllık basit (BEY) varsayılır
+        # Veya frekansla çarpılarak yıllıklandırılır
+        coupon_rate = raw_rate * Decimal(str(freq))
+        
     return (issue_date, maturity_date, coupon_rate, freq)
 
 
