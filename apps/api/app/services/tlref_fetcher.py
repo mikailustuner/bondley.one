@@ -23,7 +23,7 @@ from datetime import datetime, date
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 import httpx
-from sqlalchemy import select, func
+from sqlalchemy import select, func, case
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -437,8 +437,8 @@ class TLREFFetcher:
                 set_={
                     "published_annual_rate_pct": stmt.excluded.published_annual_rate_pct,
                     "daily_rate": func.coalesce(stmt.excluded.daily_rate, TLREFRate.daily_rate),
-                    "index_value": func.case(
-                        (TLREFRate.index_value > 0, TLREFRate.index_value),
+                    "index_value": case(
+                        [(TLREFRate.index_value > 0, TLREFRate.index_value)],
                         else_=stmt.excluded.index_value
                     ),
                 },
