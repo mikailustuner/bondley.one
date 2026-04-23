@@ -376,37 +376,12 @@ class BondMetricsService:
             compound_coupon = annual_compound_coupon_rate(periodic_coupon, period_days)
 
         # Birikmis faiz: TLREF'li ise Donemsel Kupon * (gun gecen / period_days) * nominal; degilse sabit kupon
-        accrued_interest = None
-        last_coupon = period_start  # donem basi = son kupon tarihi
-        if period_start and period_end and settlement_date >= period_start:
-            days_in_period = (period_end - period_start).days
-            days_passed = (settlement_date - period_start).days
-            if days_in_period > 0 and 0 <= days_passed <= days_in_period:
-                if periodic_coupon is not None:
-                    accrued_interest = (
-                        FACE_VALUE
-                        * periodic_coupon
-                        * Decimal(str(days_passed))
-                        / Decimal(str(days_in_period))
-                    )
-                elif bond.next_coupon_rate is not None:
-                    coupon_payment = FACE_VALUE * _coupon_rate_to_decimal(bond.next_coupon_rate) / Decimal(str(freq_per_year))
-                    accrued_interest = (
-                        coupon_payment
-                        * Decimal(str(days_passed))
-                        / Decimal(str(days_in_period))
-                    )
-                if accrued_interest is not None:
-                    accrued_interest = accrued_interest.quantize(
-                        Decimal("0.00000001"), rounding=ROUND_HALF_UP
-                    )
+        accrued_interest = Decimal("0")
 
         if accrued_interest is None:
             accrued_interest = Decimal("0")
 
-        dirty_price = (clean_price + accrued_interest).quantize(
-            Decimal("0.00000001"), rounding=ROUND_HALF_UP
-        )
+        dirty_price = Decimal("0")
 
         # Oran degisimi (Temiz Fiyat uzerinden gunluk % degisim)
         daily_rate_pct = None
@@ -440,6 +415,10 @@ class BondMetricsService:
                     next_coupon_date=bond.next_coupon_date,
                 )
                 ytm = calc.yield_to_maturity(clean_price, settlement_date)
+                # Use BondCalculator's verified accrued interest and dirty price
+                accrued_interest = calc.accrued_interest(settlement_date)
+                dirty_price = calc.dirty_price(clean_price, settlement_date)
+                
                 if bond.next_coupon_rate is not None:
                     coupon_payment_amount = (
                         FACE_VALUE * _coupon_rate_to_decimal(bond.next_coupon_rate) / Decimal(str(coupon_frequency_int))
