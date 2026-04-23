@@ -9,6 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { AlertCircle, Inbox, Star, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { api, BondListItem, BondStats, TLREFRecord } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
@@ -39,6 +41,7 @@ export default function BondsListPage() {
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [favoriteIsins, setFavoriteIsins] = useState<Set<string>>(new Set());
   const [favoriteToggling, setFavoriteToggling] = useState<string | null>(null);
+  const [withDataOnly, setWithDataOnly] = useState(true);
 
 
   useEffect(() => {
@@ -50,7 +53,7 @@ export default function BondsListPage() {
     }
 
     Promise.all([
-      api.bonds.list(token, { active_only: true, limit: 10, order_by: "updated_at_desc" }),
+      api.bonds.list(token, { active_only: true, with_data_only: withDataOnly, limit: 10, order_by: "updated_at_desc" }),
       api.bonds.stats(token),
       api.bonds.favoritesList(token),
     ])
@@ -63,7 +66,7 @@ export default function BondsListPage() {
 
         setFullListLoading(true);
         api.bonds
-          .list(token, { active_only: true, limit: 3000 })
+          .list(token, { active_only: true, with_data_only: withDataOnly, limit: 3000 })
           .then((fullRes) => {
             setBonds(fullRes.items || []);
             setTotal(fullRes.total ?? 0);
@@ -75,7 +78,7 @@ export default function BondsListPage() {
         setError(e?.message || tr.dashboard.bonds.errors.loadFailed);
         setLoading(false);
       });
-  }, []);
+  }, [withDataOnly]);
 
   const toggleFavorite = (e: React.MouseEvent, isinCode: string) => {
     e.preventDefault();
@@ -275,6 +278,17 @@ export default function BondsListPage() {
             </option>
           ))}
         </select>
+
+        <div className="flex items-center gap-2 px-3 py-1 bg-secondary/30 rounded-xl border border-border/50">
+          <Switch
+            id="with-data-toggle"
+            checked={withDataOnly}
+            onCheckedChange={setWithDataOnly}
+          />
+          <Label htmlFor="with-data-toggle" className="text-[13px] font-medium cursor-pointer select-none">
+            {tr.dashboard.bonds.filters.withDataOnly}
+          </Label>
+        </div>
       </div>
 
       {/* Bonds Table */}

@@ -38,7 +38,8 @@ router = APIRouter()
 async def list_bonds(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=3000),
-    active_only: bool = True,
+    active_only: bool = Query(True),
+    with_data_only: bool = Query(True, description="Sadece güncel verisi olanları getir"),
     search: str | None = Query(None, description="ISIN veya ihracciyla ara"),
     fund_user: str | None = Query(None, description="Fon kullanicisi ile ara"),
     currency: str | None = Query(None, description="Para birimi filtresi"),
@@ -62,6 +63,12 @@ async def list_bonds(
         )
         query = query.where(*active_filter)
         count_query = count_query.where(*active_filter)
+
+    if with_data_only:
+        # En son hesaplamasi olanlari getir
+        # Not: Calculation tablosunda kaydi olanlari filtreliyoruz
+        query = query.where(Bond.calculations.any())
+        count_query = count_query.where(Bond.calculations.any())
 
     if fund_user:
         pattern = f"%{fund_user}%"

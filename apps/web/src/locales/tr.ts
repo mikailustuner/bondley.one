@@ -393,6 +393,7 @@ export const tr = {
                 searchPlaceholder: "ISIN veya ihraççıyla ara...",
                 allCurrencies: "Tüm Para Birimleri",
                 allTypes: "Tüm Araç Türleri",
+                withDataOnly: "Sadece verisi olanları göster",
             },
             table: {
                 title: "Borçlanma Araçları Listesi",
