@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
-import { AlertCircle, Star, Search } from "lucide-react";
+import { AlertCircle, Star, Search, ArchiveX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api, BondListItem } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
@@ -29,14 +29,15 @@ export default function FavoritesPage() {
   }, []);
 
   const [bonds, setBonds] = useState<BondListItem[]>([]);
+  const [archivedBonds, setArchivedBonds] = useState<BondListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Filters
   const [search, setSearch] = useState("");
   const [currencyFilter, setCurrencyFilter] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<string>("");
-  
+
   // To handle local unfavoriting easily
   const [favoriteToggling, setFavoriteToggling] = useState<string | null>(null);
 
@@ -48,9 +49,13 @@ export default function FavoritesPage() {
       return;
     }
 
-    api.bonds.favoritesList(token)
-      .then((res) => {
-        setBonds(res.items || []);
+    Promise.all([
+      api.bonds.favoritesList(token),
+      api.bonds.favoritesArchived(token),
+    ])
+      .then(([active, archived]) => {
+        setBonds(active.items || []);
+        setArchivedBonds(archived.items || []);
         setLoading(false);
       })
       .catch((e) => {
@@ -70,6 +75,7 @@ export default function FavoritesPage() {
       .removeFavorite(token, isinCode)
       .then(() => {
         setBonds((prev) => prev.filter((b) => b.isin_code !== isinCode));
+        setArchivedBonds((prev) => prev.filter((b) => b.isin_code !== isinCode));
       })
       .catch(() => { })
       .finally(() => setFavoriteToggling(null));
@@ -423,6 +429,147 @@ export default function FavoritesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Archived / Expired Favorites */}
+      {!loading && archivedBonds.length > 0 && (
+        <Card className="animate-fade-up-delay-1 overflow-hidden">
+          <CardHeader>
+            <div className="flex items-center gap-2.5">
+              <ArchiveX className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <CardDescription>{tr.dashboard.favorites.archived.description}</CardDescription>
+                <CardTitle className="mt-1">{tr.dashboard.favorites.archived.title}</CardTitle>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Mobile Cards */}
+            <div className="block md:hidden space-y-3 max-h-[400px] overflow-y-auto">
+              {archivedBonds.map((bond) => (
+                <Link
+                  key={bond.isin_code}
+                  href={`/dashboard/bonds/${bond.isin_code}`}
+                  className="block rounded-3xl border border-border bg-card p-4 opacity-60 hover:opacity-80 transition-opacity"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono-data text-[13px] font-medium text-foreground">
+                      {bond.isin_code}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
+                        onClick={(e) => removeFavorite(e, bond.isin_code)}
+                        disabled={favoriteToggling === bond.isin_code}
+                        aria-label={tr.dashboard.bonds.table.cols.favorite}
+                      >
+                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                      </Button>
+                      <Badge
+                        variant={(CURRENCY_COLORS[bond.currency] as any) || "outline"}
+                        className="shrink-0"
+                      >
+                        {bond.currency}
+                      </Badge>
+                    </div>
+                  </div>
+                  <p className="text-[13px] text-muted-foreground truncate mt-1">
+                    {bond.issuer || "—"}
+                  </p>
+                  <div className="flex justify-between text-[13px] mt-2.5 text-muted-foreground">
+                    <span>Vade: {formatDate(bond.maturity_date)}</span>
+                    <span className="font-mono-data">{formatDecimal(bond.last_issue_price, 3)}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto max-h-[400px] overflow-y-auto">
+              <table className="w-full">
+                <thead className="sticky top-0 z-10 bg-card">
+                  <tr className="border-b border-border">
+                    <th scope="col" className="w-10 text-center pb-3 text-[13px] font-medium text-muted-foreground">
+                      <span className="sr-only">{tr.dashboard.bonds.table.cols.favorite}</span>
+                    </th>
+                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.isin}</th>
+                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.issuer}</th>
+                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.type}</th>
+                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.yieldType}</th>
+                    <th scope="col" className="pb-3 text-center text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.currency}</th>
+                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.maturity}</th>
+                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.lastPrice}</th>
+                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.yield}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {archivedBonds.map((bond) => (
+                    <tr
+                      key={bond.isin_code}
+                      className="border-b border-border/30 last:border-0 hover:bg-secondary/40 transition-colors group opacity-60 hover:opacity-80"
+                    >
+                      <td className="py-3.5 text-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => removeFavorite(e, bond.isin_code)}
+                          disabled={favoriteToggling === bond.isin_code}
+                          aria-label={tr.dashboard.bonds.table.cols.favorite}
+                        >
+                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                        </Button>
+                      </td>
+                      <td className="py-3.5">
+                        <Link
+                          href={`/dashboard/bonds/${bond.isin_code}`}
+                          className="font-mono-data text-[13px] text-foreground group-hover:text-primary transition-colors"
+                        >
+                          {bond.isin_code}
+                        </Link>
+                      </td>
+                      <td className="py-3.5 text-[13px] text-muted-foreground max-w-[400px] truncate">
+                        <div className="truncate" title={bond.issuer ?? ""}>{bond.issuer ?? "—"}</div>
+                        {bond.fund_user && (
+                          <div className="truncate text-[11px] text-muted-foreground/70 flex items-center gap-1 mt-0.5" title={bond.fund_user}>
+                            <span className="shrink-0 text-primary/40">↳</span>
+                            {bond.fund_user}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3.5">
+                        {bond.security_type ? (
+                          <span className="text-[13px] text-muted-foreground">{bond.security_type.split("/")[0].trim()}</span>
+                        ) : "—"}
+                      </td>
+                      <td className="py-3.5">
+                        {bond.yield_type ? (
+                          <span className="text-[13px] text-muted-foreground">{bond.yield_type.split("/")[0].trim()}</span>
+                        ) : "—"}
+                      </td>
+                      <td className="py-3.5 text-center">
+                        <Badge variant={(CURRENCY_COLORS[bond.currency] as any) || "outline"}>
+                          {bond.currency}
+                        </Badge>
+                      </td>
+                      <td className="py-3.5 text-right font-mono-data text-[13px] text-muted-foreground">
+                        {formatDate(bond.maturity_date)}
+                      </td>
+                      <td className="py-3.5 text-right font-mono-data text-[13px] text-foreground">
+                        {formatDecimal(bond.last_issue_price, 3)}
+                      </td>
+                      <td className="py-3.5 text-right font-mono-data text-[13px] text-muted-foreground">
+                        {bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

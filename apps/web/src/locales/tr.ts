@@ -278,6 +278,10 @@ export const tr = {
         favorites: {
             title: "Favorilerim",
             description: "Takip ettiğiniz favori borçlanma araçları",
+            archived: {
+                title: "Dolaşımdan Çıkmışlar",
+                description: "Vadesi dolmuş veya artık aktif olmayan favori araçlarınız",
+            },
             empty: {
                 noBonds: "Henüz favori aracınız yok",
                 noBondsDesc: "Borçlanma araçları sayfasından takip etmek istediğiniz araçları favorilerinize ekleyebilirsiniz.",

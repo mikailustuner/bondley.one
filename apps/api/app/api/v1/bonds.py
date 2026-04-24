@@ -240,6 +240,26 @@ async def list_favorites(
     return FavoriteListResponse(items=[BondListItem.model_validate(b) for b in bonds])
 
 
+@router.get("/favorites/archived", response_model=FavoriteListResponse)
+async def list_favorites_archived(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Kullanıcının favorilerindeki süresi dolmuş / dolaşımdan çıkmış tahviller."""
+    q = (
+        select(Bond)
+        .join(UserFavoriteBond, UserFavoriteBond.bond_id == Bond.id)
+        .where(
+            UserFavoriteBond.user_id == user.id,
+            or_(Bond.is_active == False, Bond.maturity_date < date.today()),
+        )
+        .order_by(Bond.maturity_date.desc().nullslast())
+    )
+    result = await db.execute(q)
+    bonds = result.unique().scalars().all()
+    return FavoriteListResponse(items=[BondListItem.model_validate(b) for b in bonds])
+
+
 @router.post("/favorites", status_code=status.HTTP_200_OK)
 async def add_favorite(
     body: AddFavoriteRequest,

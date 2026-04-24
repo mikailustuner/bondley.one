@@ -656,6 +656,8 @@ export const api = {
     stats: (token: string) => apiFetch<BondStats>("/bonds/stats", { token }),
     favoritesList: (token: string) =>
       apiFetch<{ items: BondListItem[] }>("/bonds/favorites", { token }),
+    favoritesArchived: (token: string) =>
+      apiFetch<{ items: BondListItem[] }>("/bonds/favorites/archived", { token }),
     addFavorite: (token: string, isinCode: string) =>
       apiFetch<{ status: string }>("/bonds/favorites", {
         method: "POST",
