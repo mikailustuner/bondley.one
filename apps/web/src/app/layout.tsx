@@ -20,7 +20,11 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: tr.meta.title,
+  metadataBase: new URL("https://bondley.one"),
+  title: {
+    default: tr.meta.title,
+    template: "%s | Bondley",
+  },
   description: tr.meta.description,
   icons: {
     icon: "/logo.png",
@@ -31,11 +35,15 @@ export const metadata: Metadata = {
     description: tr.meta.description,
     type: "website",
     locale: "tr_TR",
+    siteName: "Bondley",
+    url: "https://bondley.one",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Bondley – Borçlanma Araçları Platformu" }],
   },
   twitter: {
     card: "summary_large_image",
     title: tr.meta.title,
     description: tr.meta.description,
+    images: ["/og-image.png"],
   },
 };
 

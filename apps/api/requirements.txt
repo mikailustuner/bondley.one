@@ -44,3 +44,6 @@ tzdata
 
 # Email Sending
 aiosmtplib
+
+# Testing
+pytest

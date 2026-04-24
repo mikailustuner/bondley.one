@@ -646,6 +646,11 @@ export const api = {
         modified_duration: number | null;
       }>(`/bonds/${encodeURIComponent(isin)}/scenario?${query}`, { token });
     },
+    history: (token: string, isin: string, days = 90) =>
+      apiFetch<{ items: Array<{ date: string; clean_price: number | null; ytm: number | null }> }>(
+        `/bonds/${encodeURIComponent(isin)}/history?days=${days}`,
+        { token },
+      ),
     stats: (token: string) => apiFetch<BondStats>("/bonds/stats", { token }),
     favoritesList: (token: string) =>
       apiFetch<{ items: BondListItem[] }>("/bonds/favorites", { token }),

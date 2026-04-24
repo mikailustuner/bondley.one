@@ -435,6 +435,23 @@ class BondMetricsService:
                     coupon_payment_amount = (
                         FACE_VALUE * _coupon_rate_to_decimal(bond.next_coupon_rate) / Decimal(str(coupon_frequency_int))
                     ).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
+                
+                # Fix: Sabit faizli kağıtlar için oranları calculator'dan al
+                if annual_coupon is None:
+                    annual_coupon = calc.annual_coupon_rate
+                if periodic_coupon is None:
+                    periodic_coupon = annual_coupon / Decimal(str(coupon_frequency_int))
+                if compound_coupon is None:
+                    # Bileşik getiri formülü: (1 + r/f)^f - 1
+                    # Kısa vadeli bonolarda f = 365 / total_days olmalı
+                    total_days_bond = (maturity_date - issue_date).days
+                    if total_days_bond > 0 and total_days_bond < 365:
+                        f_eff = Decimal("365") / Decimal(str(total_days_bond))
+                        periodic_rate_eff = _coupon_rate_to_decimal(bond.next_coupon_rate)
+                        compound_coupon = (1 + periodic_rate_eff)**f_eff - 1
+                    else:
+                        compound_coupon = (1 + periodic_coupon)**coupon_frequency_int - 1
+
                 tlref_yield, tlref_rate_date = await self._get_tlref_annual_yield(settlement_date)
                 # Fix C: ytm==0 ama nakit akisi varsa hesaplama basarisizdir; spread None kalsin.
                 ytm_valid = ytm != 0 or not calc.generate_cash_flows(settlement_date)

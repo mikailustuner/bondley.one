@@ -4,6 +4,7 @@ from starlette.requests import Request
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import select, text
 from slowapi.errors import RateLimitExceeded
@@ -147,6 +148,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(AuditMiddleware)
 app.add_middleware(

@@ -53,6 +53,17 @@ async def list_bonds(
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
+    # Filtre yoksa cache'e bak (sayfanın varsayılan yüklemesi bu patha girer)
+    no_filters = not any([search, fund_user, currency, security_type, yield_type, max_days_to_maturity])
+    cache_key = (
+        f"bond_list:{int(active_only)}:{int(with_data_only)}:{order_by}:{skip}:{limit}"
+        if no_filters else None
+    )
+    if cache_key:
+        cached = await cache_get(cache_key)
+        if cached:
+            return BondListResponse.model_validate(json.loads(cached))
+
     query = select(Bond)
     count_query = select(func.count(Bond.id))
 
@@ -65,8 +76,6 @@ async def list_bonds(
         count_query = count_query.where(*active_filter)
 
     if with_data_only:
-        # En son hesaplamasi olanlari getir
-        # Not: Calculation tablosunda kaydi olanlari filtreliyoruz
         query = query.where(Bond.calculations.any())
         count_query = count_query.where(Bond.calculations.any())
 
@@ -123,10 +132,13 @@ async def list_bonds(
     )
     bonds = result.scalars().all()
 
-    return BondListResponse(
+    response = BondListResponse(
         items=[BondListItem.model_validate(b) for b in bonds],
         total=total,
     )
+    if cache_key:
+        await cache_set(cache_key, json.dumps(response.model_dump(mode="json")), 60)
+    return response
 
 
 @router.get("/stats", response_model=BondStatsResponse)
@@ -274,6 +286,47 @@ async def remove_favorite(
     if fav is not None:
         await db.delete(fav)
         await db.commit()
+
+
+@router.get("/{isin_code}/history")
+async def get_bond_history(
+    isin_code: str,
+    days: int = Query(90, ge=7, le=365, description="Kac gunluk gecmis"),
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(get_current_user),
+):
+    """Son N gunun temiz fiyat ve YTM verisi (grafik icin)."""
+    bond_result = await db.execute(select(Bond).where(Bond.isin_code == isin_code))
+    bond = bond_result.scalar_one_or_none()
+    if not bond:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tahvil bulunamadi")
+
+    cutoff = date.today() - timedelta(days=days)
+
+    md_rows = await db.execute(
+        select(MarketData.trade_date, MarketData.clean_price)
+        .where(MarketData.bond_id == bond.id, MarketData.trade_date >= cutoff, MarketData.clean_price.isnot(None))
+        .order_by(MarketData.trade_date.asc())
+    )
+    prices = {row[0]: float(row[1]) for row in md_rows.all()}
+
+    calc_rows = await db.execute(
+        select(Calculation.calc_date, Calculation.yield_to_maturity)
+        .where(Calculation.bond_id == bond.id, Calculation.calc_date >= cutoff)
+        .order_by(Calculation.calc_date.asc())
+    )
+    ytms = {row[0]: float(row[1]) for row in calc_rows.all()}
+
+    all_dates = sorted(set(prices.keys()) | set(ytms.keys()))
+    items = [
+        {
+            "date": d.isoformat(),
+            "clean_price": prices.get(d),
+            "ytm": ytms.get(d),
+        }
+        for d in all_dates
+    ]
+    return {"items": items}
 
 
 @router.get("/{isin_code}/scenario", response_model=BondScenarioResponse)

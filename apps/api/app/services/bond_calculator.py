@@ -334,7 +334,7 @@ class BondCalculator:
         cash_flows = self.generate_cash_flows(settlement_date)
         ytm = self.yield_to_maturity(clean_price, settlement_date)
 
-        if not cash_flows or ytm == 0 or d_price <= 0:
+        if not cash_flows or d_price <= 0:
             return Decimal("0")
 
         periodic_yield = ytm / Decimal(str(self.coupon_frequency))

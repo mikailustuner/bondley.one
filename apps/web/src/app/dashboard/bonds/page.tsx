@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,7 @@ export default function BondsListPage() {
   const [favoriteToggling, setFavoriteToggling] = useState<string | null>(null);
   const [withDataOnly, setWithDataOnly] = useState(true);
 
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const token = getToken();
@@ -136,6 +138,18 @@ export default function BondsListPage() {
     activeBonds.forEach((b) => curs.add(b.currency));
     return Array.from(curs).sort();
   }, [activeBonds]);
+
+  const rowVirtualizer = useVirtualizer({
+    count: filtered.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => 52,
+    overscan: 8,
+  });
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const paddingTop = virtualRows.length > 0 ? virtualRows[0].start : 0;
+  const paddingBottom = virtualRows.length > 0
+    ? rowVirtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end
+    : 0;
 
   return (
     <div className="space-y-8">
@@ -455,7 +469,7 @@ export default function BondsListPage() {
               </div>
 
               {/* Desktop Table */}
-              <div className="hidden md:block overflow-x-auto max-h-[70vh] overflow-y-auto">
+              <div ref={tableContainerRef} className="hidden md:block overflow-x-auto max-h-[70vh] overflow-y-auto">
                 <table className="w-full">
                   <thead className="sticky top-0 z-10 bg-card">
                     <tr className="border-b border-border">
@@ -473,7 +487,12 @@ export default function BondsListPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((bond) => (
+                    {paddingTop > 0 && (
+                      <tr><td colSpan={9} style={{ height: paddingTop }} /></tr>
+                    )}
+                    {virtualRows.map((virtualRow) => {
+                      const bond = filtered[virtualRow.index];
+                      return (
                       <tr
                         key={bond.isin_code}
                         className="border-b border-border/30 last:border-0 hover:bg-secondary/40 transition-colors group"
@@ -558,7 +577,11 @@ export default function BondsListPage() {
                           {bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"}
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
+                    {paddingBottom > 0 && (
+                      <tr><td colSpan={9} style={{ height: paddingBottom }} /></tr>
+                    )}
                   </tbody>
                 </table>
               </div>
