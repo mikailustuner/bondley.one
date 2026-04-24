@@ -393,44 +393,62 @@ class BondMetricsService:
 
         clean_price = Decimal(str(clean_price))
 
+        # Initialize BondCalculator early to use its logic for rates and periods
+        calc = None
+        inputs = bond_to_calculator_inputs(bond)
+        if inputs:
+            issue_date, maturity_date, coupon_rate, coupon_frequency_int = inputs
+            try:
+                calc = BondCalculator(
+                    isin=bond.isin_code,
+                    issue_date=issue_date,
+                    maturity_date=maturity_date,
+                    coupon_rate=coupon_rate,
+                    face_value=FACE_VALUE,
+                    coupon_frequency=coupon_frequency_int,
+                    next_coupon_date=bond.next_coupon_date,
+                )
+            except Exception as e:
+                logger.warning("BondCalculator init failed for %s: %s", bond.isin_code, e)
+
         annual_ref = None
         annual_coupon = None
         periodic_coupon = None
         compound_coupon = None
 
+        # Resolve effective period for annualization
+        eff_period = period_days
+        if bond.first_issue_date and bond.maturity_date:
+            actual_days = (bond.maturity_date - bond.first_issue_date).days
+            if 0 < actual_days < 365:
+                eff_period = actual_days
+
         if _is_tlref_indexed(bond):
             # Değişken faizli: dönem TLREF endeksi büyümesinden hesapla
             tlref_start = await self.get_tlref_for_business_day(period_start) if period_start else None
             tlref_end = await self.get_tlref_for_business_day(period_end) if period_end else None
-            if tlref_start and tlref_end and period_days > 0:
-                annual_ref = annual_reference_rate(tlref_start, tlref_end, period_days)
+            if tlref_start and tlref_end and eff_period > 0:
+                annual_ref = annual_reference_rate(tlref_start, tlref_end, eff_period)
                 annual_coupon = annual_coupon_rate(annual_ref, bond.spread)
-                periodic_coupon = periodic_coupon_rate(annual_coupon, period_days)
-                compound_coupon = annual_compound_coupon_rate(periodic_coupon, period_days)
+                periodic_coupon = periodic_coupon_rate(annual_coupon, eff_period)
+                compound_coupon = annual_compound_coupon_rate(periodic_coupon, eff_period)
         else:
-            # Sabit faizli: DB'deki dönemsel kupon oranından hesapla
-            raw_periodic = _coupon_rate_to_decimal(bond.next_coupon_rate)
-            # Kısa vadeli araçlarda (bono) gerçek vade gününü kullan;
-            # coupon_frequency DB'de null/yanlış olsa bile doğru yıllıklandırma yapılır.
-            eff_period = period_days
-            if bond.first_issue_date and bond.maturity_date:
-                actual_days = (bond.maturity_date - bond.first_issue_date).days
-                if 0 < actual_days < 365:
-                    eff_period = actual_days
-            if raw_periodic > 0 and eff_period > 0:
-                # annual_ref = None (sabit faizde TLREF göstergesi yoktur)
-                annual_coupon = (
-                    raw_periodic * Decimal("365") / Decimal(str(eff_period))
-                ).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
-                periodic_coupon = raw_periodic
-                compound_coupon = annual_compound_coupon_rate(raw_periodic, eff_period)
+            # Sabit faizli: BondCalculator verisini veya DB'deki oranı kullan
+            if calc:
+                annual_coupon = calc.coupon_rate
+                compound_coupon = calc.compound_coupon_rate()
+                periodic_coupon = _coupon_rate_to_decimal(bond.next_coupon_rate)
+            else:
+                raw_periodic = _coupon_rate_to_decimal(bond.next_coupon_rate)
+                if raw_periodic > 0 and eff_period > 0:
+                    annual_coupon = (
+                        raw_periodic * Decimal("365") / Decimal(str(eff_period))
+                    ).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
+                    periodic_coupon = raw_periodic
+                    compound_coupon = annual_compound_coupon_rate(raw_periodic, eff_period)
 
-        # Birikmis faiz: TLREF'li ise Donemsel Kupon * (gun gecen / period_days) * nominal; degilse sabit kupon
+        # Birikmis faiz and price initialization
         accrued_interest = Decimal("0")
-
-        if accrued_interest is None:
-            accrued_interest = Decimal("0")
-
         dirty_price = Decimal("0")
 
         # Oran degisimi (Temiz Fiyat uzerinden gunluk % degisim)
@@ -451,19 +469,8 @@ class BondMetricsService:
         coupon_payment_amount = None
         tlref_rate_date = None
 
-        inputs = bond_to_calculator_inputs(bond)
-        if inputs:
-            issue_date, maturity_date, coupon_rate, coupon_frequency_int = inputs
+        if calc:
             try:
-                calc = BondCalculator(
-                    isin=bond.isin_code,
-                    issue_date=issue_date,
-                    maturity_date=maturity_date,
-                    coupon_rate=coupon_rate,
-                    face_value=FACE_VALUE,
-                    coupon_frequency=coupon_frequency_int,
-                    next_coupon_date=bond.next_coupon_date,
-                )
                 ytm = calc.yield_to_maturity(clean_price, settlement_date)
                 # Use BondCalculator's verified accrued interest and dirty price
                 accrued_interest = calc.accrued_interest(settlement_date)
@@ -471,7 +478,7 @@ class BondMetricsService:
                 
                 if bond.next_coupon_rate is not None:
                     coupon_payment_amount = (
-                        FACE_VALUE * _coupon_rate_to_decimal(bond.next_coupon_rate) / Decimal(str(coupon_frequency_int))
+                        FACE_VALUE * _coupon_rate_to_decimal(bond.next_coupon_rate) / Decimal(str(calc.coupon_frequency))
                     ).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
 
                 tlref_yield, tlref_rate_date = await self._get_tlref_annual_yield(settlement_date)

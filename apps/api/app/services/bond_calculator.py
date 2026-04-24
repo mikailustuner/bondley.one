@@ -306,6 +306,25 @@ class BondCalculator:
         s = Decimal(str(bond_yield)) - Decimal(str(tlref_yield))
         return s.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
 
+    def compound_coupon_rate(self) -> Decimal:
+        """
+        Kuponun yillik bilesik karsiligini dondurur.
+        Bono icin: (1 + r*t/365)^(365/t) - 1
+        Tahvil icin: (1 + r/k)^k - 1
+        """
+        if self.coupon_frequency == 1:
+            total_days = (self.maturity_date - self.issue_date).days
+            if total_days <= 0:
+                return self.coupon_rate
+            periodic = self.coupon_rate * Decimal(str(total_days)) / Decimal("365")
+            compound = (float(Decimal("1") + periodic) ** (365.0 / total_days)) - 1.0
+        else:
+            periodic = self.coupon_rate / Decimal(str(self.coupon_frequency))
+            compound = (float(Decimal("1") + periodic) ** self.coupon_frequency) - 1.0
+            
+        return Decimal(str(compound)).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
+
+
     def modified_duration(self, clean_price: Decimal, settlement_date: date) -> Decimal:
         """
         Modifiye Durasyon = Macaulay Durasyon / (1 + y/k)
