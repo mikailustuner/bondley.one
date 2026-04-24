@@ -490,13 +490,11 @@ class BondMetricsService:
                 annual_ref = annual_reference_rate(tlref_start, tlref_end, eff_period)
                 
                 # Use bond.spread, or try to extract from remarks if NULL
-                active_spread = bond.spread
+                active_spread = _spread_to_decimal(bond.spread) if bond.spread is not None else None
                 if active_spread is None or active_spread == 0:
-                    extracted = _extract_spread_from_remarks(bond.remarks)
-                    if extracted is not None:
-                        active_spread = extracted * Decimal("100") # Normalize back to percentage for annual_coupon_rate
+                    active_spread = _extract_spread_from_remarks(bond.remarks)
                 
-                annual_coupon = annual_coupon_rate(annual_ref, active_spread)
+                annual_coupon = annual_coupon_rate(annual_ref, active_spread * Decimal("100") if active_spread is not None else None)
                 periodic_coupon = periodic_coupon_rate(annual_coupon, eff_period)
                 compound_coupon = annual_compound_coupon_rate(periodic_coupon, eff_period)
                 
