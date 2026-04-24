@@ -435,6 +435,8 @@ export const tr = {
             breadcrumb: "Borçlanma Araçları",
             hero: {
                 passive: "Pasif",
+                expired: "Vadesi Doldu",
+                archivedNotice: "Bu araç dolaşımdan çıkmıştır. Veriler bilgilendirme amaçlıdır.",
                 issuerVksh: "İhraççı VKŞ",
                 fundUser: "Fon Kullanıcısı",
                 unknown: "Bilinmiyor",

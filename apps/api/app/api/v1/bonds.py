@@ -426,10 +426,7 @@ async def get_bond(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    result = await db.execute(select(Bond).where(
-        Bond.isin_code == isin_code, Bond.is_active == True,
-        or_(Bond.maturity_date.is_(None), Bond.maturity_date >= date.today()),
-    ))
+    result = await db.execute(select(Bond).where(Bond.isin_code == isin_code))
     bond = result.scalar_one_or_none()
     if not bond:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tahvil bulunamadi")

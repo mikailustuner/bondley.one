@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
-import { FileQuestion, AlertCircle, ChevronLeft, ChevronRight, Star } from "lucide-react";
+import { FileQuestion, AlertCircle, ChevronLeft, ChevronRight, Star, ArchiveX } from "lucide-react";
 import { api, BondDetail, TLREFRecord } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate, formatLastIssueDateText } from "@/lib/utils";
@@ -367,6 +367,9 @@ export default function BondDetailPage({
               <h1 className="text-display-md font-mono-data text-foreground">{bond.isin_code}</h1>
               <Badge>{bond.currency}</Badge>
               {!bond.is_active && <Badge variant="destructive">{tr.dashboard.bondDetails.hero.passive}</Badge>}
+              {bond.is_active && bond.maturity_date && bond.maturity_date < todayISO() && (
+                <Badge variant="secondary">{tr.dashboard.bondDetails.hero.expired}</Badge>
+              )}
             </div>
             {bond.fund_user ? (
               <p className="text-[15px] text-muted-foreground mt-1">
@@ -428,6 +431,14 @@ export default function BondDetailPage({
           </div>
         </div>
       </div>
+
+      {/* ═══ Archived Notice ═══ */}
+      {(!bond.is_active || (bond.maturity_date && bond.maturity_date < todayISO())) && (
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/40 px-5 py-3.5 animate-fade-up">
+          <ArchiveX className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <p className="text-[13px] text-muted-foreground">{tr.dashboard.bondDetails.hero.archivedNotice}</p>
+        </div>
+      )}
 
       {/* ═══ Top Metrics ═══ */}
       <div className="grid gap-4 md:grid-cols-4 animate-fade-up">
