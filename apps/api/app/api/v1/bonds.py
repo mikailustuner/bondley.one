@@ -458,78 +458,24 @@ async def get_bond(
         # We can also re-fetch it if needed, but refresh is usually enough
         pass
 
-    # Once DB'de (calculations) kayit var mi kontrol et; varsa oradan doldur.
-    calc_result = await db.execute(
-        select(Calculation).where(
-            Calculation.bond_id == bond_id,
-            Calculation.calc_date == calc_date,
-        )
-    )
-    stored_calc = calc_result.scalar_one_or_none()
-    if stored_calc is not None:
-        md_result = await db.execute(
-            select(MarketData.clean_price).where(
-                MarketData.bond_id == bond_id,
-                MarketData.trade_date == calc_date,
-            )
-        )
-        md_row = md_result.one_or_none()
-        if md_row and md_row[0] is not None:
-            clean_price_used = float(md_row[0])
-        else:
-            clean_price_used = float(stored_calc.dirty_price - stored_calc.accrued_interest)
-        # Oran degisimi (gunluk TLREF %) calculations'da saklanmaz; her zaman tlref_rates'tan alinir
-        rate_change_pct = None
+    try:
         metrics_svc = BondMetricsService(db)
-        latest_daily = await metrics_svc.get_latest_daily_rate()
-        if latest_daily is not None:
-            rate_change_pct = float(latest_daily * 100)
-        base.calculated_metrics = BondCalculatedMetrics(
-            annual_reference_rate=None,
-            annual_coupon_rate=None,
-            periodic_coupon_rate=None,
-            accrued_interest=float(stored_calc.accrued_interest),
-            dirty_price=float(stored_calc.dirty_price),
-            clean_price_used=clean_price_used,
-            rate_change_today_pct=rate_change_pct,
-            yield_to_maturity=float(stored_calc.yield_to_maturity),
-            spread=float(stored_calc.spread) if stored_calc.spread is not None else None,
-            modified_duration=float(stored_calc.modified_duration) if stored_calc.modified_duration is not None else None,
-            macaulay_duration=float(stored_calc.macaulay_duration) if stored_calc.macaulay_duration is not None else None,
-            convexity=None,
-            coupon_payment_amount=None,
-            period_days=None,
-            next_coupon_date=None,
-            return_to_date_pct=None,
-            return_to_date_used_fallback_price=False,
-            is_theoretical=stored_calc.is_theoretical,
-        )
-        # Bugüne kadar getiri: DB'de saklanmaz, anlık hesapla ve ekle
-        rtd_pct, rtd_fallback = metrics_svc.compute_return_to_date_only(
-            bond, calc_date, clean_price_used
-        )
-        if rtd_pct is not None:
-            base.calculated_metrics.return_to_date_pct = rtd_pct
-            base.calculated_metrics.return_to_date_used_fallback_price = rtd_fallback
-    else:
-        try:
-            metrics_svc = BondMetricsService(db)
-            metrics_cache_key = f"bond_metrics:{isin_code}:{calc_date.isoformat()}"
-            cached_metrics = await cache_get(metrics_cache_key)
-            if cached_metrics is not None:
-                metrics = json.loads(cached_metrics)
-            else:
-                metrics = await metrics_svc.compute_metrics(bond, calc_date)
-                if metrics is not None:
-                    await cache_set(metrics_cache_key, json.dumps(metrics), 300)
-            if metrics is None:
-                # Belirli tarih icin veri yok - None olarak bırak (frontend'e bildirilecek)
-                base.calculated_metrics = None
-            else:
-                base.calculated_metrics = BondCalculatedMetrics(**metrics)
-        except Exception as e:
-            logger.warning(f"Metrics calculation failed for {isin_code} on {calc_date}: {e}")
+        metrics_cache_key = f"bond_metrics:{isin_code}:{calc_date.isoformat()}"
+        cached_metrics = await cache_get(metrics_cache_key)
+        if cached_metrics is not None:
+            metrics = json.loads(cached_metrics)
+        else:
+            metrics = await metrics_svc.compute_metrics(bond, calc_date)
+            if metrics is not None:
+                await cache_set(metrics_cache_key, json.dumps(metrics), 300)
+        
+        if metrics is None:
             base.calculated_metrics = None
+        else:
+            base.calculated_metrics = BondCalculatedMetrics(**metrics)
+    except Exception as e:
+        logger.warning(f"Metrics calculation failed for {isin_code} on {calc_date}: {e}")
+        base.calculated_metrics = None
     # Favori mi?
     fav_check = await db.execute(
         select(UserFavoriteBond).where(

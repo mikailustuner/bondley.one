@@ -42,12 +42,14 @@ def parse_coupon_frequency(coupon_frequency: str | None) -> tuple[int, int]:
     Varsayilan: 6 ayda bir -> (182, 2).
     """
     if not coupon_frequency or not str(coupon_frequency).strip():
-        return 182, 2
+        return 0, 0  # Signal for fallback
+    
     s = str(coupon_frequency).strip().lower()
     for pattern, (period_days, freq) in COUPON_FREQUENCY_MAP:
         if re.search(pattern, s, re.IGNORECASE):
             return period_days, freq
-    return 182, 2
+            
+    return 0, 0
 
 
 def get_current_coupon_period(
@@ -323,6 +325,18 @@ class BondMetricsService:
         clean_price: market_data'dan; override verilirse o kullanilir.
         """
         period_days, freq_per_year = parse_coupon_frequency(bond.coupon_frequency)
+        
+        # Smart fallback for missing/unknown frequency
+        if freq_per_year == 0:
+            if bond.first_issue_date and bond.maturity_date:
+                total_days = (bond.maturity_date - bond.first_issue_date).days
+                if total_days <= 400:
+                    # Short term bonds are usually quarterly
+                    period_days, freq_per_year = 91, 4
+                else:
+                    period_days, freq_per_year = 182, 2
+            else:
+                period_days, freq_per_year = 182, 2
         period_days = _resolve_period_days(bond, period_days)
         period_start, period_end = get_current_coupon_period(
             bond.first_issue_date,
