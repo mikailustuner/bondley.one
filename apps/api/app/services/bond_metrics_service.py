@@ -104,7 +104,7 @@ def _spread_to_decimal(spread: Decimal | None) -> Decimal:
     if spread is None:
         return Decimal("0")
     s = Decimal(str(spread))
-    if abs(s) > 1:
+    if abs(s) >= 1:
         return s / Decimal("100")
     return s
 
@@ -184,8 +184,10 @@ def bond_to_calculator_inputs(bond: Bond) -> tuple[date, date, Decimal, int] | N
     
     total_days = (maturity_date - issue_date).days
     
-    # Radikal Düzeltme: Vadesi 1 yıldan kısa her şey "Bono" mantığıyla çalışmalı
-    if total_days > 0 and total_days < 365:
+    # Radikal Düzeltme: Vadesi 1 yıldan kısa ve "Tek Kupon" (Bono) olanlar için frekans düzeltmesi.
+    # Eğer kupon frekansı zaten 1 ise (Bono) veya "Tek Kupon" olarak işaretlenmişse freq=1 kalmalı.
+    # Ancak çok kuponlu bir enstrüman ise (freq > 1), vadesi 365 günden az olsa bile (örn. 364 gün) frekansı koru.
+    if total_days > 0 and total_days < 365 and freq == 1:
         # Oranı toplam vadeye göre yıllıklandır (%18.41 * 365 / 151 = %44.50)
         coupon_rate = raw_rate * Decimal("365") / Decimal(str(total_days))
         freq = 1
@@ -417,10 +419,12 @@ class BondMetricsService:
         compound_coupon = None
 
         # Resolve effective period for annualization
+        # NOT: Override işlemi sadece "Tek Kupon" (freq_per_year=1 ve period_days >= total_days) durumunda yapılmalı.
+        # Çok kuponlu tahvillerde (örn. 364 gün vadeli ama 4 kuponlu), annualization kupon dönemine (91 gün) göre yapılmalıdır.
         eff_period = period_days
         if bond.first_issue_date and bond.maturity_date:
             actual_days = (bond.maturity_date - bond.first_issue_date).days
-            if 0 < actual_days < 365:
+            if 0 < actual_days < 365 and freq_per_year == 1:
                 eff_period = actual_days
 
         if _is_tlref_indexed(bond):
@@ -432,6 +436,25 @@ class BondMetricsService:
                 annual_coupon = annual_coupon_rate(annual_ref, bond.spread)
                 periodic_coupon = periodic_coupon_rate(annual_coupon, eff_period)
                 compound_coupon = annual_compound_coupon_rate(periodic_coupon, eff_period)
+                
+                # RE-INITIALIZE BondCalculator with calculated rate if DB rate is 0 or missing
+                # This ensures accrued_interest and other metrics use the current floating rate
+                if annual_coupon and (not calc or coupon_rate == 0):
+                    try:
+                        # For calculator, we need the annual simple coupon rate
+                        # If freq_per_year is 1, it's already annualized for the whole period
+                        calc_coupon_rate = annual_coupon
+                        calc = BondCalculator(
+                            isin=bond.isin_code,
+                            issue_date=bond.first_issue_date,
+                            maturity_date=bond.maturity_date,
+                            coupon_rate=calc_coupon_rate,
+                            face_value=FACE_VALUE,
+                            coupon_frequency=freq_per_year,
+                            next_coupon_date=bond.next_coupon_date,
+                        )
+                    except Exception as e:
+                        logger.warning("BondCalculator re-init failed: %s", e)
         else:
             # Sabit faizli: BondCalculator verisini veya DB'deki oranı kullan
             if calc:
