@@ -38,9 +38,10 @@ COUPON_FREQUENCY_MAP = [
 
 def parse_coupon_frequency(coupon_frequency: str | None, bond: "Bond" = None) -> tuple[int, int]:
     """
-    coupon_frequency string -> (period_days, frequency_per_year).
-    Varsayilan: 6 ayda bir -> (182, 2).
-    Eğer bilinmiyorsa ve kısa vadeli ise (<= 400 gün) -> (91, 4) varsayılır.
+    Eğer bilinmiyorsa:
+    - Bono (TRF/TRB) veya vade < 365 gün ise -> Tek Kupon (-1, 1) varsayılır.
+    - Tahvil (TRT) ve vade <= 400 gün ise -> 3 ayda bir (91, 4) varsayılır.
+    - Aksi halde -> 6 ayda bir (182, 2) varsayılır.
     """
     period_days, freq = 0, 0
     if coupon_frequency and str(coupon_frequency).strip():
@@ -56,6 +57,13 @@ def parse_coupon_frequency(coupon_frequency: str | None, bond: "Bond" = None) ->
     # Fallback logic
     if bond and bond.first_issue_date and bond.maturity_date:
         total_days = (bond.maturity_date - bond.first_issue_date).days
+        isin = str(bond.isin_code).upper() if bond.isin_code else ""
+        
+        # Bono (Bill) teshisi: TRF veya TRB ile basliyorsa veya vadesi 365 gunden azsa 
+        # ve kupon frekans bilgisi yoksa "Tek Kupon" (Single) varsayilir.
+        if isin.startswith("TRF") or isin.startswith("TRB") or (0 < total_days < 365):
+            return -1, 1
+            
         if 0 < total_days <= 400:
             return 91, 4
     return 182, 2
