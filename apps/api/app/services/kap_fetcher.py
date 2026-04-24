@@ -295,7 +295,7 @@ def parse_excel_detail(html_content: str) -> dict:
     }
 
     try:
-        tables = pd.read_html(html_content, header=None)
+        tables = pd.read_html(io.StringIO(html_content), header=None)
     except Exception as e:
         logger.warning(f"HTML table parse failed: {e}")
         return result
