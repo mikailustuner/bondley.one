@@ -59,9 +59,10 @@ def parse_coupon_frequency(coupon_frequency: str | None, bond: "Bond" = None) ->
         total_days = (bond.maturity_date - bond.first_issue_date).days
         isin = str(bond.isin_code).upper() if bond.isin_code else ""
         
-        # Bono (Bill) teshisi: TRF veya TRB ile basliyorsa veya vadesi 365 gunden azsa 
+        # Bono (Bill) teshisi: TRF veya TRB ile basliyorsa ve vadesi 300 gunden azsa 
         # ve kupon frekans bilgisi yoksa "Tek Kupon" (Single) varsayilir.
-        if isin.startswith("TRF") or isin.startswith("TRB") or (0 < total_days < 365):
+        # 300 gun uzeri (örn 364 gun) olanlar genellikle 4 kuponlu (Quarterly) olur.
+        if (isin.startswith("TRF") or isin.startswith("TRB")) and (0 < total_days < 300):
             return -1, 1
             
         if 0 < total_days <= 400:

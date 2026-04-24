@@ -46,6 +46,10 @@ function monthAgoISO(): string {
   return d.toISOString().slice(0, 10);
 }
 
+function daysAgo(isoString: string): number {
+  return Math.floor((Date.now() - new Date(isoString).getTime()) / 86_400_000);
+}
+
 /* ── Reusable info-row renderer ── */
 function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
   return (
@@ -837,15 +841,31 @@ export default function BondDetailPage({
       {bond.kap_data && (
         <Card className="animate-fade-up-delay-2">
           <CardHeader>
-            <CardDescription>{tr.dashboard.bondDetails.kap.desc}</CardDescription>
-            <CardTitle className="mt-1">
-              {tr.dashboard.bondDetails.kap.title}
-              {bond.kap_data.disclosure_url && (
-                <a href={bond.kap_data.disclosure_url} target="_blank" rel="noopener noreferrer" className="ml-3 text-[13px] font-normal text-primary hover:underline">
-                  {tr.dashboard.bondDetails.kap.disclosure}
-                </a>
-              )}
-            </CardTitle>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <CardDescription>{tr.dashboard.bondDetails.kap.desc}</CardDescription>
+                <CardTitle className="mt-1">
+                  {tr.dashboard.bondDetails.kap.title}
+                  {bond.kap_data.disclosure_url && (
+                    <a href={bond.kap_data.disclosure_url} target="_blank" rel="noopener noreferrer" className="ml-3 text-[13px] font-normal text-primary hover:underline">
+                      {tr.dashboard.bondDetails.kap.disclosure}
+                    </a>
+                  )}
+                </CardTitle>
+              </div>
+              {bond.kap_data.fetched_at && (() => {
+                const d = daysAgo(bond.kap_data.fetched_at!);
+                const stale = d > 30;
+                return (
+                  <span className={`shrink-0 text-[12px] mt-0.5 ${stale ? "text-yellow-500" : "text-muted-foreground/50"}`}>
+                    {d === 0
+                      ? tr.dashboard.bondDetails.kap.updatedToday
+                      : tr.dashboard.bondDetails.kap.updatedAgo.replace("{days}", d.toString())}
+                    {stale && <span className="ml-1">⚠</span>}
+                  </span>
+                );
+              })()}
+            </div>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid gap-6 lg:grid-cols-2">

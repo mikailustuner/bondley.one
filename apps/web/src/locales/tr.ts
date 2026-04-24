@@ -583,6 +583,9 @@ export const tr = {
                 title: "İhraç Detayları",
                 desc: "KAP Bildirim Verileri",
                 disclosure: "KAP Bildirimi →",
+                updatedToday: "Bugün güncellendi",
+                updatedAgo: "{days} gün önce güncellendi",
+                staleWarning: "Veri 30 günden eski",
                 instrument: {
                     title: "Araç Bilgileri",
                     isin: "ISIN Kodu",
