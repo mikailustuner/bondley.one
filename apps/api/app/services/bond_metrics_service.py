@@ -377,8 +377,18 @@ class BondMetricsService:
         Belirli tarih icin market_data yoksa None dondurur (varsayilan deger kullanmaz).
         clean_price: market_data'dan; override verilirse o kullanilir.
         """
+        # 1. Initialize spreads and frequency
         period_days, freq_per_year = parse_coupon_frequency(bond.coupon_frequency, bond)
         period_days = _resolve_period_days(bond, period_days)
+        
+        # Contractual spread from DB (normalized)
+        active_spread = _spread_to_decimal(bond.spread) if bond.spread is not None else None
+        # Try to extract from remarks if DB spread is missing
+        if active_spread is None or active_spread == 0:
+            extracted = _extract_spread_from_remarks(bond.remarks)
+            if extracted is not None:
+                active_spread = extracted
+
         period_start, period_end = get_current_coupon_period(
             bond.first_issue_date,
             bond.next_coupon_date,
@@ -489,12 +499,9 @@ class BondMetricsService:
             if tlref_start and tlref_end and eff_period > 0:
                 annual_ref = annual_reference_rate(tlref_start, tlref_end, eff_period)
                 
-                # Use bond.spread, or try to extract from remarks if NULL
-                active_spread = _spread_to_decimal(bond.spread) if bond.spread is not None else None
-                if active_spread is None or active_spread == 0:
-                    active_spread = _extract_spread_from_remarks(bond.remarks)
-                
+                # Using the active_spread initialized at the top
                 annual_coupon = annual_coupon_rate(annual_ref, active_spread * Decimal("100") if active_spread is not None else None)
+                logger.debug(f"Compute Metrics {bond.isin_code}: active_spread={active_spread}, annual_ref={annual_ref}, annual_coupon={annual_coupon}")
                 periodic_coupon = periodic_coupon_rate(annual_coupon, eff_period)
                 compound_coupon = annual_compound_coupon_rate(periodic_coupon, eff_period)
                 
