@@ -20,7 +20,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-} from "recharts"; z
+} from "recharts";
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
