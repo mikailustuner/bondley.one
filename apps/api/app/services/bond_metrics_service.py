@@ -410,13 +410,20 @@ class BondMetricsService:
         else:
             # Sabit faizli: DB'deki dönemsel kupon oranından hesapla
             raw_periodic = _coupon_rate_to_decimal(bond.next_coupon_rate)
-            if raw_periodic > 0 and period_days > 0:
+            # Kısa vadeli araçlarda (bono) gerçek vade gününü kullan;
+            # coupon_frequency DB'de null/yanlış olsa bile doğru yıllıklandırma yapılır.
+            eff_period = period_days
+            if bond.first_issue_date and bond.maturity_date:
+                actual_days = (bond.maturity_date - bond.first_issue_date).days
+                if 0 < actual_days < 365:
+                    eff_period = actual_days
+            if raw_periodic > 0 and eff_period > 0:
                 # annual_ref = None (sabit faizde TLREF göstergesi yoktur)
                 annual_coupon = (
-                    raw_periodic * Decimal("365") / Decimal(str(period_days))
+                    raw_periodic * Decimal("365") / Decimal(str(eff_period))
                 ).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
                 periodic_coupon = raw_periodic
-                compound_coupon = annual_compound_coupon_rate(raw_periodic, period_days)
+                compound_coupon = annual_compound_coupon_rate(raw_periodic, eff_period)
 
         # Birikmis faiz: TLREF'li ise Donemsel Kupon * (gun gecen / period_days) * nominal; degilse sabit kupon
         accrued_interest = Decimal("0")
