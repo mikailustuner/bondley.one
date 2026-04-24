@@ -258,8 +258,35 @@ def _safe_bool(value: str | None) -> bool | None:
     return None
 
 
+def _looks_like_label(value: str) -> bool:
+    """Hucre degerinin alan etiketi (key) olup olmadigini kontrol et."""
+    v = value.strip()
+    if not v or v.lower() == "nan":
+        return False
+    # Saf sayi → etiket degil
+    try:
+        float(v.replace(",", "."))
+        return False
+    except ValueError:
+        pass
+    # Tarih → etiket degil
+    for fmt in ("%d.%m.%Y", "%Y-%m-%d", "%d/%m/%Y"):
+        try:
+            datetime.strptime(v, fmt)
+            return False
+        except ValueError:
+            continue
+    return True
+
+
 def parse_excel_detail(html_content: str) -> dict:
-    """Excel (HTML table) icerigini parse et."""
+    """Excel (HTML table) icerigini parse et.
+
+    Desteklenen tablo yapilari:
+      - 2 kolon: | Etiket | Deger |
+      - 4 kolon: | Etiket1 | Deger1 | Etiket2 | Deger2 |
+      - Ofsetli: | NaN | Etiket | Deger |  (ve benzeri)
+    """
     result = {
         "key_values": {},
         "coupon_payments": [],
@@ -273,6 +300,8 @@ def parse_excel_detail(html_content: str) -> dict:
         logger.warning(f"HTML table parse failed: {e}")
         return result
 
+    logger.debug(f"KAP Excel: {len(tables)} tablo, boyutlar: {[df.shape for df in tables]}")
+
     for i, df in enumerate(tables):
         table_records = []
         for row_idx in range(len(df)):
@@ -285,16 +314,27 @@ def parse_excel_detail(html_content: str) -> dict:
                 table_records.append(row)
         result["tables_raw"].append(table_records)
 
-        # Key-value ciftlerini cikar (2 sutunlu satirlar)
+        # Key-value ciftlerini cikar: kolon sayisindan bagimsiz genel yaklasim.
+        # Satirdaki dolu hucreleri sirayla tara; bitisik (k_col, k_col+1) cifti
+        # bulununca ve ilk hucre etiket gibi gorunuyorsa key->value olarak al.
         for row_idx in range(len(df)):
-            row_data = {}
+            cells = []
             for col_idx in range(len(df.columns)):
                 val = df.iloc[row_idx, col_idx]
                 if pd.notna(val):
-                    row_data[col_idx] = str(val).strip()
+                    s = str(val).strip()
+                    if s and s.lower() != "nan":
+                        cells.append((col_idx, s))
 
-            if len(row_data) == 2 and 0 in row_data and 1 in row_data:
-                result["key_values"][row_data[0]] = row_data[1]
+            j = 0
+            while j < len(cells) - 1:
+                k_col, k_val = cells[j]
+                v_col, v_val = cells[j + 1]
+                if v_col == k_col + 1 and _looks_like_label(k_val):
+                    result["key_values"][k_val] = v_val
+                    j += 2
+                else:
+                    j += 1
 
         # Kupon odeme plani tablosunu bul (10 sutunlu tablo, header satiri)
         if len(df.columns) >= 7:
