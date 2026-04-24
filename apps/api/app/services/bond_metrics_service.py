@@ -28,11 +28,11 @@ logger = logging.getLogger(__name__)
 # -1 sentinel = "Tek Kupon": actual duration computed from bond dates at call site
 COUPON_FREQUENCY_MAP = [
     (r"tek\s*kupon|tek\s*öd|tek\s*od|single", (-1, 1)),
-    (r"6\s*ayda|yar[iı]?\s*y[iı]l|6\s*ay", (182, 2)),
-    (r"y[iı]ll[iı]k|yillik|1\s*yil|yilda\s*1", (365, 1)),
-    (r"3\s*ayda|3\s*ay|quarter", (91, 4)),
+    (r"6\s*ayda|yar[iı]?\s*y[iı]l|6\s*ay|semi[- ]?annu", (182, 2)),
+    (r"y[iı]ll[iı]k|yillik|1\s*yil|yilda\s*1|annu", (365, 1)),
+    (r"3\s*ayda|3\s*ay|[üu]ç\s*ay|quarter", (91, 4)),
     (r"12\s*ayda|12\s*ay", (365, 1)),
-    (r"ayda\s*bir|ayl[iı]k", (30, 12)),
+    (r"ayda\s*bir|ayl[iı]k|monthly", (30, 12)),
 ]
 
 
@@ -499,7 +499,11 @@ class BondMetricsService:
                 accrued_interest = calc.accrued_interest(settlement_date)
                 dirty_price = calc.dirty_price(clean_price, settlement_date)
                 
-                if bond.next_coupon_rate is not None:
+                if periodic_coupon is not None:
+                    coupon_payment_amount = (
+                        FACE_VALUE * periodic_coupon
+                    ).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
+                elif bond.next_coupon_rate is not None:
                     coupon_payment_amount = (
                         FACE_VALUE * _coupon_rate_to_decimal(bond.next_coupon_rate) / Decimal(str(calc.coupon_frequency))
                     ).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
