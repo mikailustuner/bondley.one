@@ -65,11 +65,11 @@ export default function LandingPage() {
               className="h-7 w-7 object-contain"
               priority
             />
-            <span className="font-semibold text-[16px] tracking-tight text-foreground">
+            <span className="hidden sm:inline font-semibold text-[16px] tracking-tight text-foreground">
               {tr.common.brand}
             </span>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {mounted && user ? (
               <>
                 <Link

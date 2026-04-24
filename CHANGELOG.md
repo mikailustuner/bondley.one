@@ -6,6 +6,95 @@ Tüm önemli değişiklikler bu dosyada belgelenir. Format [Keep a Changelog](ht
 
 ---
 
+## [1.2.3] — 2026-04-24
+
+### 🚀 Yeni Özellikler
+
+#### Dolaşımdan Çıkmış Favoriler Bölümü
+- Favorilerim sayfasına **"Dolaşımdan Çıkmışlar"** başlıklı yeni bölüm eklendi
+- Vadesi geçmiş (`maturity_date < bugün`) veya pasife alınmış (`is_active = FALSE`) favorilenen araçlar, aktif favorilerin altında ayrı bir tabloda listeleniyor
+- `GET /bonds/favorites/archived` yeni endpoint'i: `is_active = FALSE OR maturity_date < bugün` koşuluyla çalışıyor, en yakın tarihte vadesi dolanlar başa gelecek şekilde sıralı
+- Arşivlenmiş araçlar %60 opaklıkta gösteriliyor; satır üzerindeki yıldız butonu ile favoriden çıkarma hâlâ aktif
+- Hem masaüstü tablo hem mobil kart görünümü destekleniyor
+
+#### Dolaşımdan Çıkmış Tahvil Detay Sayfası
+- `GET /bonds/{isin_code}` endpoint'indeki `is_active = TRUE AND maturity_date >= bugün` filtresi kaldırıldı; artık herhangi bir ISIN'e ait tahvil erişilebilir
+- Vadesi dolmuş ve pasif tahviller için **"Vadesi Doldu"** / **"Pasif"** badge'leri header'da gösteriliyor
+- Sayfa üstünde muted tonlu bilgi banner'ı: *"Bu araç dolaşımdan çıkmıştır. Veriler bilgilendirme amaçlıdır."*
+- Metrik hesaplamalar geçerliliğini yitirmiş tarihler için graceful şekilde `null` döndürüyor; sayfanın geri kalanı (genel bilgiler, KAP verileri, kupon planı) tam görünmeye devam ediyor
+
+#### Fiyat ve YTM Geçmişi Grafiği
+- Tahvil detay sayfasına **"Son 90 Gün — Fiyat ve YTM Geçmişi"** grafiği eklendi
+- `recharts` `ComposedChart` + çift Y ekseni: sol eksen Temiz Fiyat, sağ eksen YTM
+- `GET /bonds/{isin}/history?days=90` endpoint'i kullanılıyor; yükleme iskelet animasyonu mevcut
+- Senaryo bölümü ile KAP verileri arasına yerleştirildi
+
+#### Otomatik Birim Testleri
+- `apps/api/tests/test_bond_calculator.py` oluşturuldu — **22 birim testi**, 3 test sınıfı
+- `TestBono`: ihraçta birikmiş faiz = 0, 6. ayda birikmiş faiz doğruluğu, kirli fiyat = temiz + birikmiş, YTM @ par = kupon oranı, YTM altında/üstünde fiyat, vade sonrası settlement hatası, sıfır fiyat hatası
+- `TestSemiAnnual`: 6 aylık frekans değişmezliği, dönemsel YTM roundtrip, spread hesabı, negatif spread, modifiye dürasyon pozitifliği, Macaulay < vade yılı, modifiye < Macaulay
+- Standalone: kısa vadeli bono için `parse_coupon_frequency` frekans düzeltmesi, TLREF'siz full analysis key kontrolü
+- `requirements.txt`'e `pytest` eklendi
+
+#### GZip Sıkıştırma Middleware
+- FastAPI'ye `GZipMiddleware(minimum_size=1000)` eklendi
+- `Accept-Encoding: gzip` başlığına sahip tüm yanıtlar otomatik sıkıştırılıyor
+- Bond listesi ve TLREF verileri gibi büyük JSON payload'larda ağ transferi belirgin şekilde azaldı
+
+#### Landing Sayfası SEO Maksimizasyonu
+- `apps/web/src/app/landing/layout.tsx` kapsamlı metadata seti: `authors`, `creator`, `publisher`, `category: "finance"`, 20 anahtar kelime, `googleBot` direktifi
+- **Üç adet JSON-LD şeması** `<script type="application/ld+json">` olarak embed edildi:
+  - `WebApplication` — featureList, audience, applicationCategory
+  - `Organization` — logo, foundingDate, areaServed, contactPoint
+  - `FAQPage` — 5 soru/cevap çifti: Bondley nedir, TLREF endeksi nedir, YTM nasıl hesaplanır, kirli/temiz fiyat farkı, kira sertifikası analizi
+- OG ve Twitter görsel etiketleri `metadataBase` URL'sine göre mutlak yola çözümleniyor
+- `apps/web/src/app/layout.tsx`'e `metadataBase: new URL("https://bondley.one")` ve `title.template: "%s | Bondley"` eklendi
+- `apps/web/src/app/sitemap.ts` oluşturuldu — 7 public rota, `priority` ve `changeFrequency` ayarlarıyla
+- `apps/web/src/app/robots.ts` oluşturuldu — `/dashboard/`, `/admin/`, `/api/`, `/_next/` disallow; sitemap ve host direktifleri
+
+### 🐛 Hata Düzeltmeleri
+
+#### Landing Navbar Mobil Çakışma Sorunu
+- Giriş yapılmamış durumda mobil ekranlarda "Bondley" yazısı ile sağ taraftaki butonlar (ThemeToggle + Giriş Yap + Başlat) üst üste biniyordu
+- "Bondley" marka yazısına `hidden sm:inline` eklendi — 640px altında yazı gizlenir, logo ikonu görünür kalır
+- Sağ taraf öğe boşluğu `gap-2 sm:gap-3` olarak düzenlendi; 640px+ üzerinde görünüm değişmedi
+
+#### KAP Bildirim Bölümü Boş Görünme Sorunu
+- **Kök neden:** `build_detail_record()` (kap_fetcher.py) yanlış Türkçe alan adları arıyordu; İhraç bildirimi yapısı ile İtfa bildirimi yapısı arasındaki anahtar adı farkı göz ardı edilmişti
+- Düzeltilen anahtar eşleşmeleri (13 alan):
+
+  | Alan | Eski (Hatalı) | Yeni (Doğru) |
+  |---|---|---|
+  | `instrument_type` | `"Tür"` | `"Türü"` |
+  | `maturity_date` | `"İtfa Tarihi"` | `"Vade Tarihi"` |
+  | `maturity_days` | `"Vade (Gün)"` | `"Vade (Gün Sayısı)"` |
+  | `interest_rate_type` | `"Faiz Oranı Tipi"` | `"Faiz Oranı Türü"` |
+  | `currency` | `"Para Birimi"` | `"Döviz Cinsi"` |
+  | `payment_type` | `"Ödeme Tipi"` | `"Ödeme Türü"` |
+  | `sale_type` | `"Satış Tipi"` | `"Satış Şekli"` / `"Satış Türü"` |
+  | `starting_date_sale` | `"Satış Başlangıç Tarihi"` | `"Satışa Başlanma Tarihi"` |
+  | `ending_date_sale` | `"Satış Bitiş Tarihi"` | `"Satışın Tamamlanma Tarihi"` |
+  | `traded_in_exchange` | `"Borsada İşlem Görüyor mu"` | `"Borsada İşlem Görme Durumu"` |
+  | `intermediary_brokerage` | `"Aracı Kurum Ünvanı"` | `"Aracılık Hizmeti Alınan Yatırım Kuruluşu"` |
+  | `nominal_value` | — | `"Satışı Gerçekleştirilen Nominal Tutar"` / `"Planlanan Nominal Tutar"` |
+  | `issue_limit` | `"Limit"` | `"Tutar"` / `"İhraç Tavanı"` |
+
+- `get_kap_data_for_isin()` (kap_data_resolver.py) artık mevcut DB kayıtlarında alan değerleri `NULL` ama `raw_data_json` dolu ise **otomatik yeniden ayrıştırma** (re-parse) yapıyor — KAP'tan yeniden veri çekmeden mevcut kayıtları onarıyor
+- `isin_code` alanı döndürülen dict'e eklendi (daha önce eksikti)
+
+#### Sabit Faizli Tahvil Hesaplama Hataları
+- **Kök neden 1 — Yanlış formül dalı:** `compute_metrics()` sabit faizli tahvillerde de TLREF büyüme formülünü (`annual_reference_rate`) uyguluyordu
+  - `_is_tlref_indexed()` yardımcı fonksiyonu eklendi; `yield_type` / `yield_formula` / `compound_yield_formula` içinde `"tlref"`, `"değişken"`, `"floating"` aranıyor
+  - TLREF endeksli tahviller için TLREF büyüme dalı, sabit faizliler için doğrudan dönemsel oran dalı kullanılıyor
+- **Kök neden 2 — Yanlış dönem yıllıklaştırması:** "Tek Kupon" tahvillerde kupon sıklığı bilinmediğinde varsayılan 182 gün kullanılıyordu; bu durum yıllık basit faizin 2× hatalı hesaplanmasına yol açıyordu
+  - `COUPON_FREQUENCY_MAP`'e `"Tek Kupon"` için `-1` sentinel değeri eklendi
+  - `_resolve_period_days()` eklendi: `-1` sentinel'ı gerçek `(maturity_date − first_issue_date)` gün sayısına çeviriyor
+  - `eff_period` hesabı: gerçek tahvil süresi 365 günün altındaysa vadelere arası gerçek gün sayısı kullanılıyor, `coupon_frequency` DB alanı ne olursa olsun
+  - Örnek doğrulama: `0.184096 × 365 / 151 = %44.5000` (KAP bildirimiyle birebir örtüşüyor)
+- **Kök neden 3 — Bozuk fallback bloğu:** `calc.annual_coupon_rate` property'si `BondCalculator`'da mevcut değildi; `(1 + periodic_rate_eff) ** f_eff` ifadesi `Decimal` için geçersizdi → Bozuk fallback bloğu kaldırıldı
+
+---
+
 ## [1.2.2] — 2026-04-23
 
 ### 🚀 Yeni Özellikler
