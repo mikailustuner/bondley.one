@@ -95,6 +95,7 @@ class BondCalculatedMetrics(BaseModel):
     yield_to_maturity: float | None = None
     spread: float | None = None
     contractual_spread: float | None = None
+    remarks: str | None = None
     modified_duration: float | None = None
     macaulay_duration: float | None = None
     convexity: float | None = None

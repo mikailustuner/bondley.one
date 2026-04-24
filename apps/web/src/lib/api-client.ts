@@ -207,6 +207,8 @@ export interface BondCalculatedMetrics {
   rate_change_today_pct: number | null;
   yield_to_maturity: number | null;
   spread: number | null;
+  contractual_spread: number | null;
+  remarks: string | null;
   modified_duration: number | null;
   macaulay_duration: number | null;
   convexity: number | null;

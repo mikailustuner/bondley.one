@@ -20,7 +20,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-} from "recharts";
+} from "recharts"; z
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -313,6 +313,7 @@ export default function BondDetailPage({
     [tr.dashboard.bondDetails.infoCards.financial.lastYield, bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"],
     [tr.dashboard.bondDetails.infoCards.financial.nextCouponRate, bond.next_coupon_rate != null ? formatPercent(bond.next_coupon_rate) : "—"],
     [tr.dashboard.bondDetails.infoCards.financial.spread, bond.spread != null ? formatPercent(bond.spread) : "—"],
+    ["Sözleşmesel Ek Getiri (Dinamik)", bond.calculated_metrics?.contractual_spread != null ? formatPercentFromDecimal(bond.calculated_metrics.contractual_spread, 4) : "—"],
     [tr.dashboard.bondDetails.infoCards.financial.calculatedSpread, bond.calculated_metrics?.spread != null ? formatPercentFromDecimal(bond.calculated_metrics.spread, 4) : "—"],
     [
       tr.dashboard.bondDetails.infoCards.financial.lastTlref,
@@ -501,9 +502,10 @@ export default function BondDetailPage({
               {[
                 { label: tr.dashboard.bondDetails.calculatedMetrics.dirtyPrice, value: formatDecimal(bond.calculated_metrics.dirty_price, 8, 8), primary: true },
                 { label: tr.dashboard.bondDetails.calculatedMetrics.accruedInterest, value: formatDecimal(bond.calculated_metrics.accrued_interest, 8, 8) },
+                { label: "Sözleşmesel Ek Getiri", value: bond.calculated_metrics.contractual_spread != null ? formatPercentFromDecimal(bond.calculated_metrics.contractual_spread, 4) : "—" },
+                { label: "Ek Getiri Kaynağı (Remarks)", value: bond.calculated_metrics.remarks ? (bond.calculated_metrics.remarks.length > 30 ? bond.calculated_metrics.remarks.substring(0, 30) + "..." : bond.calculated_metrics.remarks) : "—" },
                 { label: tr.dashboard.bondDetails.calculatedMetrics.rateChange, value: bond.calculated_metrics.rate_change_today_pct != null ? formatPercent(bond.calculated_metrics.rate_change_today_pct) : "—" },
                 { label: tr.dashboard.bondDetails.calculatedMetrics.cleanPrice, value: formatDecimal(bond.calculated_metrics.clean_price_used, 8, 8) },
-                { label: tr.dashboard.bondDetails.infoCards.financial.spread, value: bond.spread != null ? formatPercent(bond.spread) : "—" },
                 ...(bond.calculated_metrics.annual_reference_rate != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.annualRefRate, value: formatPercentFromDecimal(bond.calculated_metrics.annual_reference_rate, 4) }] : []),
                 ...(bond.calculated_metrics.annual_coupon_rate != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.annualCouponRate, value: formatPercentFromDecimal(bond.calculated_metrics.annual_coupon_rate, 4) }] : []),
                 ...(bond.calculated_metrics.annual_compound_coupon_rate != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.annualCompoundCouponRate, value: formatPercentFromDecimal(bond.calculated_metrics.annual_compound_coupon_rate, 4) }] : []),
