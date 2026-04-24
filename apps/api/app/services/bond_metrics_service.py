@@ -109,15 +109,21 @@ def annual_reference_rate(
 
 def _spread_to_decimal(spread: Decimal | None) -> Decimal:
     """
-    Spread'i ondaliga cevirir. DB'de yuzde olarak saklanabilir (2.5 = %2.5);
-    |spread| > 1 ise yuzde kabul edilip 100'e bolunur, aksi halde ondalik varsayilir.
+    Spread'i ondaliga cevirir. DB'de yuzde olarak saklanabilir (2.5 = %2.5).
+    BIST verilerinde spread genellikle yuzde (0.5, 1.25 vb.) olarak gelir.
+    Heuristik: Mutlak degeri 0.0001 ile 0.1 arasindaysa ondalik (decimal rate) varsayilir,
+    aksi halde (ornegin 0.5 veya 2.5) yuzde varsayilip 100'e bolunur.
     """
     if spread is None:
         return Decimal("0")
     s = Decimal(str(spread))
-    if abs(s) >= 1:
-        return s / Decimal("100")
-    return s
+    # Eger deger zaten kucuk bir ondalik ise (0.0001 ile 0.1 arasi, yani %0.01 ile %10 arasi)
+    # ve 0 degilse, muhtemelen zaten normalize edilmistir.
+    # Ancak 0.5 gibi bir deger hem %50 (ondalik) hem %0.5 (yuzde) olabilir.
+    # BIST'te spread %50 olamayacagi icin 0.5 -> %0.5 kabul edilmelidir.
+    if abs(s) > 0 and abs(s) < Decimal("0.1"):
+        return s
+    return s / Decimal("100")
 
 
 def _extract_spread_from_remarks(remarks: str | None) -> Decimal | None:
@@ -164,13 +170,13 @@ def _extract_spread_from_remarks(remarks: str | None) -> Decimal | None:
     return None
 
 
-def annual_coupon_rate(annual_reference: Decimal | None, spread: Decimal | None) -> Decimal | None:
+def annual_coupon_rate(annual_reference: Decimal | None, spread_decimal: Decimal | None) -> Decimal | None:
     """Yillik Kupon Faiz Orani = Yillik Gosterge + Yillik Basit Ek Getiri (spread).
-    annual_reference ondalik; spread DB'de yuzde olabileceginden normalize edilir."""
+    Hem annual_reference hem spread_decimal ondalik (decimal rate) olmalidir."""
     if annual_reference is None:
         return None
-    spread_val = _spread_to_decimal(spread)
-    return (annual_reference + spread_val).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
+    s = spread_decimal if spread_decimal is not None else Decimal("0")
+    return (annual_reference + s).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
 
 
 def periodic_coupon_rate(annual_coupon: Decimal | None, period_days: int) -> Decimal | None:
@@ -195,15 +201,16 @@ def annual_compound_coupon_rate(periodic_coupon: Decimal | None, period_days: in
 
 def _coupon_rate_to_decimal(rate: Decimal | None) -> Decimal:
     """
-    Kupon oranini kupon tutari formulu icin ondaliga cevirir.
-    Veritabaninda yuzde (2.7958) veya ondalik (0.027958) saklanabiliyor; |rate| > 1 ise yuzde kabul edilir.
+    Kupon oranini kupon tutari formulu icin ondalika cevirir.
+    Veritabaninda yuzde (2.7958) veya ondalik (0.027958) saklanabiliyor.
+    |rate| 0.0001 ile 0.1 arasindaysa ondalik kabul edilir, aksi halde yuzde varsayilip 100'e bolunur.
     """
     if rate is None:
         return Decimal("0")
     r = Decimal(str(rate))
-    if abs(r) > 1:
-        return r / Decimal("100")
-    return r
+    if abs(r) > 0 and abs(r) < Decimal("0.1"):
+        return r
+    return r / Decimal("100")
 
 
 def _is_tlref_indexed(bond: Bond) -> bool:
@@ -499,8 +506,8 @@ class BondMetricsService:
             if tlref_start and tlref_end and eff_period > 0:
                 annual_ref = annual_reference_rate(tlref_start, tlref_end, eff_period)
                 
-                # Using the active_spread initialized at the top
-                annual_coupon = annual_coupon_rate(annual_ref, active_spread * Decimal("100") if active_spread is not None else None)
+                # Using the active_spread initialized at the top (already normalized)
+                annual_coupon = annual_coupon_rate(annual_ref, active_spread)
                 logger.debug(f"Compute Metrics {bond.isin_code}: active_spread={active_spread}, annual_ref={annual_ref}, annual_coupon={annual_coupon}")
                 periodic_coupon = periodic_coupon_rate(annual_coupon, eff_period)
                 compound_coupon = annual_compound_coupon_rate(periodic_coupon, eff_period)
