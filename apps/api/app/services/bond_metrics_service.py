@@ -572,6 +572,7 @@ class BondMetricsService:
             "rate_change_today_pct": float(daily_rate_pct) if daily_rate_pct is not None else None,
             "yield_to_maturity": float(ytm) if ytm is not None else None,
             "spread": float(spread_bp) if spread_bp is not None else None,
+            "contractual_spread": float(bond.spread) if bond.spread is not None else None,
             "modified_duration": float(modified_duration) if modified_duration is not None else None,
             "macaulay_duration": float(macaulay_duration) if macaulay_duration is not None else None,
             "convexity": float(convexity) if convexity is not None else None,
