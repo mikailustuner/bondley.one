@@ -377,33 +377,36 @@ def build_detail_record(parsed: dict) -> dict:
 
     return {
         "isin_code": kv.get("ISIN Code") or kv.get("ISIN Kodu"),
-        "instrument_type": kv.get("Type") or kv.get("Tür"),
+        "instrument_type": kv.get("Type") or kv.get("Tür") or kv.get("Türü"),
         "fund_user": kv.get("Fund User") or kv.get("Fon Kullanıcısı") or kv.get("Fon Kullanicisi"),
         "source_institution": kv.get("Source Institution") or kv.get("Kaynak Kuruluş") or kv.get("Kaynak Kurulus"),
-        "maturity_date": _safe_date(kv.get("Maturity Date") or kv.get("İtfa Tarihi")),
-        "maturity_days": _safe_int(kv.get("Maturity (Day)") or kv.get("Vade (Gün)")),
+        "maturity_date": _safe_date(kv.get("Maturity Date") or kv.get("İtfa Tarihi") or kv.get("Vade Tarihi")),
+        "maturity_days": _safe_int(kv.get("Maturity (Day)") or kv.get("Vade (Gün)") or kv.get("Vade (Gün Sayısı)")),
         "nominal_value": _safe_decimal(
             kv.get("Nominal Value of Capital Market Instrument Sold")
             or kv.get("İhraç Edilen Sermaye Piyasası Aracının Nominal Değeri")
+            or kv.get("Satışı Gerçekleştirilen Nominal Tutar")
+            or kv.get("Planlanan Nominal Tutar")
         ),
         "issue_price": _safe_decimal(kv.get("Issue Price") or kv.get("İhraç Fiyatı")),
-        "interest_rate_type": kv.get("Interest Rate Type") or kv.get("Faiz Oranı Tipi"),
+        "interest_rate_type": kv.get("Interest Rate Type") or kv.get("Faiz Oranı Tipi") or kv.get("Faiz Oranı Türü"),
         "floating_rate_reference": kv.get("Floating Rate Reference") or kv.get("Değişken Faiz Referansı"),
         "additional_return_pct": _safe_decimal(kv.get("Additional Return (%)") or kv.get("Ek Getiri (%)")),
         "coupon_number": _safe_int(kv.get("Coupon Number") or kv.get("Kupon Sayısı")),
         "coupon_frequency": kv.get("Coupon Payment Frequency") or kv.get("Kupon Ödeme Sıklığı"),
-        "currency": kv.get("Currency Unit") or kv.get("Para Birimi"),
-        "payment_type": kv.get("Payment Type") or kv.get("Ödeme Tipi"),
-        "sale_type": kv.get("Sale Type") or kv.get("Satış Tipi"),
-        "starting_date_sale": _safe_date(kv.get("Starting Date of Sale") or kv.get("Satış Başlangıç Tarihi")),
-        "ending_date_sale": _safe_date(kv.get("Ending Date of Sale") or kv.get("Satış Bitiş Tarihi")),
+        "currency": kv.get("Currency Unit") or kv.get("Para Birimi") or kv.get("Döviz Cinsi"),
+        "payment_type": kv.get("Payment Type") or kv.get("Ödeme Tipi") or kv.get("Ödeme Türü"),
+        "sale_type": kv.get("Sale Type") or kv.get("Satış Tipi") or kv.get("Satış Şekli") or kv.get("Satış Türü"),
+        "starting_date_sale": _safe_date(kv.get("Starting Date of Sale") or kv.get("Satış Başlangıç Tarihi") or kv.get("Satışa Başlanma Tarihi")),
+        "ending_date_sale": _safe_date(kv.get("Ending Date of Sale") or kv.get("Satış Bitiş Tarihi") or kv.get("Satışın Tamamlanma Tarihi")),
         "maturity_starting_date": _safe_date(kv.get("Maturity Starting Date") or kv.get("Vade Başlangıç Tarihi")),
-        "traded_in_exchange": _safe_bool(kv.get("Traded in the Stock Exchange") or kv.get("Borsada İşlem Görüyor mu")),
+        "traded_in_exchange": _safe_bool(kv.get("Traded in the Stock Exchange") or kv.get("Borsada İşlem Görüyor mu") or kv.get("Borsada İşlem Görme Durumu")),
         "intermediary_brokerage": (
             kv.get("Title Of Intermediary Brokerage House")
             or kv.get("Aracı Kurum Ünvanı")
+            or kv.get("Aracılık Hizmeti Alınan Yatırım Kuruluşu")
         ),
-        "issue_limit": _safe_decimal(kv.get("Limit")),
+        "issue_limit": _safe_decimal(kv.get("Limit") or kv.get("İhraç Tavanı") or kv.get("Tutar")),
         "issue_limit_security_type": kv.get("Issue Limit Security Type") or kv.get("İhraç Tavanı MK Türü"),
         "issue_limit_currency": kv.get("Currency Unit"),
         "issuer_has_rating": _safe_bool(kv.get("Does the issuer have a rating note?") or kv.get("İhraççının derecelendirme notu var mı?")),

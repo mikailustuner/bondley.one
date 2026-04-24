@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.bond import Bond
 from app.models.kap_disclosure import KapDisclosure, KapDisclosureDetail
+from app.services.kap_fetcher import build_detail_record
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,25 @@ async def get_kap_data_for_isin(db: AsyncSession, isin_code: str) -> dict | None
 
     disclosure, detail = row[0], row[1]
 
+    # Re-parse from raw_data_json for records where fields were saved with wrong key names
+    rp: dict = {}
+    if detail.instrument_type is None and detail.raw_data_json:
+        try:
+            rp = build_detail_record(detail.raw_data_json)
+        except Exception:
+            pass
+
+    def _d(orm_val, field: str):
+        """Return ORM value if present, else fall back to re-parsed value."""
+        return orm_val if orm_val is not None else rp.get(field)
+
+    def _date_str(d) -> str | None:
+        if d is None:
+            return None
+        return d.isoformat() if hasattr(d, "isoformat") else str(d)
+
     return {
+        "isin_code": _d(detail.isin_code, "isin_code") or isin_code,
         "disclosure_index": disclosure.disclosure_index,
         "title": disclosure.title,
         "summary": disclosure.summary,
@@ -46,26 +65,26 @@ async def get_kap_data_for_isin(db: AsyncSession, isin_code: str) -> dict | None
         "stock_code": disclosure.stock_code,
         "is_changed": disclosure.is_changed,
         # Detail fields
-        "instrument_type": detail.instrument_type,
-        "fund_user": detail.fund_user,
-        "source_institution": detail.source_institution,
-        "maturity_date": detail.maturity_date.isoformat() if detail.maturity_date else None,
-        "maturity_days": detail.maturity_days,
-        "nominal_value": str(detail.nominal_value) if detail.nominal_value else None,
-        "issue_price": str(detail.issue_price) if detail.issue_price else None,
-        "interest_rate_type": detail.interest_rate_type,
-        "floating_rate_reference": detail.floating_rate_reference,
-        "additional_return_pct": str(detail.additional_return_pct) if detail.additional_return_pct else None,
-        "coupon_number": detail.coupon_number,
-        "coupon_frequency": detail.coupon_frequency,
-        "currency": detail.currency,
-        "payment_type": detail.payment_type,
-        "sale_type": detail.sale_type,
-        "starting_date_sale": detail.starting_date_sale.isoformat() if detail.starting_date_sale else None,
-        "ending_date_sale": detail.ending_date_sale.isoformat() if detail.ending_date_sale else None,
-        "traded_in_exchange": detail.traded_in_exchange,
-        "intermediary_brokerage": detail.intermediary_brokerage,
-        "issue_limit": str(detail.issue_limit) if detail.issue_limit else None,
+        "instrument_type": _d(detail.instrument_type, "instrument_type"),
+        "fund_user": _d(detail.fund_user, "fund_user"),
+        "source_institution": _d(detail.source_institution, "source_institution"),
+        "maturity_date": _date_str(_d(detail.maturity_date, "maturity_date")),
+        "maturity_days": _d(detail.maturity_days, "maturity_days"),
+        "nominal_value": str(_d(detail.nominal_value, "nominal_value")) if _d(detail.nominal_value, "nominal_value") else None,
+        "issue_price": str(_d(detail.issue_price, "issue_price")) if _d(detail.issue_price, "issue_price") else None,
+        "interest_rate_type": _d(detail.interest_rate_type, "interest_rate_type"),
+        "floating_rate_reference": _d(detail.floating_rate_reference, "floating_rate_reference"),
+        "additional_return_pct": str(_d(detail.additional_return_pct, "additional_return_pct")) if _d(detail.additional_return_pct, "additional_return_pct") else None,
+        "coupon_number": _d(detail.coupon_number, "coupon_number"),
+        "coupon_frequency": _d(detail.coupon_frequency, "coupon_frequency"),
+        "currency": _d(detail.currency, "currency"),
+        "payment_type": _d(detail.payment_type, "payment_type"),
+        "sale_type": _d(detail.sale_type, "sale_type"),
+        "starting_date_sale": _date_str(_d(detail.starting_date_sale, "starting_date_sale")),
+        "ending_date_sale": _date_str(_d(detail.ending_date_sale, "ending_date_sale")),
+        "traded_in_exchange": _d(detail.traded_in_exchange, "traded_in_exchange"),
+        "intermediary_brokerage": _d(detail.intermediary_brokerage, "intermediary_brokerage"),
+        "issue_limit": str(_d(detail.issue_limit, "issue_limit")) if _d(detail.issue_limit, "issue_limit") else None,
         "issuer_has_rating": detail.issuer_has_rating,
         "issuer_rating_company": detail.issuer_rating_company,
         "issuer_rating_note": detail.issuer_rating_note,
@@ -74,9 +93,9 @@ async def get_kap_data_for_isin(db: AsyncSession, isin_code: str) -> dict | None
         "instrument_has_rating": detail.instrument_has_rating,
         "originator_has_rating": detail.originator_has_rating,
         "coupon_payments": detail.coupon_payments_json,
-        "additional_explanation": detail.additional_explanation,
-        "board_decision_date": detail.board_decision_date.isoformat() if detail.board_decision_date else None,
-        "subject_of_notification": detail.subject_of_notification,
+        "additional_explanation": _d(detail.additional_explanation, "additional_explanation"),
+        "board_decision_date": _date_str(_d(detail.board_decision_date, "board_decision_date")),
+        "subject_of_notification": _d(detail.subject_of_notification, "subject_of_notification"),
         "fetched_at": detail.fetched_at.isoformat() if detail.fetched_at else None,
     }
 
