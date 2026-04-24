@@ -25,7 +25,9 @@ from app.services.bond_calculator import BondCalculator
 logger = logging.getLogger(__name__)
 
 # coupon_frequency string -> (period_days, frequency_per_year)
+# -1 sentinel = "Tek Kupon": actual duration computed from bond dates at call site
 COUPON_FREQUENCY_MAP = [
+    (r"tek\s*kupon|tek\s*öd|tek\s*od|single", (-1, 1)),
     (r"6\s*ayda|yar[iı]?\s*y[iı]l|6\s*ay", (182, 2)),
     (r"y[iı]ll[iı]k|yillik|1\s*yil|yilda\s*1", (365, 1)),
     (r"3\s*ayda|3\s*ay|quarter", (91, 4)),
@@ -147,6 +149,25 @@ def _coupon_rate_to_decimal(rate: Decimal | None) -> Decimal:
     if abs(r) > 1:
         return r / Decimal("100")
     return r
+
+
+def _is_tlref_indexed(bond: Bond) -> bool:
+    """True if the bond's coupon is floating / TLREF-indexed."""
+    text = " ".join(filter(None, [
+        bond.yield_type or "",
+        bond.yield_formula or "",
+        bond.compound_yield_formula or "",
+    ])).lower()
+    return "tlref" in text or "değişken" in text or "degisken" in text or "floating" in text
+
+
+def _resolve_period_days(bond: Bond, period_days: int) -> int:
+    """Resolve -1 sentinel (Tek Kupon) to the actual bond duration in days."""
+    if period_days == -1:
+        if bond.first_issue_date and bond.maturity_date:
+            return (bond.maturity_date - bond.first_issue_date).days
+        return 365
+    return period_days
 
 
 def bond_to_calculator_inputs(bond: Bond) -> tuple[date, date, Decimal, int] | None:
@@ -300,6 +321,7 @@ class BondMetricsService:
         clean_price: market_data'dan; override verilirse o kullanilir.
         """
         period_days, freq_per_year = parse_coupon_frequency(bond.coupon_frequency)
+        period_days = _resolve_period_days(bond, period_days)
         period_start, period_end = get_current_coupon_period(
             bond.first_issue_date,
             bond.next_coupon_date,
@@ -371,21 +393,30 @@ class BondMetricsService:
 
         clean_price = Decimal(str(clean_price))
 
-        # TLREF oranlari (donem basi/sonu onceki is gunu)
-        # Not: TLREF için "önceki iş günü" mantığı kullanılıyor, bu yüzden None kontrolü yapmıyoruz
-        # Eğer TLREF verisi yoksa, ilgili metrikler None olarak kalacak
-        tlref_start = await self.get_tlref_for_business_day(period_start) if period_start else None
-        tlref_end = await self.get_tlref_for_business_day(period_end) if period_end else None
-
         annual_ref = None
         annual_coupon = None
         periodic_coupon = None
         compound_coupon = None
-        if tlref_start and tlref_end and period_days > 0:
-            annual_ref = annual_reference_rate(tlref_start, tlref_end, period_days)
-            annual_coupon = annual_coupon_rate(annual_ref, bond.spread)
-            periodic_coupon = periodic_coupon_rate(annual_coupon, period_days)
-            compound_coupon = annual_compound_coupon_rate(periodic_coupon, period_days)
+
+        if _is_tlref_indexed(bond):
+            # Değişken faizli: dönem TLREF endeksi büyümesinden hesapla
+            tlref_start = await self.get_tlref_for_business_day(period_start) if period_start else None
+            tlref_end = await self.get_tlref_for_business_day(period_end) if period_end else None
+            if tlref_start and tlref_end and period_days > 0:
+                annual_ref = annual_reference_rate(tlref_start, tlref_end, period_days)
+                annual_coupon = annual_coupon_rate(annual_ref, bond.spread)
+                periodic_coupon = periodic_coupon_rate(annual_coupon, period_days)
+                compound_coupon = annual_compound_coupon_rate(periodic_coupon, period_days)
+        else:
+            # Sabit faizli: DB'deki dönemsel kupon oranından hesapla
+            raw_periodic = _coupon_rate_to_decimal(bond.next_coupon_rate)
+            if raw_periodic > 0 and period_days > 0:
+                # annual_ref = None (sabit faizde TLREF göstergesi yoktur)
+                annual_coupon = (
+                    raw_periodic * Decimal("365") / Decimal(str(period_days))
+                ).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
+                periodic_coupon = raw_periodic
+                compound_coupon = annual_compound_coupon_rate(raw_periodic, period_days)
 
         # Birikmis faiz: TLREF'li ise Donemsel Kupon * (gun gecen / period_days) * nominal; degilse sabit kupon
         accrued_interest = Decimal("0")
@@ -435,22 +466,6 @@ class BondMetricsService:
                     coupon_payment_amount = (
                         FACE_VALUE * _coupon_rate_to_decimal(bond.next_coupon_rate) / Decimal(str(coupon_frequency_int))
                     ).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
-                
-                # Fix: Sabit faizli kağıtlar için oranları calculator'dan al
-                if annual_coupon is None:
-                    annual_coupon = calc.annual_coupon_rate
-                if periodic_coupon is None:
-                    periodic_coupon = annual_coupon / Decimal(str(coupon_frequency_int))
-                if compound_coupon is None:
-                    # Bileşik getiri formülü: (1 + r/f)^f - 1
-                    # Kısa vadeli bonolarda f = 365 / total_days olmalı
-                    total_days_bond = (maturity_date - issue_date).days
-                    if total_days_bond > 0 and total_days_bond < 365:
-                        f_eff = Decimal("365") / Decimal(str(total_days_bond))
-                        periodic_rate_eff = _coupon_rate_to_decimal(bond.next_coupon_rate)
-                        compound_coupon = (1 + periodic_rate_eff)**f_eff - 1
-                    else:
-                        compound_coupon = (1 + periodic_coupon)**coupon_frequency_int - 1
 
                 tlref_yield, tlref_rate_date = await self._get_tlref_annual_yield(settlement_date)
                 # Fix C: ytm==0 ama nakit akisi varsa hesaplama basarisizdir; spread None kalsin.
@@ -540,6 +555,7 @@ class BondMetricsService:
             return (None, False)
         clean_price_dec = Decimal(str(clean_price))
         period_days, freq_per_year = parse_coupon_frequency(bond.coupon_frequency)
+        period_days = _resolve_period_days(bond, period_days)
         start_price = (
             Decimal(str(bond.last_issue_price))
             if bond.last_issue_price is not None
