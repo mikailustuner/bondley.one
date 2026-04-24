@@ -120,6 +120,50 @@ def _spread_to_decimal(spread: Decimal | None) -> Decimal:
     return s
 
 
+def _extract_spread_from_remarks(remarks: str | None) -> Decimal | None:
+    """
+    Ultra-robust scanner for spread patterns in BIST remarks.
+    Handles:
+    - TLREF + %1,25 / TLREF+%3,75
+    - 250 Baz Puan / 150 bp / 70bps / 150 Bbs / 150 BPS
+    - TLREF endeks değişimi + 400 puan
+    - TLREF + 100 bp (75 Baz Puan)
+    """
+    if not remarks:
+        return None
+        
+    # Normalize: Turkish chars, lower case, comma to dot
+    s = remarks.lower().replace("ı", "i").replace("ü", "u").replace("ç", "c").replace("ş", "s").replace("ö", "o").replace("ğ", "g")
+    s = s.replace(",", ".")
+    
+    # Priority 1: Match percentages (e.g. %1.25 or + 1.25%)
+    # Matches: %1.25, % 1.25, + %1.25, + 1.25%
+    pct_match = re.search(r'%\s*(\d+\.?\d*)|\+\s*(\d+\.?\d*)\s*%', s)
+    if pct_match:
+        val = pct_match.group(1) or pct_match.group(2)
+        try:
+            return Decimal(val) / Decimal("100")
+        except: pass
+
+    # Priority 2: Match basis points (e.g. 250 bp, 500 bps, 75 baz puan, 400 puan)
+    # Matches: 250 bp, 250bps, 150 bbs, 100 baz puan, 400 puan
+    bp_match = re.search(r'(\d+\.?\d*)\s*(?:baz|bp|bps|bbs|puan)', s)
+    if bp_match:
+        try:
+            return Decimal(bp_match.group(1)) / Decimal("10000")
+        except: pass
+        
+    # Priority 3: Match simple formula patterns if no explicit unit found
+    # Matches: tlref + 1.25, tlref+2.50
+    formula_match = re.search(r'tlref\s*(?:k|endeks|endeksi|degisimi)?\s*\+\s*(\d+\.?\d*)', s)
+    if formula_match:
+        try:
+            return Decimal(formula_match.group(1)) / Decimal("100")
+        except: pass
+        
+    return None
+
+
 def annual_coupon_rate(annual_reference: Decimal | None, spread: Decimal | None) -> Decimal | None:
     """Yillik Kupon Faiz Orani = Yillik Gosterge + Yillik Basit Ek Getiri (spread).
     annual_reference ondalik; spread DB'de yuzde olabileceginden normalize edilir."""
@@ -444,7 +488,15 @@ class BondMetricsService:
             tlref_end = await self.get_tlref_for_business_day(period_end) if period_end else None
             if tlref_start and tlref_end and eff_period > 0:
                 annual_ref = annual_reference_rate(tlref_start, tlref_end, eff_period)
-                annual_coupon = annual_coupon_rate(annual_ref, bond.spread)
+                
+                # Use bond.spread, or try to extract from remarks if NULL
+                active_spread = bond.spread
+                if active_spread is None or active_spread == 0:
+                    extracted = _extract_spread_from_remarks(bond.remarks)
+                    if extracted is not None:
+                        active_spread = extracted * Decimal("100") # Normalize back to percentage for annual_coupon_rate
+                
+                annual_coupon = annual_coupon_rate(annual_ref, active_spread)
                 periodic_coupon = periodic_coupon_rate(annual_coupon, eff_period)
                 compound_coupon = annual_compound_coupon_rate(periodic_coupon, eff_period)
                 
