@@ -105,7 +105,11 @@ def fetch_bond_list(self):
 
         async with session_factory() as db:
             fetcher = BondFetcher(db)
-            return await fetcher.fetch_and_sync()
+            result = await fetcher.fetch_and_sync()
+        from app.core.cache import cache_delete_pattern, cache_delete
+        await cache_delete_pattern("bond_list:*")
+        await cache_delete("bond_stats")
+        return result
 
     try:
         result = _run_async(_fetch())
@@ -139,8 +143,15 @@ def run_daily_calculations(self):
     from datetime import date
     from app.services.calculations_populator import populate_calculations
 
+    async def _calculate_and_invalidate():
+        from app.services.calculations_populator import populate_calculations
+        from app.core.cache import cache_delete_pattern, cache_delete
+        await populate_calculations(date.today(), dry_run=False)
+        await cache_delete_pattern("bond_list:*")
+        await cache_delete("bond_stats")
+
     try:
-        _run_async(populate_calculations(date.today(), dry_run=False))
+        _run_async(_calculate_and_invalidate())
         logger.info("Daily calculations completed successfully")
         return {"status": "success", "date": str(date.today())}
     except Exception as exc:

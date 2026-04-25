@@ -4,6 +4,7 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { FileQuestion, AlertCircle, ChevronLeft, ChevronRight, Star, ArchiveX } from "lucide-react";
@@ -211,7 +212,49 @@ export default function BondDetailPage({
       />
     );
   if (loading)
-    return <div className="py-12 text-center text-muted-foreground text-[15px]">{tr.dashboard.bondDetails.loading}</div>;
+    return (
+      <div className="space-y-6">
+        {/* Header skeleton */}
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-8 w-8 rounded-full" />
+          <div className="space-y-1.5 flex-1">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-8 w-8 rounded-full" />
+        </div>
+        {/* Top metrics skeleton */}
+        <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-card rounded-3xl border border-border p-4">
+              <Skeleton className="h-3 w-20 mb-3" />
+              <Skeleton className="h-7 w-16" />
+            </div>
+          ))}
+        </div>
+        {/* Info + metrics cards skeleton */}
+        <div className="grid gap-4 md:grid-cols-2">
+          {[1, 2].map((i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2"><Skeleton className="h-5 w-32" /></CardHeader>
+              <CardContent className="space-y-3">
+                {[1, 2, 3, 4, 5].map((j) => (
+                  <div key={j} className="flex justify-between">
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        {/* History chart skeleton */}
+        <Card>
+          <CardHeader className="pb-2"><Skeleton className="h-5 w-40" /></CardHeader>
+          <CardContent><Skeleton className="h-[200px] w-full rounded-xl" /></CardContent>
+        </Card>
+      </div>
+    );
   if (error)
     return (
       <EmptyState

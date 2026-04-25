@@ -130,18 +130,16 @@ def _str_val(val) -> str | None:
     return str(val).strip()
 
 
-async def resolve_data_conflicts(db: AsyncSession, bond: Bond) -> dict:
+async def resolve_data_conflicts(
+    db: AsyncSession, bond: Bond, kap_data: dict | None = None
+) -> dict:
     """
     tbliste vs KAP veri cakismalarini tespit et ve coz.
 
-    Returns:
-        {
-            "conflicts": [{"field": ..., "tbliste_value": ..., "kap_value": ..., "resolved_source": ...}],
-            "data_sources": [{"source": "tbliste", "updated_at": ...}, {"source": "kap", "updated_at": ...}],
-            "kap_overrides": {"spread": ..., ...}  # Hesaplamalarda kullanilacak override'lar
-        }
+    kap_data parametresi verilirse yeniden cekilmez (cift fetch'i onler).
     """
-    kap_data = await get_kap_data_for_isin(db, bond.isin_code)
+    if kap_data is None:
+        kap_data = await get_kap_data_for_isin(db, bond.isin_code)
 
     data_sources = [
         {

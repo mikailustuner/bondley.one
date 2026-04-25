@@ -34,3 +34,16 @@ async def cache_delete(key: str) -> None:
         await get_redis().delete(key)
     except Exception as exc:
         logger.debug("cache_delete %s: %s", key, exc)
+
+
+async def cache_delete_pattern(pattern: str) -> int:
+    try:
+        redis = get_redis()
+        keys = [k async for k in redis.scan_iter(pattern)]
+        if keys:
+            await redis.delete(*keys)
+            return len(keys)
+        return 0
+    except Exception as exc:
+        logger.debug("cache_delete_pattern %s: %s", pattern, exc)
+        return 0

@@ -47,6 +47,7 @@ class Bond(Base):
     brokerage: Mapped[str | None] = mapped_column(String(255))
     security_type_detail: Mapped[str | None] = mapped_column(String(50))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    has_data: Mapped[bool] = mapped_column(Boolean, server_default="false", default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

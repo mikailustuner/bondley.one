@@ -6,7 +6,7 @@ import logging
 from datetime import date, timedelta
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -80,6 +80,12 @@ class MarketDataService:
                 },
             )
         )
+
+        if not bond.has_data:
+            await self.db.execute(
+                update(Bond).where(Bond.id == bond.id).values(has_data=True)
+            )
+            bond.has_data = True
 
         return result
 

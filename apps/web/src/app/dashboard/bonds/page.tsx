@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +25,10 @@ const CURRENCY_COLORS: Record<string, string> = {
 };
 
 export default function BondsListPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   useEffect(() => {
     document.title = `${tr.dashboard.bonds.title} — ${tr.common.brand}`;
     return () => {
@@ -37,12 +42,22 @@ export default function BondsListPage() {
   const [loading, setLoading] = useState(true);
   const [fullListLoading, setFullListLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [currencyFilter, setCurrencyFilter] = useState<string>("");
-  const [typeFilter, setTypeFilter] = useState<string>("");
+  const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
+  const [currencyFilter, setCurrencyFilter] = useState<string>(() => searchParams.get("currency") ?? "");
+  const [typeFilter, setTypeFilter] = useState<string>(() => searchParams.get("type") ?? "");
   const [favoriteIsins, setFavoriteIsins] = useState<Set<string>>(new Set());
   const [favoriteToggling, setFavoriteToggling] = useState<string | null>(null);
-  const [withDataOnly, setWithDataOnly] = useState(true);
+  const [withDataOnly, setWithDataOnly] = useState(() => searchParams.get("data") !== "0");
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set("q", search);
+    if (currencyFilter) params.set("currency", currencyFilter);
+    if (typeFilter) params.set("type", typeFilter);
+    if (!withDataOnly) params.set("data", "0");
+    const qs = params.toString();
+    router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+  }, [search, currencyFilter, typeFilter, withDataOnly]);
 
   const tableContainerRef = useRef<HTMLDivElement>(null);
 

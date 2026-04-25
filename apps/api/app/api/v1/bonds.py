@@ -3,10 +3,11 @@ from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from datetime import date, timedelta
+import asyncio
 import json
 import logging
 
-from app.core.database import get_db
+from app.core.database import get_db, async_session_factory
 
 logger = logging.getLogger(__name__)
 from app.models.bond import Bond
@@ -76,8 +77,8 @@ async def list_bonds(
         count_query = count_query.where(*active_filter)
 
     if with_data_only:
-        query = query.where(Bond.calculations.any())
-        count_query = count_query.where(Bond.calculations.any())
+        query = query.where(Bond.has_data == True)
+        count_query = count_query.where(Bond.has_data == True)
 
     if fund_user:
         pattern = f"%{fund_user}%"
@@ -137,7 +138,7 @@ async def list_bonds(
         total=total,
     )
     if cache_key:
-        await cache_set(cache_key, json.dumps(response.model_dump(mode="json")), 60)
+        await cache_set(cache_key, json.dumps(response.model_dump(mode="json")), 300)
     return response
 
 
@@ -146,6 +147,10 @@ async def get_bond_stats(
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
+    cached = await cache_get("bond_stats")
+    if cached:
+        return BondStatsResponse.model_validate(json.loads(cached))
+
     active_filter = (
         Bond.is_active == True,
         Bond.maturity_date >= date.today(),
@@ -209,7 +214,7 @@ async def get_bond_stats(
     ).scalar() or 0
     by_maturity_bucket = {"short": short, "medium": medium, "long": long_count}
 
-    return BondStatsResponse(
+    response = BondStatsResponse(
         total_bonds=total,
         by_security_type=by_security_type,
         by_currency=by_currency,
@@ -217,6 +222,8 @@ async def get_bond_stats(
         avg_days_to_maturity=round(float(avg_dtm), 1) if avg_dtm else None,
         by_maturity_bucket=by_maturity_bucket,
     )
+    await cache_set("bond_stats", json.dumps(response.model_dump(mode="json")), 300)
+    return response
 
 
 @router.get("/favorites", response_model=FavoriteListResponse)
@@ -418,6 +425,77 @@ async def get_bond_scenario(
     )
 
 
+# ── Parallel helpers for get_bond ────────────────────────────────────────────
+
+async def _track_view_bg(
+    bond_id: int, user_id: int, ip: str | None, ua: str | None, calc_date: date
+) -> None:
+    """Fire-and-forget view tracking — kendi session'ini acip kapatir."""
+    try:
+        async with async_session_factory() as s:
+            await MetricsService.track_bond_view(
+                db=s, bond_id=bond_id, user_id=user_id,
+                ip_address=ip, user_agent=ua, settlement_date=calc_date,
+            )
+            await s.commit()
+    except Exception:
+        pass
+
+
+async def _compute_metrics_parallel(bond: Bond, calc_date: date, isin_code: str) -> dict | None:
+    metrics_cache_key = f"bond_metrics:{isin_code}:{calc_date.isoformat()}"
+    try:
+        cached = await cache_get(metrics_cache_key)
+        if cached is not None:
+            return json.loads(cached)
+        async with async_session_factory() as s:
+            result = await BondMetricsService(s).compute_metrics(bond, calc_date)
+        if result is not None:
+            await cache_set(metrics_cache_key, json.dumps(result), 300)
+        return result
+    except Exception as e:
+        logger.warning(f"Metrics parallel failed for {isin_code}: {e}")
+        return None
+
+
+async def _check_favorite_parallel(user_id: int, bond_id: int) -> bool:
+    try:
+        async with async_session_factory() as s:
+            r = await s.execute(
+                select(UserFavoriteBond).where(
+                    UserFavoriteBond.user_id == user_id,
+                    UserFavoriteBond.bond_id == bond_id,
+                )
+            )
+            return r.scalar_one_or_none() is not None
+    except Exception:
+        return False
+
+
+async def _get_kap_parallel(
+    isin_code: str, bond: Bond
+) -> tuple[dict | None, list, dict]:
+    try:
+        from app.services.kap_data_resolver import (
+            get_kap_data_for_isin,
+            get_all_kap_disclosures_for_isin,
+            resolve_data_conflicts,
+        )
+        async with async_session_factory() as s:
+            kap_data = await get_kap_data_for_isin(s, isin_code)
+            if not kap_data:
+                return None, [], {}
+            disclosures = await get_all_kap_disclosures_for_isin(s, isin_code)
+            # kap_data geçildiği için çift fetch yapılmaz
+            conflict_result = await resolve_data_conflicts(s, bond, kap_data=kap_data)
+        return kap_data, disclosures, conflict_result
+    except Exception as e:
+        logger.warning(f"KAP parallel failed for {isin_code}: {e}")
+        return None, [], {}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+
 @router.get("/{isin_code}", response_model=BondDetailWithMetrics)
 async def get_bond(
     isin_code: str,
@@ -431,100 +509,43 @@ async def get_bond(
     if not bond:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tahvil bulunamadi")
 
-    # Get bond.id and user.id immediately to avoid lazy loading issues after potential rollback
     bond_id = bond.id
     user_id = user.id
-    
+
     base = BondDetailWithMetrics.model_validate(bond)
     calc_date = settlement_date or date.today()
-    # Hafta sonu ise Cuma gününe (getiri hesaplamalari icin) geri çek
-    if calc_date.weekday() == 5:  # Cumartesi
+    if calc_date.weekday() == 5:
         calc_date -= timedelta(days=1)
-    elif calc_date.weekday() == 6:  # Pazar
+    elif calc_date.weekday() == 6:
         calc_date -= timedelta(days=2)
 
-    # Track bond view
-    client_host = None
-    user_agent = None
-    if request:
-        client_host = request.client.host if request.client else None
-        user_agent = request.headers.get("user-agent")
+    # View tracking — arka planda, ana isteği bloklamaz
+    client_host = request.client.host if request and request.client else None
+    user_agent = request.headers.get("user-agent") if request else None
+    task = asyncio.create_task(_track_view_bg(bond_id, user_id, client_host, user_agent, calc_date))
+    task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
 
-    try:
-        await MetricsService.track_bond_view(
-            db=db,
-            bond_id=bond_id,
-            user_id=user_id,
-            ip_address=client_host,
-            user_agent=user_agent,
-            settlement_date=calc_date,
-        )
-    except Exception:
-        # Don't fail the request if tracking fails
-        # Rollback any partial transaction to avoid "transaction aborted" errors
-        try:
-            await db.rollback()
-        except Exception:
-            pass
-    
-    # Ensure bond object is not expired after potential rollback
-    try:
-        await db.refresh(bond)
-    except Exception:
-        # If refresh fails, we still have the object but might hit lazy-load later
-        # We can also re-fetch it if needed, but refresh is usually enough
-        pass
-
-    try:
-        metrics_svc = BondMetricsService(db)
-        metrics_cache_key = f"bond_metrics:{isin_code}:{calc_date.isoformat()}"
-        cached_metrics = await cache_get(metrics_cache_key)
-        if cached_metrics is not None:
-            metrics = json.loads(cached_metrics)
-        else:
-            metrics = await metrics_svc.compute_metrics(bond, calc_date)
-            if metrics is not None:
-                await cache_set(metrics_cache_key, json.dumps(metrics), 300)
-        
-        if metrics is None:
-            base.calculated_metrics = None
-        else:
-            base.calculated_metrics = BondCalculatedMetrics(**metrics)
-    except Exception as e:
-        logger.warning(f"Metrics calculation failed for {isin_code} on {calc_date}: {e}")
-        base.calculated_metrics = None
-    # Favori mi?
-    fav_check = await db.execute(
-        select(UserFavoriteBond).where(
-            UserFavoriteBond.user_id == user_id,
-            UserFavoriteBond.bond_id == bond_id,
-        )
+    # Metrik, favori ve KAP verisini paralel çek (her biri kendi session'ını açar)
+    metrics, is_fav, (kap_data, kap_disclosures, conflict_result) = await asyncio.gather(
+        _compute_metrics_parallel(bond, calc_date, isin_code),
+        _check_favorite_parallel(user_id, bond_id),
+        _get_kap_parallel(isin_code, bond),
     )
-    base.is_favorite = fav_check.scalar_one_or_none() is not None
 
-    # KAP veri entegrasyonu
-    try:
-        from app.services.kap_data_resolver import (
-            get_kap_data_for_isin,
-            get_all_kap_disclosures_for_isin,
-            resolve_data_conflicts,
-        )
-        kap_data = await get_kap_data_for_isin(db, isin_code)
-        if kap_data:
-            base.kap_data = kap_data
-            base.kap_disclosures = await get_all_kap_disclosures_for_isin(db, isin_code)
-            conflict_result = await resolve_data_conflicts(db, bond)
-            base.data_conflicts = conflict_result.get("conflicts")
-            base.data_sources = conflict_result.get("data_sources")
-        else:
-            # Sadece tbliste kaynagi
-            base.data_sources = [{
-                "source": "tbliste",
-                "label": "BIST tbliste.zip",
-                "updated_at": bond.updated_at.isoformat() if bond.updated_at else None,
-            }]
-    except Exception as e:
-        logger.warning(f"KAP data integration failed for {isin_code}: {e}")
+    base.calculated_metrics = BondCalculatedMetrics(**metrics) if metrics else None
+    base.is_favorite = is_fav
+
+    if kap_data:
+        base.kap_data = kap_data
+        base.kap_disclosures = kap_disclosures
+        base.data_conflicts = conflict_result.get("conflicts")
+        base.data_sources = conflict_result.get("data_sources")
+    else:
+        base.data_sources = [{
+            "source": "tbliste",
+            "label": "BIST tbliste.zip",
+            "updated_at": bond.updated_at.isoformat() if bond.updated_at else None,
+        }]
 
     return base
 
