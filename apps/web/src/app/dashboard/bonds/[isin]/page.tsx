@@ -1,13 +1,13 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
-import { FileQuestion, AlertCircle, ChevronLeft, ChevronRight, Star, ArchiveX, StickyNote, Trash2, Save } from "lucide-react";
+import { FileQuestion, AlertCircle, ChevronLeft, ChevronRight, Star, ArchiveX, StickyNote, Trash2, Save, X } from "lucide-react";
 import { api, BondDetail, TLREFRecord, BondNote } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate, formatLastIssueDateText } from "@/lib/utils";
@@ -98,6 +98,8 @@ export default function BondDetailPage({
   const [savedNote, setSavedNote] = useState<BondNote | null>(null);
   const [noteSaving, setNoteSaving] = useState(false);
   const [noteDeleting, setNoteDeleting] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (bond) setIsFavorite(!!bond.is_favorite);
@@ -215,6 +217,12 @@ export default function BondDetailPage({
     }, 300);
     return () => clearTimeout(t);
   }, [bond?.calculated_metrics, isin, selectedDate, scenarioShockBp]);
+
+  useEffect(() => {
+    if (noteOpen) {
+      setTimeout(() => textareaRef.current?.focus(), 50);
+    }
+  }, [noteOpen]);
 
   const handleNoteSave = async () => {
     const token = getToken();
@@ -1137,58 +1145,6 @@ export default function BondDetailPage({
         </Card>
       )}
 
-      {/* ═══ Personal Notes ═══ */}
-      <Card className="animate-fade-up-delay-2">
-        <CardHeader>
-          <div className="flex items-center gap-2.5">
-            <StickyNote className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <CardDescription>{tr.dashboard.bondDetails.notes.desc}</CardDescription>
-              <CardTitle className="mt-0.5">{tr.dashboard.bondDetails.notes.title}</CardTitle>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <textarea
-            className="w-full min-h-[100px] resize-none rounded-xl border border-border bg-secondary/30 px-3.5 py-3 text-[14px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-            placeholder={tr.dashboard.bondDetails.notes.placeholder}
-            value={noteText}
-            onChange={(e) => setNoteText(e.target.value)}
-          />
-          {savedNote?.updated_at && (
-            <p className="text-[12px] text-muted-foreground">
-              {tr.dashboard.bondDetails.notes.savedAt.replace(
-                "{date}",
-                new Date(savedNote.updated_at).toLocaleDateString("tr-TR", { day: "2-digit", month: "long", year: "numeric" }),
-              )}
-            </p>
-          )}
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={handleNoteSave}
-              disabled={noteSaving || noteText.trim() === ""}
-              className="gap-1.5"
-            >
-              <Save className="h-3.5 w-3.5" />
-              {noteSaving ? tr.dashboard.bondDetails.notes.saving : tr.dashboard.bondDetails.notes.save}
-            </Button>
-            {savedNote && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleNoteDelete}
-                disabled={noteDeleting}
-                className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                {tr.dashboard.bondDetails.notes.delete}
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* ═══ Data Sources ═══ */}
       {bond.data_sources && bond.data_sources.length > 0 && (
         <div className="animate-fade-up-delay-2 rounded-3xl border border-border/50 bg-secondary/20 p-5">
@@ -1211,6 +1167,107 @@ export default function BondDetailPage({
           </div>
         </div>
       )}
+
+      {/* ═══ Notes FAB ═══ */}
+      {noteOpen && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setNoteOpen(false)}
+        />
+      )}
+      <div className="fixed z-50 right-4 lg:right-8 notes-fab">
+        {/* Panel */}
+        <div
+          className={`absolute bottom-[calc(100%+0.75rem)] right-0 w-[320px] max-w-[calc(100vw-2rem)] rounded-3xl border border-border/60 shadow-2xl overflow-hidden transition-all duration-300 origin-bottom-right notes-panel-bg ${
+            noteOpen
+              ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"
+              : "opacity-0 translate-y-3 scale-95 pointer-events-none"
+          }`}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-border/30">
+            <div className="flex items-center gap-2">
+              <StickyNote className="h-4 w-4 text-primary" />
+              <span className="text-[14px] font-semibold text-foreground">{tr.dashboard.bondDetails.notes.title}</span>
+            </div>
+            <button
+              onClick={() => setNoteOpen(false)}
+              className="h-7 w-7 rounded-full bg-secondary/70 flex items-center justify-center text-muted-foreground hover:bg-secondary transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="p-4 space-y-3">
+            <textarea
+              ref={textareaRef}
+              className="w-full min-h-[120px] resize-none rounded-xl border border-border/50 bg-secondary/40 px-3.5 py-3 text-[13.5px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+              placeholder={tr.dashboard.bondDetails.notes.placeholder}
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+                  e.preventDefault();
+                  handleNoteSave();
+                }
+              }}
+            />
+
+            {savedNote?.updated_at && (
+              <p className="text-[11px] text-muted-foreground/70">
+                {tr.dashboard.bondDetails.notes.savedAt.replace(
+                  "{date}",
+                  new Date(savedNote.updated_at).toLocaleDateString("tr-TR", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                  }),
+                )}
+              </p>
+            )}
+
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                onClick={handleNoteSave}
+                disabled={noteSaving || noteText.trim() === ""}
+                className="flex-1 h-9 gap-1.5 text-[13px]"
+              >
+                <Save className="h-3.5 w-3.5" />
+                {noteSaving ? tr.dashboard.bondDetails.notes.saving : tr.dashboard.bondDetails.notes.save}
+              </Button>
+              {savedNote && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleNoteDelete}
+                  disabled={noteDeleting}
+                  className="h-9 w-9 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* FAB button */}
+        <button
+          onClick={() => setNoteOpen((v) => !v)}
+          className={`relative h-14 w-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
+            noteOpen
+              ? "bg-primary text-primary-foreground scale-90 shadow-primary/25"
+              : "bg-card border border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:shadow-md"
+          }`}
+          aria-label={tr.dashboard.bondDetails.notes.title}
+        >
+          <StickyNote className={`h-5 w-5 transition-transform duration-300 ${noteOpen ? "rotate-[-8deg]" : ""}`} />
+          {savedNote && !noteOpen && (
+            <span className="absolute top-0.5 right-0.5 h-2.5 w-2.5 rounded-full bg-primary border-2 border-background" />
+          )}
+        </button>
+      </div>
     </div>
   );
 }

@@ -11,7 +11,8 @@ import { tr } from "@/locales/tr";
 import { api, YieldCurvePoint } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import {
-  ScatterChart,
+  ComposedChart,
+  Line,
   Scatter,
   XAxis,
   YAxis,
@@ -127,104 +128,144 @@ export default function AnalyticsPage() {
       </Card>
 
       {/* Yield Curve */}
-      <Card className="animate-fade-up-delay-2">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardDescription>{tr.dashboard.analytics.yieldCurve.desc}</CardDescription>
-              <CardTitle className="mt-1">{tr.dashboard.analytics.yieldCurve.title}</CardTitle>
+      {yieldCurvePoints.length > 0 && (() => {
+        const classify = (p: YieldCurvePoint) => {
+          const yt = p.yield_type?.toLowerCase() ?? "";
+          if (yt.includes("değişken") || yt.includes("floating")) return "floating";
+          if (yt.includes("sabit") || yt.includes("fixed")) return "fixed";
+          return "other";
+        };
+        const allSorted = [...yieldCurvePoints].sort((a, b) => a.days_to_maturity - b.days_to_maturity);
+        const floatingData = allSorted.filter((p) => classify(p) === "floating");
+        const fixedData    = allSorted.filter((p) => classify(p) === "fixed");
+        const otherData    = allSorted.filter((p) => classify(p) === "other");
+
+        const xTicks = [90, 182, 365, 548, 730, 1095, 1460, 1825].filter(
+          (t) => t <= (allSorted[allSorted.length - 1]?.days_to_maturity ?? 0) + 60,
+        );
+        const xFmt = (v: number) => {
+          if (v >= 365) return `${Math.round(v / 365)}y`;
+          if (v >= 30)  return `${Math.round(v / 30)}ay`;
+          return `${v}g`;
+        };
+
+        const tooltipContent = ({ active, payload }: any) => {
+          if (!active || !payload?.length) return null;
+          const d = payload[0]?.payload as YieldCurvePoint;
+          if (!d?.isin_code) return null;
+          return (
+            <div className="bg-card border border-border rounded-2xl px-3.5 py-3 text-[12px] shadow-lg space-y-1.5 min-w-[180px]">
+              <div className="font-semibold text-foreground text-[13px]">{d.isin_code}</div>
+              {d.issuer && <div className="text-muted-foreground truncate max-w-[200px]">{d.issuer.split("/")[0].trim()}</div>}
+              <div className="border-t border-border/40 pt-1.5 space-y-1">
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">YTM</span>
+                  <span className="font-mono-data font-semibold text-foreground">{d.ytm_pct.toFixed(2)}%</span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">Vade</span>
+                  <span className="font-mono-data text-foreground">{xFmt(d.days_to_maturity)}</span>
+                </div>
+                {d.yield_type && (
+                  <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">Tür</span>
+                    <span className="text-foreground">{d.yield_type.split("/")[0].trim()}</span>
+                  </div>
+                )}
+              </div>
             </div>
-            <Badge variant="outline">{yieldCurvePoints.length} Araç</Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {yieldCurvePoints.length === 0 ? (
-            <div className="h-[320px] flex items-center justify-center text-[14px] text-muted-foreground">
-              {tr.dashboard.analytics.yieldCurve.empty}
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={320}>
-              <ScatterChart margin={{ top: 8, right: 16, bottom: 24, left: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
-                <XAxis
-                  dataKey="days_to_maturity"
-                  type="number"
-                  name={tr.dashboard.analytics.yieldCurve.xLabel}
-                  label={{ value: tr.dashboard.analytics.yieldCurve.xLabel, position: "insideBottom", offset: -12, fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  dataKey="ytm_pct"
-                  type="number"
-                  name={tr.dashboard.analytics.yieldCurve.yLabel}
-                  label={{ value: tr.dashboard.analytics.yieldCurve.yLabel, angle: -90, position: "insideLeft", offset: 12, fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(v) => `${v.toFixed(1)}%`}
-                />
-                <Tooltip
-                  cursor={{ strokeDasharray: "3 3" }}
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null;
-                    const d = payload[0]?.payload as YieldCurvePoint;
-                    return (
-                      <div className="bg-card border border-border rounded-xl px-3 py-2.5 text-[12px] shadow-md space-y-1">
-                        <div className="font-semibold text-foreground">{d.isin_code}</div>
-                        {d.issuer && <div className="text-muted-foreground truncate max-w-[180px]">{d.issuer}</div>}
-                        <div className="flex gap-3 pt-0.5">
-                          <span className="text-muted-foreground">{tr.dashboard.analytics.yieldCurve.tooltip.ytm}:</span>
-                          <span className="font-mono-data text-foreground">{d.ytm_pct.toFixed(2)}%</span>
-                        </div>
-                        <div className="flex gap-3">
-                          <span className="text-muted-foreground">{tr.dashboard.analytics.yieldCurve.tooltip.days}:</span>
-                          <span className="font-mono-data text-foreground">{d.days_to_maturity} gün</span>
-                        </div>
-                        {d.yield_type && (
-                          <div className="flex gap-3">
-                            <span className="text-muted-foreground">{tr.dashboard.analytics.yieldCurve.tooltip.type}:</span>
-                            <span className="text-foreground">{d.yield_type.split("/")[0].trim()}</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }}
-                />
-                <Legend
-                  formatter={(value) => <span className="text-[12px] text-muted-foreground">{value}</span>}
-                  wrapperStyle={{ paddingTop: 8 }}
-                />
-                <Scatter
-                  name={tr.dashboard.analytics.yieldCurve.legend.floating}
-                  data={yieldCurvePoints.filter((p) => p.yield_type?.toLowerCase().includes("değişken") || p.yield_type?.toLowerCase().includes("floating"))}
-                  fill="hsl(var(--primary))"
-                  opacity={0.7}
-                  r={4}
-                />
-                <Scatter
-                  name={tr.dashboard.analytics.yieldCurve.legend.fixed}
-                  data={yieldCurvePoints.filter((p) => p.yield_type?.toLowerCase().includes("sabit") || p.yield_type?.toLowerCase().includes("fixed"))}
-                  fill="hsl(var(--positive))"
-                  opacity={0.7}
-                  r={4}
-                />
-                <Scatter
-                  name={tr.dashboard.analytics.yieldCurve.legend.other}
-                  data={yieldCurvePoints.filter((p) => {
-                    const yt = p.yield_type?.toLowerCase() ?? "";
-                    return !yt.includes("değişken") && !yt.includes("floating") && !yt.includes("sabit") && !yt.includes("fixed");
-                  })}
-                  fill="hsl(var(--muted-foreground))"
-                  opacity={0.5}
-                  r={3}
-                />
-              </ScatterChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
+          );
+        };
+
+        return (
+          <Card className="animate-fade-up-delay-2">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardDescription>{tr.dashboard.analytics.yieldCurve.desc}</CardDescription>
+                  <CardTitle className="mt-1">{tr.dashboard.analytics.yieldCurve.title}</CardTitle>
+                </div>
+                <Badge variant="outline">{yieldCurvePoints.length} Araç</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={340}>
+                <ComposedChart data={allSorted} margin={{ top: 8, right: 16, bottom: 32, left: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" vertical={false} />
+                  <XAxis
+                    dataKey="days_to_maturity"
+                    type="number"
+                    scale="linear"
+                    domain={["auto", "auto"]}
+                    ticks={xTicks}
+                    tickFormatter={xFmt}
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    tickLine={false}
+                    axisLine={false}
+                    label={{ value: tr.dashboard.analytics.yieldCurve.xLabel, position: "insideBottom", offset: -18, fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                  />
+                  <YAxis
+                    type="number"
+                    domain={["auto", "auto"]}
+                    tickFormatter={(v) => `${v.toFixed(1)}%`}
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={52}
+                  />
+                  <Tooltip content={tooltipContent} cursor={{ strokeDasharray: "4 4", stroke: "hsl(var(--border))" }} />
+                  <Legend
+                    formatter={(value) => <span className="text-[12px] text-muted-foreground">{value}</span>}
+                    wrapperStyle={{ paddingTop: 12 }}
+                  />
+
+                  {/* Curve line — connects all bonds in maturity order to show the shape */}
+                  <Line
+                    dataKey="ytm_pct"
+                    type="monotone"
+                    dot={false}
+                    activeDot={false}
+                    stroke="hsl(var(--border))"
+                    strokeWidth={1.5}
+                    strokeOpacity={0.7}
+                    connectNulls
+                    legendType="none"
+                  />
+
+                  {/* Colored dots by yield type */}
+                  {floatingData.length > 0 && (
+                    <Scatter
+                      name={tr.dashboard.analytics.yieldCurve.legend.floating}
+                      data={floatingData}
+                      fill="hsl(211, 100%, 50%)"
+                      opacity={0.8}
+                      r={4}
+                    />
+                  )}
+                  {fixedData.length > 0 && (
+                    <Scatter
+                      name={tr.dashboard.analytics.yieldCurve.legend.fixed}
+                      data={fixedData}
+                      fill="hsl(142, 71%, 45%)"
+                      opacity={0.8}
+                      r={4}
+                    />
+                  )}
+                  {otherData.length > 0 && (
+                    <Scatter
+                      name={tr.dashboard.analytics.yieldCurve.legend.other}
+                      data={otherData}
+                      fill="hsl(var(--muted-foreground))"
+                      opacity={0.55}
+                      r={3}
+                    />
+                  )}
+                </ComposedChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Distribution Analysis */}
       {bondStats && bondStats.total_bonds > 0 && (

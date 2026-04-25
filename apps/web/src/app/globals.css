@@ -367,4 +367,24 @@
       padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
     }
   }
+
+  /* ═══ Notes FAB — above bottom nav on mobile, free-floating on desktop ═══ */
+  .notes-fab {
+    bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px) + 1rem);
+  }
+  @media (min-width: 1024px) {
+    .notes-fab {
+      bottom: 2rem;
+    }
+  }
+
+  /* ═══ Notes panel — frosted glass ═══ */
+  .notes-panel-bg {
+    background: hsl(var(--card) / 0.92);
+    backdrop-filter: saturate(180%) blur(24px);
+    -webkit-backdrop-filter: saturate(180%) blur(24px);
+  }
+  .dark .notes-panel-bg {
+    background: hsl(var(--card) / 0.88);
+  }
 }

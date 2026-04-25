@@ -182,7 +182,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-background flex">
       {/* ═══ Desktop Sidebar ═══ */}
-      <aside className="sidebar hidden lg:flex flex-col w-[260px] shrink-0 h-screen sticky top-0">
+      <aside className="sidebar hidden lg:flex flex-col w-[260px] fixed inset-y-0 left-0 z-40">
         {sidebarContent}
       </aside>
 
@@ -215,7 +215,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* ═══ Main Content ═══ */}
-      <div className="flex-1 min-w-0 flex flex-col">
+      <div className="flex-1 min-w-0 flex flex-col lg:pl-[260px]">
         {/* Mobile top bar */}
         <div
           className="lg:hidden apple-navbar sticky top-0 z-30"
