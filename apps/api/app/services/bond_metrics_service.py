@@ -437,11 +437,16 @@ class BondMetricsService:
             # being re-reported with today's date (common for illiquid bonds).
             if clean_price is not None and bond.maturity_date and settlement_date:
                 days_to_mat = (bond.maturity_date - settlement_date).days
-                # If less than 20 days to maturity and price is still near issue price (< 92)
-                # for a discounted bond, or if price is generally too low.
-                if 0 < days_to_mat < 20 and clean_price < 92:
-                    logger.warning(f"Discarding suspicious market price {clean_price} for {bond.isin_code} (only {days_to_mat} days to maturity)")
-                    clean_price = None
+                if 0 < days_to_mat < 30:
+                    # Quick yield check: (100/P - 1) * (365/days)
+                    # %200'den fazla getiri (vadeye 30 gunden az kalmisken) buyuk ihtimalle bayat veridir.
+                    try:
+                        quick_yield = (Decimal("100") / clean_price - 1) * Decimal("365") / Decimal(str(max(1, days_to_mat)))
+                        if quick_yield > 2.0:
+                            logger.warning(f"Discarding suspicious market price {clean_price} for {bond.isin_code} (implied yield: {quick_yield*100:.2f}%)")
+                            clean_price = None
+                    except Exception:
+                        pass
 
             if clean_price is None:
                 # Fallback: Theoretical Yield-to-Price calculation
@@ -613,6 +618,11 @@ class BondMetricsService:
         if calc:
             try:
                 ytm = calc.yield_to_maturity(clean_price, settlement_date)
+                
+                # Eğer kuponsuz (iskontolu) ise Bileşik Getiri YTM'ye eşittir
+                if (compound_coupon is None or compound_coupon == 0) and ytm is not None and ytm > 0:
+                    compound_coupon = ytm
+
                 # Use BondCalculator's verified accrued interest and dirty price
                 accrued_interest = calc.accrued_interest(settlement_date)
                 dirty_price = calc.dirty_price(clean_price, settlement_date)
