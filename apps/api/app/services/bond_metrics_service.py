@@ -432,6 +432,17 @@ class BondMetricsService:
                     clean_price = None
                     market_data_date = settlement_date
 
+            # SUSPICIOUS PRICE PROTECTION:
+            # If the date is fresh but the price implies an impossible yield, it's likely stale data 
+            # being re-reported with today's date (common for illiquid bonds).
+            if clean_price is not None and bond.maturity_date and settlement_date:
+                days_to_mat = (bond.maturity_date - settlement_date).days
+                # If less than 20 days to maturity and price is still near issue price (< 92)
+                # for a discounted bond, or if price is generally too low.
+                if 0 < days_to_mat < 20 and clean_price < 92:
+                    logger.warning(f"Discarding suspicious market price {clean_price} for {bond.isin_code} (only {days_to_mat} days to maturity)")
+                    clean_price = None
+
             if clean_price is None:
                 # Fallback: Theoretical Yield-to-Price calculation
                 stale_limit = 7
