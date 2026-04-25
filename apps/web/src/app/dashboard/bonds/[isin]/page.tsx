@@ -956,7 +956,56 @@ export default function BondDetailPage({
             {bond.kap_data.coupon_payments && bond.kap_data.coupon_payments.length > 0 && (
               <div>
                 <h4 className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">{tr.dashboard.bondDetails.kap.plan.title}</h4>
-                <div className="overflow-x-auto">
+
+                {/* Mobile cards */}
+                <div className="block md:hidden space-y-2">
+                  {bond.kap_data.coupon_payments.map((cp: any, idx: number) => (
+                    <div key={idx} className="rounded-2xl border border-border/30 bg-secondary/20 px-4 py-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono-data text-[13px] font-semibold text-foreground">
+                          {cp.coupon_number === "principal" ? tr.dashboard.bondDetails.kap.plan.principal : `#${cp.coupon_number}`}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono-data text-[12px] text-muted-foreground">{cp.payment_date || "—"}</span>
+                          {cp.was_payment_made === "Yes" ? (
+                            <Badge variant="default" className="text-[10px]">{tr.dashboard.bondDetails.kap.plan.cols.paid}</Badge>
+                          ) : cp.was_payment_made === "No" ? (
+                            <Badge variant="secondary" className="text-[10px]">Bekliyor</Badge>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-2.5">
+                        <div>
+                          <div className="text-[10px] text-muted-foreground/60">{tr.dashboard.bondDetails.kap.plan.cols.compound}</div>
+                          <div className="font-mono-data text-[12px] text-foreground">
+                            {cp.yearly_compound_rate ? `%${(Number(cp.yearly_compound_rate) / 10000).toFixed(4)}` : "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-muted-foreground/60">{tr.dashboard.bondDetails.kap.plan.cols.amount}</div>
+                          <div className="font-mono-data text-[12px] text-foreground">
+                            {cp.payment_amount ? Number(cp.payment_amount.replace(/\./g, '').replace(',', '.')).toLocaleString('tr-TR') : "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-muted-foreground/60">{tr.dashboard.bondDetails.kap.plan.cols.periodic}</div>
+                          <div className="font-mono-data text-[12px] text-muted-foreground">
+                            {cp.periodic_rate ? `%${(Number(cp.periodic_rate) / 10000).toFixed(4)}` : "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-muted-foreground/60">{tr.dashboard.bondDetails.kap.plan.cols.simple}</div>
+                          <div className="font-mono-data text-[12px] text-muted-foreground">
+                            {cp.yearly_simple_rate ? `%${(Number(cp.yearly_simple_rate) / 10000).toFixed(4)}` : "—"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-[13px]">
                     <thead>
                       <tr className="border-b border-border/50">

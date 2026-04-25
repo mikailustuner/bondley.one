@@ -27,6 +27,7 @@ import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 import { tr } from "@/locales/tr";
 import { APP_VERSION } from "@/lib/constants";
+import { BottomNav } from "@/components/bottom-nav";
 
 const NAV_SECTIONS = [
   {
@@ -196,11 +197,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         className={`sidebar fixed inset-y-0 left-0 z-50 flex flex-col w-[280px] transform transition-transform duration-300 lg:hidden ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
-        style={{ background: "hsl(var(--card))" }}
+        style={{
+          background: "hsl(var(--card))",
+          paddingTop: "env(safe-area-inset-top, 0px)",
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        }}
       >
         <button
           onClick={() => setSidebarOpen(false)}
-          className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-secondary/60 text-muted-foreground"
+          className="absolute right-4 h-11 w-11 flex items-center justify-center rounded-xl hover:bg-secondary/60 text-muted-foreground"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
           aria-label={tr.dashboard.sidebar.closeMenu}
         >
           <X className="h-5 w-5" />
@@ -211,7 +217,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ═══ Main Content ═══ */}
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Mobile top bar */}
-        <div className="lg:hidden apple-navbar sticky top-0 z-30 flex items-center justify-between px-4 h-14">
+        <div
+          className="lg:hidden apple-navbar sticky top-0 z-30"
+          style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+        >
+        <div className="flex items-center justify-between px-4 h-14">
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 -ml-2 rounded-lg hover:bg-secondary/60 text-muted-foreground"
@@ -234,8 +244,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <ThemeToggle />
           </div>
         </div>
+        </div>
 
-        <main className="flex-1 px-6 lg:px-10 py-8 max-w-[1200px] mx-auto w-full">
+        <main className="flex-1 px-6 lg:px-10 pt-8 pb-8 mobile-main-pb max-w-[1200px] mx-auto w-full">
           {user && user.is_email_verified === false && (
             <Alert variant="destructive" className="bg-destructive/5 border-destructive/15 text-destructive flex items-center justify-between rounded-2xl mb-6">
               <div className="flex items-center gap-3">
@@ -264,6 +275,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {children}
           </div>
         </main>
+        <BottomNav />
       </div>
     </div>
   );
