@@ -13,6 +13,7 @@ import { api, BondListItem } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercent, formatDate } from "@/lib/utils";
 import { tr } from "@/locales/tr";
+import { SwipeableCard } from "@/components/swipeable-card";
 
 const CURRENCY_COLORS: Record<string, string> = {
   TRY: "default",
@@ -69,7 +70,7 @@ export default function FavoritesPage() {
     e.stopPropagation();
     const token = getToken();
     if (!token || favoriteToggling) return;
-    
+
     setFavoriteToggling(isinCode);
     api.bonds
       .removeFavorite(token, isinCode)
@@ -80,6 +81,40 @@ export default function FavoritesPage() {
       .catch(() => { })
       .finally(() => setFavoriteToggling(null));
   };
+
+  const removeFavoriteByIsin = (isinCode: string) => {
+    const token = getToken();
+    if (!token || favoriteToggling) return;
+    setFavoriteToggling(isinCode);
+    api.bonds
+      .removeFavorite(token, isinCode)
+      .then(() => {
+        setBonds((prev) => prev.filter((b) => b.isin_code !== isinCode));
+        setArchivedBonds((prev) => prev.filter((b) => b.isin_code !== isinCode));
+      })
+      .catch(() => { })
+      .finally(() => setFavoriteToggling(null));
+  };
+
+  const maturityBuckets = useMemo(() => {
+    const today = new Date();
+    const counts = [0, 0, 0, 0, 0, 0, 0];
+    bonds.forEach((b) => {
+      let days = b.days_to_maturity;
+      if (days == null && b.maturity_date) {
+        days = Math.ceil((new Date(b.maturity_date).getTime() - today.getTime()) / 86400000);
+      }
+      if (days == null || days < 0) return;
+      if (days <= 30) counts[0]++;
+      else if (days <= 90) counts[1]++;
+      else if (days <= 180) counts[2]++;
+      else if (days <= 365) counts[3]++;
+      else if (days <= 730) counts[4]++;
+      else if (days <= 1095) counts[5]++;
+      else counts[6]++;
+    });
+    return counts;
+  }, [bonds]);
 
   const filtered = useMemo(() => {
     let result = bonds;
@@ -161,6 +196,42 @@ export default function FavoritesPage() {
             ))}
           </select>
         </div>
+      )}
+
+      {/* Maturity Ladder */}
+      {!loading && bonds.length > 0 && (
+        <Card className="animate-fade-up-delay-1">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">{tr.dashboard.favorites.maturityLadder.title}</CardTitle>
+            <CardDescription>{tr.dashboard.favorites.maturityLadder.description}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-end gap-1.5 h-16">
+              {maturityBuckets.map((count, i) => {
+                const maxCount = Math.max(...maturityBuckets, 1);
+                const barH = count > 0 ? Math.max((count / maxCount) * 100, 6) : 0;
+                return (
+                  <div key={i} className="flex-1 flex flex-col items-center h-full justify-end">
+                    {count > 0 && (
+                      <span className="text-[10px] text-muted-foreground font-mono-data mb-0.5">{count}</span>
+                    )}
+                    <div
+                      className="w-full rounded-t-sm bg-primary/70 transition-all"
+                      style={{ height: `${barH}%` }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex gap-1.5 mt-1.5">
+              {tr.dashboard.favorites.maturityLadder.buckets.map((label, i) => (
+                <div key={i} className="flex-1 text-center text-[9px] text-muted-foreground truncate">
+                  {label}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Bonds Table */}
@@ -256,66 +327,71 @@ export default function FavoritesPage() {
               {/* Mobile Cards */}
               <div className="block md:hidden space-y-3 max-h-[600px] overflow-y-auto">
                 {filtered.map((bond) => (
-                  <Link
+                  <SwipeableCard
                     key={bond.isin_code}
-                    href={`/dashboard/bonds/${bond.isin_code}`}
-                    onClick={() => {
-                      try {
-                        sessionStorage.setItem(
-                          "bondley_bonds_isins",
-                          JSON.stringify(filtered.map((b) => b.isin_code))
-                        );
-                      } catch { }
-                    }}
-                    className="block rounded-3xl border border-border bg-card p-4 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all"
+                    onSwipeLeft={() => removeFavoriteByIsin(bond.isin_code)}
+                    leftLabel={tr.dashboard.bondDetails.actions.removeFavorite}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono-data text-[13px] font-medium text-primary">
-                        {bond.isin_code}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 shrink-0"
-                          onClick={(e) => removeFavorite(e, bond.isin_code)}
-                          disabled={favoriteToggling === bond.isin_code}
-                          aria-label={tr.dashboard.bonds.table.cols.favorite}
-                        >
-                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        </Button>
-                        <Badge
-                          variant={(CURRENCY_COLORS[bond.currency] as any) || "outline"}
-                          className="shrink-0"
-                        >
-                          {bond.currency}
-                        </Badge>
+                    <Link
+                      href={`/dashboard/bonds/${bond.isin_code}`}
+                      onClick={() => {
+                        try {
+                          sessionStorage.setItem(
+                            "bondley_bonds_isins",
+                            JSON.stringify(filtered.map((b) => b.isin_code))
+                          );
+                        } catch { }
+                      }}
+                      className="block rounded-3xl border border-border bg-card p-4 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono-data text-[13px] font-medium text-primary">
+                          {bond.isin_code}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            onClick={(e) => removeFavorite(e, bond.isin_code)}
+                            disabled={favoriteToggling === bond.isin_code}
+                            aria-label={tr.dashboard.bonds.table.cols.favorite}
+                          >
+                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                          </Button>
+                          <Badge
+                            variant={(CURRENCY_COLORS[bond.currency] as any) || "outline"}
+                            className="shrink-0"
+                          >
+                            {bond.currency}
+                          </Badge>
+                        </div>
                       </div>
-                    </div>
-                    <p className="text-[13px] text-muted-foreground truncate mt-1">
-                      {bond.issuer || "—"}
-                    </p>
-                    {bond.fund_user && (
-                      <p className="text-[11px] text-muted-foreground/70 truncate flex items-center gap-1 mt-0.5">
-                        <span className="shrink-0 text-primary/40">↳</span>
-                        {bond.fund_user}
+                      <p className="text-[13px] text-muted-foreground truncate mt-1">
+                        {bond.issuer || "—"}
                       </p>
-                    )}
-                    <div className="flex justify-between text-[13px] mt-2.5 text-muted-foreground">
-                      <span>
-                        Vade:{" "}
-                        {bond.days_to_maturity != null
-                          ? `${bond.days_to_maturity} gün`
-                          : formatDate(bond.maturity_date)}
-                      </span>
-                      <span className="text-foreground font-mono-data">
-                        {formatDecimal(bond.last_issue_price, 3)}
-                      </span>
-                    </div>
-                    <div className="text-[13px] text-positive font-mono-data mt-1">
-                      {bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"}
-                    </div>
-                  </Link>
+                      {bond.fund_user && (
+                        <p className="text-[11px] text-muted-foreground/70 truncate flex items-center gap-1 mt-0.5">
+                          <span className="shrink-0 text-primary/40">↳</span>
+                          {bond.fund_user}
+                        </p>
+                      )}
+                      <div className="flex justify-between text-[13px] mt-2.5 text-muted-foreground">
+                        <span>
+                          Vade:{" "}
+                          {bond.days_to_maturity != null
+                            ? `${bond.days_to_maturity} gün`
+                            : formatDate(bond.maturity_date)}
+                        </span>
+                        <span className="text-foreground font-mono-data">
+                          {formatDecimal(bond.last_issue_price, 3)}
+                        </span>
+                      </div>
+                      <div className="text-[13px] text-positive font-mono-data mt-1">
+                        {bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"}
+                      </div>
+                    </Link>
+                  </SwipeableCard>
                 ))}
               </div>
 

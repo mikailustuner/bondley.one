@@ -6,6 +6,76 @@ Tüm önemli değişiklikler bu dosyada belgelenir. Format [Keep a Changelog](ht
 
 ---
 
+## [1.2.4] — 2026-04-25
+
+### 🚀 Yeni Özellikler
+
+#### Vade Merdiveni (Maturity Ladder)
+- Favorilerim sayfasına **Vade Merdiveni** bileşeni eklendi
+- Favori araçların vadeye kalan gün dağılımını 7 dilimde gösteriyor: `≤30g`, `31–90g`, `91–180g`, `181–365g`, `1–2y`, `2–3y`, `3y+`
+- Her dilim için CSS bar chart (recharts bağımlılığı yok), üstte araç sayısı, altta dilim etiketi
+- Yükseklik, en kalabalık dilime göre dinamik ölçekleniyor; boş dilimler görünmez
+
+#### Dokunma Kaydırma Hareketi (Swipe Gesture)
+- `SwipeableCard` bileşeni oluşturuldu — mobil kartlara sağa/sola kaydırma desteği
+- 60px eşiği, ±110px sınırı; kaydırma mesafesiyle orantılı arka plan opaklığı (kırmızı / yeşil)
+- `onClickCapture` ile kaydırma sonrasında link navigasyonu engelleniyor
+- **Favorilerim sayfası:** mobil kartlarda sola kaydır → favoriden çıkar
+- **Borçlanma Araçları sayfası:** sağa kaydır → favoriye ekle, sola kaydır → favoriden çıkar (zaten favoriyse)
+
+#### PWA Desteği
+- `public/manifest.json` eklendi: `display: standalone`, `start_url: /dashboard/bonds`, `theme_color: #007bff`, `lang: tr`, `categories: ["finance"]`
+- `public/sw.js` Service Worker: network-first strateji, `install` aşamasında `/`, `/dashboard/bonds`, `/dashboard/favorites` önceden önbelleğe alınıyor, `/api/` yolları atlanıyor, eski cache versiyonları `activate`'de temizleniyor
+- `ServiceWorkerRegistrar` Client Component ile SW kaydı layout seviyesinde yapılıyor
+- Uygulama artık mobil cihazlara ana ekrana eklenebilir (PWA install prompt)
+
+#### URL ile Filtre Kalıcılığı
+- Borçlanma Araçları sayfasındaki filtre durumu URL'ye yazılıyor: `?q=`, `?currency=`, `?type=`, `?data=0`
+- Sayfa yenilendiğinde veya link paylaşıldığında filtreler korunuyor
+- `useSearchParams` + `router.replace` ile scroll pozisyonu bozulmadan senkronizasyon sağlanıyor
+
+#### Boş KAP Kayıtlarını Yeniden Çekme Görevi
+- `refetch_empty_kap_details` Celery beat görevi eklendi — her gece 23:30 UTC (02:30 İstanbul) çalışıyor
+- `instrument_type IS NULL` olan en fazla 50 aktif KAP kaydını tespit edip KAP Excel bildirimini yeniden indiriyor ve alanları güncelliyor
+- Eksik KAP metadata'sının zamanla otomatik tamamlanmasını sağlıyor
+
+#### Günlük Veritabanı Yedeği
+- `scripts/backup_bondley.sh` oluşturuldu
+- Docker container'dan `pg_dump | gzip` ile sıkıştırılmış dump alınıyor, SCP ile EC2'ye aktarılıyor
+- EC2 üzerinde 30 günden eski yedekler otomatik siliniyor
+- `crontab` ile her gece 23:00 UTC (02:00 İstanbul) zamanlıyor
+
+### ⚡ Performans İyileştirmeleri
+
+#### `has_data` Denormalize Bayrağı
+- `bonds` tablosuna `has_data BOOLEAN` sütunu eklendi (Alembic migration 012)
+- Mevcut kayıtlar backfill ile güncellendi: `calculations` tablosunda kaydı olan tahvillere `has_data = TRUE` atandı
+- Partial index: `WHERE has_data = TRUE` — veri bulunanlar filtresinde correlated subquery (`calculations.any()`) tamamen ortadan kalktı
+- Yeni hesaplama yazıldığında `market_data_service` sütunu otomatik `TRUE`'ya çekiyor
+
+#### Paralel Bond Detay Yüklemesi
+- `GET /bonds/{isin}` endpoint'inde bağımsız üç okuma `asyncio.gather` ile eş zamanlı çalışıyor: metrik hesaplama, favori kontrolü, KAP verisi
+- Her paralel çalışma ayrı `async_session_factory()` oturumu kullanıyor — SQLAlchemy concurrent session hatası yok
+- Görüntüleme takibi fire-and-forget `asyncio.create_task` ile ana akışı bloke etmeden çalışıyor
+
+#### Cache İyileştirmeleri
+- Bond listesi cache TTL 60s → 300s
+- `bond_stats` endpoint'i 300s TTL ile cache'lendi
+- `cache_delete_pattern(pattern)` yardımcısı Redis'e eklendi (`scan_iter` tabanlı)
+- Günlük veri senkronizasyonu (`fetch_bond_list`, `run_daily_calculations`) tamamlanınca `bond_list:*` ve `bond_stats` cache'leri otomatik temizleniyor
+
+### 🔧 İyileştirmeler
+
+#### Tahvil Detay Sayfası Yükleme İskeleti
+- Veri yüklenirken statik "Yükleniyor..." metni yerine tam iskelet düzeni gösteriliyor
+- Header alanı, 4 metrik kartı, 2 bilgi kartı ve geçmiş grafik alanı iskelet olarak render ediliyor
+
+#### KAP Çift Çekme Hatası Düzeltmesi
+- `resolve_data_conflicts` fonksiyonuna isteğe bağlı `kap_data` parametresi eklendi
+- `get_bond` endpoint'i önceden çektiği KAP verisini bu parametre ile iletiyor — aynı istek içinde KAP'a çift istek gönderilmesi engellendi
+
+---
+
 ## [1.2.3] — 2026-04-24
 
 ### 🚀 Yeni Özellikler

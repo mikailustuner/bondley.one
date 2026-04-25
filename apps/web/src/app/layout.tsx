@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { InitialLoader } from "@/components/initial-loader";
 import { MaintenanceGuard } from "@/components/maintenance-guard";
 import { CookieConsentBanner } from "@/components/ui/cookie-consent";
+import { ServiceWorkerRegistrar } from "@/components/service-worker-registrar";
 import "./globals.css";
 import { tr } from "@/locales/tr";
 
@@ -26,6 +27,7 @@ export const metadata: Metadata = {
     template: "%s | Bondley",
   },
   description: tr.meta.description,
+  manifest: "/manifest.json",
   icons: {
     icon: "/logo.png",
     apple: "/logo.png",
@@ -61,6 +63,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </MaintenanceGuard>
           <CookieConsentBanner />
+          <ServiceWorkerRegistrar />
         </ThemeProvider>
       </body>
     </html>

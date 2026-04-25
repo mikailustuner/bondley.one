@@ -17,6 +17,7 @@ import { api, BondListItem, BondStats, TLREFRecord } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
 import { tr } from "@/locales/tr";
+import { SwipeableCard } from "@/components/swipeable-card";
 
 const CURRENCY_COLORS: Record<string, string> = {
   TRY: "default",
@@ -117,6 +118,28 @@ export default function BondsListPage() {
         .catch(() => { })
         .finally(() => setFavoriteToggling(null));
     }
+  };
+
+  const swipeAddFavorite = (isinCode: string) => {
+    const token = getToken();
+    if (!token || favoriteToggling) return;
+    setFavoriteToggling(isinCode);
+    api.bonds
+      .addFavorite(token, isinCode)
+      .then(() => setFavoriteIsins((prev) => new Set(prev).add(isinCode)))
+      .catch(() => { })
+      .finally(() => setFavoriteToggling(null));
+  };
+
+  const swipeRemoveFavorite = (isinCode: string) => {
+    const token = getToken();
+    if (!token || favoriteToggling) return;
+    setFavoriteToggling(isinCode);
+    api.bonds
+      .removeFavorite(token, isinCode)
+      .then(() => setFavoriteIsins((prev) => { const s = new Set(prev); s.delete(isinCode); return s; }))
+      .catch(() => { })
+      .finally(() => setFavoriteToggling(null));
   };
 
   const activeBonds = bonds.length > 0 ? bonds : recentBonds;
@@ -418,8 +441,14 @@ export default function BondsListPage() {
               {/* Mobile Cards */}
               <div className="block md:hidden space-y-3 max-h-[600px] overflow-y-auto">
                 {filtered.map((bond) => (
-                  <Link
+                  <SwipeableCard
                     key={bond.isin_code}
+                    onSwipeRight={!favoriteIsins.has(bond.isin_code) ? () => swipeAddFavorite(bond.isin_code) : undefined}
+                    onSwipeLeft={favoriteIsins.has(bond.isin_code) ? () => swipeRemoveFavorite(bond.isin_code) : undefined}
+                    rightLabel={tr.dashboard.bondDetails.actions.addFavorite}
+                    leftLabel={tr.dashboard.bondDetails.actions.removeFavorite}
+                  >
+                  <Link
                     href={`/dashboard/bonds/${bond.isin_code}`}
                     onClick={() => {
                       try {
@@ -480,6 +509,7 @@ export default function BondsListPage() {
                       {bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"}
                     </div>
                   </Link>
+                  </SwipeableCard>
                 ))}
               </div>
 

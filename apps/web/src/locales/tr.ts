@@ -278,6 +278,11 @@ export const tr = {
         favorites: {
             title: "Favorilerim",
             description: "Takip ettiğiniz favori borçlanma araçları",
+            maturityLadder: {
+                title: "Vade Merdiveni",
+                description: "Favori araçlarınızın vadeye kalan gün dağılımı",
+                buckets: ["≤30g", "31-90g", "91-180g", "181-365g", "1-2y", "2-3y", "3y+"],
+            },
             archived: {
                 title: "Dolaşımdan Çıkmışlar",
                 description: "Vadesi dolmuş veya artık aktif olmayan favori araçlarınız",
