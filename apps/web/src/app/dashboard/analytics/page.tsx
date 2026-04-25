@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TlrefIndexChart } from "@/components/charts/tlref-index-chart";
@@ -8,6 +8,18 @@ import { TlrefRateChart } from "@/components/charts/tlref-rate-chart";
 import { useTlrefHistory } from "@/hooks/use-tlref-history";
 import { formatDecimal, formatPercent } from "@/lib/utils";
 import { tr } from "@/locales/tr";
+import { api, YieldCurvePoint } from "@/lib/api-client";
+import { getToken } from "@/lib/auth";
+import {
+  ScatterChart,
+  Scatter,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 
 export default function AnalyticsPage() {
   useEffect(() => {
@@ -17,6 +29,13 @@ export default function AnalyticsPage() {
     };
   }, []);
   const { history, indexData, rateData, bondStats, loading } = useTlrefHistory();
+  const [yieldCurvePoints, setYieldCurvePoints] = useState<YieldCurvePoint[]>([]);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+    api.bonds.yieldCurve(token).then((res) => setYieldCurvePoints(res.items)).catch(() => {});
+  }, []);
 
   if (loading) {
     return (
@@ -104,6 +123,106 @@ export default function AnalyticsPage() {
         </CardHeader>
         <CardContent>
           <TlrefRateChart data={rateData} />
+        </CardContent>
+      </Card>
+
+      {/* Yield Curve */}
+      <Card className="animate-fade-up-delay-2">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardDescription>{tr.dashboard.analytics.yieldCurve.desc}</CardDescription>
+              <CardTitle className="mt-1">{tr.dashboard.analytics.yieldCurve.title}</CardTitle>
+            </div>
+            <Badge variant="outline">{yieldCurvePoints.length} Araç</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {yieldCurvePoints.length === 0 ? (
+            <div className="h-[320px] flex items-center justify-center text-[14px] text-muted-foreground">
+              {tr.dashboard.analytics.yieldCurve.empty}
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={320}>
+              <ScatterChart margin={{ top: 8, right: 16, bottom: 24, left: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
+                <XAxis
+                  dataKey="days_to_maturity"
+                  type="number"
+                  name={tr.dashboard.analytics.yieldCurve.xLabel}
+                  label={{ value: tr.dashboard.analytics.yieldCurve.xLabel, position: "insideBottom", offset: -12, fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  dataKey="ytm_pct"
+                  type="number"
+                  name={tr.dashboard.analytics.yieldCurve.yLabel}
+                  label={{ value: tr.dashboard.analytics.yieldCurve.yLabel, angle: -90, position: "insideLeft", offset: 12, fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v) => `${v.toFixed(1)}%`}
+                />
+                <Tooltip
+                  cursor={{ strokeDasharray: "3 3" }}
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const d = payload[0]?.payload as YieldCurvePoint;
+                    return (
+                      <div className="bg-card border border-border rounded-xl px-3 py-2.5 text-[12px] shadow-md space-y-1">
+                        <div className="font-semibold text-foreground">{d.isin_code}</div>
+                        {d.issuer && <div className="text-muted-foreground truncate max-w-[180px]">{d.issuer}</div>}
+                        <div className="flex gap-3 pt-0.5">
+                          <span className="text-muted-foreground">{tr.dashboard.analytics.yieldCurve.tooltip.ytm}:</span>
+                          <span className="font-mono-data text-foreground">{d.ytm_pct.toFixed(2)}%</span>
+                        </div>
+                        <div className="flex gap-3">
+                          <span className="text-muted-foreground">{tr.dashboard.analytics.yieldCurve.tooltip.days}:</span>
+                          <span className="font-mono-data text-foreground">{d.days_to_maturity} gün</span>
+                        </div>
+                        {d.yield_type && (
+                          <div className="flex gap-3">
+                            <span className="text-muted-foreground">{tr.dashboard.analytics.yieldCurve.tooltip.type}:</span>
+                            <span className="text-foreground">{d.yield_type.split("/")[0].trim()}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }}
+                />
+                <Legend
+                  formatter={(value) => <span className="text-[12px] text-muted-foreground">{value}</span>}
+                  wrapperStyle={{ paddingTop: 8 }}
+                />
+                <Scatter
+                  name={tr.dashboard.analytics.yieldCurve.legend.floating}
+                  data={yieldCurvePoints.filter((p) => p.yield_type?.toLowerCase().includes("değişken") || p.yield_type?.toLowerCase().includes("floating"))}
+                  fill="hsl(var(--primary))"
+                  opacity={0.7}
+                  r={4}
+                />
+                <Scatter
+                  name={tr.dashboard.analytics.yieldCurve.legend.fixed}
+                  data={yieldCurvePoints.filter((p) => p.yield_type?.toLowerCase().includes("sabit") || p.yield_type?.toLowerCase().includes("fixed"))}
+                  fill="hsl(var(--positive))"
+                  opacity={0.7}
+                  r={4}
+                />
+                <Scatter
+                  name={tr.dashboard.analytics.yieldCurve.legend.other}
+                  data={yieldCurvePoints.filter((p) => {
+                    const yt = p.yield_type?.toLowerCase() ?? "";
+                    return !yt.includes("değişken") && !yt.includes("floating") && !yt.includes("sabit") && !yt.includes("fixed");
+                  })}
+                  fill="hsl(var(--muted-foreground))"
+                  opacity={0.5}
+                  r={3}
+                />
+              </ScatterChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
 

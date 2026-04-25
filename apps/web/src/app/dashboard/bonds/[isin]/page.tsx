@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
-import { FileQuestion, AlertCircle, ChevronLeft, ChevronRight, Star, ArchiveX } from "lucide-react";
-import { api, BondDetail, TLREFRecord } from "@/lib/api-client";
+import { FileQuestion, AlertCircle, ChevronLeft, ChevronRight, Star, ArchiveX, StickyNote, Trash2, Save } from "lucide-react";
+import { api, BondDetail, TLREFRecord, BondNote } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate, formatLastIssueDateText } from "@/lib/utils";
 import { tr } from "@/locales/tr";
@@ -94,6 +94,10 @@ export default function BondDetailPage({
   const [tlrefLatest, setTlrefLatest] = useState<TLREFRecord | null>(null);
   const [historyData, setHistoryData] = useState<Array<{ date: string; clean_price: number | null; ytm: number | null }>>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [noteText, setNoteText] = useState("");
+  const [savedNote, setSavedNote] = useState<BondNote | null>(null);
+  const [noteSaving, setNoteSaving] = useState(false);
+  const [noteDeleting, setNoteDeleting] = useState(false);
 
   useEffect(() => {
     if (bond) setIsFavorite(!!bond.is_favorite);
@@ -156,6 +160,16 @@ export default function BondDetailPage({
 
   useEffect(() => {
     if (!isin) return;
+    const token = getToken();
+    if (!token) return;
+    api.bonds
+      .getNote(token, isin)
+      .then((n) => { setSavedNote(n); setNoteText(n.note_text); })
+      .catch(() => { setSavedNote(null); setNoteText(""); });
+  }, [isin]);
+
+  useEffect(() => {
+    if (!isin) return;
     try {
       const raw = sessionStorage.getItem("bondley_bonds_isins");
       const list: string[] = raw ? JSON.parse(raw) : [];
@@ -201,6 +215,35 @@ export default function BondDetailPage({
     }, 300);
     return () => clearTimeout(t);
   }, [bond?.calculated_metrics, isin, selectedDate, scenarioShockBp]);
+
+  const handleNoteSave = async () => {
+    const token = getToken();
+    if (!token || !isin || noteSaving) return;
+    setNoteSaving(true);
+    try {
+      const updated = await api.bonds.upsertNote(token, isin, noteText);
+      setSavedNote(updated);
+    } catch {
+      // silent
+    } finally {
+      setNoteSaving(false);
+    }
+  };
+
+  const handleNoteDelete = async () => {
+    const token = getToken();
+    if (!token || !isin || noteDeleting) return;
+    setNoteDeleting(true);
+    try {
+      await api.bonds.deleteNote(token, isin);
+      setSavedNote(null);
+      setNoteText("");
+    } catch {
+      // silent
+    } finally {
+      setNoteDeleting(false);
+    }
+  };
 
   if (!isin)
     return (
@@ -1093,6 +1136,58 @@ export default function BondDetailPage({
           </CardContent>
         </Card>
       )}
+
+      {/* ═══ Personal Notes ═══ */}
+      <Card className="animate-fade-up-delay-2">
+        <CardHeader>
+          <div className="flex items-center gap-2.5">
+            <StickyNote className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <CardDescription>{tr.dashboard.bondDetails.notes.desc}</CardDescription>
+              <CardTitle className="mt-0.5">{tr.dashboard.bondDetails.notes.title}</CardTitle>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <textarea
+            className="w-full min-h-[100px] resize-none rounded-xl border border-border bg-secondary/30 px-3.5 py-3 text-[14px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+            placeholder={tr.dashboard.bondDetails.notes.placeholder}
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+          />
+          {savedNote?.updated_at && (
+            <p className="text-[12px] text-muted-foreground">
+              {tr.dashboard.bondDetails.notes.savedAt.replace(
+                "{date}",
+                new Date(savedNote.updated_at).toLocaleDateString("tr-TR", { day: "2-digit", month: "long", year: "numeric" }),
+              )}
+            </p>
+          )}
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={handleNoteSave}
+              disabled={noteSaving || noteText.trim() === ""}
+              className="gap-1.5"
+            >
+              <Save className="h-3.5 w-3.5" />
+              {noteSaving ? tr.dashboard.bondDetails.notes.saving : tr.dashboard.bondDetails.notes.save}
+            </Button>
+            {savedNote && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleNoteDelete}
+                disabled={noteDeleting}
+                className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                {tr.dashboard.bondDetails.notes.delete}
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* ═══ Data Sources ═══ */}
       {bond.data_sources && bond.data_sources.length > 0 && (

@@ -287,6 +287,21 @@ export interface BondStats {
   by_maturity_bucket?: { short: number; medium: number; long: number };
 }
 
+export interface YieldCurvePoint {
+  isin_code: string;
+  issuer: string | null;
+  days_to_maturity: number;
+  ytm_pct: number;
+  yield_type: string | null;
+  security_type: string | null;
+}
+
+export interface BondNote {
+  isin_code: string;
+  note_text: string;
+  updated_at: string;
+}
+
 // --- Auth / User types (including MFA) ---
 
 export interface UserMe {
@@ -674,6 +689,21 @@ export const api = {
         "/bonds/sync",
         { method: "POST", token },
       ),
+    yieldCurve: (token: string) =>
+      apiFetch<{ items: YieldCurvePoint[] }>("/bonds/yield-curve", { token }),
+    getNote: (token: string, isin: string) =>
+      apiFetch<BondNote>(`/bonds/${encodeURIComponent(isin)}/note`, { token }),
+    upsertNote: (token: string, isin: string, note_text: string) =>
+      apiFetch<BondNote>(`/bonds/${encodeURIComponent(isin)}/note`, {
+        method: "PUT",
+        token,
+        body: JSON.stringify({ note_text }),
+      }),
+    deleteNote: (token: string, isin: string) =>
+      apiFetch<void>(`/bonds/${encodeURIComponent(isin)}/note`, {
+        method: "DELETE",
+        token,
+      }),
   },
 
   tlref: {

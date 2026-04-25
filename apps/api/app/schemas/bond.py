@@ -140,3 +140,26 @@ class BondStatsResponse(BaseModel):
     by_yield_type: dict[str, int]
     avg_days_to_maturity: float | None = None
     by_maturity_bucket: dict[str, int] = {}
+
+
+class YieldCurvePoint(BaseModel):
+    isin_code: str
+    issuer: str | None = None
+    days_to_maturity: int
+    ytm_pct: float
+    yield_type: str | None = None
+    security_type: str | None = None
+
+
+class YieldCurveResponse(BaseModel):
+    items: list[YieldCurvePoint]
+
+
+class BondNoteResponse(BaseModel):
+    isin_code: str
+    note_text: str
+    updated_at: datetime
+
+
+class BondNoteUpsert(BaseModel):
+    note_text: str

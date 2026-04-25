@@ -15,6 +15,7 @@ from app.models.calculation import Calculation
 from app.models.market_data import MarketData
 from app.models.user import User
 from app.models.user_favorite_bond import UserFavoriteBond
+from app.models.bond_user_note import BondUserNote
 from app.schemas.bond import (
     BondResponse,
     BondListResponse,
@@ -25,6 +26,10 @@ from app.schemas.bond import (
     BondScenarioResponse,
     FavoriteListResponse,
     AddFavoriteRequest,
+    YieldCurveResponse,
+    YieldCurvePoint,
+    BondNoteResponse,
+    BondNoteUpsert,
 )
 from app.api.deps import get_current_user, get_admin_user
 from app.core.cache import cache_get, cache_set
@@ -315,6 +320,63 @@ async def remove_favorite(
         await db.commit()
 
 
+@router.get("/yield-curve", response_model=YieldCurveResponse)
+async def get_yield_curve(
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(get_current_user),
+):
+    """Tüm aktif tahvillerin son hesaplanan YTM vs vadeye kalan gün verisi (scatter plot için)."""
+    cached = await cache_get("bond_yield_curve")
+    if cached:
+        return YieldCurveResponse.model_validate(json.loads(cached))
+
+    latest_calc = (
+        select(Calculation.bond_id, func.max(Calculation.calc_date).label("max_date"))
+        .group_by(Calculation.bond_id)
+        .subquery()
+    )
+
+    stmt = (
+        select(
+            Bond.isin_code,
+            Bond.issuer,
+            Bond.days_to_maturity,
+            Bond.yield_type,
+            Bond.security_type,
+            Calculation.yield_to_maturity,
+        )
+        .join(latest_calc, latest_calc.c.bond_id == Bond.id)
+        .join(
+            Calculation,
+            (Calculation.bond_id == Bond.id) & (Calculation.calc_date == latest_calc.c.max_date),
+        )
+        .where(
+            Bond.is_active == True,
+            Bond.has_data == True,
+            Bond.maturity_date >= date.today(),
+            Bond.days_to_maturity.isnot(None),
+            Calculation.yield_to_maturity.isnot(None),
+        )
+        .order_by(Bond.days_to_maturity.asc())
+    )
+
+    rows = (await db.execute(stmt)).all()
+    items = [
+        YieldCurvePoint(
+            isin_code=row.isin_code,
+            issuer=row.issuer,
+            days_to_maturity=row.days_to_maturity,
+            ytm_pct=round(float(row.yield_to_maturity) * 100, 4),
+            yield_type=row.yield_type,
+            security_type=row.security_type,
+        )
+        for row in rows
+    ]
+    response = YieldCurveResponse(items=items)
+    await cache_set("bond_yield_curve", json.dumps(response.model_dump(mode="json")), 300)
+    return response
+
+
 @router.get("/{isin_code}/history")
 async def get_bond_history(
     isin_code: str,
@@ -548,6 +610,77 @@ async def get_bond(
         }]
 
     return base
+
+
+@router.get("/{isin_code}/note", response_model=BondNoteResponse)
+async def get_bond_note(
+    isin_code: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Kullanıcının belirli tahvil için kişisel notunu getirir."""
+    result = await db.execute(
+        select(BondUserNote).where(
+            BondUserNote.user_id == user.id,
+            BondUserNote.isin_code == isin_code,
+        )
+    )
+    note = result.scalar_one_or_none()
+    if not note:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not bulunamadı")
+    return BondNoteResponse(
+        isin_code=note.isin_code,
+        note_text=note.note_text,
+        updated_at=note.updated_at,
+    )
+
+
+@router.put("/{isin_code}/note", response_model=BondNoteResponse)
+async def upsert_bond_note(
+    isin_code: str,
+    body: BondNoteUpsert,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Kullanıcının tahvil notunu oluşturur veya günceller (upsert)."""
+    result = await db.execute(
+        select(BondUserNote).where(
+            BondUserNote.user_id == user.id,
+            BondUserNote.isin_code == isin_code,
+        )
+    )
+    note = result.scalar_one_or_none()
+    if note is None:
+        note = BondUserNote(user_id=user.id, isin_code=isin_code, note_text=body.note_text)
+        db.add(note)
+    else:
+        note.note_text = body.note_text
+    await db.commit()
+    await db.refresh(note)
+    return BondNoteResponse(
+        isin_code=note.isin_code,
+        note_text=note.note_text,
+        updated_at=note.updated_at,
+    )
+
+
+@router.delete("/{isin_code}/note", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_bond_note(
+    isin_code: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Kullanıcının tahvil notunu siler."""
+    result = await db.execute(
+        select(BondUserNote).where(
+            BondUserNote.user_id == user.id,
+            BondUserNote.isin_code == isin_code,
+        )
+    )
+    note = result.scalar_one_or_none()
+    if note is not None:
+        await db.delete(note)
+        await db.commit()
 
 
 @router.post("/sync", tags=["Admin"])

@@ -637,6 +637,19 @@ export const tr = {
                     principal: "Anapara",
                 }
             },
+            notes: {
+                title: "Kişisel Notlar",
+                desc: "Bu araç hakkında kendinize özel notlar alın",
+                placeholder: "Notunuzu buraya yazın...",
+                save: "Kaydet",
+                saving: "Kaydediliyor...",
+                delete: "Notu Sil",
+                empty: "Henüz not eklenmedi.",
+                savedAt: "{date} tarihinde güncellendi",
+                saveSuccess: "Not kaydedildi",
+                deleteSuccess: "Not silindi",
+                error: "Not kaydedilemedi",
+            },
             errors: {
                 noIsin: "Menkul kıymet kodu belirtilmedi",
                 loginRequired: "Giriş yapmanız gerekiyor",
@@ -792,7 +805,25 @@ export const tr = {
                 yieldTypeDist: "Getiri Türü Dağılımı",
                 byCurrency: "Para Birimine Göre",
                 currencyDist: "Döviz Dağılımı",
-            }
+            },
+            yieldCurve: {
+                desc: "Aktif Araçlar — YTM vs Vade",
+                title: "Getiri Eğrisi",
+                xLabel: "Vadeye Kalan (Gün)",
+                yLabel: "YTM (%)",
+                tooltip: {
+                    isin: "ISIN",
+                    ytm: "YTM",
+                    days: "Vade",
+                    type: "Tür",
+                },
+                legend: {
+                    floating: "Değişken",
+                    fixed: "Sabit",
+                    other: "Diğer",
+                },
+                empty: "Getiri eğrisi verisi bulunamadı.",
+            },
         },
         components: {
             userMenu: {
