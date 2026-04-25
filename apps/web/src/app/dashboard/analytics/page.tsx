@@ -11,15 +11,13 @@ import { tr } from "@/locales/tr";
 import { api, YieldCurvePoint } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import {
-  ComposedChart,
+  LineChart,
   Line,
-  Scatter,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from "recharts";
 
 export default function AnalyticsPage() {
@@ -47,20 +45,22 @@ export default function AnalyticsPage() {
   }
 
   const last30 = history.slice(-30);
-  const dailyRates = last30.filter((r) => r.daily_rate != null);
+  const dailyRates = last30.filter((r) => r.daily_rate != null && r.daily_rate > 0);
   const avgDailyRatePct =
     dailyRates.length > 0
       ? (dailyRates.reduce((acc, r) => acc + (r.daily_rate ?? 0), 0) / dailyRates.length) * 100
       : null;
 
-  const minIndex = history.length ? Math.min(...history.map((r) => r.index_value)) : null;
-  const maxIndex = history.length ? Math.max(...history.map((r) => r.index_value)) : null;
+  const validHistory = history.filter((r) => r.index_value > 0);
+  const minIndex = validHistory.length ? Math.min(...validHistory.map((r) => r.index_value)) : null;
+  const maxIndex = validHistory.length ? Math.max(...validHistory.map((r) => r.index_value)) : null;
   const totalReturnPct =
-    history.length >= 2
-      ? ((history[history.length - 1].index_value - history[0].index_value) /
-        history[0].index_value) *
-      100
+    validHistory.length >= 2 && validHistory[0].index_value > 0
+      ? ((validHistory[validHistory.length - 1].index_value - validHistory[0].index_value) /
+          validHistory[0].index_value) *
+        100
       : null;
+  const safeTotal = totalReturnPct != null && isFinite(totalReturnPct) ? totalReturnPct : null;
 
   const sortedSecTypes = bondStats
     ? Object.entries(bondStats.by_security_type).sort(([, a], [, b]) => b - a)
@@ -81,7 +81,7 @@ export default function AnalyticsPage() {
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4 animate-fade-up">
         {[
-          { label: tr.dashboard.analytics.stats.totalReturn, value: totalReturnPct != null ? formatPercent(totalReturnPct) : "—", sub: tr.dashboard.analytics.stats.cumulative, highlight: true },
+          { label: tr.dashboard.analytics.stats.totalReturn, value: safeTotal != null ? formatPercent(safeTotal) : "—", sub: tr.dashboard.analytics.stats.cumulative, highlight: true },
           { label: tr.dashboard.analytics.stats.avgDaily, value: avgDailyRatePct != null ? formatPercent(avgDailyRatePct) : "—", sub: tr.dashboard.analytics.stats.last30 },
           { label: tr.dashboard.analytics.stats.min, value: minIndex != null ? formatDecimal(minIndex, 2) : "—", sub: tr.dashboard.analytics.stats.index },
           { label: tr.dashboard.analytics.stats.max, value: maxIndex != null ? formatDecimal(maxIndex, 2) : "—", sub: tr.dashboard.analytics.stats.index },
@@ -129,34 +129,60 @@ export default function AnalyticsPage() {
 
       {/* Yield Curve */}
       {yieldCurvePoints.length > 0 && (() => {
-        const classify = (p: YieldCurvePoint) => {
+        const classify = (p: YieldCurvePoint): "floating" | "fixed" | "other" => {
           const yt = p.yield_type?.toLowerCase() ?? "";
           if (yt.includes("değişken") || yt.includes("floating")) return "floating";
           if (yt.includes("sabit") || yt.includes("fixed")) return "fixed";
           return "other";
         };
-        const allSorted = [...yieldCurvePoints].sort((a, b) => a.days_to_maturity - b.days_to_maturity);
-        const floatingData = allSorted.filter((p) => classify(p) === "floating");
-        const fixedData    = allSorted.filter((p) => classify(p) === "fixed");
-        const otherData    = allSorted.filter((p) => classify(p) === "other");
 
-        const xTicks = [90, 182, 365, 548, 730, 1095, 1460, 1825].filter(
-          (t) => t <= (allSorted[allSorted.length - 1]?.days_to_maturity ?? 0) + 60,
-        );
+        const DOT_COLOR: Record<string, string> = {
+          floating: "hsl(211, 100%, 50%)",
+          fixed:    "hsl(142, 71%, 45%)",
+          other:    "hsl(var(--muted-foreground))",
+        };
+
+        const allSorted = [...yieldCurvePoints].sort((a, b) => a.days_to_maturity - b.days_to_maturity);
+
         const xFmt = (v: number) => {
           if (v >= 365) return `${Math.round(v / 365)}y`;
           if (v >= 30)  return `${Math.round(v / 30)}ay`;
           return `${v}g`;
         };
 
-        const tooltipContent = ({ active, payload }: any) => {
+        const maxDays = allSorted[allSorted.length - 1]?.days_to_maturity ?? 0;
+        const xTicks = [90, 182, 365, 548, 730, 1095, 1460, 1825].filter((t) => t <= maxDays + 90);
+
+        /* Custom dot — colors each circle by yield_type */
+        const YieldDot = (props: { cx?: number; cy?: number; payload?: YieldCurvePoint }) => {
+          const { cx, cy, payload } = props;
+          if (!cx || !cy || !payload) return null;
+          return (
+            <circle
+              cx={cx}
+              cy={cy}
+              r={3.5}
+              fill={DOT_COLOR[classify(payload)]}
+              opacity={0.75}
+            />
+          );
+        };
+
+        /* Tooltip */
+        const YieldTooltip = ({ active, payload }: any) => {
           if (!active || !payload?.length) return null;
           const d = payload[0]?.payload as YieldCurvePoint;
           if (!d?.isin_code) return null;
+          const color = DOT_COLOR[classify(d)];
           return (
             <div className="bg-card border border-border rounded-2xl px-3.5 py-3 text-[12px] shadow-lg space-y-1.5 min-w-[180px]">
-              <div className="font-semibold text-foreground text-[13px]">{d.isin_code}</div>
-              {d.issuer && <div className="text-muted-foreground truncate max-w-[200px]">{d.issuer.split("/")[0].trim()}</div>}
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full shrink-0" style={{ background: color }} />
+                <span className="font-semibold text-foreground text-[13px]">{d.isin_code}</span>
+              </div>
+              {d.issuer && (
+                <div className="text-muted-foreground truncate max-w-[210px]">{d.issuer.split("/")[0].trim()}</div>
+              )}
               <div className="border-t border-border/40 pt-1.5 space-y-1">
                 <div className="flex justify-between gap-4">
                   <span className="text-muted-foreground">YTM</span>
@@ -177,6 +203,10 @@ export default function AnalyticsPage() {
           );
         };
 
+        const floatingCount = allSorted.filter((p) => classify(p) === "floating").length;
+        const fixedCount    = allSorted.filter((p) => classify(p) === "fixed").length;
+        const otherCount    = allSorted.filter((p) => classify(p) === "other").length;
+
         return (
           <Card className="animate-fade-up-delay-2">
             <CardHeader>
@@ -190,13 +220,13 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={340}>
-                <ComposedChart data={allSorted} margin={{ top: 8, right: 16, bottom: 32, left: 8 }}>
+                <LineChart data={allSorted} margin={{ top: 8, right: 16, bottom: 32, left: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" vertical={false} />
                   <XAxis
                     dataKey="days_to_maturity"
                     type="number"
                     scale="linear"
-                    domain={["auto", "auto"]}
+                    domain={[0, "auto"]}
                     ticks={xTicks}
                     tickFormatter={xFmt}
                     tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
@@ -205,6 +235,7 @@ export default function AnalyticsPage() {
                     label={{ value: tr.dashboard.analytics.yieldCurve.xLabel, position: "insideBottom", offset: -18, fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
                   />
                   <YAxis
+                    dataKey="ytm_pct"
                     type="number"
                     domain={["auto", "auto"]}
                     tickFormatter={(v) => `${v.toFixed(1)}%`}
@@ -213,55 +244,42 @@ export default function AnalyticsPage() {
                     axisLine={false}
                     width={52}
                   />
-                  <Tooltip content={tooltipContent} cursor={{ strokeDasharray: "4 4", stroke: "hsl(var(--border))" }} />
-                  <Legend
-                    formatter={(value) => <span className="text-[12px] text-muted-foreground">{value}</span>}
-                    wrapperStyle={{ paddingTop: 12 }}
-                  />
+                  <Tooltip content={<YieldTooltip />} cursor={{ strokeDasharray: "4 4", stroke: "hsl(var(--border))" }} />
 
-                  {/* Curve line — connects all bonds in maturity order to show the shape */}
                   <Line
                     dataKey="ytm_pct"
                     type="monotone"
-                    dot={false}
-                    activeDot={false}
                     stroke="hsl(var(--border))"
                     strokeWidth={1.5}
-                    strokeOpacity={0.7}
+                    dot={<YieldDot />}
+                    activeDot={{ r: 5, strokeWidth: 0 }}
+                    isAnimationActive={false}
                     connectNulls
-                    legendType="none"
                   />
-
-                  {/* Colored dots by yield type */}
-                  {floatingData.length > 0 && (
-                    <Scatter
-                      name={tr.dashboard.analytics.yieldCurve.legend.floating}
-                      data={floatingData}
-                      fill="hsl(211, 100%, 50%)"
-                      opacity={0.8}
-                      r={4}
-                    />
-                  )}
-                  {fixedData.length > 0 && (
-                    <Scatter
-                      name={tr.dashboard.analytics.yieldCurve.legend.fixed}
-                      data={fixedData}
-                      fill="hsl(142, 71%, 45%)"
-                      opacity={0.8}
-                      r={4}
-                    />
-                  )}
-                  {otherData.length > 0 && (
-                    <Scatter
-                      name={tr.dashboard.analytics.yieldCurve.legend.other}
-                      data={otherData}
-                      fill="hsl(var(--muted-foreground))"
-                      opacity={0.55}
-                      r={3}
-                    />
-                  )}
-                </ComposedChart>
+                </LineChart>
               </ResponsiveContainer>
+
+              {/* Manual legend */}
+              <div className="flex items-center justify-center gap-6 mt-3">
+                {floatingCount > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: DOT_COLOR.floating }} />
+                    <span className="text-[12px] text-muted-foreground">{tr.dashboard.analytics.yieldCurve.legend.floating} ({floatingCount})</span>
+                  </div>
+                )}
+                {fixedCount > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: DOT_COLOR.fixed }} />
+                    <span className="text-[12px] text-muted-foreground">{tr.dashboard.analytics.yieldCurve.legend.fixed} ({fixedCount})</span>
+                  </div>
+                )}
+                {otherCount > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: "hsl(var(--muted-foreground))" }} />
+                    <span className="text-[12px] text-muted-foreground">{tr.dashboard.analytics.yieldCurve.legend.other} ({otherCount})</span>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         );
