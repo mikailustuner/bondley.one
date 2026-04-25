@@ -224,6 +224,9 @@ class BondCalculator:
             ratio = amounts[0] / d_price
             if ratio > 0:
                 y = k * (ratio ** (1.0 / times[0]) - 1)
+                # Sanity check: cap extreme yields caused by stale prices/near-zero time
+                if y > 1000.0:
+                    y = 1000.0
                 return Decimal(str(y)).quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
 
         def npv(y: float) -> float:

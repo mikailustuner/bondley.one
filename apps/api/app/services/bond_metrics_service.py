@@ -420,9 +420,21 @@ class BondMetricsService:
         is_theoretical = False
         if clean_price is None:
             clean_price, market_data_date = await self.get_clean_price(bond.id, settlement_date)
+            
+            # STALE DATA PROTECTION:
+            # If market data is older than 7 days, ignore it for YTM/Price calculation 
+            # and fall back to theoretical values. Stale prices near maturity cause 
+            # astronomical yields (e.g. millions of %).
+            if clean_price is not None and market_data_date:
+                age = (settlement_date - market_data_date).days
+                if age > 7:
+                    logger.info(f"Ignoring stale market data for {bond.isin_code} (age: {age} days, date: {market_data_date})")
+                    clean_price = None
+                    market_data_date = settlement_date
+
             if clean_price is None:
-                # Fallback: Yield-to-Price calculation
-                stale_limit = 5
+                # Fallback: Theoretical Yield-to-Price calculation
+                stale_limit = 7
                 limit_date = settlement_date - timedelta(days=stale_limit)
                 fallback_calc = await self.db.execute(
                     select(Calculation)
@@ -444,8 +456,19 @@ class BondMetricsService:
                 elif bond.spread is not None:
                     theoretical_spread = _spread_to_decimal(bond.spread)
 
-                if theoretical_spread is not None and tlref_rate:
-                    theoretical_ytm = tlref_rate + theoretical_spread
+                theoretical_ytm = None
+                if _is_tlref_indexed(bond):
+                    if tlref_rate and theoretical_spread is not None:
+                        theoretical_ytm = tlref_rate + theoretical_spread
+                else:
+                    # FIXED RATE Fallback: Use last/first issue yield if available
+                    if bond.last_issue_yield is not None:
+                        theoretical_ytm = _spread_to_decimal(bond.last_issue_yield)
+                    elif bond.first_issue_yield is not None:
+                        theoretical_ytm = _spread_to_decimal(bond.first_issue_yield)
+
+                if theoretical_ytm is not None:
+                    is_theoretical = True
                     inputs = bond_to_calculator_inputs(bond)
                     if inputs:
                         issue_date, maturity_date, coupon_rate, coupon_frequency_int = inputs
