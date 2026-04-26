@@ -146,7 +146,10 @@ export default function OnboardingPage() {
                                                         <SelectItem value="Araştırma / Strateji">{tr.onboarding.form.department.options.research}</SelectItem>
                                                         <SelectItem value="Kurumsal Finansman">{tr.onboarding.form.department.options.corporate}</SelectItem>
                                                         <SelectItem value="Bireysel Yatırımcı">{tr.onboarding.form.department.options.retail}</SelectItem>
-                                                        <SelectItem value="Diğer">{tr.onboarding.form.department.options.other}</SelectItem>
+                                                        <SelectItem value="Fon Hizmet">{tr.onboarding.form.department.options.fund_serv}</SelectItem>
+                                                        <SelectItem value="Saklama">{tr.onboarding.form.department.options.custody}</SelectItem>
+                                                        <SelectItem value="Fon Operasyon">{tr.onboarding.form.department.options.fund_ops}</SelectItem>
+                                                        <SelectItem value="Diğer ve Öğrenci">{tr.onboarding.form.department.options.other}</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                                 <FormMessage />

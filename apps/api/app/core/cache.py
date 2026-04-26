@@ -1,3 +1,4 @@
+import hashlib
 import logging
 from redis.asyncio import Redis
 from app.core.config import get_settings
@@ -34,6 +35,18 @@ async def cache_delete(key: str) -> None:
         await get_redis().delete(key)
     except Exception as exc:
         logger.debug("cache_delete %s: %s", key, exc)
+
+
+def token_blacklist_key(raw_token: str) -> str:
+    return "token_bl:" + hashlib.sha256(raw_token.encode()).hexdigest()
+
+
+async def cache_exists(key: str) -> bool:
+    try:
+        return bool(await get_redis().exists(key))
+    except Exception as exc:
+        logger.debug("cache_exists %s: %s", key, exc)
+        return False
 
 
 async def cache_delete_pattern(pattern: str) -> int:

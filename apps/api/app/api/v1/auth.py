@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi import Request
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -54,8 +55,8 @@ import hashlib
 
 from app.core.config import get_settings
 from app.core.email import send_verification_email
-from app.core.cache import cache_get, cache_set
-from app.api.deps import get_current_user, get_admin_user
+from app.core.cache import cache_get, cache_set, token_blacklist_key
+from app.api.deps import get_current_user, get_admin_user, security
 
 settings = get_settings()
 from app.core.security import (
@@ -277,6 +278,11 @@ async def change_email(
     db: AsyncSession = Depends(get_db),
 ):
     """Kullanici e-posta adresini degistirir."""
+    if not verify_password(data.current_password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mevcut şifre yanlış",
+        )
     # Check if new email is already taken
     existing = await db.execute(select(User).where(User.email == data.new_email))
     if existing.scalar_one_or_none():
@@ -396,18 +402,27 @@ async def refresh_token(data: RefreshTokenRequest, db: AsyncSession = Depends(ge
 @router.post("/logout", status_code=status.HTTP_200_OK)
 async def logout(
     data: RefreshTokenRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """Logout - revoke refresh token"""
+    """Logout - revoke refresh token and blacklist access token"""
     success = await revoke_refresh_token(data.refresh_token, db)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid refresh token",
         )
-
     await db.commit()
+
+    raw_token = credentials.credentials
+    payload = decode_access_token(raw_token)
+    if payload and "exp" in payload:
+        from datetime import datetime, timezone as tz
+        remaining = int(payload["exp"]) - int(datetime.now(tz.utc).timestamp())
+        if remaining > 0:
+            await cache_set(token_blacklist_key(raw_token), "1", ttl=remaining)
+
     return {"message": "Successfully logged out"}
 
 

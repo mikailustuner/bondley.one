@@ -24,7 +24,7 @@ export const tr = {
     },
     meta: {
         title: "Bondley – Borçlanma Araçları Değerleme ve Analiz Platformu",
-        description: "Borçlanma araçları değerleme, fiyat takibi ve analiz platformu. Tahvil, bono, kira sertifikası, VDMK. Piyasa verileri, endeks takibi ve kurumsal raporlama.",
+        description: "Değişken getirili menkul kıymetlerin kupon oranları ve tüm borçlanma araçlarının günlük değerleme, fiyat takibi ve analiz platformu. Tahvil, bono, kira sertifikası, VDMK...",
     },
     error: {
         notFound: {
@@ -35,12 +35,12 @@ export const tr = {
         },
         generic: {
             title: "Bir hata oluştu",
-            description: "Beklenmedik bir hata meydana geldi. Lütfen tekrar deneyin.",
+            description: "Sistemin veri güncellemesi nedeniyle işleminiz askıya alındı. Lütfen tekrar deneyin.",
             retry: "Tekrar Dene",
         }
     },
     auth: {
-        sessionExpired: "Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.",
+        sessionExpired: "Oturum süreniz sona ermiştir. Lütfen tekrar giriş yapın.",
         login: {
             title: "Giriş Yap",
             subtitle: "Kimlik Doğrulama",
@@ -81,7 +81,7 @@ export const tr = {
             placeholders: {
                 fullName: "Ad Soyad",
                 email: "ornek@sirket.com",
-                company: "Şirket veya kurum adı",
+                company: "Şirket veya Kurum Adı",
                 location: "İstanbul, Türkiye",
                 password: "En az 8 karakter",
                 passwordConfirm: "Şifrenizi tekrar girin",
@@ -114,13 +114,16 @@ export const tr = {
                 label: "Departman",
                 placeholder: "Departmanınızı seçin",
                 options: {
-                    treasury: "Hazine (Treasury)",
-                    portfolio: "Portföy Yönetimi",
+                    treasury: "Hazine (Treasury), (PYŞ Hariç) Fon Yönetimi",
+                    portfolio: "(PYŞ-Fon) Portföy Yönetimi",
                     risk: "Risk Yönetimi",
                     research: "Araştırma / Strateji",
                     corporate: "Kurumsal Finansman",
                     retail: "Bireysel Yatırımcı",
-                    other: "Diğer",
+                    fund_serv: "Fon Hizmet",
+                    custody: "Saklama",
+                    fund_ops: "Fon Operasyon",
+                    other: "Diğer ve Öğrenci",
                 },
                 validation: "Departman ismi en az 2 karakter olmalıdır.",
             },
@@ -135,15 +138,15 @@ export const tr = {
                 validation: "Lütfen platformu ne amaçla kullanacağınızı kısaca açıklayın (en az 10 karakter).",
             },
             dailyViews: {
-                label: "Günlük Tahmini İşlem/İnceleme",
-                description: "Günde ortalama kaç farklı borçlanma aracı inceleyeceğinizi tahmin ediyorsunuz?",
+                label: "Günlük Tahmini Ortalama İnceleme Beklentiniz",
+                description: "Günde ortalama kaç farklı borçlanma aracı, kira sertifikası, vdmk vb. inceleyeceğinizi tahmin ediyorsunuz?",
                 validation: "Günlük tahmini inceleme sayısı 1 ile 10000 arasında geçerli bir sayı olmalıdır.",
             },
             submit: "Profilimi Tamamla ve Başla",
         },
         hero: {
-            title: "Kurumsal Borçlanma Araçları Platformu",
-            description: "Tahvil, bono, kira sertifikası ve VDMK piyasalarındaki tüm gelişmeleri anlık takip edin. Yapay zeka destekli fiyatlama modelleri ve kurumsal arayüzler ile risklerinizi yönetin.",
+            title: "Bondley – Borçlanma Araçları, Takip, Değerleme ve Analiz Platformu",
+            description: "Değişken getirili menkul kıymetlerin kupon oranları ve tüm borçlanma araçlarının günlük değerleme, fiyat takibi ve analiz platformu. Tahvil, bono, kira sertifikası, VDMK...",
         }
     },
     landing: {
@@ -153,15 +156,15 @@ export const tr = {
             signup: "Ücretsiz Başlat",
         },
         hero: {
-            badge: "Canlı Veri Akışı",
+            badge: "Borsa İstanbul ve MKK-E-KAP Verileri ile her gün güncel",
             titleLine1: "Tahvil değerleme.",
             titleLine2: "Yeniden tanımlandı.",
-            description: "Borsa İstanbul borçlanma araçlarını gerçek zamanlı takip edin. TLREF endeks, getiri analizi ve risk hesaplamalarını tek bir platformda birleştirdik.",
+            description: "Yatırım yaptığınız veya yapacağınız sermaye piyasası enstrümanlarının kupon oranlarını, kirli fiyatlarını, teorik fiyatlarını en kolay, güncel, hızlı ve doğru yerden takip ederek zamandan tasarruf edin. Bondley sizin için takip etsin, dilediğiniz zaman dilediğiniz enstrümanın detaylarını ilk siz öğrenin.",
             ctaStart: "Ücretsiz Başlat",
             ctaLogin: "Giriş Yap",
         },
         ticker: {
-            title: "Canlı Piyasa Verisi",
+            title: "Borsa İstanbul ve MKK-E-KAP Verileri ile her gün güncel",
             labels: {
                 tlrefIndex: "TLREF Endeks",
                 comparedToYesterday: "Düne Göre",
@@ -185,8 +188,8 @@ export const tr = {
                     desc: "ISIN kodu veya ihraççıya göre arama yapın. 2.100+ borçlanma aracını filtreleyin, karşılaştırın.",
                 },
                 {
-                    title: "Analiz edin",
-                    desc: "Vadeye getiri, kirli fiyat, modifiye durasyon ve senaryo analizi ile riskinizi ölçün.",
+                    title: "İlk Öğrenen Siz Olun, İnceleyin, Analiz edin",
+                    desc: "Hesaplamalarınızı kontrol edin, gün sonu işlemlerinizi vaktinde tamamlayın. Ertesi iş günlerinizi bugünden planlayın.",
                 }
             ]
         },
@@ -196,7 +199,7 @@ export const tr = {
             items: [
                 {
                     label: "Borçlanma Aracı",
-                    desc: "Devlet tahvili, hazine bonosu, özel sektör tahvili, kira sertifikası ve VDMK.",
+                    desc: "Kamu (DİBS — Devlet Tahvili, Hazine Bonosu, Kira Sertifikaları) ve Özel Sektör Borçlanma Araçları, Kira Sertifikaları ve VDMK.",
                 },
                 {
                     label: "TLREF Kayıt",
@@ -211,14 +214,14 @@ export const tr = {
         features: {
             badge: "Özellikler",
             title: "Her ihtiyacınız için.",
-            description: "Profesyonel yatırımcılar için tasarlanmış kapsamlı araç seti.",
+            description: "İhraççılar, Aracı Kurumlar ve Profesyonel Yatırımcılar için tasarlanmış kapsamlı araçlar",
             items: [
                 {
                     title: "Borçlanma Araçları",
                     desc: "Para birimi, vade, getiri türü ve ihraççıya göre gelişmiş filtreleme. 2.100+ aktif araç.",
                 },
                 {
-                    title: "TLREF Grafikleri",
+                    title: "Değişken Getirililer için TLREF ve Endeks Grafikleri",
                     desc: "Tarihsel endeks değeri ve günlük oran grafikleri. İnteraktif ve dışa aktarılabilir.",
                 },
                 {
@@ -235,21 +238,21 @@ export const tr = {
                 },
                 {
                     title: "Piyasa Verisi",
-                    desc: "Temiz fiyat, kirli fiyat, kupon ödeme planı ve KAP bildirim verileri tek ekranda.",
+                    desc: "Temiz fiyat, kirli fiyat, kupon ödeme planı, oranları ve KAP bildirim verileri tek ekranda.",
                 }
             ]
         },
         cta: {
             title: "Hemen başlayın.",
-            description: "Gelişmiş analitikler, portföy yönetimi ve gerçek zamanlı piyasa verilerine erişmek için ücretsiz hesabınızı oluşturun.",
-            button: "Ücretsiz Başlayın",
+            description: "Ücretsiz hesap oluşturun ve Türkiye borçlanma araçları piyasasını profesyonel araçlarla analiz etmeye başlayın.",
+            button: "Ücretsiz Hesap Oluştur",
         },
         upcoming: {
             title: "Veri Açıklanmasına {days} Gün Kalanlar",
             seeMore: "Daha fazlasını gör",
         },
         trust: [
-            "BIST resmî veri kaynağı",
+            "Borsa İstanbul resmî veri kaynağı",
             "Her iş günü otomatik güncelleme",
             "Güvenli hesap & 2FA desteği",
         ],
@@ -271,7 +274,7 @@ export const tr = {
             account: "Hesap",
         },
         sidebar: {
-            liveData: "Canlı Veri",
+            liveData: "Veri",
             closeMenu: "Menüyü kapat",
             openMenu: "Menüyü aç",
         },

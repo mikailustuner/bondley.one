@@ -99,6 +99,7 @@ class PasswordChange(BaseModel):
 
 class EmailChange(BaseModel):
     """E-posta degistirme"""
+    current_password: str
     new_email: EmailStr
 
 
