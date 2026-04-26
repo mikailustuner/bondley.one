@@ -34,6 +34,10 @@ graph TB
         MetricsRouter[Metrics Router<br/>/metrics/*]
         TLREFRouter[TLREF Router<br/>/tlref/*]
         ImportRouter[CSV Import Router<br/>/import/*]
+        AlertsRouter[Alerts Router<br/>/alerts/*]
+        NotificationsRouter[Notifications Router<br/>/notifications/*]
+        KapRouter[KAP Router<br/>/kap/*]
+        SystemRouter[System Router<br/>/system/*]
     end
     
     subgraph "Middleware Layer"
@@ -55,9 +59,14 @@ graph TB
     subgraph "Background Tasks - Celery"
         CeleryWorker[Celery Worker<br/>Concurrency: 2]
         CeleryBeat[Celery Beat<br/>Scheduler]
-        DailyTLREFTask[Daily TLREF Fetch<br/>18:30 Weekdays]
-        BondListTask[Bond List Fetch<br/>19:00 Weekdays]
+        DailyTLREFTask[Daily TLREF Fetch<br/>16:05 Weekdays]
+        BondListTask[Bond List Fetch<br/>16:10 Weekdays]
         HistoricalTLREFTask[Historical TLREF Fetch]
+        KapDisclosuresTask[KAP Disclosures Fetch<br/>18:00 Weekdays]
+        MarketDataTask[Daily Market Data Populate<br/>16:15 Weekdays]
+        CalculationsTask[Daily Calculations Run<br/>16:20 Weekdays]
+        AlertsTask[User Alerts Check<br/>Every 15 Minutes]
+        KapRefetchTask[KAP Details Refetch<br/>23:30 Daily]
     end
     
     subgraph "Database Layer - PostgreSQL"
@@ -70,6 +79,15 @@ graph TB
         BondViewsTable[(bond_views<br/>Görüntülenme Kayıtları)]
         UserMetricsTable[(user_metrics<br/>Kullanıcı Metrikleri)]
         SystemSettingsTable[(system_settings<br/>Sistem Ayarları)]
+        RefreshTokensTable[(refresh_tokens<br/>Token Yenileme)]
+        UserAlertsTable[(user_alerts<br/>Kullanıcı Uyarıları)]
+        UserFavoritesTable[(user_favorite_bonds<br/>Favori Tahviller)]
+        MFABackupCodesTable[(user_mfa_backup_codes<br/>MFA Yedek Kodları)]
+        NotificationsTable[(notifications<br/>Bildirimler)]
+        BondNotesTable[(bond_user_notes<br/>Tahvil Notları)]
+        KapCompaniesTable[(kap_companies<br/>KAP Şirketleri)]
+        KapDisclosuresTable[(kap_disclosures<br/>KAP Açıklamaları)]
+        KapDetailsTable[(kap_disclosure_details<br/>KAP Detayları)]
     end
     
     subgraph "Cache Layer - Redis"
@@ -105,6 +123,10 @@ graph TB
     AuthMiddleware --> MetricsRouter
     AuthMiddleware --> TLREFRouter
     AuthMiddleware --> ImportRouter
+    AuthMiddleware --> AlertsRouter
+    AuthMiddleware --> NotificationsRouter
+    AuthMiddleware --> KapRouter
+    AuthMiddleware --> SystemRouter
     
     AuthRouter --> SecurityService
     BondsRouter --> BondFetcher
@@ -288,7 +310,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    Start([Celery Beat Scheduler<br/>19:00 Weekdays]) --> Trigger[Trigger fetch_bond_list Task]
+    Start([Celery Beat Scheduler<br/>16:10 Weekdays]) --> Trigger[Trigger fetch_bond_list Task]
     Trigger --> CeleryWorker[Celery Worker Receives Task]
     CeleryWorker --> CreateSession[Create Async DB Session]
     CreateSession --> InitFetcher[Initialize BondFetcher]
@@ -520,9 +542,18 @@ erDiagram
     BONDS ||--o{ MARKET_DATA : "has"
     BONDS ||--o{ CALCULATIONS : "has"
     BONDS ||--o{ BOND_VIEWS : "viewed"
+    BONDS ||--o{ BOND_USER_NOTES : "notes"
+    BONDS ||--o{ USER_FAVORITE_BONDS : "favorites"
     USERS ||--o{ BOND_VIEWS : "views"
     USERS ||--o{ USER_METRICS : "has"
     USERS ||--o{ AUDIT_LOGS : "performs"
+    USERS ||--o{ USER_ALERTS : "has"
+    USERS ||--o{ USER_FAVORITE_BONDS : "favorites"
+    USERS ||--o{ REFRESH_TOKENS : "has"
+    USERS ||--o{ NOTIFICATIONS : "receives"
+    USERS ||--o{ USER_MFA_BACKUP_CODES : "has"
+    KAP_COMPANIES ||--o{ KAP_DISCLOSURES : "has"
+    KAP_DISCLOSURES ||--o{ KAP_DISCLOSURE_DETAILS : "has"
     
     BONDS {
         int id PK
@@ -626,6 +657,94 @@ erDiagram
         string value
         string description
         timestamp updated_at
+    }
+    
+    REFRESH_TOKENS {
+        int id PK
+        int user_id FK
+        string token
+        timestamp expires_at
+        timestamp created_at
+        string ip_address
+        string user_agent
+    }
+    
+    USER_ALERTS {
+        int id PK
+        int user_id FK
+        string alert_type
+        string bond_isin
+        decimal threshold_value
+        boolean is_active
+        timestamp created_at
+        timestamp triggered_at
+    }
+    
+    USER_FAVORITE_BONDS {
+        int id PK
+        int user_id FK
+        string bond_isin FK
+        timestamp created_at
+    }
+    
+    USER_MFA_BACKUP_CODES {
+        int id PK
+        int user_id FK
+        string code_hash
+        boolean is_used
+        timestamp used_at
+        timestamp created_at
+    }
+    
+    NOTIFICATIONS {
+        int id PK
+        int user_id FK
+        string title
+        string message
+        string notification_type
+        boolean is_read
+        timestamp created_at
+        timestamp read_at
+    }
+    
+    BOND_USER_NOTES {
+        int id PK
+        int user_id FK
+        string bond_isin FK
+        text note
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    KAP_COMPANIES {
+        int id PK
+        string company_code UK
+        string company_name
+        string trade_name
+        string industry
+        string sector
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    KAP_DISCLOSURES {
+        int id PK
+        int company_id FK
+        string disclosure_type
+        string title
+        text summary
+        date disclosure_date
+        string url
+        boolean is_processed
+        timestamp created_at
+    }
+    
+    KAP_DISCLOSURE_DETAILS {
+        int id PK
+        int disclosure_id FK
+        string field_name
+        text field_value
+        timestamp created_at
     }
 ```
 
@@ -771,7 +890,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Start([Celery Beat<br/>18:30 Daily]) --> Trigger[Trigger fetch_daily_tlref]
+    Start([Celery Beat<br/>16:05 Weekdays]) --> Trigger[Trigger fetch_daily_tlref]
     Trigger --> Worker[Celery Worker]
     Worker --> CreateSession[Create Async DB Session]
     CreateSession --> InitFetcher[Initialize TLREFFetcher]
@@ -1153,8 +1272,13 @@ flowchart TB
     
     subgraph "Data Ingestion Layer"
         CeleryBeat[Celery Beat<br/>Scheduler]
-        DailyTLREF[Daily TLREF Task<br/>18:30 Weekdays]
-        DailyBonds[Daily Bonds Task<br/>19:00 Weekdays]
+        DailyTLREF[Daily TLREF Task<br/>16:05 Weekdays]
+        DailyBonds[Daily Bonds Task<br/>16:10 Weekdays]
+        KapDisclosures[KAP Disclosures Task<br/>18:00 Weekdays]
+        PopulateMarketData[Populate Market Data<br/>16:15 Weekdays]
+        RunCalculations[Run Calculations<br/>16:20 Weekdays]
+        CheckAlerts[Check User Alerts<br/>Every 15 Minutes]
+        RefetchKap[Refetch KAP Details<br/>23:30 Daily]
     end
     
     subgraph "Data Processing"

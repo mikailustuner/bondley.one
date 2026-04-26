@@ -35,7 +35,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   { href: "/admin", label: tr.dashboard.admin.sidebar.overview },
                   { href: "/admin/bonds", label: tr.dashboard.admin.sidebar.bonds },
                   { href: "/admin/users", label: tr.dashboard.admin.sidebar.users },
-                  { href: "/admin/logs", label: tr.dashboard.admin.sidebar.logs },
                   { href: "/admin/metrics", label: tr.dashboard.admin.sidebar.metrics },
                   { href: "/admin/notifications", label: tr.dashboard.admin.sidebar.notifications },
                   { href: "/admin/import", label: tr.dashboard.admin.sidebar.import },
