@@ -135,7 +135,7 @@ export default function OnboardingPage() {
                                                 </FormLabel>
                                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                     <FormControl>
-                                                        <SelectTrigger className="h-11 bg-secondary/30">
+                                                        <SelectTrigger className="h-11 bg-background">
                                                             <SelectValue placeholder={tr.onboarding.form.department.placeholder} />
                                                         </SelectTrigger>
                                                     </FormControl>
@@ -167,7 +167,7 @@ export default function OnboardingPage() {
                                                 <FormControl>
                                                     <Input
                                                         placeholder={tr.onboarding.form.jobTitle.placeholder}
-                                                        className="h-11 bg-secondary/30"
+                                                        className="h-11 bg-background"
                                                         {...field}
                                                     />
                                                 </FormControl>
@@ -189,7 +189,7 @@ export default function OnboardingPage() {
                                                 <FormControl>
                                                     <Textarea
                                                         placeholder={tr.onboarding.form.usagePurpose.placeholder}
-                                                        className="min-h-[100px] bg-secondary/30 resize-none"
+                                                        className="min-h-[100px] bg-background resize-none"
                                                         {...field}
                                                     />
                                                 </FormControl>
@@ -213,7 +213,7 @@ export default function OnboardingPage() {
                                                         type="number"
                                                         min="1"
                                                         max="10000"
-                                                        className="h-11 bg-secondary/30"
+                                                        className="h-11 bg-background"
                                                         {...field}
                                                     />
                                                 </FormControl>

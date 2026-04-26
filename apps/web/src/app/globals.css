@@ -292,6 +292,12 @@
     transition-duration: 200ms;
   }
 
+  /* Radix UI portals use keyframe animations — block the * opacity transition from interfering */
+  [data-radix-popper-content-wrapper] *,
+  [data-radix-select-content] * {
+    transition-property: color, background-color, border-color, fill, stroke, box-shadow, transform;
+  }
+
   button:hover,
   a:hover {
     transition-duration: 150ms;
