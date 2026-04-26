@@ -308,8 +308,8 @@ export default function DashboardPage() {
                       className="flex items-center justify-between rounded-xl py-3 px-3 -mx-1 hover:bg-secondary/50 transition-colors group"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <span className="font-mono-data text-[13px] font-medium text-foreground">{b.isin_code}</span>
-                        <span className="text-[12px] text-muted-foreground truncate max-w-[240px]">{b.issuer ?? "—"}</span>
+                        <span className="font-mono-data text-[13px] font-medium text-foreground shrink-0">{b.isin_code}</span>
+                        <span className="text-[12px] text-muted-foreground truncate min-w-0">{b.issuer ?? "—"}</span>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="font-mono-data text-[13px] text-muted-foreground">
@@ -341,8 +341,8 @@ export default function DashboardPage() {
                       className="flex items-center justify-between rounded-xl py-3 px-3 -mx-1 hover:bg-secondary/50 transition-colors group"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <span className="font-mono-data text-[13px] font-medium text-foreground">{b.isin_code}</span>
-                        <span className="text-[12px] text-muted-foreground truncate max-w-[240px]">{b.issuer ?? "—"}</span>
+                        <span className="font-mono-data text-[13px] font-medium text-foreground shrink-0">{b.isin_code}</span>
+                        <span className="text-[12px] text-muted-foreground truncate min-w-0">{b.issuer ?? "—"}</span>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="font-mono-data text-[13px] text-positive font-medium">
