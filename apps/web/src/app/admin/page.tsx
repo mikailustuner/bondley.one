@@ -136,8 +136,8 @@ export default function AdminPage() {
       if (h.index_records) parts.push(tr.dashboard.admin.overview.operations.tlrefHistorical.replace("{count}", h.index_records.toString()));
       if (h.rates_computed) parts.push(tr.dashboard.admin.overview.operations.tlrefRates.replace("{count}", h.rates_computed.toString()));
       if (d.records) parts.push(tr.dashboard.admin.overview.operations.tlrefDaily.replace("{count}", d.records.toString()));
-      if (h.status === "error") parts.push(tr.dashboard.admin.overview.operations.tlrefHistError.replace("{error}", h.error));
-      if (d.status === "error") parts.push(tr.dashboard.admin.overview.operations.tlrefDailyError.replace("{error}", d.error));
+      if (h.status === "error") parts.push(tr.dashboard.admin.overview.operations.tlrefHistError.replace("{error}", h.error ?? ""));
+      if (d.status === "error") parts.push(tr.dashboard.admin.overview.operations.tlrefDailyError.replace("{error}", d.error ?? ""));
       setSyncMessage({
         type: h.status === "error" && d.status === "error" ? "error" : "success",
         text: parts.length ? parts.join(" | ") : tr.dashboard.admin.overview.operations.tlrefSuccess,
@@ -205,8 +205,8 @@ export default function AdminPage() {
       if (d.records) parts.push(tr.dashboard.admin.overview.operations.tlrefDaily.replace("{count}", d.records.toString()));
       if (b.bonds_upserted) parts.push(tr.dashboard.admin.overview.operations.bondsUpdated.replace("{count}", b.bonds_upserted.toString()));
       if (b.bonds_deactivated) parts.push(tr.dashboard.admin.overview.operations.bondsDeactivated.replace("{count}", b.bonds_deactivated.toString()));
-      if (h.status === "error") parts.push(tr.dashboard.admin.overview.operations.tlrefError.replace("{error}", h.error));
-      if (b.status === "error") parts.push(tr.dashboard.admin.overview.operations.bondsError.replace("{error}", b.error));
+      if (h.status === "error") parts.push(tr.dashboard.admin.overview.operations.tlrefError.replace("{error}", h.error ?? ""));
+      if (b.status === "error") parts.push(tr.dashboard.admin.overview.operations.bondsError.replace("{error}", b.error ?? ""));
       setSyncMessage({
         type: parts.some((p) => p.includes(tr.common.error.toLowerCase())) ? "error" : "success",
         text: parts.length ? parts.join(" | ") : tr.dashboard.admin.overview.operations.syncSuccess,
