@@ -19,6 +19,7 @@ services:
     depends_on:
       - web
       - api
+      - api-2
     networks:
       - frontend
       - backend
@@ -38,6 +39,10 @@ services:
     image: postgres:16-alpine
     container_name: fincalc-postgres
     restart: unless-stopped
+    command: >
+      postgres
+      -c max_connections=150
+      -c shared_buffers=256MB
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -128,6 +133,74 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - ./sirket_kap_idleri.csv:/data/sirket_kap_idleri.csv:ro
+    networks:
+      - frontend
+      - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+
+  api-2:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: fincalc-api-2
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      JWT_REFRESH_TOKEN_EXPIRE_DAYS: ${JWT_REFRESH_TOKEN_EXPIRE_DAYS:-30}
+      JWT_REFRESH_SECRET_KEY: ${JWT_REFRESH_SECRET_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@fincalc.com}
+      ADMIN_INIT_PASSWORD: ${ADMIN_INIT_PASSWORD:-}
+      RUN_MIGRATIONS: "false"
+      MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:-}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      RATE_LIMIT_LOGIN_PER_MINUTE: ${RATE_LIMIT_LOGIN_PER_MINUTE:-5}
+      RATE_LIMIT_SIGNUP_PER_HOUR: ${RATE_LIMIT_SIGNUP_PER_HOUR:-3}
+      BIST_TLREF_DAILY_URL: https://borsaistanbul.com/datum/bisttlrefendeksi.csv
+      BIST_TLREF_HISTORICAL_URL: https://borsaistanbul.com/datum/BISTTLREFENDEKSI_D.zip
+      BIST_BOND_LIST_URL: https://borsaistanbul.com/datum/tbliste.zip
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      FRONTEND_URL: ${FRONTEND_URL}
+      PROJECT_NAME: ${PROJECT_NAME}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
         condition: service_healthy
     dns:
       - 8.8.8.8
