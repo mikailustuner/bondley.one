@@ -6,6 +6,54 @@ Tüm önemli değişiklikler bu dosyada belgelenir. Format [Keep a Changelog](ht
 
 ---
 
+## [1.2.5] — 2026-04-26
+
+### 🏗️ Altyapı
+
+#### Yatay Ölçeklendirme (Adım 1)
+- `docker-compose.prod.yml`'e `api-2` servisi eklendi; `RUN_MIGRATIONS: "false"` ile Alembic race condition önlendi, `depends_on: api: condition: service_healthy` ile sıralı başlatma garanti altına alındı
+- Nginx upstream bloğu eklendi: `api` ve `api-2` arasında round-robin yük dağılımı; `max_fails=3 fail_timeout=30s` ile otomatik failover, `keepalive 16` ile bağlantı yeniden kullanımı
+- PostgreSQL `max_connections=150`, `shared_buffers=256MB` ile 8 GB GCP VM'e göre optimize edildi
+
+### 🔒 Güvenlik
+
+- **MFA Yedek Kodları:** SHA256 → bcrypt geçişi yapıldı; random salt nedeniyle DB'de hash ile sorgulama yerine fetch-all + `checkpw` akışı uygulandı; mevcut SHA256 kodlar için şeffaf fallback koruması eklendi
+- **Rate Limiting:** `/calculations/run` → 10 istek/dakika, `/calculations/run-all` → 3 istek/dakika limitleri getirildi (CPU yoğun endpoint'ler)
+- **Admin Sorgu Doğrulama:** `action` (max 50), `resource_type` (max 50), `resource_id` (max 100) parametrelerine `max_length` kısıtlaması eklendi
+
+### 🐛 Hata Düzeltmeleri
+
+#### Mobil Dikey Kaydırma Kırık
+- **Kök neden:** `html` elementindeki `overflow-x: hidden` kuralı iOS ve Android'de yeni bir scroll container oluşturuyordu; dikey kaydırma tamamen çalışmaz hale geliyordu
+- `html {}` bloğundaki kural kaldırıldı; `body` üzerindeki `overflow-x: hidden` korundu
+
+#### Dashboard Kart Taşması (Mobil)
+- "Vadesi Yaklaşan" ve "Yüksek Getiri" listelerinde ISIN span'ı `shrink-0`, ihraçcı span'ı `truncate min-w-0` yapıldı; `max-w-[240px]` sabit genişlik kaldırıldı — dar ekranlarda sağa taşma giderildi
+
+#### Onboarding Form Okunurluğu
+- SelectTrigger, Input ve Textarea alanlarındaki `bg-secondary/30` (aşırı şeffaf) → `bg-background` olarak değiştirildi
+- Radix UI Select açılır menüsünün CSS `*` opacity geçiş kuralıyla çakışması giderildi: `backdrop-filter-none will-change-auto` + portal selector override eklendi
+
+#### Admin Senkronizasyon Mesajları
+- `SyncStatus.error` alanının `string | undefined` olması nedeniyle `.replace()` çağrısında oluşan TypeScript hatası `?? ""` fallback ile düzeltildi
+
+### 🔧 İyileştirmeler
+
+#### Tip Güvenliği (`api-client.ts`)
+- `SyncStatus` arayüzü eklendi: tüm senkronizasyon yanıt alanları (`status`, `error`, `index_records`, `rates_computed`, `records`, `bonds_upserted`, `bonds_deactivated`) optional olarak tanımlandı
+- `signup`, `refresh`, `updateProfile`, `changeEmail`, `updateUser`, `updateUserRole`, `updateUserStatus` → `any` → `UserMe`
+- `syncAll` ve `syncNow` → tam tip ile döndürülüyor
+- `triggerSentryError` → `apiFetch<{ error?: string }>`
+
+#### Alt Navigasyon Kaldırıldı
+- Dashboard mobil layout'undan `BottomNav` bileşeni çıkarıldı; dar ekranlarda gereksiz yer kaplayan navigasyon çubuğu giderildi
+
+### 🗑️ Kaldırılanlar
+
+- **Admin Sistem Logları:** Yüksek sunucu yükü nedeniyle log görüntüleme bölümü tamamen kaldırıldı — `/admin/logs` sayfası silindi, navbar linki çıkarıldı, `getLogs` / `getLogDetail` / `getLogStats` API metodları temizlendi. Backend log yazımı bozulmadı.
+
+---
+
 ## [1.2.4] — 2026-04-25
 
 ### 🚀 Yeni Özellikler
