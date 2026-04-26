@@ -166,9 +166,10 @@ export default function AnalyticsPage() {
             <circle
               cx={cx}
               cy={cy}
-              r={3.5}
+              r={5}
               fill={DOT_COLOR[classify(payload)]}
-              opacity={0.75}
+              stroke="hsl(var(--card))"
+              strokeWidth={1.5}
             />
           );
         };
