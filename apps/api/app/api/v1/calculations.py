@@ -1,7 +1,7 @@
 import logging
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +12,7 @@ from app.models.user import User
 from app.schemas.calculation import CalculationResponse, CalculationRequest
 from app.services.market_data_service import MarketDataService
 from app.api.deps import get_current_user
+from app.core.rate_limit import limiter
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -44,18 +45,20 @@ async def get_calculations(
 
 
 @router.post("/run", response_model=dict)
+@limiter.limit("10/minute")
 async def trigger_calculation(
-    request: CalculationRequest,
+    request: Request,
+    body: CalculationRequest,
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
-    bond_result = await db.execute(select(Bond).where(Bond.id == request.bond_id))
+    bond_result = await db.execute(select(Bond).where(Bond.id == body.bond_id))
     bond = bond_result.scalar_one_or_none()
     if not bond:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bond not found")
 
     service = MarketDataService(db)
-    calc_date = request.calc_date or date.today()
+    calc_date = body.calc_date or date.today()
 
     from sqlalchemy import select as sa_select
     from app.models.market_data import MarketData
@@ -91,7 +94,9 @@ async def trigger_calculation(
 
 
 @router.post("/run-all", response_model=dict)
+@limiter.limit("3/minute")
 async def trigger_all_calculations(
+    request: Request,
     calc_date: date | None = None,
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),

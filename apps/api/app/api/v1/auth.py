@@ -53,6 +53,7 @@ from app.core.security import (
     generate_totp_secret,
     get_totp_uri,
     hash_backup_code,
+    verify_backup_code,
 )
 
 router = APIRouter()
@@ -465,15 +466,16 @@ async def mfa_verify(data: MfaVerifyRequest, db: AsyncSession = Depends(get_db))
         if secret and len(data.code) == 6 and verify_totp(secret, data.code):
             verified = True
     if not verified:
-        code_hash = hash_backup_code(data.code)
         backup_result = await db.execute(
             select(UserMfaBackupCode).where(
                 UserMfaBackupCode.user_id == user.id,
-                UserMfaBackupCode.code_hash == code_hash,
                 UserMfaBackupCode.used_at.is_(None),
             )
         )
-        backup = backup_result.scalar_one_or_none()
+        backup = next(
+            (b for b in backup_result.scalars().all() if verify_backup_code(data.code, b.code_hash)),
+            None,
+        )
         if backup:
             from datetime import datetime, timezone
             backup.used_at = datetime.now(timezone.utc)

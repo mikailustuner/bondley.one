@@ -69,7 +69,17 @@ def get_totp_uri(secret: str, email: str, issuer: str = "FinCalc") -> str:
 
 
 def hash_backup_code(code: str) -> str:
-    return hashlib.sha256(code.encode("utf-8")).hexdigest()
+    return bcrypt.hashpw(code.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def verify_backup_code(code: str, stored_hash: str) -> bool:
+    # bcrypt hashes start with $2b$ / $2a$; SHA256 hashes are 64-char hex
+    try:
+        if stored_hash.startswith("$2"):
+            return bcrypt.checkpw(code.encode("utf-8"), stored_hash.encode("utf-8"))
+    except Exception:
+        pass
+    return hashlib.sha256(code.encode("utf-8")).hexdigest() == stored_hash
 
 # bcrypt max 72 bytes; UTF-8 ile kesiyoruz (passlib kullanmiyoruz, uyumluluk hatasi onlendi)
 BCRYPT_MAX_PASSWORD_BYTES = 72

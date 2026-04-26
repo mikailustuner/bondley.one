@@ -296,6 +296,16 @@ export interface YieldCurvePoint {
   security_type: string | null;
 }
 
+export interface SyncStatus {
+  status?: string;
+  error?: string;
+  index_records?: number;
+  rates_computed?: number;
+  records?: number;
+  bonds_upserted?: number;
+  bonds_deactivated?: number;
+}
+
 export interface BondNote {
   isin_code: string;
   note_text: string;
@@ -344,13 +354,13 @@ export const api = {
       location: string;
       privacy_policy_accepted: boolean;
     }) =>
-      apiFetch<{ access_token: string; refresh_token: string; user: any }>("/auth/signup", {
+      apiFetch<{ access_token: string; refresh_token: string; user: UserMe }>("/auth/signup", {
         method: "POST",
         body: JSON.stringify(data),
         skipRefresh: true,
       }),
     refresh: (refreshToken: string) =>
-      apiFetch<{ access_token: string; refresh_token: string; user: any }>("/auth/refresh", {
+      apiFetch<{ access_token: string; refresh_token: string; user: UserMe }>("/auth/refresh", {
         method: "POST",
         body: JSON.stringify({ refresh_token: refreshToken }),
         skipRefresh: true,
@@ -391,7 +401,7 @@ export const api = {
         body: JSON.stringify({ password }),
       }),
     updateProfile: (token: string, data: { full_name?: string; company?: string; location?: string }) =>
-      apiFetch<any>("/auth/me", {
+      apiFetch<UserMe>("/auth/me", {
         method: "PUT",
         token,
         body: JSON.stringify(data),
@@ -414,7 +424,7 @@ export const api = {
         body: JSON.stringify(data),
       }),
     changeEmail: (token: string, data: { new_email: string }) =>
-      apiFetch<any>("/auth/change-email", {
+      apiFetch<UserMe>("/auth/change-email", {
         method: "POST",
         token,
         body: JSON.stringify(data),
@@ -480,23 +490,23 @@ export const api = {
       }>("/admin/data-health", { token }),
     publicSummary: () => apiFetch<PublicSummary>("/system/public-summary"),
     syncAll: (token: string) =>
-      apiFetch<{ tlref_historical: any; tlref_daily: any; bonds: any }>("/admin/sync-all", {
+      apiFetch<{ tlref_historical: SyncStatus; tlref_daily: SyncStatus; bonds: SyncStatus }>("/admin/sync-all", {
         method: "POST",
         token,
       }),
     updateUser: (token: string, userId: number, data: { full_name?: string; company?: string; location?: string }) =>
-      apiFetch<any>(`/admin/users/${userId}`, {
+      apiFetch<UserMe>(`/admin/users/${userId}`, {
         method: "PUT",
         token,
         body: JSON.stringify(data),
       }),
     updateUserRole: (token: string, userId: number, role: string) =>
-      apiFetch<any>(`/admin/users/${userId}/role?role=${role}`, {
+      apiFetch<UserMe>(`/admin/users/${userId}/role?role=${role}`, {
         method: "PUT",
         token,
       }),
     updateUserStatus: (token: string, userId: number, is_active: boolean) =>
-      apiFetch<any>(`/admin/users/${userId}/status?is_active=${is_active}`, {
+      apiFetch<UserMe>(`/admin/users/${userId}/status?is_active=${is_active}`, {
         method: "PUT",
         token,
       }),
@@ -543,7 +553,7 @@ export const api = {
           request_method: string | null;
           request_path: string | null;
           status_code: number | null;
-          details: any;
+          details: Record<string, unknown> | null;
           created_at: string;
         }>;
         total: number;
@@ -552,7 +562,20 @@ export const api = {
       }>(`/admin/logs?${query}`, { token });
     },
     getLogDetail: (token: string, logId: number) =>
-      apiFetch<any>(`/admin/logs/${logId}`, { token }),
+      apiFetch<{
+        id: number;
+        user_id: number | null;
+        action: string;
+        resource_type: string | null;
+        resource_id: string | null;
+        ip_address: string | null;
+        user_agent: string | null;
+        request_method: string | null;
+        request_path: string | null;
+        status_code: number | null;
+        details: Record<string, unknown> | null;
+        created_at: string;
+      }>(`/admin/logs/${logId}`, { token }),
     getLogStats: (token: string, params?: { start_date?: string; end_date?: string }) => {
       const query = new URLSearchParams();
       if (params?.start_date) query.set("start_date", params.start_date);
@@ -605,7 +628,7 @@ export const api = {
       }>(`/admin/metrics/overview?${query}`, { token });
     },
     triggerSentryError: (token: string) =>
-      apiFetch<any>("/admin/sentry-debug", { token }),
+      apiFetch<{ error?: string }>("/admin/sentry-debug", { token }),
   },
 
   bonds: {
@@ -718,7 +741,7 @@ export const api = {
     },
     stats: (token: string) => apiFetch<TLREFStats>("/tlref/stats", { token }),
     syncNow: (token: string) =>
-      apiFetch<{ historical: any; daily: any }>("/tlref/sync-now", { method: "POST", token }),
+      apiFetch<{ historical: SyncStatus; daily: SyncStatus }>("/tlref/sync-now", { method: "POST", token }),
   },
 
   metrics: {
