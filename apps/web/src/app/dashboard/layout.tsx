@@ -27,7 +27,6 @@ import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 import { tr } from "@/locales/tr";
 import { APP_VERSION } from "@/lib/constants";
-import { BottomNav } from "@/components/bottom-nav";
 
 const NAV_SECTIONS = [
   {
@@ -246,7 +245,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         </div>
 
-        <main className="flex-1 px-6 lg:px-10 pt-8 pb-8 mobile-main-pb max-w-[1200px] mx-auto w-full">
+        <main className="flex-1 px-6 lg:px-10 pt-8 pb-8 max-w-[1200px] mx-auto w-full">
           {user && user.is_email_verified === false && (
             <Alert variant="destructive" className="bg-destructive/5 border-destructive/15 text-destructive flex items-center justify-between rounded-2xl mb-6">
               <div className="flex items-center gap-3">
@@ -275,7 +274,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {children}
           </div>
         </main>
-        <BottomNav />
       </div>
     </div>
   );

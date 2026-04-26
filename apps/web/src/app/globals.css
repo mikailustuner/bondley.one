@@ -94,7 +94,6 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    overflow-x: hidden;
   }
 
   body {
@@ -361,21 +360,9 @@
     }
   }
 
-  /* ═══ Mobile bottom-nav spacer ═══ */
-  @media (max-width: 1023px) {
-    .mobile-main-pb {
-      padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
-    }
-  }
-
-  /* ═══ Notes FAB — above bottom nav on mobile, free-floating on desktop ═══ */
+  /* ═══ Notes FAB ═══ */
   .notes-fab {
-    bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px) + 1rem);
-  }
-  @media (min-width: 1024px) {
-    .notes-fab {
-      bottom: 2rem;
-    }
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem);
   }
 
   /* ═══ Notes panel — frosted glass ═══ */
