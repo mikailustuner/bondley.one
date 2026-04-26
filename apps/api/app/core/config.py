@@ -95,12 +95,17 @@ class Settings(BaseSettings):
         if self.ENVIRONMENT != "production":
             return
         weak_jwt = "your-super-secret-key-change-in-production"
+        weak_refresh = "your-refresh-secret-key-change-in-production"
         weak_db = "fincalc_secret"
         errors = []
         if self.JWT_SECRET_KEY == weak_jwt or not (self.JWT_SECRET_KEY and len(self.JWT_SECRET_KEY) >= 32):
             errors.append("JWT_SECRET_KEY must be set and at least 32 characters in production")
+        if self.JWT_REFRESH_SECRET_KEY == weak_refresh or not (self.JWT_REFRESH_SECRET_KEY and len(self.JWT_REFRESH_SECRET_KEY) >= 32):
+            errors.append("JWT_REFRESH_SECRET_KEY must be set and at least 32 characters in production")
         if self.POSTGRES_PASSWORD == weak_db:
             errors.append("POSTGRES_PASSWORD must be changed from default in production")
+        if not self.MFA_ENCRYPTION_KEY:
+            errors.append("MFA_ENCRYPTION_KEY must be set in production")
         if errors:
             raise ValueError("Production config invalid: " + "; ".join(errors))
 
