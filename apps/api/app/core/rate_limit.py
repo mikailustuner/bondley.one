@@ -8,6 +8,12 @@ limiter = Limiter(key_func=get_remote_address)
 _settings = get_settings()
 
 
+def _limit(count: int, period: str) -> str:
+    if not _settings.RATE_LIMIT_ENABLED:
+        return "10000/minute"
+    return f"{count}/{period}"
+
+
 def _login_limit_str() -> str:
     if not _settings.RATE_LIMIT_ENABLED:
         return "10000/minute"
@@ -23,3 +29,8 @@ def _signup_limit_str() -> str:
 # For @limiter.limit(): use string so limit is fixed at first request (config is read once)
 login_limit = _login_limit_str()
 signup_limit = _signup_limit_str()
+change_password_limit = _limit(5, "minute")
+change_email_limit = _limit(3, "minute")
+verify_email_limit = _limit(10, "minute")
+resend_verification_limit = _limit(5, "hour")
+mfa_verify_limit = _limit(10, "minute")

@@ -4,7 +4,16 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.rate_limit import limiter, login_limit, signup_limit
+from app.core.rate_limit import (
+    limiter,
+    login_limit,
+    signup_limit,
+    change_password_limit,
+    change_email_limit,
+    verify_email_limit,
+    resend_verification_limit,
+    mfa_verify_limit,
+)
 from app.core.security import (
     hash_password,
     verify_password,
@@ -41,8 +50,11 @@ from app.schemas.user import (
     EmailVerificationRequest,
     ResendVerificationRequest,
 )
+import hashlib
+
 from app.core.config import get_settings
 from app.core.email import send_verification_email
+from app.core.cache import cache_get, cache_set
 from app.api.deps import get_current_user, get_admin_user
 
 settings = get_settings()
@@ -233,7 +245,9 @@ async def complete_onboarding(
     return UserResponse.model_validate(user)
 
 @router.post("/change-password", status_code=status.HTTP_200_OK)
+@limiter.limit(change_password_limit)
 async def change_password(
+    request: Request,
     data: PasswordChange,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -254,7 +268,9 @@ async def change_password(
 
 
 @router.post("/change-email", response_model=UserResponse)
+@limiter.limit(change_email_limit)
 async def change_email(
+    request: Request,
     data: EmailChange,
     background_tasks: BackgroundTasks,
     user: User = Depends(get_current_user),
@@ -283,7 +299,9 @@ async def change_email(
     return UserResponse.model_validate(user)
 
 @router.post("/verify-email", status_code=status.HTTP_200_OK)
+@limiter.limit(verify_email_limit)
 async def verify_email(
+    request: Request,
     data: EmailVerificationRequest,
     db: AsyncSession = Depends(get_db),
 ):
@@ -312,7 +330,9 @@ async def verify_email(
     return {"message": "E-posta başarıyla doğrulandı."}
 
 @router.post("/resend-verification", status_code=status.HTTP_200_OK)
+@limiter.limit(resend_verification_limit)
 async def resend_verification(
+    request: Request,
     data: ResendVerificationRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
@@ -360,16 +380,15 @@ async def refresh_token(data: RefreshTokenRequest, db: AsyncSession = Depends(ge
     # Create new access token
     access_token = create_access_token(data={"sub": str(user.id), "role": user.role})
 
-    # Optionally create a new refresh token (token rotation - more secure)
-    # For now, we'll reuse the same refresh token
-    # new_refresh_token = await create_refresh_token(user.id, db)
-    # await revoke_refresh_token(data.refresh_token, db)
+    # Token rotation: revoke old refresh token, issue a new one
+    new_refresh_token = await create_refresh_token(user.id, db)
+    await revoke_refresh_token(data.refresh_token, db)
 
     await db.commit()
 
     return TokenResponse(
         access_token=access_token,
-        refresh_token=data.refresh_token,  # Return same token (or new_refresh_token if rotating)
+        refresh_token=new_refresh_token,
         user=UserResponse.model_validate(user),
     )
 
@@ -450,10 +469,15 @@ async def mfa_confirm(
 
 
 @router.post("/mfa/verify", response_model=TokenResponse)
-async def mfa_verify(data: MfaVerifyRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit(mfa_verify_limit)
+async def mfa_verify(request: Request, data: MfaVerifyRequest, db: AsyncSession = Depends(get_db)):
     """Exchange mfa_token + TOTP or backup code for access and refresh tokens."""
     payload = decode_access_token(data.mfa_token)
     if not payload or not payload.get("mfa_pending") or not payload.get("sub"):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Geçersiz veya süresi dolmuş mfa_token")
+
+    mfa_token_key = "mfa_used:" + hashlib.sha256(data.mfa_token.encode()).hexdigest()
+    if await cache_get(mfa_token_key):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Geçersiz veya süresi dolmuş mfa_token")
     user_id = int(payload["sub"])
     result = await db.execute(select(User).where(User.id == user_id))
@@ -482,6 +506,7 @@ async def mfa_verify(data: MfaVerifyRequest, db: AsyncSession = Depends(get_db))
             verified = True
     if not verified:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Geçersiz kod")
+    await cache_set(mfa_token_key, "1", ttl=120)
     access_token = create_access_token(data={"sub": str(user.id), "role": user.role})
     refresh_token = await create_refresh_token(user.id, db)
     await db.commit()

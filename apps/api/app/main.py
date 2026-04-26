@@ -115,11 +115,12 @@ async def lifespan(app: FastAPI):
     yield
 
 
+_is_production = settings.ENVIRONMENT == "production"
 app = FastAPI(
     title=settings.PROJECT_NAME,
     lifespan=lifespan,
-    docs_url="/api/docs",
-    openapi_url="/api/openapi.json",
+    docs_url=None if _is_production else "/api/docs",
+    openapi_url=None if _is_production else "/api/openapi.json",
 )
 app.state.limiter = limiter
 
