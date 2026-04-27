@@ -298,7 +298,7 @@ export default function DashboardPage() {
       )}
 
       {/* ═══ Lists: Soon Maturing + High Yield + High Spread ═══ */}
-      {(soonMaturing.length > 0 || highYield.length > 0 || highSpread.length > 0 || highSpreadLoading) && (
+      {(soonMaturing.length > 0 || highYield.length > 0) && (
         <div className="grid gap-5 lg:grid-cols-2 animate-fade-up-delay-1">
           {soonMaturing.length > 0 && (
             <Card>
