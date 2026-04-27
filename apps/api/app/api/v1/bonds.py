@@ -84,16 +84,21 @@ async def list_bonds(
             .group_by(Calculation.bond_id)
             .subquery()
         )
-        # Bond ile Calculation'ı eşleştir
+        # 1. Alt sorguyu Bond ile birleştir (anon_1 hatasını çözer)
+        query = query.outerjoin(
+            latest_calc_sub, Bond.id == latest_calc_sub.c.bond_id
+        )
+        # 2. Calculation tablosunu hem bond_id hem de en son tarih üzerinden birleştir
         query = query.outerjoin(
             Calculation,
             (Bond.id == Calculation.bond_id) & 
             (Calculation.calc_date == latest_calc_sub.c.max_date)
         )
-        # Not: count_query için join'e gerek yok çünkü Bond sayısını sayıyoruz, 
-        # ancak filtreleme varsa count_query'ye de join eklemeliyiz.
+        
         if min_spread is not None:
             count_query = count_query.outerjoin(
+                latest_calc_sub, Bond.id == latest_calc_sub.c.bond_id
+            ).outerjoin(
                 Calculation,
                 (Bond.id == Calculation.bond_id) & 
                 (Calculation.calc_date == latest_calc_sub.c.max_date)
