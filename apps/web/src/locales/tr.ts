@@ -328,7 +328,7 @@ export const tr = {
                 annualizedRate: "Yıllık Bileşik",
                 annualizedRateDesc: "Bileşik yıllık oran",
                 activeBonds: "Aktif Araç",
-                avgMaturity: "Ort. vade: {days} gün",
+                avgMaturity: "Ortalama vade: {days} gün",
                 bondsDesc: "Borçlanma araçları",
                 noRateData: "Oran verisi bulunmuyor",
             },
@@ -383,7 +383,7 @@ export const tr = {
             stats: {
                 total: "Toplam Araç",
                 totalDesc: "Aktif kayıt",
-                avgMaturity: "Ort. Vade",
+                avgMaturity: "Ortalama Vade",
                 avgMaturityDesc: "Kalan gün",
                 currency: "Para Birimi",
                 currencyDesc: "{count} farklı döviz",
@@ -785,7 +785,7 @@ export const tr = {
             loading: "Analiz verileri yükleniyor...",
             stats: {
                 totalReturn: "Toplam Getiri",
-                avgDaily: "Ort. Günlük",
+                avgDaily: "Ortalama Günlük",
                 min: "En Düşük",
                 max: "En Yüksek",
                 cumulative: "Kümülatif",
