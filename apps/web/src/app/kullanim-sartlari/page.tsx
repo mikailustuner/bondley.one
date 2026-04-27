@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Kullanım Şartları – Bondley",
+  title: "Kullanım Şartları",
   description:
     "Bondley platformunun kullanımına ilişkin temel kurallar, kullanıcı hakları ve sorumlulukları ile hizmet şartları.",
+  alternates: { canonical: "https://bondley.one/kullanim-sartlari" },
 };
 
 export default function TermsOfServicePage() {

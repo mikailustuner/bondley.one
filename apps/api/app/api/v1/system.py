@@ -109,3 +109,57 @@ async def get_public_summary(db: AsyncSession = Depends(get_db)):
         "total_bonds": total_bonds,
         "upcoming_bonds": upcoming_bonds,
     }
+
+
+@router.get("/public-bonds")
+async def get_public_bonds(
+    db: AsyncSession = Depends(get_db),
+    limit: int = 1000,
+):
+    """Auth gerektirmez: sitemap ve public tahvil sayfaları için liste."""
+    today = date.today()
+    result = await db.execute(
+        select(Bond)
+        .where(Bond.is_active == True, Bond.maturity_date >= today)
+        .order_by(Bond.updated_at.desc())
+        .limit(min(limit, 2000))
+    )
+    bonds = result.scalars().all()
+    return [
+        {
+            "isin_code": b.isin_code,
+            "issuer": b.issuer,
+            "security_type": b.security_type,
+            "yield_type": b.yield_type,
+            "currency": b.currency,
+            "maturity_date": b.maturity_date.isoformat() if b.maturity_date else None,
+            "coupon_frequency": b.coupon_frequency,
+            "updated_at": b.updated_at.isoformat() if b.updated_at else None,
+        }
+        for b in bonds
+    ]
+
+
+@router.get("/public-bonds/{isin}")
+async def get_public_bond(isin: str, db: AsyncSession = Depends(get_db)):
+    """Auth gerektirmez: tek tahvil temel bilgisi."""
+    from fastapi import HTTPException, status as http_status
+    result = await db.execute(
+        select(Bond).where(Bond.isin_code == isin, Bond.is_active == True)
+    )
+    bond = result.scalar_one_or_none()
+    if bond is None:
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Bond not found")
+    return {
+        "isin_code": bond.isin_code,
+        "issuer": bond.issuer,
+        "security_type": bond.security_type,
+        "yield_type": bond.yield_type,
+        "currency": bond.currency,
+        "maturity_date": bond.maturity_date.isoformat() if bond.maturity_date else None,
+        "coupon_frequency": bond.coupon_frequency,
+        "first_issue_date": bond.first_issue_date.isoformat() if bond.first_issue_date else None,
+        "total_issue_amount": float(bond.total_issue_amount) if bond.total_issue_amount else None,
+        "next_coupon_date": bond.next_coupon_date.isoformat() if bond.next_coupon_date else None,
+        "updated_at": bond.updated_at.isoformat() if bond.updated_at else None,
+    }

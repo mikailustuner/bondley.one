@@ -1,9 +1,10 @@
-import { tr } from "@/locales/tr";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: `${tr.auth.login.title} — ${tr.common.brand}`,
-  description: `${tr.common.brand} ${tr.auth.login.subtitle.toLowerCase()}`,
+  title: "Giriş Yap",
+  description:
+    "Bondley hesabınıza giriş yapın. Türkiye tahvil ve bono piyasasında YTM, kirly fiyat ve spread analizi yapın.",
+  alternates: { canonical: "https://bondley.one/login" },
 };
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {

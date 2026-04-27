@@ -7,8 +7,20 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/landing", "/login", "/signup", "/gizlilik", "/kullanim-sartlari", "/iletisim"],
-        disallow: ["/dashboard/", "/admin/", "/api/", "/_next/"],
+        allow: [
+          "/",
+          "/landing",
+          "/login",
+          "/signup",
+          "/gizlilik",
+          "/kullanim-sartlari",
+          "/iletisim",
+          "/sss",
+          "/sozluk",
+          "/tahvil",
+          "/tahvil/",
+        ],
+        disallow: ["/dashboard/", "/admin/", "/api/", "/_next/", "/onboarding"],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,

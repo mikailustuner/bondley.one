@@ -3,8 +3,10 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const metadata: Metadata = {
-  title: "İletişim — Bondley",
-  description: "Bondley iletişim bilgileri",
+  title: "İletişim",
+  description:
+    "Bondley ekibiyle iletişime geçin. Soru, öneri veya destek talepleriniz için e-posta yoluyla bize ulaşabilirsiniz.",
+  alternates: { canonical: "https://bondley.one/iletisim" },
 };
 
 export default function IletisimPage() {

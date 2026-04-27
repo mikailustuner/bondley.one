@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Gizlilik ve Çerez Politikası – Bondley",
+  title: "Gizlilik ve Çerez Politikası",
   description:
     "Bondley gizlilik politikası, kişisel verilerin korunması, çerez kullanımı ve KVKK uyumluluğu hakkında detaylı bilgi.",
+  alternates: { canonical: "https://bondley.one/gizlilik" },
 };
 
 export default function PrivacyPolicyPage() {
