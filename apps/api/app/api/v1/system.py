@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 from sqlalchemy import or_
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -114,7 +114,7 @@ async def get_public_summary(db: AsyncSession = Depends(get_db)):
 @router.get("/public-bonds")
 async def get_public_bonds(
     db: AsyncSession = Depends(get_db),
-    limit: int = 1000,
+    limit: int = Query(default=1000, ge=1, le=2000),
 ):
     """Auth gerektirmez: sitemap ve public tahvil sayfaları için liste."""
     today = date.today()
@@ -122,7 +122,7 @@ async def get_public_bonds(
         select(Bond)
         .where(Bond.is_active == True, Bond.maturity_date >= today)
         .order_by(Bond.updated_at.desc())
-        .limit(min(limit, 2000))
+        .limit(limit)
     )
     bonds = result.scalars().all()
     return [
@@ -143,13 +143,13 @@ async def get_public_bonds(
 @router.get("/public-bonds/{isin}")
 async def get_public_bond(isin: str, db: AsyncSession = Depends(get_db)):
     """Auth gerektirmez: tek tahvil temel bilgisi."""
-    from fastapi import HTTPException, status as http_status
+    today = date.today()
     result = await db.execute(
-        select(Bond).where(Bond.isin_code == isin, Bond.is_active == True)
+        select(Bond).where(Bond.isin_code == isin, Bond.is_active == True, Bond.maturity_date >= today)
     )
     bond = result.scalar_one_or_none()
     if bond is None:
-        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Bond not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bond not found")
     return {
         "isin_code": bond.isin_code,
         "issuer": bond.issuer,
