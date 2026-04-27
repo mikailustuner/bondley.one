@@ -60,30 +60,42 @@ def parse_coupon_frequency(coupon_frequency: str | None, bond: "Bond" = None) ->
         isin = str(bond.isin_code).upper() if bond.isin_code else ""
         
         # IMPROVEMENT 1: Use distance between issue and next coupon as a clue
+        # This handles long-term bonds in their last period correctly by detecting the cycle multiple.
         if bond.next_coupon_date and bond.first_issue_date:
             diff = (bond.next_coupon_date - bond.first_issue_date).days
             if diff > 0:
-                # Check for quarterly (~91 days)
+                # Check for quarterly (~91 days) or multiples thereof
                 if diff % 91 < 5 or diff % 91 > 86:
                     return 91, 4
-                # Check for semi-annual (~182 days)
+                # Check for semi-annual (~182 days) or multiples thereof
                 if diff % 182 < 10 or diff % 182 > 172:
                     return 182, 2
                 # Check for monthly or irregular high-freq (15-45 days)
                 if 15 <= diff <= 45:
                     implied_freq = round(365 / diff)
                     return diff, implied_freq
+
+        # IMPROVEMENT 0: Definitive Single Coupon Check
+        # If the next coupon date is not before maturity, and we didn't match a cycle above,
+        # it is a single coupon bond (Bono/Bill/Sukuk).
+        if bond.next_coupon_date and bond.maturity_date and bond.next_coupon_date >= bond.maturity_date:
+            return -1, 1
+        
+        # If next_coupon is missing, use prefix and duration as fallback for single coupon
+        if not bond.next_coupon_date:
+            if (isin.startswith("TRF") or isin.startswith("TRB") or isin.startswith("TRD")) and (0 < total_days < 400):
+                return -1, 1
         
         # IMPROVEMENT 2: If we have a next_coupon_date that is before maturity, 
         # it CANNOT be a single coupon bond.
         if bond.next_coupon_date and bond.maturity_date and bond.next_coupon_date < bond.maturity_date:
             # If freq is not known, assume quarterly for short/mid term, semi-annual for long
-            if total_days <= 550: # Increased from 400 to catch more corporate bonds
+            if total_days <= 550:
                 return 91, 4
             return 182, 2
 
-        # Bono (Bill) teshisi: TRF veya TRB ile basliyorsa ve vadesi 155 gunden azsa
-        if (isin.startswith("TRF") or isin.startswith("TRB")) and (0 < total_days < 155):
+        # Bono/Sukuk Fallback (tight bound)
+        if (isin.startswith("TRF") or isin.startswith("TRB") or isin.startswith("TRD")) and (0 < total_days < 155):
             return -1, 1
             
         if 0 < total_days <= 550:
