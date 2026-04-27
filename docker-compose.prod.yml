@@ -5,7 +5,7 @@ services:
     build:
       context: ./nginx
       dockerfile: Dockerfile
-    image: fincalc-nginx:latest
+    image: ghcr.io/mikailustuner/fincalc-nginx:latest
     container_name: fincalc-nginx
     restart: unless-stopped
     ports:
@@ -97,6 +97,7 @@ services:
     build:
       context: ./apps/api
       dockerfile: Dockerfile
+    image: ghcr.io/mikailustuner/fincalc-api:latest
     container_name: fincalc-api
     restart: unless-stopped
     environment:
@@ -163,6 +164,7 @@ services:
     build:
       context: ./apps/api
       dockerfile: Dockerfile
+    image: ghcr.io/mikailustuner/fincalc-api:latest
     container_name: fincalc-api-2
     restart: unless-stopped
     environment:
@@ -231,6 +233,7 @@ services:
     build:
       context: ./apps/api
       dockerfile: Dockerfile
+    image: ghcr.io/mikailustuner/fincalc-api:latest
     container_name: fincalc-celery-worker
     restart: unless-stopped
     command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2
@@ -276,6 +279,7 @@ services:
     build:
       context: ./apps/api
       dockerfile: Dockerfile
+    image: ghcr.io/mikailustuner/fincalc-api:latest
     container_name: fincalc-celery-beat
     restart: unless-stopped
     command: celery -A app.tasks.celery_app beat --loglevel=info --pidfile=/tmp/celerybeat.pid --schedule=/tmp/celerybeat-schedule
@@ -325,6 +329,7 @@ services:
         NEXT_PUBLIC_API_URL: https://${DOMAIN}/api/v1
         NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
         SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN:-}
+    image: ghcr.io/mikailustuner/fincalc-web:latest
     container_name: fincalc-web
     restart: unless-stopped
     environment:
