@@ -130,13 +130,83 @@ def _str_val(val) -> str | None:
     return str(val).strip()
 
 
+async def apply_kap_data_to_bond(db: AsyncSession, bond: Bond, kap_data: dict) -> bool:
+    """
+    KAP verilerini Bond modeline uygula (BIST verisini ez).
+    """
+    changed = False
+    
+    # 1. Tarihleri Guncelle (KAP her zaman daha dogrudur)
+    kap_maturity = kap_data.get("maturity_date")
+    if kap_maturity:
+        try:
+            k_mat = date.fromisoformat(kap_maturity)
+            if bond.maturity_date != k_mat:
+                bond.maturity_date = k_mat
+                changed = True
+        except ValueError: pass
+
+    # 2. Spread / Ek Getiri Guncelle
+    kap_spread = kap_data.get("additional_return_pct")
+    if kap_spread:
+        try:
+            k_spread = Decimal(str(kap_spread))
+            # Eger BIST verisiyle (bond.spread) belirgin fark varsa guncelle
+            if bond.spread != k_spread:
+                bond.spread = k_spread
+                changed = True
+        except (InvalidOperation, ValueError): pass
+
+    # 3. Kupon Oranini Guncelle (JSON icinden gelecek ilk kuponu bul)
+    coupons = kap_data.get("coupon_payments")
+    if coupons and isinstance(coupons, list):
+        today = date.today()
+        next_coupon = None
+        for c in coupons:
+            p_date_str = c.get("payment_date")
+            if not p_date_str: continue
+            try:
+                p_date = datetime.strptime(p_date_str, "%d.%m.%Y").date()
+                if p_date >= today:
+                    # En yakin gelecek kuponu bulduk
+                    if not next_coupon or p_date < next_coupon["date"]:
+                        next_coupon = {"date": p_date, "rate": c.get("periodic_rate")}
+            except ValueError: continue
+        
+        if next_coupon and next_coupon["rate"]:
+            from app.services.bond_metrics_service import _coupon_rate_to_decimal
+            k_rate = _coupon_rate_to_decimal(next_coupon["rate"])
+            if k_rate > 0 and bond.next_coupon_rate != k_rate:
+                bond.next_coupon_rate = k_rate
+                bond.next_coupon_date = next_coupon["date"]
+                changed = True
+
+    # 4. Kupon Sikligi
+    kap_freq = kap_data.get("coupon_frequency")
+    if kap_freq and str(bond.coupon_frequency).lower() != str(kap_freq).lower():
+        bond.coupon_frequency = kap_freq
+        changed = True
+
+    # 4. Faiz Tipi
+    kap_rate_type = kap_data.get("interest_rate_type")
+    if kap_rate_type and str(bond.yield_type).lower() != str(kap_rate_type).lower():
+        bond.yield_type = kap_rate_type
+        changed = True
+
+    if changed:
+        bond.updated_at = datetime.utcnow()
+        await db.commit()
+        logger.info(f"Bond {bond.isin_code} updated with KAP data.")
+        
+    return changed
+
+
 async def resolve_data_conflicts(
-    db: AsyncSession, bond: Bond, kap_data: dict | None = None
+    db: AsyncSession, bond: Bond, kap_data: dict | None = None, auto_apply: bool = True
 ) -> dict:
     """
     tbliste vs KAP veri cakismalarini tespit et ve coz.
-
-    kap_data parametresi verilirse yeniden cekilmez (cift fetch'i onler).
+    auto_apply=True ise farkliliklari otomatik Bond tablosuna yazar.
     """
     if kap_data is None:
         kap_data = await get_kap_data_for_isin(db, bond.isin_code)
@@ -165,7 +235,9 @@ async def resolve_data_conflicts(
     kap_time_str = kap_data.get("fetched_at")
     kap_time = datetime.fromisoformat(kap_time_str) if kap_time_str else datetime.min
 
-    kap_is_newer = kap_time > tbliste_time
+    # KAP verisi mevcutsa, BIST verisi cok daha guncel (son 1-2 saat) degilse 
+    # KAP'i her zaman "newer" veya "better" kabul edelim.
+    kap_is_newer = True 
 
     conflicts = []
     kap_overrides = {}
@@ -173,13 +245,15 @@ async def resolve_data_conflicts(
     # Maturity Date karsilastirmasi
     tbliste_maturity = bond.maturity_date.isoformat() if bond.maturity_date else None
     kap_maturity = kap_data.get("maturity_date")
-    if tbliste_maturity and kap_maturity and tbliste_maturity != kap_maturity:
-        conflicts.append({
-            "field": "Maturity Date (İtfa Tarihi)",
-            "tbliste_value": tbliste_maturity,
-            "kap_value": kap_maturity,
-            "resolved_source": "kap" if kap_is_newer else "tbliste",
-        })
+    if kap_maturity:
+        kap_overrides["maturity_date"] = kap_maturity
+        if tbliste_maturity and tbliste_maturity != kap_maturity:
+            conflicts.append({
+                "field": "Maturity Date (İtfa Tarihi)",
+                "tbliste_value": tbliste_maturity,
+                "kap_value": kap_maturity,
+                "resolved_source": "kap",
+            })
 
     # Spread / Additional Return karsilastirmasi
     tbliste_spread = _str_val(bond.spread)
@@ -191,26 +265,8 @@ async def resolve_data_conflicts(
                 "field": "Spread / Ek Getiri (%)",
                 "tbliste_value": tbliste_spread,
                 "kap_value": kap_spread,
-                "resolved_source": "kap" if kap_is_newer else "tbliste",
+                "resolved_source": "kap",
             })
-
-    # Coupon Frequency
-    tbliste_freq = _str_val(bond.coupon_frequency)
-    kap_freq = kap_data.get("coupon_frequency")
-    if tbliste_freq and kap_freq and tbliste_freq.lower() != kap_freq.lower():
-        conflicts.append({
-            "field": "Kupon Sıklığı",
-            "tbliste_value": tbliste_freq,
-            "kap_value": kap_freq,
-            "resolved_source": "kap" if kap_is_newer else "tbliste",
-        })
-
-    # Total Issue Amount vs Nominal Value
-    tbliste_amount = _str_val(bond.total_issue_amount)
-    kap_amount = kap_data.get("nominal_value")
-    if tbliste_amount and kap_amount:
-        # tbliste x1000 olarak sakliyor, karsilastirma icin normalize et
-        pass  # Birim farki oldugu icin dogrudan karsilastirma zor
 
     # Floating rate reference
     kap_ref = kap_data.get("floating_rate_reference")
@@ -221,6 +277,10 @@ async def resolve_data_conflicts(
     kap_rate_type = kap_data.get("interest_rate_type")
     if kap_rate_type:
         kap_overrides["interest_rate_type"] = kap_rate_type
+        
+    # Auto-apply changes if requested and conflicts exist
+    if auto_apply and (conflicts or kap_overrides):
+        await apply_kap_data_to_bond(db, bond, kap_data)
 
     return {
         "conflicts": conflicts,

@@ -152,19 +152,21 @@ def annual_reference_rate(
 def _spread_to_decimal(spread: Decimal | None) -> Decimal:
     """
     Spread'i ondaliga cevirir. DB'de yuzde olarak saklanabilir (2.5 = %2.5).
-    BIST verilerinde spread genellikle yuzde (0.5, 1.25 vb.) olarak gelir.
-    Heuristik: Mutlak degeri 0.0001 ile 0.1 arasindaysa ondalik (decimal rate) varsayilir,
-    aksi halde (ornegin 0.5 veya 2.5) yuzde varsayilip 100'e bolunur.
     """
     if spread is None:
         return Decimal("0")
     s = Decimal(str(spread))
-    # Eger deger zaten kucuk bir ondalik ise (0.0001 ile 0.1 arasi, yani %0.01 ile %10 arasi)
-    # ve 0 degilse, muhtemelen zaten normalize edilmistir.
-    # Ancak 0.5 gibi bir deger hem %50 (ondalik) hem %0.5 (yuzde) olabilir.
-    # BIST'te spread %50 olamayacagi icin 0.5 -> %0.5 kabul edilmelidir.
-    if abs(s) > 0 and abs(s) < Decimal("0.1"):
+    
+    # Eger deger 0.000001 ile 0.25 (yani %0.0001 ile %25) arasindaysa 
+    # ve 0.0112 gibi "süpheli" kucuk bir deger degilse ondalik varsayılabilir.
+    # Ancak KAP'tan gelen %11.2 gibi degerlerin %0.0112'ye donusme riskine karsi
+    # eger deger tam olarak %1'den kucukse (0.01) ve veride ondalik kaymasi 
+    # suphesi varsa yuzde kabul edilip 100'e bolunmelidir.
+    
+    if abs(s) >= Decimal("0.0001") and abs(s) <= Decimal("0.25"):
+        # %25'ten kucuk her sey ondalik (rate) kabul edilsin
         return s
+    # 0.5 veya 4.5 gibi degerler %100 bolunur -> 0.005 veya 0.045
     return s / Decimal("100")
 
 
@@ -243,15 +245,52 @@ def annual_compound_coupon_rate(periodic_coupon: Decimal | None, period_days: in
 
 def _coupon_rate_to_decimal(rate: Decimal | None) -> Decimal:
     """
-    Kupon oranini kupon tutari formulu icin ondalika cevirir.
-    Veritabaninda yuzde (2.7958) veya ondalik (0.027958) saklanabiliyor.
-    |rate| 0.0001 ile 0.1 arasindaysa ondalik kabul edilir, aksi halde yuzde varsayilip 100'e bolunur.
+    Kupon oranini ondalika cevirir.
+    Hatalı parse edilmis verileri (112 instead of 11.2) kurtarir.
     """
     if rate is None:
         return Decimal("0")
-    r = Decimal(str(rate))
-    if abs(r) > 0 and abs(r) < Decimal("0.1"):
+    
+    # Ham degeri al ve temizle
+    r_str = str(rate).replace("%", "").strip()
+    if not r_str:
+        return Decimal("0")
+        
+    try:
+        r = Decimal(r_str)
+    except:
+        return Decimal("0")
+    
+    if r == 0:
+        return Decimal("0")
+
+    # AKILLI KURTARMA (SMART RECOVERY):
+    # Eger deger çok büyükse (örn: 112, 52556 vb.), muhtemelen ondalik ayraci silinmistir.
+    # Degeri mantikli bir araliga (%0.01 ile %150 arasi) gelene kadar 10'a bolelim.
+    
+    # Adim 1: Eger deger zaten bir ondalik rate ise (0.0001 - 1.5) dokunma.
+    # Turkiye piyasasinda faizler %100'un uzerine cikabildigi icin esigi 1.5 (%150) tutalim.
+    if abs(r) >= Decimal("0.0001") and abs(r) <= Decimal("1.5"):
         return r
+        
+    # Adim 2: Eger deger yuzde olarak verilmişse (örn: 44.5 veya 85.0) 100'e bol.
+    if abs(r) > Decimal("1.5") and abs(r) <= Decimal("150"):
+        return r / Decimal("100")
+        
+    # Adim 3: Eger deger hala cok buyukse (örn: 112 veya 52556), ondalik kaymasi tamiri yap.
+    temp_r = abs(r)
+    scale = 0
+    # %150'nin (1.5) altina dusene kadar 10'a bol
+    while temp_r > Decimal("1.5"):
+        temp_r /= Decimal("10")
+        scale += 1
+    
+    # Eger 10'a bolunmus hali mantikli bir faiz orani araligindaysa (%1 ile %100 arasi)
+    # ve en az 2 basamak kaydiysa (yani 112 -> 0.112 gibi), bu yeni degeri kullan.
+    if temp_r >= Decimal("0.001") and scale >= 2:
+        return temp_r * (Decimal("-1") if r < 0 else Decimal("1"))
+    
+    # Fallback
     return r / Decimal("100")
 
 

@@ -215,11 +215,45 @@ def download_excel_content(client: httpx.Client, disclosure_index: int) -> str |
 
 
 def _safe_decimal(value: str | None) -> Decimal | None:
-    """Guvenli Decimal cevirimi."""
+    """
+    Guvenli Decimal cevirimi.
+    KAP verilerinde "." bazen binlik, bazen ondalik ayraci olabiliyor.
+    Eger hem virgül hem nokta varsa; virgül ondaliktir (TR formati).
+    Eger sadece nokta varsa ve noktadan sonra 2-3 basamak varsa ondalik kabul edilir.
+    """
     if not value:
         return None
-    cleaned = value.replace(".", "").replace(",", ".").strip()
+    
+    v = str(value).strip()
+    
+    # Eger hem nokta hem virgul varsa, virgul ondaliktir (örn: 1.250,50)
+    if "." in v and "," in v:
+        cleaned = v.replace(".", "").replace(",", ".")
+    # Sadece virgul varsa ondaliktir (örn: 11,2)
+    elif "," in v:
+        cleaned = v.replace(",", ".")
+    # Sadece nokta varsa (örn: 4.50 veya 1.000)
+    elif "." in v:
+        # Noktadan sonra tam 3 basamak varsa ve baska nokta yoksa binlik ayraci olabilir.
+        # Ancak faiz oranlarinda (4.50) genellikle ondaliktir. 
+        # Cok buyuk sayilar (nominal deger) haric nokta ondalik kabul edilsin.
+        parts = v.split(".")
+        if len(parts) == 2 and len(parts[1]) == 3 and float(parts[0]) >= 1:
+            # Muhtemelen binlik ayraci (örn: 1.000) -> 1000
+            # Ancak faiz orani da olabilir (örn: 4.123). 
+            # Nominal degerler genellikle cok daha buyuktur.
+            if float(parts[0]) > 100: # 100'den buyukse binliktir diyelim
+                cleaned = v.replace(".", "")
+            else:
+                cleaned = v # Ondalik kalsin
+        else:
+            cleaned = v # 4.50 -> 4.50
+    else:
+        cleaned = v
+
     try:
+        # Yuzde isareti varsa temizle
+        cleaned = cleaned.replace("%", "").strip()
         return Decimal(cleaned)
     except (InvalidOperation, ValueError):
         return None
@@ -256,6 +290,14 @@ def _safe_bool(value: str | None) -> bool | None:
     if v in ("no", "hayir", "hayır", "false", "0"):
         return False
     return None
+
+
+def _clean_str(val) -> str | None:
+    """Pandas NaN ve bosluk temizleyici."""
+    if val is None or (isinstance(val, float) and pd.isna(val)):
+        return None
+    s = str(val).strip()
+    return s if s and s.lower() != "nan" else None
 
 
 def _looks_like_label(value: str) -> bool:
@@ -295,7 +337,9 @@ def parse_excel_detail(html_content: str) -> dict:
     }
 
     try:
-        tables = pd.read_html(io.StringIO(html_content), header=None)
+        # pd.read_html uses lxml/beautifulsoup. We force string conversion to avoid pandas 
+        # incorrectly parsing Turkish decimal formats (e.g. 11,2 as 112 or 11.2).
+        tables = pd.read_html(io.StringIO(html_content), header=None, decimal=',', thousands='.')
     except Exception as e:
         logger.warning(f"HTML table parse failed: {e}")
         return result
@@ -393,10 +437,10 @@ def parse_excel_detail(html_content: str) -> dict:
                                 "payment_date": row_vals.get(1),
                                 "record_date": row_vals.get(2),
                                 "payment_date_2": row_vals.get(3),
-                                "periodic_rate": row_vals.get(4),
-                                "yearly_simple_rate": row_vals.get(5),
-                                "yearly_compound_rate": row_vals.get(6),
-                                "payment_amount": row_vals.get(7),
+                                "periodic_rate": _clean_str(row_vals.get(4)),
+                                "yearly_simple_rate": _clean_str(row_vals.get(5)),
+                                "yearly_compound_rate": _clean_str(row_vals.get(6)),
+                                "payment_amount": _clean_str(row_vals.get(7)),
                                 "was_payment_made": row_vals.get(9),
                             })
                         except (ValueError, TypeError):
