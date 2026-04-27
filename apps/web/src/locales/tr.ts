@@ -789,7 +789,9 @@ export const tr = {
                 min: "En Düşük",
                 max: "En Yüksek",
                 cumulative: "Kümülatif",
-                last30: "Son 30 gün",
+                last30: "Son 30 Gün",
+                last3M: "Son 3 Ay",
+                ytd: "Yıl Başı (YTD)",
                 index: "Endeks",
             },
             charts: {

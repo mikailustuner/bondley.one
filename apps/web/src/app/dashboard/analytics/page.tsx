@@ -55,15 +55,32 @@ export default function AnalyticsPage() {
       : null;
 
   const validHistory = history.filter((r) => r.index_value > 0);
+  
+  // Calculate YTD (Year-to-Date) Return
+  const lastRecord = validHistory[validHistory.length - 1];
+  const lastDate = lastRecord ? new Date(lastRecord.rate_date) : new Date();
+  
+  const yearStart = new Date(lastDate.getFullYear(), 0, 1);
+  const ytdHistory = validHistory.filter(r => new Date(r.rate_date) >= yearStart);
+  
+  const ytdReturnPct = ytdHistory.length >= 2 && ytdHistory[0].index_value > 0
+    ? ((ytdHistory[ytdHistory.length - 1].index_value - ytdHistory[0].index_value) / ytdHistory[0].index_value) * 100
+    : null;
+
+  // Calculate 3-Month Rolling Return (Calendar-aware)
+  const threeMonthsAgo = new Date(lastDate);
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+  const threeMHistory = validHistory.filter(r => new Date(r.rate_date) >= threeMonthsAgo);
+  
+  const threeMReturnPct = threeMHistory.length >= 2 && threeMHistory[0].index_value > 0
+    ? ((threeMHistory[threeMHistory.length - 1].index_value - threeMHistory[0].index_value) / threeMHistory[0].index_value) * 100
+    : null;
+
   const minIndex = validHistory.length ? Math.min(...validHistory.map((r) => r.index_value)) : null;
   const maxIndex = validHistory.length ? Math.max(...validHistory.map((r) => r.index_value)) : null;
-  const totalReturnPct =
-    validHistory.length >= 2 && validHistory[0].index_value > 0
-      ? ((validHistory[validHistory.length - 1].index_value - validHistory[0].index_value) /
-          validHistory[0].index_value) *
-        100
-      : null;
-  const safeTotal = totalReturnPct != null && isFinite(totalReturnPct) ? totalReturnPct : null;
+
+  const safeYtd = ytdReturnPct != null && isFinite(ytdReturnPct) ? ytdReturnPct : null;
+  const safe3M = threeMReturnPct != null && isFinite(threeMReturnPct) ? threeMReturnPct : null;
 
   const sortedSecTypes = bondStats
     ? Object.entries(bondStats.by_security_type).sort(([, a], [, b]) => b - a)
@@ -82,14 +99,15 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4 animate-fade-up">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-5 animate-fade-up">
         {[
-          { label: tr.dashboard.analytics.stats.totalReturn, value: safeTotal != null ? formatPercent(safeTotal) : "—", sub: tr.dashboard.analytics.stats.cumulative, highlight: true },
+          { label: tr.dashboard.analytics.stats.totalReturn, value: safeYtd != null ? formatPercent(safeYtd) : "—", sub: tr.dashboard.analytics.stats.ytd, highlight: true },
+          { label: tr.dashboard.analytics.stats.totalReturn, value: safe3M != null ? formatPercent(safe3M) : "—", sub: tr.dashboard.analytics.stats.last3M, highlight: true },
           { label: tr.dashboard.analytics.stats.avgDaily, value: avgDailyRatePct != null ? formatPercent(avgDailyRatePct) : "—", sub: tr.dashboard.analytics.stats.last30 },
           { label: tr.dashboard.analytics.stats.min, value: minIndex != null ? formatDecimal(minIndex, 2) : "—", sub: tr.dashboard.analytics.stats.index },
           { label: tr.dashboard.analytics.stats.max, value: maxIndex != null ? formatDecimal(maxIndex, 2) : "—", sub: tr.dashboard.analytics.stats.index },
         ].map((stat) => (
-          <div key={stat.label} className="bg-card rounded-3xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <div key={`${stat.label}-${stat.sub}`} className="bg-card rounded-3xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <div className="text-[13px] font-medium text-muted-foreground mb-2">{stat.label}</div>
             <div className={`font-mono-data text-stat ${stat.highlight ? "text-positive" : "text-foreground"}`}>
               {stat.value}
