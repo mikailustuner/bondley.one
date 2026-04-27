@@ -184,6 +184,7 @@ export interface BondListItem {
   isin_code: string;
   issuer: string | null;
   fund_user: string | null;
+  source_institution: string | null;
   yield_type: string | null;
   security_type: string | null;
   currency: string;
@@ -194,6 +195,7 @@ export interface BondListItem {
   next_coupon_rate: number | null;
   spread: number | null;
   day_count_convention: string | null;
+  remarks: string | null;
   is_active: boolean;
 }
 
