@@ -84,11 +84,13 @@ async def list_bonds(
             .group_by(Calculation.bond_id)
             .subquery()
         )
-        # 1. Alt sorguyu Bond ile birleştir (anon_1 hatasını çözer)
+        # Query'yi Bond ve Calculation modellerini içerecek şekilde başlat
+        query = select(Bond, Calculation)
+        # 1. Alt sorguyu Bond ile birleştir
         query = query.outerjoin(
             latest_calc_sub, Bond.id == latest_calc_sub.c.bond_id
         )
-        # 2. Calculation tablosunu hem bond_id hem de en son tarih üzerinden birleştir
+        # 2. Calculation tablosunu birleştir
         query = query.outerjoin(
             Calculation,
             (Bond.id == Calculation.bond_id) & 
