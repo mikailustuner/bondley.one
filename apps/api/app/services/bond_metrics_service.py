@@ -59,20 +59,30 @@ def parse_coupon_frequency(coupon_frequency: str | None, bond: "Bond" = None) ->
         total_days = (bond.maturity_date - bond.first_issue_date).days
         isin = str(bond.isin_code).upper() if bond.isin_code else ""
         
-        # IMPROVEMENT: If we have a next_coupon_date that is before maturity, 
+        # IMPROVEMENT 1: Use distance between issue and next coupon as a clue
+        if bond.next_coupon_date and bond.first_issue_date:
+            diff = (bond.next_coupon_date - bond.first_issue_date).days
+            if diff > 0:
+                # Check for quarterly (~91 days)
+                if diff % 91 < 10 or diff % 91 > 81:
+                    return 91, 4
+                # Check for semi-annual (~182 days)
+                if diff % 182 < 15 or diff % 182 > 167:
+                    return 182, 2
+        
+        # IMPROVEMENT 2: If we have a next_coupon_date that is before maturity, 
         # it CANNOT be a single coupon bond.
         if bond.next_coupon_date and bond.maturity_date and bond.next_coupon_date < bond.maturity_date:
             # If freq is not known, assume quarterly for short/mid term, semi-annual for long
-            if total_days <= 400:
+            if total_days <= 550: # Increased from 400 to catch more corporate bonds
                 return 91, 4
             return 182, 2
 
-        # Bono (Bill) teshisi: TRF veya TRB ile basliyorsa ve vadesi 155 gunden azsa 
-        # (Eski limit 300 idi, 270 gunluk 3 kuponlu bonolar hatalı sekilde "Tek Kupon" oluyordu)
+        # Bono (Bill) teshisi: TRF veya TRB ile basliyorsa ve vadesi 155 gunden azsa
         if (isin.startswith("TRF") or isin.startswith("TRB")) and (0 < total_days < 155):
             return -1, 1
             
-        if 0 < total_days <= 400:
+        if 0 < total_days <= 550:
             return 91, 4
     return 182, 2
 
@@ -260,23 +270,28 @@ def bond_to_calculator_inputs(bond: Bond) -> tuple[date, date, Decimal, int] | N
     period_days, freq = parse_coupon_frequency(bond.coupon_frequency, bond)
     
     # We prioritize the next_coupon_rate from the database if available.
-    # For a multi-coupon bond, next_coupon_rate is usually the periodic rate.
-    # For a single coupon bond (Bono), it's the periodic rate for the whole duration.
     raw_rate = _coupon_rate_to_decimal(bond.next_coupon_rate)
     
     total_days = (maturity_date - issue_date).days
     
     # Radikal Düzeltme: 
-    # freq == 1 means it's a "Single Coupon" (Bono/Bill) instrument.
     if freq == 1:
-        # Oranı toplam vadeye göre yıllıklandır (%18.41 * 365 / 151 = %44.50)
-        # BondCalculator expects annual simple coupon_rate for single-coupon bonds
+        # Single Coupon (Bono/Bill): Oranı toplam vadeye göre yıllıklandır
         actual_days = total_days if total_days > 0 else 365
         coupon_rate = raw_rate * Decimal("365") / Decimal(str(actual_days))
     else:
-        # Multi-coupon bond: next_coupon_rate is the periodic rate.
-        # BondCalculator expects (Periodic Rate * Frequency) as the annual rate input.
-        coupon_rate = raw_rate * Decimal(str(freq))
+        # Multi-coupon bond: Deciding if DB rate is periodic or already annualized
+        # Heuristik: Eğer rate * freq > 2.0 (%200), rate muhtemelen zaten yıllıklandırılmıştır.
+        # Ayrıca floating rate tahvillerde genellikle periyodik oran saklanır.
+        if raw_rate > Decimal("0.2"): # > %20 is very likely annual
+             coupon_rate = raw_rate
+        elif raw_rate * Decimal(str(freq)) > Decimal("2.0"): # e.g. 0.46 * 4 = 1.84 (OK), but 0.6 * 4 = 2.4 (Suspicious)
+             coupon_rate = raw_rate
+        else:
+             # Assume periodic
+             coupon_rate = raw_rate * Decimal(str(freq))
+        
+    return (issue_date, maturity_date, coupon_rate, freq)
         
     return (issue_date, maturity_date, coupon_rate, freq)
 
@@ -566,9 +581,19 @@ class BondMetricsService:
             if tlref_start and tlref_end and eff_period > 0:
                 annual_ref = annual_reference_rate(tlref_start, tlref_end, eff_period)
                 
-                # Using the active_spread initialized at the top (already normalized)
-                annual_coupon = annual_coupon_rate(annual_ref, active_spread)
-                logger.debug(f"Compute Metrics {bond.isin_code}: active_spread={active_spread}, annual_ref={annual_ref}, annual_coupon={annual_coupon}")
+                # IMPROVEMENT: Prioritize next_coupon_rate for current period calculation
+                # This ensures we use the official fixed rate if it's known.
+                db_rate = _coupon_rate_to_decimal(bond.next_coupon_rate)
+                if db_rate > 0:
+                    # Decide if it's annual or periodic
+                    if db_rate > Decimal("0.2"): # Likely annual simple
+                        annual_coupon = db_rate
+                    else: # Likely periodic
+                        annual_coupon = db_rate * Decimal(str(freq_per_year))
+                else:
+                    annual_coupon = annual_coupon_rate(annual_ref, active_spread)
+                
+                logger.debug(f"Compute Metrics {bond.isin_code}: db_rate={db_rate}, annual_ref={annual_ref}, annual_coupon={annual_coupon}")
                 periodic_coupon = periodic_coupon_rate(annual_coupon, eff_period)
                 compound_coupon = annual_compound_coupon_rate(periodic_coupon, eff_period)
                 
@@ -709,9 +734,7 @@ class BondMetricsService:
             "coupon_payment_amount": float(coupon_payment_amount) if coupon_payment_amount is not None else None,
             "period_days": period_days,
             "next_coupon_date": (
-                bond.maturity_date.isoformat()
-                if bond.maturity_date and bond.first_issue_date
-                and (bond.maturity_date - bond.first_issue_date).days < 365
+                calc._next_coupon_date(settlement_date).isoformat() if calc
                 else (bond.next_coupon_date.isoformat() if bond.next_coupon_date else None)
             ),
             "return_to_date_pct": return_to_date_pct,
