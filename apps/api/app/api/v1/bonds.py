@@ -53,14 +53,15 @@ async def list_bonds(
     yield_type: str | None = Query(None, description="Getiri turu filtresi"),
     order_by: str | None = Query(
         "maturity_date_asc",
-        description="maturity_date_asc | days_to_maturity_asc | last_issue_yield_desc",
+        description="maturity_date_asc | days_to_maturity_asc | last_issue_yield_desc | spread_desc",
     ),
     max_days_to_maturity: int | None = Query(None, description="Maksimum vadeye kalan gun (dahil)"),
+    min_spread: float | None = Query(None, description="Minimum spread filtresi (yuzde, ornek: 5.0)"),
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
     # Filtre yoksa cache'e bak (sayfanın varsayılan yüklemesi bu patha girer)
-    no_filters = not any([search, fund_user, currency, security_type, yield_type, max_days_to_maturity])
+    no_filters = not any([search, fund_user, currency, security_type, yield_type, max_days_to_maturity, min_spread])
     cache_key = (
         f"bond_list:{int(active_only)}:{int(with_data_only)}:{order_by}:{skip}:{limit}"
         if no_filters else None
@@ -123,12 +124,18 @@ async def list_bonds(
             Bond.days_to_maturity <= max_days_to_maturity,
         )
 
+    if min_spread is not None:
+        query = query.where(Bond.spread >= min_spread, Bond.spread.isnot(None))
+        count_query = count_query.where(Bond.spread >= min_spread, Bond.spread.isnot(None))
+
     if order_by == "days_to_maturity_asc":
         order_clause = Bond.days_to_maturity.asc().nullslast()
     elif order_by == "last_issue_yield_desc":
         order_clause = Bond.last_issue_yield.desc().nullslast()
     elif order_by == "updated_at_desc":
         order_clause = Bond.updated_at.desc().nullslast()
+    elif order_by == "spread_desc":
+        order_clause = Bond.spread.desc().nullslast()
     else:
         order_clause = Bond.maturity_date.asc().nullslast()
 

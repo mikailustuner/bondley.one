@@ -192,6 +192,7 @@ export interface BondListItem {
   last_issue_price: number | null;
   last_issue_yield: number | null;
   next_coupon_rate: number | null;
+  spread: number | null;
   day_count_convention: string | null;
   is_active: boolean;
 }
@@ -577,9 +578,10 @@ export const api = {
         currency?: string;
         security_type?: string;
         yield_type?: string;
-        order_by?: "maturity_date_asc" | "days_to_maturity_asc" | "last_issue_yield_desc" | "updated_at_desc";
+        order_by?: "maturity_date_asc" | "days_to_maturity_asc" | "last_issue_yield_desc" | "updated_at_desc" | "spread_desc";
         max_days_to_maturity?: number;
         with_data_only?: boolean;
+        min_spread?: number;
       },
     ) => {
       const query = new URLSearchParams();
@@ -595,6 +597,8 @@ export const api = {
         query.set("max_days_to_maturity", String(params.max_days_to_maturity));
       if (params?.with_data_only !== undefined)
         query.set("with_data_only", String(params.with_data_only));
+      if (params?.min_spread != null)
+        query.set("min_spread", String(params.min_spread));
       return apiFetch<BondListResponse>(`/bonds/?${query}`, { token });
     },
     get: (token: string, isin: string, params?: { settlement_date?: string }) => {

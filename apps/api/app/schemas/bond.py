@@ -63,6 +63,7 @@ class BondListItem(BaseModel):
     last_issue_price: Decimal | None = None
     last_issue_yield: Decimal | None = None
     next_coupon_rate: Decimal | None = None
+    spread: Decimal | None = None
     day_count_convention: str | None = None
     is_active: bool = True
 
