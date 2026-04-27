@@ -12,16 +12,12 @@ import { api, BondDetail, TLREFRecord, BondNote } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate, formatLastIssueDateText } from "@/lib/utils";
 import { tr } from "@/locales/tr";
-import {
-  ComposedChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+import dynamic from "next/dynamic";
+
+const BondHistoryChart = dynamic(
+  () => import("@/components/charts/bond-history-chart").then((m) => ({ default: m.BondHistoryChart })),
+  { ssr: false, loading: () => <div className="h-64 flex items-center justify-center text-[13px] text-muted-foreground">Yükleniyor…</div> }
+);
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -724,66 +720,7 @@ export default function BondDetailPage({
                 Yükleniyor…
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={260}>
-                <ComposedChart data={historyData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 11 }}
-                    tickFormatter={(v: string) => v.slice(5)}
-                    interval="preserveStartEnd"
-                    className="text-muted-foreground"
-                  />
-                  <YAxis
-                    yAxisId="price"
-                    orientation="left"
-                    tick={{ fontSize: 11 }}
-                    tickFormatter={(v: number) => v.toFixed(2)}
-                    domain={["auto", "auto"]}
-                    className="text-muted-foreground"
-                    width={60}
-                  />
-                  <YAxis
-                    yAxisId="ytm"
-                    orientation="right"
-                    tick={{ fontSize: 11 }}
-                    tickFormatter={(v: number) => `%${(v * 100).toFixed(1)}`}
-                    domain={["auto", "auto"]}
-                    className="text-muted-foreground"
-                    width={64}
-                  />
-                  <Tooltip
-                    contentStyle={{ fontSize: 12, borderRadius: 12 }}
-                    formatter={(value: number, name: string) =>
-                      name === "YTM"
-                        ? [`%${(value * 100).toFixed(4)}`, name]
-                        : [value.toFixed(4), name]
-                    }
-                    labelFormatter={(label: string) => formatDate(label)}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Line
-                    yAxisId="price"
-                    type="monotone"
-                    dataKey="clean_price"
-                    name="Temiz Fiyat"
-                    stroke="hsl(var(--primary))"
-                    dot={false}
-                    strokeWidth={2}
-                    connectNulls
-                  />
-                  <Line
-                    yAxisId="ytm"
-                    type="monotone"
-                    dataKey="ytm"
-                    name="YTM"
-                    stroke="hsl(var(--chart-2, 217 91% 60%))"
-                    dot={false}
-                    strokeWidth={2}
-                    connectNulls
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
+              <BondHistoryChart data={historyData} />
             )}
           </CardContent>
         </Card>

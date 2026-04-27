@@ -7,8 +7,16 @@ import { Search, ArrowRight, TrendingUp, Clock, Star as StarIcon, BarChart3 } fr
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { TlrefIndexChart } from "@/components/charts/tlref-index-chart";
-import { TlrefRateTVChart } from "@/components/charts/tlref-rate-tv-chart";
+import dynamic from "next/dynamic";
+
+const TlrefIndexChart = dynamic(
+  () => import("@/components/charts/tlref-index-chart").then((m) => ({ default: m.TlrefIndexChart })),
+  { ssr: false, loading: () => <Skeleton className="h-[200px] w-full rounded-xl" /> }
+);
+const TlrefRateTVChart = dynamic(
+  () => import("@/components/charts/tlref-rate-tv-chart").then((m) => ({ default: m.TlrefRateTVChart })),
+  { ssr: false, loading: () => <Skeleton className="h-[200px] w-full rounded-xl" /> }
+);
 import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton-components";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTlrefHistory } from "@/hooks/use-tlref-history";

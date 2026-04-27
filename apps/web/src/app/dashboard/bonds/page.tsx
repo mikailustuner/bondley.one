@@ -468,7 +468,7 @@ export default function BondsListPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 shrink-0"
+                          className="h-10 w-10 shrink-0"
                           onClick={(e) => toggleFavorite(e, bond.isin_code)}
                           disabled={favoriteToggling === bond.isin_code}
                           aria-label={favoriteIsins.has(bond.isin_code) ? tr.dashboard.bonds.table.cols.favorite : tr.dashboard.bonds.table.cols.favorite}

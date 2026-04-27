@@ -352,7 +352,7 @@ export default function FavoritesPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 shrink-0"
+                            className="h-10 w-10 shrink-0"
                             onClick={(e) => removeFavorite(e, bond.isin_code)}
                             disabled={favoriteToggling === bond.isin_code}
                             aria-label={tr.dashboard.bonds.table.cols.favorite}
@@ -535,7 +535,7 @@ export default function FavoritesPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 shrink-0"
+                        className="h-10 w-10 shrink-0"
                         onClick={(e) => removeFavorite(e, bond.isin_code)}
                         disabled={favoriteToggling === bond.isin_code}
                         aria-label={tr.dashboard.bonds.table.cols.favorite}
