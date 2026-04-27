@@ -150,7 +150,8 @@ async def apply_kap_data_to_bond(db: AsyncSession, bond: Bond, kap_data: dict) -
     kap_spread = kap_data.get("additional_return_pct")
     if kap_spread:
         try:
-            k_spread = Decimal(str(kap_spread))
+            from app.services.bond_metrics_service import _spread_to_decimal
+            k_spread = _spread_to_decimal(kap_spread)
             # Eger BIST verisiyle (bond.spread) belirgin fark varsa guncelle
             if bond.spread != k_spread:
                 bond.spread = k_spread

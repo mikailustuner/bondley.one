@@ -151,22 +151,33 @@ def annual_reference_rate(
 
 def _spread_to_decimal(spread: Decimal | None) -> Decimal:
     """
-    Spread'i ondaliga cevirir. DB'de yuzde olarak saklanabilir (2.5 = %2.5).
+    Spread'i ondaliga cevirir. DB'de yuzde (4.5) veya bps (450) olarak saklanabilir.
     """
     if spread is None:
         return Decimal("0")
     s = Decimal(str(spread))
     
-    # Eger deger 0.000001 ile 0.25 (yani %0.0001 ile %25) arasindaysa 
-    # ve 0.0112 gibi "süpheli" kucuk bir deger degilse ondalik varsayılabilir.
-    # Ancak KAP'tan gelen %11.2 gibi degerlerin %0.0112'ye donusme riskine karsi
-    # eger deger tam olarak %1'den kucukse (0.01) ve veride ondalik kaymasi 
-    # suphesi varsa yuzde kabul edilip 100'e bolunmelidir.
-    
+    if s == 0:
+        return Decimal("0")
+
+    # AKILLI KURTARMA:
+    # Adim 1: Eger deger zaten kucuk bir ondalik ise (0.0001 - 0.25) dokunma.
     if abs(s) >= Decimal("0.0001") and abs(s) <= Decimal("0.25"):
-        # %25'ten kucuk her sey ondalik (rate) kabul edilsin
         return s
-    # 0.5 veya 4.5 gibi degerler %100 bolunur -> 0.005 veya 0.045
+        
+    # Adim 2: Eger deger yuzde (4.5) veya bps (450) ise uygun sekilde bol.
+    temp_s = abs(s)
+    # Tahvillerde spread nadiren %15'i (0.15) gecer. 
+    # Degeri 0.15'in altina dusene kadar 10'a bolelim.
+    scale = 0
+    while temp_s > Decimal("0.15"):
+        temp_s /= Decimal("10")
+        scale += 1
+    
+    # Eger 4.5 -> 0.045 olduysa (2 basamak kaydiysa) veya 450 -> 0.045 olduysa, bu dogrudur.
+    if temp_s >= Decimal("0.0001"):
+        return temp_s * (Decimal("-1") if s < 0 else Decimal("1"))
+        
     return s / Decimal("100")
 
 
