@@ -74,6 +74,31 @@ async def list_bonds(
     query = select(Bond)
     count_query = select(func.count(Bond.id))
 
+    # Spread bazlı filtreleme veya sıralama varsa Calculation tablosuna join yap
+    needs_calc_join = min_spread is not None or order_by == "spread_desc"
+    
+    if needs_calc_join:
+        # En son hesaplama tarihlerini bul
+        latest_calc_sub = (
+            select(Calculation.bond_id, func.max(Calculation.calc_date).label("max_date"))
+            .group_by(Calculation.bond_id)
+            .subquery()
+        )
+        # Bond ile Calculation'ı eşleştir
+        query = query.outerjoin(
+            Calculation,
+            (Bond.id == Calculation.bond_id) & 
+            (Calculation.calc_date == latest_calc_sub.c.max_date)
+        )
+        # Not: count_query için join'e gerek yok çünkü Bond sayısını sayıyoruz, 
+        # ancak filtreleme varsa count_query'ye de join eklemeliyiz.
+        if min_spread is not None:
+            count_query = count_query.outerjoin(
+                Calculation,
+                (Bond.id == Calculation.bond_id) & 
+                (Calculation.calc_date == latest_calc_sub.c.max_date)
+            )
+
     if active_only:
         active_filter = (
             Bond.is_active == True,
@@ -125,8 +150,22 @@ async def list_bonds(
         )
 
     if min_spread is not None:
-        query = query.where(Bond.spread >= min_spread, Bond.spread.isnot(None))
-        count_query = count_query.where(Bond.spread >= min_spread, Bond.spread.isnot(None))
+        # Calculation tablosundaki spread ondalık (0.05 = %5) olabilir, 
+        # frontend'den gelen min_spread ise yüzde (5.0) formatındadır.
+        # Hem Bond.spread (statik) hem de Calculation.spread (dinamik) kontrol edilebilir.
+        # Öncelik dinamik hesaplanmış spread'de.
+        query = query.where(
+            or_(
+                (Bond.spread >= min_spread),
+                (Calculation.spread >= min_spread / 100)
+            )
+        )
+        count_query = count_query.where(
+            or_(
+                (Bond.spread >= min_spread),
+                (Calculation.spread >= min_spread / 100)
+            )
+        )
 
     if order_by == "days_to_maturity_asc":
         order_clause = Bond.days_to_maturity.asc().nullslast()
@@ -135,18 +174,37 @@ async def list_bonds(
     elif order_by == "updated_at_desc":
         order_clause = Bond.updated_at.desc().nullslast()
     elif order_by == "spread_desc":
-        order_clause = Bond.spread.desc().nullslast()
+        # Sıralamada da dinamik spread'i kullan (varsa hesaplanmış spread, yoksa statik spread)
+        order_clause = func.coalesce(Calculation.spread * 100, Bond.spread).desc().nullslast()
     else:
         order_clause = Bond.maturity_date.asc().nullslast()
 
     total = (await db.execute(count_query)).scalar() or 0
-    result = await db.execute(
-        query.order_by(order_clause).offset(skip).limit(limit)
-    )
-    bonds = result.scalars().all()
+    
+    if needs_calc_join:
+        # Tuple olarak (Bond, Calculation) döner
+        result = await db.execute(
+            query.order_by(order_clause).offset(skip).limit(limit)
+        )
+        rows = result.all()
+        items = []
+        for row in rows:
+            bond_obj = row[0]
+            calc_obj = row[1]
+            item = BondListItem.model_validate(bond_obj)
+            # Eğer statik spread yoksa, hesaplanmış spread'i kullan (% formatına çevirerek)
+            if (item.spread is None or item.spread == 0) and calc_obj and calc_obj.spread is not None:
+                item.spread = calc_obj.spread * 100
+            items.append(item)
+    else:
+        result = await db.execute(
+            query.order_by(order_clause).offset(skip).limit(limit)
+        )
+        bonds = result.scalars().all()
+        items = [BondListItem.model_validate(b) for b in bonds]
 
     response = BondListResponse(
-        items=[BondListItem.model_validate(b) for b in bonds],
+        items=items,
         total=total,
     )
     if cache_key:
