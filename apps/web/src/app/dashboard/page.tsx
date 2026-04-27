@@ -53,9 +53,6 @@ export default function DashboardPage() {
   const quickSearchRef = useRef<HTMLDivElement>(null);
   const [soonMaturing, setSoonMaturing] = useState<BondListItem[]>([]);
   const [highYield, setHighYield] = useState<BondListItem[]>([]);
-  const [highSpread, setHighSpread] = useState<BondListItem[]>([]);
-  const [spreadThreshold, setSpreadThreshold] = useState<number>(5);
-  const [highSpreadLoading, setHighSpreadLoading] = useState(false);
   const userName = getUser()?.full_name || "User";
 
   useEffect(() => {
@@ -123,22 +120,7 @@ export default function DashboardPage() {
       .catch(() => { });
   }, []);
 
-  useEffect(() => {
-    const token = getToken();
-    if (!token) return;
-    setHighSpreadLoading(true);
-    api.bonds
-      .list(token, {
-        limit: 5,
-        order_by: "spread_desc",
-        active_only: true,
-        yield_type: "Değişken",
-        min_spread: spreadThreshold,
-      })
-      .then((res) => setHighSpread(res.items || []))
-      .catch(() => setHighSpread([]))
-      .finally(() => setHighSpreadLoading(false));
-  }, [spreadThreshold]);
+
 
   const { history, indexData, annualRateData, stats, bondStats, loading, error } = useTlrefHistory();
   const { summary: usageSummary } = useUsageSummary();
@@ -362,99 +344,37 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent className="pt-2">
                 <div className="space-y-0">
-                  {highYield.map((b) => (
-                    <Link
-                      key={b.isin_code}
-                      href={`/dashboard/bonds/${encodeURIComponent(b.isin_code)}`}
-                      className="flex items-center justify-between rounded-xl py-3 px-3 -mx-1 hover:bg-secondary/50 transition-colors group"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="font-mono-data text-[13px] font-medium text-foreground shrink-0">{b.isin_code}</span>
-                        <span className="text-[12px] text-muted-foreground truncate min-w-0">{b.issuer ?? "—"}</span>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="font-mono-data text-[13px] text-positive font-medium">
-                          {b.last_issue_yield != null ? formatPercent(b.last_issue_yield) : "—"}
-                        </span>
-                        <ArrowRight className="h-3 w-3 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                    </Link>
-                  ))}
+                    {highYield.map((b) => (
+                      <Link
+                        key={b.isin_code}
+                        href={`/dashboard/bonds/${encodeURIComponent(b.isin_code)}`}
+                        className="flex flex-col rounded-xl py-3 px-3 -mx-1 hover:bg-secondary/50 transition-colors group"
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="font-mono-data text-[13px] font-medium text-foreground shrink-0">{b.isin_code}</span>
+                            <span className="text-[12px] text-muted-foreground truncate min-w-0">{b.issuer ?? "—"}</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="font-mono-data text-[13px] text-positive font-medium">
+                              {b.last_issue_yield != null ? formatPercent(b.last_issue_yield) : "—"}
+                            </span>
+                            <ArrowRight className="h-3 w-3 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </div>
+                        {b.remarks && (
+                          <div className="mt-1 text-[11px] text-muted-foreground/70 line-clamp-1 italic">
+                            {b.remarks}
+                          </div>
+                        )}
+                      </Link>
+                    ))}
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Yüksek Spreadli Değişken Araçlar */}
-          <Card className="lg:col-span-2">
-            <CardHeader className="pb-2">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-primary" />
-                  <CardTitle className="text-[15px]">Yüksek Spreadli Değişken Araçlar</CardTitle>
-                </div>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {[4, 5, 5.5, 6].map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setSpreadThreshold(t)}
-                      className={`text-[12px] font-mono-data px-2.5 py-1 rounded-lg border transition-colors ${
-                        spreadThreshold === t
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
-                      }`}
-                    >
-                      +%{t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <CardDescription>
-                Değişken faizli araçlar — TLREF spread&apos;i %{spreadThreshold} ve üzeri, yüksekten düşüğe
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-2">
-              {highSpreadLoading ? (
-                <div className="space-y-0">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center justify-between py-3 px-3 -mx-1">
-                      <div className="flex items-center gap-3">
-                        <Skeleton className="h-3.5 w-28" />
-                        <Skeleton className="h-3 w-24" />
-                      </div>
-                      <Skeleton className="h-3.5 w-12" />
-                    </div>
-                  ))}
-                </div>
-              ) : highSpread.length === 0 ? (
-                <p className="text-[13px] text-muted-foreground py-3 px-3">
-                  %{spreadThreshold} ve üzeri spreadli değişken araç bulunamadı.
-                </p>
-              ) : (
-                <div className="space-y-0">
-                  {highSpread.map((b) => (
-                    <Link
-                      key={b.isin_code}
-                      href={`/dashboard/bonds/${encodeURIComponent(b.isin_code)}`}
-                      className="flex items-center justify-between rounded-xl py-3 px-3 -mx-1 hover:bg-secondary/50 transition-colors group"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="font-mono-data text-[13px] font-medium text-foreground shrink-0">{b.isin_code}</span>
-                        <span className="text-[12px] text-muted-foreground truncate min-w-0">{b.issuer ?? "—"}</span>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="font-mono-data text-[13px] text-primary font-medium">
-                          {b.spread != null ? `+%${formatDecimal(b.spread, 2)}` : "—"}
-                        </span>
-                        <ArrowRight className="h-3 w-3 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+
         </div>
       )}
 
