@@ -966,7 +966,7 @@ export default function BondDetailPage({
                         <div>
                           <div className="text-[10px] text-muted-foreground/60">{tr.dashboard.bondDetails.kap.plan.cols.compound}</div>
                           <div className="font-mono-data text-[12px] text-foreground">
-                            {cp.yearly_compound_rate ? `%${(Number(cp.yearly_compound_rate) / 10000).toFixed(4)}` : "—"}
+                            {cp.yearly_compound_rate ? `%${Number(cp.yearly_compound_rate).toFixed(4)}` : "—"}
                           </div>
                         </div>
                         <div>
@@ -978,13 +978,13 @@ export default function BondDetailPage({
                         <div>
                           <div className="text-[10px] text-muted-foreground/60">{tr.dashboard.bondDetails.kap.plan.cols.periodic}</div>
                           <div className="font-mono-data text-[12px] text-muted-foreground">
-                            {cp.periodic_rate ? `%${(Number(cp.periodic_rate) / 10000).toFixed(4)}` : "—"}
+                            {cp.periodic_rate ? `%${Number(cp.periodic_rate).toFixed(4)}` : "—"}
                           </div>
                         </div>
                         <div>
                           <div className="text-[10px] text-muted-foreground/60">{tr.dashboard.bondDetails.kap.plan.cols.simple}</div>
                           <div className="font-mono-data text-[12px] text-muted-foreground">
-                            {cp.yearly_simple_rate ? `%${(Number(cp.yearly_simple_rate) / 10000).toFixed(4)}` : "—"}
+                            {cp.yearly_simple_rate ? `%${Number(cp.yearly_simple_rate).toFixed(4)}` : "—"}
                           </div>
                         </div>
                       </div>
@@ -1014,13 +1014,13 @@ export default function BondDetailPage({
                           </td>
                           <td className="py-2.5 font-mono-data text-foreground">{cp.payment_date || "—"}</td>
                           <td className="py-2.5 font-mono-data text-foreground text-right">
-                            {cp.periodic_rate ? `%${(Number(cp.periodic_rate) / 10000).toFixed(4)}` : "—"}
+                            {cp.periodic_rate ? `%${Number(cp.periodic_rate).toFixed(4)}` : "—"}
                           </td>
                           <td className="py-2.5 font-mono-data text-foreground text-right">
-                            {cp.yearly_simple_rate ? `%${(Number(cp.yearly_simple_rate) / 10000).toFixed(4)}` : "—"}
+                            {cp.yearly_simple_rate ? `%${Number(cp.yearly_simple_rate).toFixed(4)}` : "—"}
                           </td>
                           <td className="py-2.5 font-mono-data text-foreground text-right">
-                            {cp.yearly_compound_rate ? `%${(Number(cp.yearly_compound_rate) / 10000).toFixed(4)}` : "—"}
+                            {cp.yearly_compound_rate ? `%${Number(cp.yearly_compound_rate).toFixed(4)}` : "—"}
                           </td>
                           <td className="py-2.5 font-mono-data text-foreground text-right">
                             {cp.payment_amount ? Number(cp.payment_amount.replace(/\./g, '').replace(',', '.')).toLocaleString('tr-TR') : "—"}

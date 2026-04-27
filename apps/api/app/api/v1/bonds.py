@@ -555,8 +555,47 @@ async def _get_kap_parallel(
             if not kap_data:
                 return None, [], {}
             disclosures = await get_all_kap_disclosures_for_isin(s, isin_code)
-            # kap_data geçildiği için çift fetch yapılmaz
+            # resolve_data_conflicts will auto-apply and update the Bond record if needed
             conflict_result = await resolve_data_conflicts(s, bond, kap_data=kap_data)
+            
+            # --- API Response Cleanup & Cache Invalidation ---
+            if kap_data and "coupon_payments" in kap_data:
+                from app.services.bond_metrics_service import _coupon_rate_to_decimal
+                seen_coupons = set()
+                unique_coupons = []
+                
+                for c in kap_data["coupon_payments"]:
+                    # 1. Deduplicate (KAP often includes TR and EN tables)
+                    # We use coupon number and date as a unique key
+                    c_id = f"{c.get('coupon_number')}_{c.get('payment_date')}"
+                    if c_id in seen_coupons:
+                        continue
+                    seen_coupons.add(c_id)
+                    
+                    # 2. Recover rates from decimal corruption
+                    for field in ["periodic_rate", "yearly_simple_rate", "yearly_compound_rate"]:
+                        val = c.get(field)
+                        if val:
+                            recovered = _coupon_rate_to_decimal(val)
+                            # Convert to float (standardizing for frontend, which might divide by 100)
+                            # Note: To show %11.2, if frontend divides by 100, we should send 11.2 (float)
+                            # But standard API practice is to send the rate (0.112). 
+                            # Let's send the value that results in correct display.
+                            # If the user saw 0.0112 for "112", it means frontend does val / 10000? 
+                            # Or val / 100? If val was "112", 112/10000 = 0.0112.
+                            # We want 11.2. So we should send 0.112 * 100 = 11.2.
+                            c[field] = float(recovered * 100)
+                    
+                    unique_coupons.append(c)
+                
+                kap_data["coupon_payments"] = unique_coupons
+
+            if conflict_result.get("conflicts"):
+                from app.core.cache import cache_delete
+                today_str = date.today().isoformat()
+                await cache_delete(f"bond_metrics:{isin_code}:{today_str}")
+                logger.info(f"Invalidated metrics cache for {isin_code} due to KAP sync")
+                
         return kap_data, disclosures, conflict_result
     except Exception as e:
         logger.warning(f"KAP parallel failed for {isin_code}: {e}")
