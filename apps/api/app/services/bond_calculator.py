@@ -37,9 +37,13 @@ class BondCalculator:
         self.coupon_rate = Decimal(str(coupon_rate))
         self.face_value = Decimal(str(face_value))
 
-        # Tek odemeli (Bono) veya vadesi kisa olanlar icin frekans duzeltmesi
+        # Tek odemeli (Bono) veya vadesi kisa olanlar icin frekans duzeltmesi.
+        # ANCAK: Eger anchor (next_coupon_date) verilmisse ve maturity'den farkliysa, 
+        # bu kesinlikle cok kuponlu bir enstrumandir; frekansi 1'e zorlama.
         total_days = (maturity_date - issue_date).days
-        if coupon_frequency > 1 and total_days < (365 // coupon_frequency + 30):
+        is_truly_single = next_coupon_date is None or next_coupon_date >= maturity_date
+        
+        if is_truly_single and coupon_frequency > 1 and total_days < (365 // coupon_frequency + 30):
             self.coupon_frequency = 1
         else:
             self.coupon_frequency = coupon_frequency
@@ -97,18 +101,28 @@ class BondCalculator:
             anchor = self._next_coupon_date_anchor
             dates = []
             current = anchor
-            while current <= self.maturity_date:
+            # Forward from anchor
+            while current < self.maturity_date:
                 dates.append(current)
                 current += timedelta(days=period_days)
+            
+            # Backward from anchor
             current = anchor - timedelta(days=period_days)
-            while current >= self.issue_date:
+            while current > self.issue_date:
                 dates.append(current)
                 current -= timedelta(days=period_days)
+            
+            dates.append(self.maturity_date)
             dates.sort()
-            if not dates or dates[-1] != self.maturity_date:
-                dates.append(self.maturity_date)
-                dates.sort()
-            return dates
+            
+            # Unique dates only
+            seen = set()
+            unique_dates = []
+            for d in dates:
+                if d not in seen:
+                    unique_dates.append(d)
+                    seen.add(d)
+            return unique_dates
         dates = []
         current = self.issue_date + timedelta(days=period_days)
         while current <= self.maturity_date:

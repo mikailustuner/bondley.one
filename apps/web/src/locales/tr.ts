@@ -156,7 +156,7 @@ export const tr = {
             signup: "Ücretsiz Başlat",
         },
         hero: {
-            badge: "Borsa İstanbul ve MKK-E-KAP Verileri ile her gün güncel",
+            badge: "Borsa İstanbul ve MKK-E-KAP Verileri ile Her Gün Güncel",
             titleLine1: "Tahvil değerleme.",
             titleLine2: "Yeniden tanımlandı.",
             description: "Yatırım yaptığınız veya yapacağınız sermaye piyasası enstrümanlarının kupon oranlarını, kirli fiyatlarını, teorik fiyatlarını en kolay, güncel, hızlı ve doğru yerden takip ederek zamandan tasarruf edin. Bondley sizin için takip etsin, dilediğiniz zaman dilediğiniz enstrümanın detaylarını ilk siz öğrenin.",
@@ -164,7 +164,7 @@ export const tr = {
             ctaLogin: "Giriş Yap",
         },
         ticker: {
-            title: "Borsa İstanbul ve MKK-E-KAP Verileri ile her gün güncel",
+            title: "Borsa İstanbul ve MKK-E-KAP Verileri ile Her Gün Güncel",
             labels: {
                 tlrefIndex: "TLREF Endeks",
                 comparedToYesterday: "Düne Göre",

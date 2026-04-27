@@ -59,10 +59,17 @@ def parse_coupon_frequency(coupon_frequency: str | None, bond: "Bond" = None) ->
         total_days = (bond.maturity_date - bond.first_issue_date).days
         isin = str(bond.isin_code).upper() if bond.isin_code else ""
         
-        # Bono (Bill) teshisi: TRF veya TRB ile basliyorsa ve vadesi 300 gunden azsa 
-        # ve kupon frekans bilgisi yoksa "Tek Kupon" (Single) varsayilir.
-        # 300 gun uzeri (örn 364 gun) olanlar genellikle 4 kuponlu (Quarterly) olur.
-        if (isin.startswith("TRF") or isin.startswith("TRB")) and (0 < total_days < 300):
+        # IMPROVEMENT: If we have a next_coupon_date that is before maturity, 
+        # it CANNOT be a single coupon bond.
+        if bond.next_coupon_date and bond.maturity_date and bond.next_coupon_date < bond.maturity_date:
+            # If freq is not known, assume quarterly for short/mid term, semi-annual for long
+            if total_days <= 400:
+                return 91, 4
+            return 182, 2
+
+        # Bono (Bill) teshisi: TRF veya TRB ile basliyorsa ve vadesi 155 gunden azsa 
+        # (Eski limit 300 idi, 270 gunluk 3 kuponlu bonolar hatalı sekilde "Tek Kupon" oluyordu)
+        if (isin.startswith("TRF") or isin.startswith("TRB")) and (0 < total_days < 155):
             return -1, 1
             
         if 0 < total_days <= 400:
@@ -251,19 +258,24 @@ def bond_to_calculator_inputs(bond: Bond) -> tuple[date, date, Decimal, int] | N
         return None
         
     period_days, freq = parse_coupon_frequency(bond.coupon_frequency, bond)
+    
+    # We prioritize the next_coupon_rate from the database if available.
+    # For a multi-coupon bond, next_coupon_rate is usually the periodic rate.
+    # For a single coupon bond (Bono), it's the periodic rate for the whole duration.
     raw_rate = _coupon_rate_to_decimal(bond.next_coupon_rate)
     
     total_days = (maturity_date - issue_date).days
     
-    # Radikal Düzeltme: Vadesi 1 yıldan kısa ve "Tek Kupon" (Bono) olanlar için frekans düzeltmesi.
-    # Eğer kupon frekansı zaten 1 ise (Bono) veya "Tek Kupon" olarak işaretlenmişse freq=1 kalmalı.
-    # Ancak çok kuponlu bir enstrüman ise (freq > 1), vadesi 365 günden az olsa bile (örn. 364 gün) frekansı koru.
-    if total_days > 0 and total_days < 365 and freq == 1:
+    # Radikal Düzeltme: 
+    # freq == 1 means it's a "Single Coupon" (Bono/Bill) instrument.
+    if freq == 1:
         # Oranı toplam vadeye göre yıllıklandır (%18.41 * 365 / 151 = %44.50)
-        coupon_rate = raw_rate * Decimal("365") / Decimal(str(total_days))
-        freq = 1
+        # BondCalculator expects annual simple coupon_rate for single-coupon bonds
+        actual_days = total_days if total_days > 0 else 365
+        coupon_rate = raw_rate * Decimal("365") / Decimal(str(actual_days))
     else:
-        # 1 yıldan uzun standart tahviller
+        # Multi-coupon bond: next_coupon_rate is the periodic rate.
+        # BondCalculator expects (Periodic Rate * Frequency) as the annual rate input.
         coupon_rate = raw_rate * Decimal(str(freq))
         
     return (issue_date, maturity_date, coupon_rate, freq)
