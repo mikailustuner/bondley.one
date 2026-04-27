@@ -279,20 +279,20 @@ def _coupon_rate_to_decimal(rate: Decimal | None) -> Decimal:
     # Eger deger çok büyükse (örn: 112, 52556 vb.), muhtemelen ondalik ayraci silinmistir.
     # Degeri mantikli bir araliga (%0.01 ile %150 arasi) gelene kadar 10'a bolelim.
     
-    # Adim 1: Eger deger zaten bir ondalik rate ise (0.0001 - 1.5) dokunma.
-    # Turkiye piyasasinda faizler %100'un uzerine cikabildigi icin esigi 1.5 (%150) tutalim.
-    if abs(r) >= Decimal("0.0001") and abs(r) <= Decimal("1.5"):
+    # Adim 1: Eger deger zaten bir ondalik rate ise (0.0001 - 1.0) dokunma.
+    # Turkiye piyasasinda faizler %100'e yaklasabildigi icin esigi 1.0 (%100) tutalim.
+    if abs(r) >= Decimal("0.0001") and abs(r) <= Decimal("1.0"):
         return r
         
     # Adim 2: Eger deger yuzde olarak verilmişse (örn: 44.5 veya 85.0) 100'e bol.
-    if abs(r) > Decimal("1.5") and abs(r) <= Decimal("150"):
+    if abs(r) > Decimal("1.0") and abs(r) <= Decimal("100"):
         return r / Decimal("100")
         
     # Adim 3: Eger deger hala cok buyukse (örn: 112 veya 52556), ondalik kaymasi tamiri yap.
     temp_r = abs(r)
     scale = 0
-    # %150'nin (1.5) altina dusene kadar 10'a bol
-    while temp_r > Decimal("1.5"):
+    # %100'un (1.0) altina dusene kadar 10'a bol
+    while temp_r > Decimal("1.0"):
         temp_r /= Decimal("10")
         scale += 1
     
