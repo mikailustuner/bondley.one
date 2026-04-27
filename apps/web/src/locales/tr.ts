@@ -24,7 +24,7 @@ export const tr = {
     },
     meta: {
         title: "Bondley – Borçlanma Araçları Değerleme ve Analiz Platformu",
-        description: "Değişken getirili menkul kıymetlerin kupon oranları ve tüm borçlanma araçlarının günlük değerleme, fiyat takibi ve analiz platformu. Tahvil, bono, kira sertifikası, VDMK...",
+        description: "Profesyonel Tahvil Analiz Platformu",
     },
     error: {
         notFound: {
@@ -146,7 +146,7 @@ export const tr = {
         },
         hero: {
             title: "Bondley – Borçlanma Araçları, Takip, Değerleme ve Analiz Platformu",
-            description: "Değişken getirili menkul kıymetlerin kupon oranları ve tüm borçlanma araçlarının günlük değerleme, fiyat takibi ve analiz platformu. Tahvil, bono, kira sertifikası, VDMK...",
+            description: "Profesyonel Tahvil Analiz Platformu",
         }
     },
     landing: {
@@ -156,15 +156,15 @@ export const tr = {
             signup: "Ücretsiz Başlat",
         },
         hero: {
-            badge: "Borsa İstanbul ve MKK-E-KAP Verileri ile Her Gün Güncel",
-            titleLine1: "Tahvil değerleme.",
-            titleLine2: "Yeniden tanımlandı.",
-            description: "Yatırım yaptığınız veya yapacağınız sermaye piyasası enstrümanlarının kupon oranlarını, kirli fiyatlarını, teorik fiyatlarını en kolay, güncel, hızlı ve doğru yerden takip ederek zamandan tasarruf edin. Bondley sizin için takip etsin, dilediğiniz zaman dilediğiniz enstrümanın detaylarını ilk siz öğrenin.",
+            badge: "Borsa İstanbul ve MKK-E-KAP Verileri ile her gün güncel",
+            titleLine1: "Profesyonel Tahvil Analiz Platformu",
+            titleLine2: "Hassas Değerleme.",
+            description: "Yatırım yaptığınız veya yapacağınız sermaye piyayası entrümanlarının kupon oranlarını, kirli fiyatlarını, teorik fiyalarını, en kolay, güncel, hızlı ve doğru yerden takip ederek zamandan tasarruf ederken beşeri hataların ve üçüncü parti yazılımlardan kaynaklanan fiyat dalgalanmalarından kurtulun. Bondley sizin için takip etsin ve dilediğiniz zaman dilediğiniz enstrümanın detaylarını ilk siz öğrenin. Hesaplamalarınızı kontrol edin, gün sonu işlemlerinizi vaktinde tamamlayın. Ertesi iş günlerinizi bugünden planlayın.",
             ctaStart: "Ücretsiz Başlat",
             ctaLogin: "Giriş Yap",
         },
         ticker: {
-            title: "Borsa İstanbul ve MKK-E-KAP Verileri ile Her Gün Güncel",
+            title: "Borsa İstanbul ve MKK-E-KAP Verileri ile her gün güncel",
             labels: {
                 tlrefIndex: "TLREF Endeks",
                 comparedToYesterday: "Düne Göre",
@@ -199,7 +199,7 @@ export const tr = {
             items: [
                 {
                     label: "Borçlanma Aracı",
-                    desc: "Kamu (DİBS — Devlet Tahvili, Hazine Bonosu, Kira Sertifikaları) ve Özel Sektör Borçlanma Araçları, Kira Sertifikaları ve VDMK.",
+                    desc: "Kamu (DİBS -Devlet Tahvili, Hazine Bonosu, Kira Sertifikaları-) ve Özel Sektör Borçlanma Araçları, Kira Sertifikaları ve VDMK.",
                 },
                 {
                     label: "TLREF Kayıt",
@@ -316,7 +316,7 @@ export const tr = {
                 evening: "İyi akşamlar",
             },
             search: {
-                placeholder: "Araç ara...",
+                placeholder: "Sermaye Piyasası Aracını Ara... (ISIN) ",
                 ariaLabel: "Borçlanma aracı ara",
                 searching: "Aranıyor...",
                 noResults: "Sonuç bulunamadı",
@@ -378,7 +378,7 @@ export const tr = {
         },
         bonds: {
             title: "Borçlanma Araçları",
-            description: "{total} aktif araç — {count} adet verisi olan listeleniyor",
+            description: "Tahvil, Bono, Kira Sertifikası, VDMK ve Türevleri — {count} aktif kayıt",
             descriptionFull: "{total} aktif araç listeleniyor",
             stats: {
                 total: "Toplam Araç",
@@ -446,7 +446,7 @@ export const tr = {
                 expired: "Vadesi Doldu",
                 archivedNotice: "Bu araç dolaşımdan çıkmıştır. Veriler bilgilendirme amaçlıdır.",
                 issuerVksh: "İhraççı VKŞ",
-                fundUser: "Fon Kullanıcısı",
+                fundUser: "Fon Kullanıcısı/Kaynak Kuruluş",
                 unknown: "Bilinmiyor",
             },
             actions: {
@@ -481,7 +481,7 @@ export const tr = {
                 rateChange: "Oran Değişimi (Günlük %)",
                 cleanPrice: "Temiz Fiyat",
                 annualRefRate: "Yıllık Gösterge Faiz",
-                annualCouponRate: "Yıllık Basit Kupon",
+                annualCouponRate: "Yıllık Kupon Faiz",
                 periodicCouponRate: "Dönemsel Kupon Faiz",
                 annualCompoundCouponRate: "Yıllık Bileşik Getiri",
                 ytm: "Vadeye Kadar Getiri (YTM)",
@@ -522,7 +522,7 @@ export const tr = {
                     desc: "Genel Bilgiler",
                     isin: "ISIN Kodu",
                     issuer: "İhraççı",
-                    fundUser: "Fon Kullanıcısı",
+                    fundUser: "Fon Kullanıcısı/Kaynak Kuruluş",
                     sourceInst: "Kaynak Kuruluş",
                     issuanceType: "İhraç Türü",
                     yieldType: "Getiri Türü",
@@ -552,7 +552,7 @@ export const tr = {
                     firstYield: "İlk İhraç Getirisi %",
                     lastYield: "Son İhraç Getirisi %",
                     nextCouponRate: "Sonraki Kupon Oranı %",
-                    spread: "Sözleşmesel Ek Getiri (Spread) %",
+                    spread: "Spread %",
                     calculatedSpread: "Hesaplanan Spread (YTM − TLREF) %",
                     lastTlref: "Son TLREF (Gecelik Faiz) %",
                     lastTlrefk: "Son TLREFK (Endeks)",
@@ -598,7 +598,7 @@ export const tr = {
                     title: "Araç Bilgileri",
                     isin: "ISIN Kodu",
                     type: "Araç Tipi",
-                    fundUser: "Fon Kullanıcısı",
+                    fundUser: "Fon Kullanıcısı/Kaynak Kuruluş",
                     sourceInst: "Kaynak Kuruluş",
                     maturity: "İtfa Tarihi",
                     days: "Vade (Gün)",
@@ -939,7 +939,7 @@ export const tr = {
                     process: {
                         label: "BIST OTOMATİK SÜREÇ",
                         title: "Veri Aktarımı",
-                        description: "Tüm veriler (tahviller, piyasa verileri, TLREF) yalnızca BIST'ten internet üzerinden indirilen zip/CSV dosyaları ile veritabanına yazan otomatik süreç ile doldurulur. Manuel yükleme yapılamaz (admin dahil).",
+                        description: "Tüm veriler (ilgili sermaye piyasası araçları, piyasa verileri, TLREF) yalnızca BIST'ten internet üzerinden indirilen zip/CSV dosyaları ile veritabanına yazan otomatik süreç ile doldurulur. Manuel yükleme yapılamaz (admin dahil).",
                     },
                     tasks: {
                         label: "ZAMANLANMIŞ GÖREVLER",
