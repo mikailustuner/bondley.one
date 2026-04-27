@@ -64,11 +64,15 @@ def parse_coupon_frequency(coupon_frequency: str | None, bond: "Bond" = None) ->
             diff = (bond.next_coupon_date - bond.first_issue_date).days
             if diff > 0:
                 # Check for quarterly (~91 days)
-                if diff % 91 < 10 or diff % 91 > 81:
+                if diff % 91 < 5 or diff % 91 > 86:
                     return 91, 4
                 # Check for semi-annual (~182 days)
-                if diff % 182 < 15 or diff % 182 > 167:
+                if diff % 182 < 10 or diff % 182 > 172:
                     return 182, 2
+                # Check for monthly or irregular high-freq (15-45 days)
+                if 15 <= diff <= 45:
+                    implied_freq = round(365 / diff)
+                    return diff, implied_freq
         
         # IMPROVEMENT 2: If we have a next_coupon_date that is before maturity, 
         # it CANNOT be a single coupon bond.
@@ -282,16 +286,15 @@ def bond_to_calculator_inputs(bond: Bond) -> tuple[date, date, Decimal, int] | N
     else:
         # Multi-coupon bond: Deciding if DB rate is periodic or already annualized
         # Heuristik: Eğer rate * freq > 2.0 (%200), rate muhtemelen zaten yıllıklandırılmıştır.
-        # Ayrıca floating rate tahvillerde genellikle periyodik oran saklanır.
         if raw_rate > Decimal("0.2"): # > %20 is very likely annual
-             coupon_rate = raw_rate
-        elif raw_rate * Decimal(str(freq)) > Decimal("2.0"): # e.g. 0.46 * 4 = 1.84 (OK), but 0.6 * 4 = 2.4 (Suspicious)
+             # Calculator needs a rate that produces the correct periodic coupon:
+             # CalcRate = (Annual * PeriodDays / 365) * Frequency
+             coupon_rate = (raw_rate * Decimal(str(period_days)) / Decimal("365")) * Decimal(str(freq))
+        elif raw_rate * Decimal(str(freq)) > Decimal("2.0"):
              coupon_rate = raw_rate
         else:
-             # Assume periodic
+             # Assume periodic. Calculator expects annual simple = periodic * frequency.
              coupon_rate = raw_rate * Decimal(str(freq))
-        
-    return (issue_date, maturity_date, coupon_rate, freq)
         
     return (issue_date, maturity_date, coupon_rate, freq)
 
@@ -588,22 +591,27 @@ class BondMetricsService:
                     # Decide if it's annual or periodic
                     if db_rate > Decimal("0.2"): # Likely annual simple
                         annual_coupon = db_rate
+                        # Calculator needs a rate that produces the correct periodic coupon:
+                        # Periodic = Annual * (PeriodDays / 365)
+                        # CalcRate = Periodic * Frequency
+                        calc_coupon_rate = (db_rate * Decimal(str(eff_period)) / Decimal("365")) * Decimal(str(freq_per_year))
                     else: # Likely periodic
-                        annual_coupon = db_rate * Decimal(str(freq_per_year))
+                        # CRITICAL FIX: Annual simple yield for display uses ACTUAL day-fraction (365/eff_period)
+                        # whereas calculator rate uses fixed frequency multiplier to keep periodic rate stable.
+                        annual_coupon = db_rate * Decimal("365") / Decimal(str(eff_period))
+                        calc_coupon_rate = db_rate * Decimal(str(freq_per_year))
                 else:
                     annual_coupon = annual_coupon_rate(annual_ref, active_spread)
+                    calc_coupon_rate = annual_coupon # Use calculated floating rate
                 
                 logger.debug(f"Compute Metrics {bond.isin_code}: db_rate={db_rate}, annual_ref={annual_ref}, annual_coupon={annual_coupon}")
                 periodic_coupon = periodic_coupon_rate(annual_coupon, eff_period)
                 compound_coupon = annual_compound_coupon_rate(periodic_coupon, eff_period)
                 
-                # RE-INITIALIZE BondCalculator with calculated rate if DB rate is 0 or missing
-                # This ensures accrued_interest and other metrics use the current floating rate
+                # RE-INITIALIZE BondCalculator with correct rate for math consistency
                 if annual_coupon and (not calc or coupon_rate == 0):
                     try:
-                        # For calculator, we need the annual simple coupon rate
-                        # If freq_per_year is 1, it's already annualized for the whole period
-                        calc_coupon_rate = annual_coupon
+                        # Use calc_coupon_rate which is optimized for BondCalculator's (Rate/Freq) logic
                         calc = BondCalculator(
                             isin=bond.isin_code,
                             issue_date=bond.first_issue_date,
