@@ -174,13 +174,17 @@ async def apply_kap_data_to_bond(db: AsyncSession, bond: Bond, kap_data: dict) -
                         next_coupon = {"date": p_date, "rate": c.get("periodic_rate")}
             except ValueError: continue
         
-        if next_coupon and next_coupon["rate"]:
-            from app.services.bond_metrics_service import _coupon_rate_to_decimal
-            k_rate = _coupon_rate_to_decimal(next_coupon["rate"])
-            if k_rate > 0 and bond.next_coupon_rate != k_rate:
-                bond.next_coupon_rate = k_rate
+        if next_coupon:
+            if bond.next_coupon_date != next_coupon["date"]:
                 bond.next_coupon_date = next_coupon["date"]
                 changed = True
+            
+            if next_coupon["rate"]:
+                from app.services.bond_metrics_service import _coupon_rate_to_decimal
+                k_rate = _coupon_rate_to_decimal(next_coupon["rate"])
+                if k_rate > 0 and bond.next_coupon_rate != k_rate:
+                    bond.next_coupon_rate = k_rate
+                    changed = True
 
     # 4. Kupon Sikligi
     kap_freq = kap_data.get("coupon_frequency")

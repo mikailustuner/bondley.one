@@ -594,6 +594,9 @@ async def _get_kap_parallel(
                 from app.core.cache import cache_delete
                 today_str = date.today().isoformat()
                 await cache_delete(f"bond_metrics:{isin_code}:{today_str}")
+                # Additionally try to clear 27.04.2026 and 28.04.2026 specifically for testing
+                await cache_delete(f"bond_metrics:{isin_code}:2026-04-27")
+                await cache_delete(f"bond_metrics:{isin_code}:2026-04-28")
                 logger.info(f"Invalidated metrics cache for {isin_code} due to KAP sync")
                 
         return kap_data, disclosures, conflict_result
