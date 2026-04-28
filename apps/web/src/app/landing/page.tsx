@@ -101,7 +101,7 @@ export default function LandingPage() {
       </nav>
 
       {/* ═══════ Hero — full-width, Apple keynote style ═══════ */}
-      <section className="relative pt-32 pb-28 overflow-hidden">
+      <section className="relative pt-24 pb-16 overflow-hidden">
         {/* Subtle background gradient */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] rounded-full bg-primary/[0.04] blur-[120px]" />
@@ -118,13 +118,13 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <h1 className="text-display-xl md:text-[4.5rem] md:leading-[1.04] lg:text-[5.5rem] lg:leading-[1.02] text-foreground tracking-tight max-w-4xl mx-auto animate-fade-up">
+          <h1 className="text-display-xl md:text-[4.5rem] md:leading-[1.04] lg:text-[5.5rem] lg:leading-[1.02] text-foreground tracking-tight max-w-6xl mx-auto animate-fade-up">
             {tr.landing.hero.titleLine1}
             <br />
             <span className="text-primary">{tr.landing.hero.titleLine2}</span>
           </h1>
 
-          <p className="text-body-lg md:text-[1.25rem] md:leading-[1.6] text-muted-foreground max-w-2xl mx-auto mt-8 animate-fade-up-delay-1">
+          <p className="text-body-lg md:text-[1.25rem] md:leading-[1.6] text-muted-foreground max-w-4xl mx-auto mt-8 animate-fade-up-delay-1">
             {tr.landing.hero.description}
           </p>
 
@@ -147,6 +147,41 @@ export default function LandingPage() {
               </Link>
             )}
           </div>
+
+          {/* ═══════ PC: Veri Açıklanmasına 1 Gün Kalanlar ═══════ */}
+          {summary?.upcoming_bonds?.some(b => b.days_to_coupon === 1) && (
+            <div className="hidden md:block mt-20 animate-fade-up-delay-3 max-w-5xl mx-auto">
+              <div className="flex items-center justify-center gap-3 mb-6">
+                <div className="h-px w-12 bg-primary/20" />
+                <span className="text-[13px] font-semibold text-primary uppercase tracking-[0.2em]">
+                  {tr.landing.upcoming.title.replace("{days}", "1")}
+                </span>
+                <div className="h-px w-12 bg-primary/20" />
+              </div>
+              <div className="flex flex-wrap justify-center gap-3">
+                {summary.upcoming_bonds
+                  .filter(b => b.days_to_coupon === 1)
+                  .map((b) => (
+                    <Link
+                      key={b.isin_code}
+                      href={user ? `/dashboard/bonds/${b.isin_code}` : "/signup"}
+                      className="group relative flex flex-col items-start p-5 rounded-2xl bg-card border border-border/50 hover:border-primary/40 hover:shadow-md transition-all duration-300 w-[240px] text-left"
+                    >
+                      <div className="absolute top-4 right-4 h-2 w-2 rounded-full bg-positive animate-pulse" />
+                      <span className="font-mono-data font-bold text-[16px] text-foreground mb-1">
+                        {b.isin_code}
+                      </span>
+                      <span className="text-[13px] text-muted-foreground line-clamp-1 mb-3">
+                        {b.issuer || "—"}
+                      </span>
+                      <div className="flex items-center text-[12px] font-medium text-primary group-hover:translate-x-1 transition-transform">
+                        {tr.landing.upcoming.seeMore} <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
+                      </div>
+                    </Link>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
