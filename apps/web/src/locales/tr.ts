@@ -158,7 +158,7 @@ export const tr = {
         hero: {
             badge: "Borsa İstanbul ve MKK-E-KAP Verileri ile her gün güncel",
             titleLine1: "Bondley ile Takip Edin",
-            titleLine2: "Hesaplamalarınızı Kontrol Edin",
+            titleLine2: "Hesaplamaları Kontrol Edin",
             description: "Yatırım yaptığınız veya yapacağınız sermaye piyayası entrümanlarının kupon oranlarını, kirli fiyatlarını, teorik fiyalarını, en kolay, güncel, hızlı ve doğru yerden takip ederek zamandan tasarruf ederken beşeri hataların ve üçüncü parti yazılımlardan kaynaklanan fiyat dalgalanmalarından kurtulun. Bondley sizin için takip etsin ve dilediğiniz zaman dilediğiniz enstrümanın detaylarını ilk siz öğrenin. Hesaplamalarınızı kontrol edin, gün sonu işlemlerinizi vaktinde tamamlayın. Ertesi iş günlerinizi bugünden planlayın.",
             ctaStart: "Ücretsiz Başlat",
             ctaLogin: "Giriş Yap",
