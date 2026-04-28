@@ -28,11 +28,11 @@ logger = logging.getLogger(__name__)
 # -1 sentinel = "Tek Kupon": actual duration computed from bond dates at call site
 COUPON_FREQUENCY_MAP = [
     (r"tek\s*kupon|tek\s*öd|tek\s*od|single", (-1, 1)),
-    (r"6\s*ayda|yar[iı]?\s*y[iı]l|6\s*ay|semi[- ]?annu", (182, 2)),
-    (r"y[iı]ll[iı]k|yillik|1\s*yil|yilda\s*1|annu", (365, 1)),
-    (r"3\s*ayda|3\s*ay|[üu]ç\s*ay|quarter", (91, 4)),
-    (r"12\s*ayda|12\s*ay", (365, 1)),
-    (r"ayda\s*bir|ayl[iı]k|monthly", (30, 12)),
+    (r"6\s*ayda|yar[iı]?\s*y[iı]l|6\s*ay|semi[- ]?annu|^2$", (182, 2)),
+    (r"y[iı]ll[iı]k|yillik|1\s*yil|yilda\s*1|annu|^1$", (365, 1)),
+    (r"3\s*ayda|3\s*ay|[üu]ç\s*ay|quarter|^4$", (91, 4)),
+    (r"12\s*ayda|12\s*ay|^1$", (365, 1)),
+    (r"ayda\s*bir|ayl[iı]k|monthly|^12$", (30, 12)),
 ]
 
 
