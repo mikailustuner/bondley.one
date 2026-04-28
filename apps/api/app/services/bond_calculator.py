@@ -94,43 +94,22 @@ class BondCalculator:
     def _all_coupon_dates(self) -> list[date]:
         """
         Ihrac tarihinden vadeye kadar tum kupon tarihlerini uret.
-        next_coupon_date verildiyse BIST ile uyumlu olarak o tarihten geriye/ileriye period_days ile uretir.
+        Ileriye dogru (forward) uretilir, kalan kisa/uzun sure (stub) son kupona yansitilir.
         """
         period_days = 365 // max(1, self.coupon_frequency)
-        if self._next_coupon_date_anchor is not None:
-            anchor = self._next_coupon_date_anchor
-            dates = []
-            current = anchor
-            # Forward from anchor
-            while current < self.maturity_date:
-                dates.append(current)
-                current += timedelta(days=period_days)
-            
-            # Backward from anchor
-            current = anchor - timedelta(days=period_days)
-            while current > self.issue_date:
-                dates.append(current)
-                current -= timedelta(days=period_days)
-            
-            dates.append(self.maturity_date)
-            dates.sort()
-            
-            # Unique dates only
-            seen = set()
-            unique_dates = []
-            for d in dates:
-                if d not in seen:
-                    unique_dates.append(d)
-                    seen.add(d)
-            return unique_dates
-        dates = []
+        dates = [self.issue_date]
         current = self.issue_date + timedelta(days=period_days)
-        while current <= self.maturity_date:
+        while current < self.maturity_date:
+            # Eger vadeye kalan gun cok azsa (orn <= 14), yeni kupon yaratma, son (uzun) kupona ekle.
+            if (self.maturity_date - current).days <= 14:
+                break
             dates.append(current)
             current += timedelta(days=period_days)
-        if not dates or dates[-1] != self.maturity_date:
+            
+        if dates[-1] != self.maturity_date:
             dates.append(self.maturity_date)
-        return dates
+            
+        return dates[1:]
 
     def _period_days(self) -> int:
         """Iki kupon arasi gun sayisi; _all_coupon_dates ile uyumlu (365 // coupon_frequency)."""
@@ -160,12 +139,9 @@ class BondCalculator:
             # Bono icin Birikmis Faiz: Nominal * Oran * (Gecen Gun / 365)
             accrued = self.face_value * self.coupon_rate * Decimal(str(days_passed)) / Decimal("365")
         else:
-            days_in_period = (next_coupon - last_coupon).days
-            if days_in_period <= 0:
-                return Decimal("0")
-            accrued = self.coupon_payment * (
-                Decimal(str(days_passed)) / Decimal(str(days_in_period))
-            )
+            # Act/365 yaklasimi ile kupon donemi icindeki gercek gecen gun uzerinden hesapla
+            accrued = self.face_value * self.coupon_rate * Decimal(str(days_passed)) / Decimal("365")
+            
         return accrued.quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
 
     def dirty_price(self, clean_price: Decimal, settlement_date: date) -> Decimal:
@@ -193,10 +169,16 @@ class BondCalculator:
                 continue
 
             is_last = coupon_date == self.maturity_date or i == len(coupon_dates) - 1
+            
+            # Tam kupon tutari donemin gercek gun sayisi uzerinden hesaplanir
+            prev_date = coupon_dates[i-1] if i > 0 else self.issue_date
+            days_in_period = (coupon_date - prev_date).days
+            exact_coupon_payment = self.face_value * self.coupon_rate * Decimal(str(days_in_period)) / Decimal("365")
+
             if is_last:
-                amount = self.coupon_payment + self.face_value
+                amount = exact_coupon_payment + self.face_value
             else:
-                amount = self.coupon_payment
+                amount = exact_coupon_payment
 
             flows.append(BondCashFlow(payment_date=coupon_date, amount=amount))
 

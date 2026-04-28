@@ -112,24 +112,35 @@ def get_current_coupon_period(
 ) -> tuple[date | None, date | None]:
     """
     Yerlesim tarihi icin cari kupon donemi baslangic ve bitis tarihlerini dondurur.
-    next_coupon_date bir sonraki kupon odeme gunu; donem bitisi = next_coupon_date,
-    donem basi = next_coupon_date - period_days.
+    BondCalculator'daki tam dongusel (forward) tarih uretimini kullanarak (long stub icerecek sekilde) 
+    period'u secer.
     """
-    if not next_coupon_date:
-        if not first_issue_date or not maturity_date or period_days <= 0:
-            return None, None
-        # Donemleri first_issue_date'den itibaren uret, settlement'i iceren donemi bul
-        start = first_issue_date
-        while start + timedelta(days=period_days) <= settlement_date:
-            start = start + timedelta(days=period_days)
-        end = start + timedelta(days=period_days)
-        if end > maturity_date:
-            end = maturity_date
-        return start, end
-    period_end = next_coupon_date
-    period_start = period_end - timedelta(days=period_days)
-    if first_issue_date and period_start < first_issue_date:
-        period_start = first_issue_date
+    if not first_issue_date or not maturity_date or period_days <= 0:
+        return None, None
+        
+    dates = [first_issue_date]
+    current = first_issue_date + timedelta(days=period_days)
+    while current < maturity_date:
+        if (maturity_date - current).days <= 14:
+            break
+        dates.append(current)
+        current += timedelta(days=period_days)
+        
+    if dates[-1] != maturity_date:
+        dates.append(maturity_date)
+        
+    period_start = None
+    period_end = None
+    for i in range(1, len(dates)):
+        if dates[i] > settlement_date:
+            period_start = dates[i-1]
+            period_end = dates[i]
+            break
+            
+    if period_start is None:
+        period_start = dates[-2] if len(dates) >= 2 else dates[0]
+        period_end = dates[-1]
+        
     return period_start, period_end
 
 
@@ -631,10 +642,12 @@ class BondMetricsService:
         compound_coupon = None
 
         # Resolve effective period for annualization
-        # NOT: Override işlemi sadece "Tek Kupon" (freq_per_year=1 ve period_days >= total_days) durumunda yapılmalı.
-        # Çok kuponlu tahvillerde (örn. 364 gün vadeli ama 4 kuponlu), annualization kupon dönemine (91 gün) göre yapılmalıdır.
+        # Eger period_start ve period_end get_current_coupon_period tarafindan
+        # bulunabilmisse (stub/tam donem farketmeksizin), donemin gercek gun sayisi kullanilmalidir.
         eff_period = period_days
-        if bond.first_issue_date and bond.maturity_date:
+        if period_start and period_end:
+            eff_period = (period_end - period_start).days
+        elif bond.first_issue_date and bond.maturity_date:
             actual_days = (bond.maturity_date - bond.first_issue_date).days
             if 0 < actual_days < 365 and freq_per_year == 1:
                 eff_period = actual_days
@@ -653,15 +666,10 @@ class BondMetricsService:
                     # Decide if it's annual or periodic
                     if db_rate > Decimal("0.2"): # Likely annual simple
                         annual_coupon = db_rate
-                        # Calculator needs a rate that produces the correct periodic coupon:
-                        # Periodic = Annual * (PeriodDays / 365)
-                        # CalcRate = Periodic * Frequency
-                        calc_coupon_rate = (db_rate * Decimal(str(eff_period)) / Decimal("365")) * Decimal(str(freq_per_year))
+                        calc_coupon_rate = annual_coupon
                     else: # Likely periodic
-                        # CRITICAL FIX: Annual simple yield for display uses ACTUAL day-fraction (365/eff_period)
-                        # whereas calculator rate uses fixed frequency multiplier to keep periodic rate stable.
                         annual_coupon = db_rate * Decimal("365") / Decimal(str(eff_period))
-                        calc_coupon_rate = db_rate * Decimal(str(freq_per_year))
+                        calc_coupon_rate = annual_coupon
                 else:
                     annual_coupon = annual_coupon_rate(annual_ref, active_spread)
                     calc_coupon_rate = annual_coupon # Use calculated floating rate
@@ -689,8 +697,8 @@ class BondMetricsService:
             # Sabit faizli: BondCalculator verisini veya DB'deki oranı kullan
             if calc:
                 annual_coupon = calc.coupon_rate
-                compound_coupon = calc.compound_coupon_rate()
-                periodic_coupon = _coupon_rate_to_decimal(bond.next_coupon_rate)
+                periodic_coupon = periodic_coupon_rate(annual_coupon, eff_period)
+                compound_coupon = annual_compound_coupon_rate(periodic_coupon, eff_period)
             else:
                 raw_periodic = _coupon_rate_to_decimal(bond.next_coupon_rate)
                 if raw_periodic > 0 and eff_period > 0:
