@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { InitialLoader } from "@/components/initial-loader";
 import { MaintenanceGuard } from "@/components/maintenance-guard";
 import { CookieConsentBanner } from "@/components/ui/cookie-consent";
+import { AboutPopup } from "@/components/about-popup";
 import { ServiceWorkerRegistrar } from "@/components/service-worker-registrar";
 import "./globals.css";
 import { tr } from "@/locales/tr";
@@ -71,6 +72,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </MaintenanceGuard>
           <CookieConsentBanner />
+          <AboutPopup />
           <ServiceWorkerRegistrar />
         </ThemeProvider>
       </body>

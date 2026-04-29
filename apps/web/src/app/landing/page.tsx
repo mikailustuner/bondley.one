@@ -488,6 +488,12 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center gap-8 text-[13px] text-muted-foreground">
               <Link
+                href="/hakkimizda"
+                className="hover:text-primary transition-colors"
+              >
+                {tr.landing.footer.about}
+              </Link>
+              <Link
                 href="/gizlilik"
                 className="hover:text-primary transition-colors"
               >

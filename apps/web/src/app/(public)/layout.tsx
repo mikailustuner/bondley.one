@@ -34,6 +34,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           <Link href="/sss" className="hover:text-foreground transition-colors">SSS</Link>
           <Link href="/sozluk" className="hover:text-foreground transition-colors">Sözlük</Link>
           <Link href="/iletisim" className="hover:text-foreground transition-colors">İletişim</Link>
+          <Link href="/hakkimizda" className="hover:text-foreground transition-colors">Hakkımızda</Link>
           <Link href="/gizlilik" className="hover:text-foreground transition-colors">Gizlilik</Link>
         </div>
         <p className="mt-3">© {new Date().getFullYear()} Bondley. Tüm hakları saklıdır.</p>
