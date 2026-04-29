@@ -20,7 +20,7 @@ export function AboutPopup() {
         setVisible(true);
       }, 2000);
 
-      // Auto-collapse after 20 seconds to give more time to read
+      // Auto-collapse after 25 seconds
       const collapseTimer = setTimeout(() => {
         setIsExpanded(false);
       }, 25000);
@@ -42,8 +42,10 @@ export function AboutPopup() {
   return (
     <div 
       className={cn(
-        "fixed bottom-6 right-6 z-[60] transition-all duration-700 ease-in-out",
-        isExpanded ? "w-[440px] max-w-[calc(100vw-48px)]" : "w-[56px] h-[56px]"
+        "fixed z-[60] transition-all duration-700 ease-in-out",
+        isExpanded 
+          ? "bottom-6 right-6 w-[440px] max-w-[calc(100vw-48px)]" 
+          : "top-1/2 -translate-y-1/2 right-0 w-[36px] h-[120px]"
       )}
     >
       {isExpanded ? (
@@ -93,7 +95,7 @@ export function AboutPopup() {
                 {content.content1}
               </p>
 
-              {/* Names Section - More prominent */}
+              {/* Names Section */}
               <div className="relative p-5 rounded-2xl bg-primary/[0.03] border border-primary/10 group overflow-hidden">
                 <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
                    <Users className="w-8 h-8 text-primary" />
@@ -118,14 +120,19 @@ export function AboutPopup() {
           </div>
         </div>
       ) : (
+        /* Collapsed State - Minimalist Vertical Tab */
         <button
           onClick={() => setIsExpanded(true)}
-          className="group relative flex h-[56px] w-[56px] items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/20 hover:scale-110 transition-all duration-300 animate-in fade-in zoom-in-50"
+          className="group relative flex h-[120px] w-[36px] items-center justify-center rounded-l-xl bg-primary text-primary-foreground shadow-xl shadow-primary/20 hover:w-[42px] transition-all duration-300 animate-in slide-in-from-right-10 overflow-hidden"
         >
-          <Info className="h-6 w-6" />
-          <div className="absolute right-full mr-3 whitespace-nowrap rounded-xl bg-foreground text-background px-4 py-2 text-[13px] font-bold opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0 pointer-events-none">
-            Hakkımızda
+          <div className="rotate-180" style={{ writingMode: 'vertical-rl' }}>
+            <span className="text-[12px] font-bold tracking-[0.2em] uppercase py-2">
+              Hakkımızda
+            </span>
           </div>
+          
+          {/* Subtle glow effect on hover */}
+          <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
         </button>
       )}
     </div>
