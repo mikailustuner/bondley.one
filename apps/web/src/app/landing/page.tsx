@@ -25,12 +25,7 @@ import {
 } from "lucide-react";
 import { getUser } from "@/lib/auth";
 import { api, PublicSummary } from "@/lib/api-client";
-import {
-  formatDecimal,
-  formatPercentFromDecimal,
-  formatPercent,
-  formatDate,
-} from "@/lib/utils";
+import { cn, formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
 import { tr } from "@/locales/tr";
 import { APP_VERSION } from "@/lib/constants";
 
@@ -38,6 +33,8 @@ export default function LandingPage() {
   const [summary, setSummary] = useState<PublicSummary | null>(null);
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [filterDays, setFilterDays] = useState(1); // Default: Yarın (1 gün kalanlar)
+
 
   useEffect(() => {
     setMounted(true);
@@ -148,19 +145,48 @@ export default function LandingPage() {
             )}
           </div>
 
-          {/* ═══════ Veri Açıklanmasına 1 Gün Kalanlar ═══════ */}
-          {summary?.upcoming_bonds?.some(b => b.days_to_coupon === 1) && (
+          {/* ═══════ Veri Açıklanması Yaklaşanlar (Filtreleme Sistemi) ═══════ */}
+          {summary?.upcoming_bonds && summary.upcoming_bonds.length > 0 && (
             <div className="mt-16 md:mt-20 animate-fade-up-delay-3 max-w-5xl mx-auto px-4 md:px-0">
-              <div className="flex items-center justify-center gap-3 mb-6">
+              <div className="flex items-center justify-center gap-3 mb-8">
                 <div className="h-px w-12 bg-primary/20" />
                 <span className="text-[13px] font-semibold text-primary uppercase tracking-[0.2em]">
-                  {tr.landing.upcoming.title.replace("{days}", "1")}
+                  {filterDays === 0 
+                    ? tr.landing.upcoming.titleToday 
+                    : filterDays === 1 
+                      ? tr.landing.upcoming.titleTomorrow 
+                      : tr.landing.upcoming.titleDayAfter}
                 </span>
                 <div className="h-px w-12 bg-primary/20" />
               </div>
+
+              {/* Day Filter Segmented Control */}
+              <div className="flex items-center justify-center mb-10">
+                <div className="inline-flex items-center gap-1 p-1 rounded-2xl bg-secondary/50 border border-border/50 backdrop-blur-sm">
+                  {[
+                    { val: 0, label: tr.landing.upcoming.filterToday },
+                    { val: 1, label: tr.landing.upcoming.filterTomorrow },
+                    { val: 2, label: tr.landing.upcoming.filterDayAfter },
+                  ].map((d) => (
+                    <button
+                      key={d.val}
+                      onClick={() => setFilterDays(d.val)}
+                      className={cn(
+                        "px-6 py-2 rounded-xl text-[14px] font-medium transition-all duration-300",
+                        filterDays === d.val
+                          ? "bg-background text-primary shadow-sm border border-border/40"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex flex-wrap justify-center gap-3">
                 {summary.upcoming_bonds
-                  .filter(b => b.days_to_coupon === 1)
+                  .filter(b => b.days_to_coupon === filterDays)
                   .map((b) => (
                     <Link
                       key={b.isin_code}
@@ -179,6 +205,14 @@ export default function LandingPage() {
                       </div>
                     </Link>
                   ))}
+                
+                {summary.upcoming_bonds.filter(b => b.days_to_coupon === filterDays).length === 0 && (
+                  <div className="py-12 text-center w-full">
+                    <p className="text-muted-foreground text-[15px]">
+                      Bu gün için beklenen veri açıklaması bulunmuyor.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}

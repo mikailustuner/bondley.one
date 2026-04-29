@@ -249,6 +249,12 @@ export const tr = {
         },
         upcoming: {
             title: "Veri Açıklanmasına {days} Gün Kalanlar",
+            titleToday: "Bugün Veri Açıklayacaklar",
+            titleTomorrow: "Yarın Veri Açıklayacaklar",
+            titleDayAfter: "2 Gün Sonra Veri Açıklayacaklar",
+            filterToday: "Bugün",
+            filterTomorrow: "Yarın",
+            filterDayAfter: "2 Gün Sonra",
             seeMore: "Daha fazlasını gör",
         },
         trust: [
