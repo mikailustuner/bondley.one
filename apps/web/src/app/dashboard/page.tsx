@@ -137,7 +137,7 @@ export default function DashboardPage() {
             {getTodayText()}
           </p>
         </div>
-        <div ref={quickSearchRef} className="relative w-full md:w-[460px]">
+        <div ref={quickSearchRef} className="relative w-full md:w-[600px]">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-[18px] w-[18px] pointer-events-none text-muted-foreground/70" />
           <Input
             type="search"
@@ -145,12 +145,15 @@ export default function DashboardPage() {
             value={quickSearchQuery}
             onChange={(e) => setQuickSearchQuery(e.target.value)}
             onFocus={() => quickSearchResults.length > 0 && setQuickSearchOpen(true)}
-            className="pl-11 h-12 rounded-full bg-background border-border hover:border-primary/50 focus-visible:ring-4 focus-visible:ring-primary/10 focus-visible:border-primary text-[15px] transition-all shadow-md"
+            className="pl-11 h-12 rounded-full bg-background border-border hover:border-primary/50 focus-visible:ring-4 focus-visible:ring-primary/10 focus-visible:border-primary text-[15px] transition-all shadow-md search-glow"
             aria-label={tr.dashboard.overview.search.ariaLabel}
             autoComplete="off"
           />
           {quickSearchOpen && (
-            <ul className="absolute top-full left-0 right-0 z-50 mt-2 max-h-64 overflow-auto rounded-2xl border border-border bg-card py-1.5 shadow-lg">
+            <ul className="absolute top-full left-0 right-0 z-50 mt-3 max-h-80 overflow-auto rounded-3xl border border-border bg-card/95 backdrop-blur-xl py-2 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+              <li className="px-4 py-2 text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
+                {tr.dashboard.overview.search.results || "Sonuçlar"}
+              </li>
               {quickSearchLoading && (
                 <li className="px-4 py-3 text-[13px] text-muted-foreground">{tr.dashboard.overview.search.searching}</li>
               )}

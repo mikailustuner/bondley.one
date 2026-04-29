@@ -320,6 +320,7 @@ export const tr = {
                 ariaLabel: "Borçlanma aracı ara",
                 searching: "Aranıyor...",
                 noResults: "Sonuç bulunamadı",
+                results: "Sonuçlar",
             },
             widgets: {
                 tlrefIndex: "TLREF Endeks",
@@ -1075,6 +1076,13 @@ export const tr = {
                     maintenance: "Bakım Modu (Site Under Construction)",
                     maintenanceDesc: "Ziyaretçilere bakımdayız sayfasını gösterir",
                     autoUpdate: "Otomatik Güncelleme",
+                },
+                search: {
+                    placeholder: "Sermaye Piyasası Aracını Ara... (ISIN)",
+                    ariaLabel: "Borçlanma aracı ara",
+                    searching: "Aranıyor...",
+                    noResults: "Sonuç bulunamadı",
+                    results: "Sonuçlar",
                 },
                 health: {
                     label: "VERİ SAĞLIĞI & EKSİKLİKLER",
