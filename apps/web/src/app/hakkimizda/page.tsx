@@ -9,7 +9,7 @@ export default function HakkimizdaPage() {
 
   return (
     <div className="min-h-screen bg-background selection:bg-primary/10">
-      <div className="container mx-auto py-16 px-4 max-w-4xl animate-fade-in">
+      <div className="container mx-auto py-[clamp(3rem,8vh,6rem)] px-4 max-w-4xl animate-fade-in">
         <div className="mb-10">
           <Link
             href="/landing"
@@ -27,10 +27,10 @@ export default function HakkimizdaPage() {
               <Shield className="w-3.5 h-3.5" />
               Bondley
             </div>
-            <h1 className="text-[3.5rem] font-bold tracking-tight text-foreground leading-[1.1]">
+            <h1 className="text-[clamp(2.5rem,8vw,3.5rem)] font-bold tracking-tight text-foreground leading-[1.1]">
               {content.title}
             </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            <p className="text-[clamp(1.125rem,2vw,1.25rem)] text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               {content.description}
             </p>
           </header>

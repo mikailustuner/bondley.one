@@ -98,7 +98,7 @@ export default function LandingPage() {
       </nav>
 
       {/* ═══════ Hero — full-width, Apple keynote style ═══════ */}
-      <section className="relative pt-24 pb-16 overflow-hidden">
+      <section className="relative pt-[clamp(4rem,12vh,7rem)] pb-[clamp(3rem,8vh,5rem)] overflow-hidden">
         {/* Subtle background gradient */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] rounded-full bg-primary/[0.04] blur-[120px]" />
@@ -115,13 +115,13 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <h1 className="text-display-xl md:text-[4.5rem] md:leading-[1.04] lg:text-[5.5rem] lg:leading-[1.02] text-foreground tracking-tight max-w-6xl mx-auto animate-fade-up">
+          <h1 className="text-[clamp(2.5rem,8vw,5.5rem)] font-extrabold leading-[1.1] md:leading-[1.02] text-foreground tracking-tight max-w-6xl mx-auto animate-fade-up">
             {tr.landing.hero.titleLine1}
             <br />
             <span className="text-primary">{tr.landing.hero.titleLine2}</span>
           </h1>
 
-          <p className="text-body-lg md:text-[1.25rem] md:leading-[1.6] text-muted-foreground max-w-4xl mx-auto mt-8 animate-fade-up-delay-1">
+          <p className="text-[clamp(1rem,2vw,1.25rem)] leading-relaxed text-muted-foreground max-w-4xl mx-auto mt-8 animate-fade-up-delay-1">
             {tr.landing.hero.description}
           </p>
 
@@ -151,10 +151,10 @@ export default function LandingPage() {
               <div className="flex items-center justify-center gap-3 mb-8">
                 <div className="h-px w-12 bg-primary/20" />
                 <span className="text-[13px] font-semibold text-primary uppercase tracking-[0.2em]">
-                  {filterDays === 0 
-                    ? tr.landing.upcoming.titleToday 
-                    : filterDays === 1 
-                      ? tr.landing.upcoming.titleTomorrow 
+                  {filterDays === 0
+                    ? tr.landing.upcoming.titleToday
+                    : filterDays === 1
+                      ? tr.landing.upcoming.titleTomorrow
                       : tr.landing.upcoming.titleDayAfter}
                 </span>
                 <div className="h-px w-12 bg-primary/20" />
@@ -191,7 +191,7 @@ export default function LandingPage() {
                     <Link
                       key={b.isin_code}
                       href={user ? `/dashboard/bonds/${b.isin_code}` : "/signup"}
-                      className="group relative flex flex-col items-start p-5 rounded-2xl bg-card border border-border/50 hover:border-primary/40 hover:shadow-md transition-all duration-300 w-[240px] text-left"
+                      className="group relative flex flex-col items-start p-5 rounded-2xl bg-card border border-border/50 hover:border-primary/40 hover:shadow-md transition-all duration-300 w-full sm:w-[240px] text-left"
                     >
                       <div className="absolute top-4 right-4 h-2 w-2 rounded-full bg-positive animate-pulse" />
                       <span className="font-mono-data font-bold text-[16px] text-foreground mb-1">
@@ -205,7 +205,7 @@ export default function LandingPage() {
                       </div>
                     </Link>
                   ))}
-                
+
                 {summary.upcoming_bonds.filter(b => b.days_to_coupon === filterDays).length === 0 && (
                   <div className="py-12 text-center w-full">
                     <p className="text-muted-foreground text-[15px]">
@@ -284,8 +284,8 @@ export default function LandingPage() {
                   </span>
                   <span
                     className={`font-mono-data ${(item as any).large
-                      ? "text-[1.75rem] font-bold leading-none"
-                      : "text-[1.125rem] font-semibold leading-tight"
+                      ? "text-[clamp(1.5rem,4vw,1.75rem)] font-bold leading-none"
+                      : "text-[clamp(0.9375rem,2vw,1.125rem)] font-semibold leading-tight"
                       } ${(item as any).highlight
                         ? "text-primary"
                         : (item as any).positive
@@ -303,13 +303,13 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════ How it Works — 3 steps, expansive ═══════ */}
-      <section className="py-28 bg-secondary/30">
+      <section className="py-[clamp(4rem,12vh,7rem)] bg-secondary/30">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <span className="text-[13px] font-medium text-primary uppercase tracking-wider">
               {tr.landing.howItWorks.badge}
             </span>
-            <h2 className="text-display-lg md:text-[2.75rem] text-foreground mt-3 tracking-tight">
+            <h2 className="text-display-lg text-foreground mt-3 tracking-tight">
               {tr.landing.howItWorks.title}
             </h2>
           </div>
@@ -319,38 +319,38 @@ export default function LandingPage() {
               { step: "02", icon: Search },
               { step: "03", icon: BarChart3 },
             ].map((item, i) => (
-            <div
-              key={item.step}
-              className="group relative bg-card rounded-3xl border border-border p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all duration-300"
-            >
-              <span className="text-[4rem] font-bold text-border/70 leading-none absolute top-6 right-8 select-none pointer-events-none">
-                {item.step}
-              </span>
-              <div className="relative z-10">
-                <div className="rounded-2xl bg-primary/8 w-14 h-14 flex items-center justify-center mb-6">
-                  <item.icon className="h-6 w-6 text-primary" />
+              <div
+                key={item.step}
+                className="group relative bg-card rounded-3xl border border-border p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all duration-300"
+              >
+                <span className="text-[4rem] font-bold text-border/70 leading-none absolute top-6 right-8 select-none pointer-events-none">
+                  {item.step}
+                </span>
+                <div className="relative z-10">
+                  <div className="rounded-2xl bg-primary/8 w-14 h-14 flex items-center justify-center mb-6">
+                    <item.icon className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="font-semibold text-[20px] text-foreground mb-3 tracking-tight">
+                    {tr.landing.howItWorks.steps[i].title}
+                  </h3>
+                  <p className="text-[15px] text-muted-foreground leading-relaxed">
+                    {tr.landing.howItWorks.steps[i].desc}
+                  </p>
                 </div>
-                <h3 className="font-semibold text-[20px] text-foreground mb-3 tracking-tight">
-                  {tr.landing.howItWorks.steps[i].title}
-                </h3>
-                <p className="text-[15px] text-muted-foreground leading-relaxed">
-                  {tr.landing.howItWorks.steps[i].desc}
-                </p>
               </div>
-            </div>
             ))}
           </div>
         </div>
       </section>
 
       {/* ═══════ Stats Callout — Apple number band ═══════ */}
-      <section className="py-28">
+      <section className="py-[clamp(4rem,12vh,7rem)]">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <span className="text-[13px] font-medium text-primary uppercase tracking-wider">
               {tr.landing.stats.badge}
             </span>
-            <h2 className="text-display-lg md:text-[2.75rem] text-foreground mt-3 tracking-tight">
+            <h2 className="text-display-lg text-foreground mt-3 tracking-tight">
               {tr.landing.stats.title}
             </h2>
           </div>
@@ -360,36 +360,36 @@ export default function LandingPage() {
               { label: "tlref", number: "1.700+", icon: LineChart },
               { label: "update", number: "Her Gün", icon: RefreshCw },
             ].map((item, i) => (
-            <div
-              key={item.label}
-              className="bg-card rounded-3xl border border-border p-10 shadow-[0_1px_3px_rgba(0,0,0,0.04)] text-center hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-shadow"
-            >
-              <div className="rounded-2xl bg-primary/8 w-14 h-14 flex items-center justify-center mx-auto mb-6">
-                <item.icon className="h-6 w-6 text-primary" />
+              <div
+                key={item.label}
+                className="bg-card rounded-3xl border border-border p-10 shadow-[0_1px_3px_rgba(0,0,0,0.04)] text-center hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-shadow"
+              >
+                <div className="rounded-2xl bg-primary/8 w-14 h-14 flex items-center justify-center mx-auto mb-6">
+                  <item.icon className="h-6 w-6 text-primary" />
+                </div>
+                <div className="font-mono-data text-[2.5rem] font-bold text-primary leading-none mb-3 tracking-tight">
+                  {item.number}
+                </div>
+                <div className="text-[15px] font-semibold text-foreground mb-3">
+                  {tr.landing.stats.items[i].label}
+                </div>
+                <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs mx-auto">
+                  {tr.landing.stats.items[i].desc}
+                </p>
               </div>
-              <div className="font-mono-data text-[2.5rem] font-bold text-primary leading-none mb-3 tracking-tight">
-                {item.number}
-              </div>
-              <div className="text-[15px] font-semibold text-foreground mb-3">
-                {tr.landing.stats.items[i].label}
-              </div>
-              <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs mx-auto">
-                {tr.landing.stats.items[i].desc}
-              </p>
-            </div>
             ))}
           </div>
         </div>
       </section>
 
       {/* ═══════ Features Grid — Apple icon grid ═══════ */}
-      <section className="py-28 bg-secondary/30">
+      <section className="py-[clamp(4rem,12vh,7rem)] bg-secondary/30">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <span className="text-[13px] font-medium text-primary uppercase tracking-wider">
               {tr.landing.features.badge}
             </span>
-            <h2 className="text-display-lg md:text-[2.75rem] text-foreground mt-3 tracking-tight">
+            <h2 className="text-display-lg text-foreground mt-3 tracking-tight">
               {tr.landing.features.title}
             </h2>
             <p className="text-[17px] text-muted-foreground mt-4 max-w-xl mx-auto">
@@ -405,27 +405,27 @@ export default function LandingPage() {
               { title: "yield", icon: Calculator },
               { title: "market", icon: Shield },
             ].map((item, i) => (
-            <div
-              key={item.title}
-              className="group rounded-3xl border border-border bg-card p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all duration-300"
-            >
-              <div className="rounded-2xl bg-primary/8 w-12 h-12 flex items-center justify-center mb-5 group-hover:bg-primary/12 transition-colors">
-                <item.icon className="h-5 w-5 text-primary" />
+              <div
+                key={item.title}
+                className="group rounded-3xl border border-border bg-card p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_88px_24px_rgba(0,0,0,0.08)] transition-all duration-300"
+              >
+                <div className="rounded-2xl bg-primary/8 w-12 h-12 flex items-center justify-center mb-5 group-hover:bg-primary/12 transition-colors">
+                  <item.icon className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="font-semibold text-[17px] text-foreground mb-2 tracking-tight">
+                  {tr.landing.features.items[i].title}
+                </h3>
+                <p className="text-[15px] text-muted-foreground leading-relaxed">
+                  {tr.landing.features.items[i].desc}
+                </p>
               </div>
-              <h3 className="font-semibold text-[17px] text-foreground mb-2 tracking-tight">
-                {tr.landing.features.items[i].title}
-              </h3>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">
-                {tr.landing.features.items[i].desc}
-              </p>
-            </div>
             ))}
           </div>
         </div>
       </section>
 
       {/* ═══════ CTA Banner ═══════ */}
-      <section className="py-28">
+      <section className="py-[clamp(4rem,12vh,7rem)]">
         <div className="container mx-auto">
           <div className="rounded-3xl bg-primary/[0.04] border border-primary/10 p-16 text-center relative overflow-hidden">
             {/* Subtle glow */}

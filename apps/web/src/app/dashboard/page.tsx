@@ -137,7 +137,7 @@ export default function DashboardPage() {
             {getTodayText()}
           </p>
         </div>
-        <div ref={quickSearchRef} className="relative w-full md:w-[600px]">
+        <div ref={quickSearchRef} className="relative w-full md:max-w-[600px]">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-[18px] w-[18px] pointer-events-none text-muted-foreground/70" />
           <Input
             type="search"
@@ -212,7 +212,7 @@ export default function DashboardPage() {
           {/* TLREF Endeks — highlight */}
           <div className="widget-blue rounded-3xl border border-primary/10 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <div className="text-[12px] font-semibold text-primary/70 uppercase tracking-wider mb-3">{tr.dashboard.overview.widgets.tlrefIndex}</div>
-            <div className="font-mono-data text-[2.25rem] font-bold text-primary leading-none tracking-tight">
+            <div className="font-mono-data text-display-lg font-bold text-primary leading-none tracking-tight">
               {formatDecimal(stats.latest_index, 2)}
             </div>
             <div className="text-[13px] text-muted-foreground mt-2.5">
@@ -223,7 +223,7 @@ export default function DashboardPage() {
           {/* Günlük Oran */}
           <div className="widget-green rounded-3xl border border-border p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <div className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">{tr.dashboard.overview.widgets.dailyRate}</div>
-            <div className="font-mono-data text-[2.25rem] font-bold text-positive leading-none tracking-tight">
+            <div className="font-mono-data text-display-lg font-bold text-positive leading-none tracking-tight">
               {formatPercent(stats.latest_daily_rate, 4)}
             </div>
             <div className="text-[13px] text-muted-foreground mt-2.5">{tr.dashboard.overview.widgets.dailyRateDesc}</div>
@@ -232,7 +232,7 @@ export default function DashboardPage() {
           {/* Yıllık Oran */}
           <div className="widget-purple rounded-3xl border border-border p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <div className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">{tr.dashboard.overview.widgets.annualizedRate}</div>
-            <div className="font-mono-data text-[2.25rem] font-bold text-foreground leading-none tracking-tight">
+            <div className="font-mono-data text-display-lg font-bold text-foreground leading-none tracking-tight">
               {stats.annualized_rate_pct != null ? formatPercent(stats.annualized_rate_pct) : "—"}
             </div>
             <div className="text-[13px] text-muted-foreground mt-2.5">{tr.dashboard.overview.widgets.annualizedRateDesc}</div>
@@ -242,7 +242,7 @@ export default function DashboardPage() {
           <Link href="/dashboard/bonds">
             <div className="widget-orange rounded-3xl border border-border p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] cursor-pointer hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] hover:border-border transition-all group">
               <div className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">{tr.dashboard.overview.widgets.activeBonds}</div>
-              <div className="font-mono-data text-[2.25rem] font-bold text-foreground leading-none tracking-tight">
+              <div className="font-mono-data text-display-lg font-bold text-foreground leading-none tracking-tight">
                 {bondStats ? formatDecimal(bondStats.total_bonds, 0) : "—"}
               </div>
               <div className="flex items-center gap-1.5 mt-2.5">
