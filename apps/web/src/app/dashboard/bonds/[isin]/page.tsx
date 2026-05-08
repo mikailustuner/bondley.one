@@ -72,19 +72,7 @@ export default function BondDetailPage({
   const [selectedDate, setSelectedDate] = useState<string>(() => todayISO());
   const [prevIsin, setPrevIsin] = useState<string | null>(null);
   const [nextIsin, setNextIsin] = useState<string | null>(null);
-  const [scenarioShockBp, setScenarioShockBp] = useState(0);
-  const [scenarioResult, setScenarioResult] = useState<{
-    new_ytm_approx: number;
-    new_dirty_price_approx: number;
-    price_change_pct: number;
-    shock_bp: number;
-  } | null>(null);
-  const [baseScenarioMetrics, setBaseScenarioMetrics] = useState<{
-    current_ytm: number;
-    current_dirty_price: number;
-    modified_duration: number | null;
-  } | null>(null);
-  const [scenarioLoading, setScenarioLoading] = useState(false);
+
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteToggling, setFavoriteToggling] = useState(false);
   const [tlrefLatest, setTlrefLatest] = useState<TLREFRecord | null>(null);
@@ -182,37 +170,7 @@ export default function BondDetailPage({
     }
   }, [isin]);
 
-  // Senaryo: TLREF şoku — debounced fetch
-  useEffect(() => {
-    if (!bond?.calculated_metrics || !isin) {
-      setScenarioResult(null);
-      setBaseScenarioMetrics(null);
-      return;
-    }
-    const token = getToken();
-    if (!token) return;
-    const t = setTimeout(() => {
-      setScenarioLoading(true);
-      api.bonds
-        .scenario(token, isin, { settlement_date: selectedDate, tlref_shock_bp: scenarioShockBp })
-        .then((r) => {
-          setScenarioResult({
-            shock_bp: r.shock_bp,
-            new_ytm_approx: r.new_ytm_approx,
-            new_dirty_price_approx: r.new_dirty_price_approx,
-            price_change_pct: r.price_change_pct,
-          });
-          setBaseScenarioMetrics({
-            current_ytm: r.current_ytm,
-            current_dirty_price: r.current_dirty_price,
-            modified_duration: r.modified_duration ?? null,
-          });
-        })
-        .catch(() => setScenarioResult(null))
-        .finally(() => setScenarioLoading(false));
-    }, 300);
-    return () => clearTimeout(t);
-  }, [bond?.calculated_metrics, isin, selectedDate, scenarioShockBp]);
+
 
   useEffect(() => {
     if (noteOpen) {
@@ -638,73 +596,7 @@ export default function BondDetailPage({
         </Card>
       )}
 
-      {/* ═══ Scenario ═══ */}
-      {bond.calculated_metrics && !metricsLoading && (
-        <Card className="animate-fade-up">
-          <CardHeader>
-            <CardDescription>{tr.dashboard.bondDetails.scenario.title}</CardDescription>
-            <CardTitle className="mt-1">{tr.dashboard.bondDetails.scenario.subtitle}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-[13px] text-muted-foreground block mb-3">
-                {tr.dashboard.bondDetails.scenario.shockLabel.replace("{shock}", `${scenarioShockBp > 0 ? "+" : ""}${scenarioShockBp}`)}
-              </label>
-              <input
-                type="range"
-                min={-100}
-                max={100}
-                step={5}
-                value={scenarioShockBp}
-                onChange={(e) => setScenarioShockBp(Number(e.target.value))}
-                className="w-full"
-              />
-              <div className="flex justify-between text-[11px] text-muted-foreground mt-1">
-                <span>-100 bp</span>
-                <span>0</span>
-                <span>+100 bp</span>
-              </div>
-            </div>
-            {baseScenarioMetrics && (
-              <div className="rounded-2xl bg-secondary/30 border border-border/30 p-4 text-[13px] text-muted-foreground">
-                <span className="font-medium text-foreground">{tr.dashboard.bondDetails.scenario.preview}</span>{" "}
-                {tr.dashboard.bondDetails.scenario.dirtyPriceApprox}{" "}
-                <span className="font-mono-data text-foreground">
-                  {formatDecimal(
-                    baseScenarioMetrics.current_dirty_price *
-                    (1 - (baseScenarioMetrics.modified_duration ?? 0) * (scenarioShockBp / 10000)),
-                    4, 4
-                  )}
-                </span>
-                , {tr.dashboard.bondDetails.scenario.change}{" "}
-                <span className={(baseScenarioMetrics.modified_duration ?? 0) * scenarioShockBp <= 0 ? "text-negative" : "text-positive"}>
-                  {formatPercent(-((baseScenarioMetrics.modified_duration ?? 0) * (scenarioShockBp / 10000)) * 100)}
-                </span>
-                {" · "}{tr.dashboard.bondDetails.scenario.ytmApprox}{" "}
-                <span className="font-mono-data text-foreground">
-                  {formatPercentFromDecimal(baseScenarioMetrics.current_ytm + scenarioShockBp / 10000, 4)}
-                </span>
-              </div>
-            )}
-            {scenarioLoading && (
-              <p className="text-[13px] text-muted-foreground">{tr.dashboard.bondDetails.scenario.calculating}</p>
-            )}
-            {!scenarioLoading && scenarioResult && (
-              <div className="rounded-2xl border border-border/50 bg-card p-4">
-                <p className="text-[13px] text-foreground">
-                  TLREF {scenarioResult.shock_bp > 0 ? "+" : ""}{scenarioResult.shock_bp} bp → {tr.dashboard.bondDetails.scenario.dirtyPriceApprox}: <span className="font-mono-data">{formatDecimal(scenarioResult.new_dirty_price_approx, 4, 4)}</span>, {tr.dashboard.bondDetails.scenario.change}:{" "}
-                  <span className={scenarioResult.price_change_pct >= 0 ? "text-positive" : "text-negative"}>
-                    {formatPercent(scenarioResult.price_change_pct)}
-                  </span>
-                </p>
-                <p className="text-[12px] text-muted-foreground mt-1">
-                  {tr.dashboard.bondDetails.scenario.ytmApprox}: {formatPercentFromDecimal(scenarioResult.new_ytm_approx, 4)}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+
 
       {/* ═══ Price / YTM History Chart ═══ */}
       {(historyLoading || historyData.length > 0) && (
