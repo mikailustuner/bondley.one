@@ -55,7 +55,7 @@ const faqs = [
   {
     question: "Spread nedir ve nasıl hesaplanır?",
     answer:
-      "Spread, değerleme girdileriyle hesaplanan yıllık YTM ile Borsa İstanbul'un yayımladığı yıllık TLREF oranı arasındaki farktır. Son ihraç fiyatı piyasa fiyatı kabul edilmez; kullanıcı bir fiyat girmedikçe anlık piyasa getirisi iddiasında bulunulmaz. TRD ile başlayan katılım kıymetlerinde referans TLREFK'dir.",
+      "Spread, teorik yıllık getiri ile ilgili referans oran arasındaki farktır. Bondley kıymetleri karşılaştırılabilir kılmak için temiz fiyatı nominal 100 varsayarak otomatik değerler; bu bir piyasa kotasyonu veya anlık piyasa getirisi iddiası değildir. TRD ile başlayan katılım kıymetlerinde referans TLREFK'dir.",
   },
   {
     question: "Modifiye durasyon ve Macaulay durasyon nedir?",

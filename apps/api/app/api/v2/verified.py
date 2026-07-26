@@ -159,7 +159,7 @@ def _instrument_payload(
             "valuation_eligible": version.valuation_eligible,
             "diagnostics": ast.get("diagnostics", []),
         },
-        "price_status": "USER_INPUT_REQUIRED",
+        "price_status": "SYSTEM_NOMINAL_100",
         "source": {
             "source_file_id": version.source_file_id,
             "source_row": version.source_row_number,
@@ -413,7 +413,7 @@ async def instrument_stats(
         "avg_days_to_maturity": (
             sum(maturity_days) / len(maturity_days) if maturity_days else None
         ),
-        "price_policy": "USER_INPUT_ONLY",
+        "price_policy": "SYSTEM_NOMINAL_100",
     }
 
 
@@ -534,11 +534,16 @@ async def create_valuation(
         quote_date=payload.quote_date or turkey_today(),
         settlement_date=payload.settlement_date,
         currency=fields.get("currency_or_unit") or "TRY",
-        source_type="USER_INPUT",
-        confidence="USER_PROVIDED",
+        source_type=payload.quote_source,
+        confidence=(
+            "SYSTEM_ASSUMPTION"
+            if payload.quote_source == "SYSTEM_NOMINAL_100"
+            else "USER_PROVIDED"
+        ),
         raw_payload={
             "quote_type": payload.quote_type,
             "quote_value": str(payload.quote_value),
+            "quote_source": payload.quote_source,
             "quote_date": (payload.quote_date or turkey_today()).isoformat(),
             "settlement_date": payload.settlement_date.isoformat(),
         },
@@ -581,7 +586,7 @@ async def create_valuation(
             price_input=PriceInput(
                 QuoteType(payload.quote_type),
                 payload.quote_value,
-                source="USER_INPUT",
+                source=payload.quote_source,
             ),
             benchmark=benchmark_input,
             cpi_ratio=payload.cpi_ratio,
@@ -1015,7 +1020,7 @@ async def get_quality(
             if latest_bootstrap
             else None
         ),
-        "price_policy": "USER_INPUT_ONLY",
+        "price_policy": "SYSTEM_NOMINAL_100",
     }
 
 

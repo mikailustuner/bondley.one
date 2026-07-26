@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class ValuationCreate(BaseModel):
@@ -12,9 +12,20 @@ class ValuationCreate(BaseModel):
     settlement_date: date
     quote_type: Literal["CLEAN_PRICE", "DIRTY_PRICE", "ANNUAL_YIELD"]
     quote_value: Decimal = Field(gt=0)
+    quote_source: Literal["USER_INPUT", "SYSTEM_NOMINAL_100"] = "USER_INPUT"
     quote_date: date | None = None
     cpi_ratio: Decimal | None = Field(default=None, gt=0)
     explicit_coupon_dates: list[date] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_system_nominal_quote(self) -> "ValuationCreate":
+        if self.quote_source == "SYSTEM_NOMINAL_100" and (
+            self.quote_type != "CLEAN_PRICE" or self.quote_value != Decimal("100")
+        ):
+            raise ValueError(
+                "SYSTEM_NOMINAL_100 yalnız CLEAN_PRICE ve 100 değeriyle kullanılabilir."
+            )
+        return self
 
 
 class ValuationResponse(BaseModel):

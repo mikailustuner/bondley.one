@@ -119,17 +119,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const sidebarContent = (
     <>
       {/* Logo */}
-      <Link href="/" className="flex items-center gap-2.5 px-5 py-5 hover:opacity-80 transition-opacity">
-        <Image
-          src="/logo.png"
-          alt="Bondley"
-          width={26}
-          height={26}
-          className="h-[26px] w-[26px] object-contain"
-          priority
-        />
-        <span className="font-semibold text-[16px] tracking-tight text-foreground">
-          {tr.common.brand}
+      <Link href="/" className="group flex items-center gap-3 px-5 pb-7 pt-6 transition-opacity hover:opacity-90">
+        <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/70 bg-card/80 shadow-sm">
+          <Image
+            src="/logo.png"
+            alt="Bondley"
+            width={25}
+            height={25}
+            className="h-[25px] w-[25px] object-contain"
+            priority
+          />
+        </span>
+        <span>
+          <span className="block text-[16px] font-semibold tracking-[-0.02em] text-foreground">
+            {tr.common.brand}
+          </span>
+          <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+            Fixed income desk
+          </span>
         </span>
       </Link>
 
@@ -138,7 +145,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {NAV_SECTIONS.map((section, si) => (
           <div key={si}>
             {section.title && (
-              <div className="px-3 mb-2 text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
+              <div className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
                 {section.title}
               </div>
             )}
@@ -159,13 +166,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </nav>
 
       {/* Bottom */}
-      <div className="px-3 pb-4 pt-2 border-t border-border/30 space-y-2">
+      <div className="space-y-3 border-t border-border/60 px-3 pb-4 pt-4">
         <div className="flex items-center justify-between px-3 py-1">
           <div className="flex items-center gap-2">
             <span className="h-1.5 w-1.5 rounded-full bg-positive live-indicator" />
             <span className="text-[11px] font-medium text-muted-foreground">{tr.dashboard.sidebar.liveData}</span>
           </div>
-          <span className="text-[10px] font-mono-data text-muted-foreground/40">v{APP_VERSION}</span>
+          <span className="font-mono-data text-[10px] text-muted-foreground/50">v{APP_VERSION}</span>
         </div>
         <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-1">
@@ -179,9 +186,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   );
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="workspace-grid flex min-h-screen bg-background">
       {/* ═══ Desktop Sidebar ═══ */}
-      <aside className="sidebar hidden lg:flex flex-col w-[260px] fixed inset-y-0 left-0 z-40">
+      <aside className="sidebar fixed inset-y-0 left-0 z-40 hidden w-[248px] flex-col lg:flex">
         {sidebarContent}
       </aside>
 
@@ -193,18 +200,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         />
       )}
       <aside
-        className={`sidebar fixed inset-y-0 left-0 z-50 flex flex-col w-[280px] transform transition-transform duration-300 lg:hidden ${
+        className={`sidebar fixed inset-y-0 left-0 z-50 flex w-[280px] transform flex-col transition-transform duration-300 lg:hidden ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         style={{
-          background: "hsl(var(--card))",
           paddingTop: "env(safe-area-inset-top, 0px)",
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
         }}
       >
         <button
           onClick={() => setSidebarOpen(false)}
-          className="absolute right-4 h-11 w-11 flex items-center justify-center rounded-xl hover:bg-secondary/60 text-muted-foreground"
+          className="absolute right-4 flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground"
           style={{ top: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
           aria-label={tr.dashboard.sidebar.closeMenu}
         >
@@ -214,21 +220,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* ═══ Main Content ═══ */}
-      <div className="flex-1 min-w-0 flex flex-col lg:pl-[260px]">
+      <div className="flex min-w-0 flex-1 flex-col lg:pl-[248px]">
         {/* Mobile top bar */}
         <div
-          className="lg:hidden apple-navbar sticky top-0 z-30"
+          className="sidebar sticky top-0 z-30 lg:hidden"
           style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
         >
         <div className="flex items-center justify-between px-4 h-14">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-2 -ml-2 rounded-lg hover:bg-secondary/60 text-muted-foreground"
+            className="-ml-2 rounded-lg p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
             aria-label={tr.dashboard.sidebar.openMenu}
           >
             <Menu className="h-5 w-5" />
           </button>
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <Link href="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
             <Image
               src="/logo.png"
               alt="Bondley"
@@ -236,7 +242,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               height={22}
               className="h-[22px] w-[22px] object-contain"
             />
-            <span className="font-semibold text-[15px] text-foreground">{tr.common.brand}</span>
+            <span className="text-[15px] font-semibold text-foreground">{tr.common.brand}</span>
           </Link>
           <div className="flex items-center gap-1">
             <NotificationBell />
@@ -245,7 +251,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         </div>
 
-        <main className="flex-1 px-6 lg:px-10 pt-8 pb-8 max-w-[1200px] mx-auto w-full">
+        <main className="mx-auto w-full max-w-[1480px] flex-1 px-4 pb-12 pt-6 sm:px-6 lg:px-10 lg:pt-9 xl:px-12">
           {user && user.is_email_verified === false && (
             <Alert variant="destructive" className="bg-destructive/5 border-destructive/15 text-destructive flex items-center justify-between rounded-2xl mb-6">
               <div className="flex items-center gap-3">

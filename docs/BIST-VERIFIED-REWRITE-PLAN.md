@@ -6,7 +6,8 @@ Durum (26.07.2026): **Faz 0–11 uygulandı; son doğrulama çıktıları README
 
 - Resmî BIST `tbliste`, TLREF ve TLREFK kaynakları değişmez ham dosya olarak saklanır.
 - KAP temel veri/değerleme akışının dışında tutulur.
-- İlk sürümde değerleme fiyatı/getirisi yalnız açık kullanıcı girdisidir.
+- Değerleme, kullanıcı işlemi gerektirmeden temiz fiyat `100` nominal karşılaştırma
+  varsayımıyla çalışır; bu varsayım provenance içinde `SYSTEM_NOMINAL_100` olarak saklanır.
 - Son ihraç fiyatı piyasa fiyatı değildir.
 - `TRD` ailesinde değişken referans TLREFK’dir; TLREF ile karıştırılmaz.
 - Belirsiz/çelişkili terimler görüntülenebilir fakat otomatik değerlenemez.
@@ -20,8 +21,8 @@ Durum (26.07.2026): **Faz 0–11 uygulandı; son doğrulama çıktıları README
 4. **Faz 3 — Açıklama AST:** Benchmark, spread/birim, lag, kupon rejimi ve güven durumu.
 5. **Faz 4 — TLREF/TLREFK:** Günlük+tarihsel oran/endeks, iş günü `g`, rekonstrüksiyon.
 6. **Faz 5 — Finansal çekirdek:** Decimal, takvim/day-count, formül dispatcher, typed failure.
-7. **Faz 6 — v2 şema/API:** Fiyat gözlemi, değerleme kayıtları, provenance ve kullanıcı geçişi.
-8. **Faz 7 — Web:** Kaynak/AST/değerleme ayrımı, fiyat formu ve kalite ekranları.
+7. **Faz 6 — v2 şema/API:** Fiyat gözlemi, sistem nominal varsayımı, değerleme kayıtları, provenance ve kullanıcı geçişi.
+8. **Faz 7 — Web:** Kaynak/AST/değerleme ayrımı, otomatik nominal-100 değerleme ve kalite ekranları.
 9. **Faz 8 — Operasyon UI:** Bootstrap/import gözlemi, tazelik ve hata tanıları.
 10. **Faz 9 — Üretim:** Tek migration, ilk-açılış bootstrap, readiness ve deploy.
 11. **Faz 10 — Doğrulama:** Resmî fixture, unit/integration, TypeScript/build/Compose.

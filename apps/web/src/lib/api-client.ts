@@ -332,7 +332,7 @@ export interface VerifiedInstrument {
     valuation_eligible: boolean;
     diagnostics: Array<Record<string, unknown>>;
   };
-  price_status: "USER_INPUT_REQUIRED";
+  price_status: "SYSTEM_NOMINAL_100";
   source: {
     source_file_id: number;
     source_row: number;
@@ -675,6 +675,7 @@ export const api = {
         settlement_date: string;
         quote_type: "CLEAN_PRICE" | "DIRTY_PRICE" | "ANNUAL_YIELD";
         quote_value: string;
+        quote_source?: "USER_INPUT" | "SYSTEM_NOMINAL_100";
         cpi_ratio?: string;
         explicit_coupon_dates?: string[];
       },
@@ -702,7 +703,7 @@ export const api = {
       apiFetch<{
         published_versions: number;
         valuation_eligible_versions: number;
-        price_policy: "USER_INPUT_ONLY";
+        price_policy: "SYSTEM_NOMINAL_100";
         latest_source: {
           kind: string;
           filename: string;

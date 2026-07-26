@@ -1,0 +1,38 @@
+from decimal import Decimal
+
+import pytest
+from pydantic import ValidationError
+
+from app.schemas.valuation_v2 import ValuationCreate
+
+
+def test_system_nominal_100_accepts_only_clean_price_100():
+    payload = ValuationCreate(
+        isin="TRD030227F16",
+        settlement_date="2026-07-24",
+        quote_type="CLEAN_PRICE",
+        quote_value="100",
+        quote_source="SYSTEM_NOMINAL_100",
+    )
+
+    assert payload.quote_value == Decimal("100")
+    assert payload.quote_source == "SYSTEM_NOMINAL_100"
+
+
+@pytest.mark.parametrize(
+    ("quote_type", "quote_value"),
+    [
+        ("DIRTY_PRICE", "100"),
+        ("ANNUAL_YIELD", "100"),
+        ("CLEAN_PRICE", "99.99"),
+    ],
+)
+def test_system_nominal_100_rejects_other_quotes(quote_type, quote_value):
+    with pytest.raises(ValidationError):
+        ValuationCreate(
+            isin="TRD030227F16",
+            settlement_date="2026-07-24",
+            quote_type=quote_type,
+            quote_value=quote_value,
+            quote_source="SYSTEM_NOMINAL_100",
+        )

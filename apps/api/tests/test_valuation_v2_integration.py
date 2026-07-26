@@ -50,6 +50,7 @@ async def _run_check():
             assert response.result["provenance"]["instrument_source_row"] is not None
             assert response.result["provenance"]["parser_version"]
             assert response.result["provenance"]["benchmark"]["name"] == "TLREFK"
+            assert response.result["provenance"]["price_source"] == "USER_INPUT"
 
             assert await db.scalar(select(func.count(PriceObservation.id))) == price_count + 1
             assert await db.scalar(select(func.count(ValuationRequestRecord.id))) == request_count + 1
