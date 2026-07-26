@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { api, VerifiedInstrument } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDate, formatDecimal } from "@/lib/utils";
+import { tr } from "@/locales/tr";
 
 const STATUS_LABEL: Record<VerifiedInstrument["quality"]["parse_status"], string> = {
   EXACT: "Doğrulandı",
@@ -114,16 +115,16 @@ export default function BondsListPage() {
   if (loading && items.length === 0) {
     return (
       <div className="space-y-5" aria-busy="true">
-        <Skeleton className="h-32 w-full rounded-[28px]" />
-        <Skeleton className="h-20 w-full rounded-[24px]" />
-        <Skeleton className="h-[520px] w-full rounded-[28px]" />
+        <Skeleton className="h-32 w-full rounded-3xl" />
+        <Skeleton className="h-20 w-full rounded-2xl" />
+        <Skeleton className="h-[520px] w-full rounded-3xl" />
       </div>
     );
   }
 
   if (error && items.length === 0) {
     return (
-      <div role="alert" className="rounded-[28px] border border-destructive/20 bg-destructive/5 p-6">
+      <div role="alert" className="rounded-3xl border border-destructive/20 bg-destructive/5 p-6">
         <div className="flex items-center gap-2 font-semibold text-destructive">
           <AlertCircle className="h-5 w-5" />
           {error}
@@ -153,8 +154,8 @@ export default function BondsListPage() {
             </span>
             <p className="eyebrow text-primary">Doğrulanmış BIST evreni</p>
           </div>
-          <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
-            Borçlanma araçları
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+            {tr.dashboard.bonds.title}
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
             Kıymeti seçtiğiniz anda Bondley, nominal 100 temiz fiyat varsayımıyla teorik
@@ -163,13 +164,13 @@ export default function BondsListPage() {
         </div>
 
         <div className="flex gap-3">
-          <div className="data-surface min-w-32 rounded-2xl px-4 py-3">
+          <div className="data-surface widget-blue min-w-32 rounded-2xl px-4 py-3">
             <span className="eyebrow block">Yayımlanan</span>
             <span className="metric-value mt-2 block text-2xl">
               {formatDecimal(quality?.published_versions ?? total, 0)}
             </span>
           </div>
-          <div className="data-surface min-w-32 rounded-2xl px-4 py-3">
+          <div className="data-surface widget-green min-w-32 rounded-2xl px-4 py-3">
             <span className="eyebrow block">Değerlenebilir</span>
             <span className="metric-value mt-2 block text-2xl text-positive">
               {formatDecimal(eligibleCount, 0)}
@@ -178,7 +179,7 @@ export default function BondsListPage() {
         </div>
       </header>
 
-      <section className="data-surface rounded-[24px] p-3 sm:p-4" aria-label="Kıymet filtreleri">
+      <section className="data-surface rounded-2xl p-3 sm:p-4" aria-label="Kıymet filtreleri">
         <div className="grid gap-3 lg:grid-cols-[1fr_190px_auto]">
           <label className="relative">
             <span className="sr-only">ISIN veya ihraççı ara</span>
@@ -189,8 +190,8 @@ export default function BondsListPage() {
                 setSearch(event.target.value);
                 setPage(0);
               }}
-              placeholder="ISIN veya ihraççı ara"
-              className="h-12 rounded-2xl border-transparent bg-muted/60 pl-11 focus-visible:bg-background"
+              placeholder={tr.dashboard.bonds.filters.searchPlaceholder}
+              className="h-11 rounded-xl border-transparent bg-muted/60 pl-11 focus-visible:bg-background"
             />
           </label>
           <label className="relative">
@@ -202,7 +203,7 @@ export default function BondsListPage() {
                 setStatusFilter(event.target.value);
                 setPage(0);
               }}
-              className="h-12 w-full appearance-none rounded-2xl border border-transparent bg-muted/60 pl-11 pr-4 text-sm outline-none focus:border-primary/30 focus:bg-background"
+              className="h-11 w-full appearance-none rounded-xl border border-transparent bg-muted/60 pl-11 pr-4 text-sm outline-none focus:border-primary/30 focus:bg-background"
             >
               <option value="">Tüm veri durumları</option>
               <option value="EXACT">Doğrulandı</option>
@@ -218,7 +219,7 @@ export default function BondsListPage() {
               setEligibleOnly((value) => !value);
               setPage(0);
             }}
-            className={`flex h-12 items-center justify-center gap-2 rounded-2xl border px-4 text-sm font-semibold ${
+            className={`flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold ${
               eligibleOnly
                 ? "border-primary/20 bg-primary/10 text-primary"
                 : "border-transparent bg-muted/60 text-muted-foreground hover:text-foreground"
@@ -242,15 +243,15 @@ export default function BondsListPage() {
         </div>
       )}
 
-      <section className="data-surface overflow-hidden rounded-[28px]">
+      <section className="data-surface overflow-hidden rounded-3xl">
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left">
             <caption className="sr-only">Doğrulanmış BIST kıymetleri</caption>
             <thead>
               <tr className="border-b border-border/70 text-[10px] font-bold uppercase tracking-[0.11em] text-muted-foreground">
-                <th className="px-6 py-4">Kıymet</th>
-                <th className="px-5 py-4">Vade</th>
-                <th className="px-5 py-4">Referans / tür</th>
+                <th className="px-6 py-4">{tr.dashboard.bonds.table.cols.isin} / {tr.dashboard.bonds.table.cols.issuer}</th>
+                <th className="px-5 py-4">{tr.dashboard.bonds.table.cols.maturity}</th>
+                <th className="px-5 py-4">Referans / {tr.dashboard.bonds.table.cols.type}</th>
                 <th className="px-5 py-4">Durum</th>
                 <th className="px-5 py-4">Değerleme bazı</th>
                 <th className="w-24 px-5 py-4"><span className="sr-only">İşlemler</span></th>

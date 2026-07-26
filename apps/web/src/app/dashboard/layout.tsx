@@ -119,24 +119,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const sidebarContent = (
     <>
       {/* Logo */}
-      <Link href="/" className="group flex items-center gap-3 px-5 pb-7 pt-6 transition-opacity hover:opacity-90">
-        <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/70 bg-card/80 shadow-sm">
-          <Image
-            src="/logo.png"
-            alt="Bondley"
-            width={25}
-            height={25}
-            className="h-[25px] w-[25px] object-contain"
-            priority
-          />
-        </span>
-        <span>
-          <span className="block text-[16px] font-semibold tracking-[-0.02em] text-foreground">
-            {tr.common.brand}
-          </span>
-          <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-            Fixed income desk
-          </span>
+      <Link href="/" className="flex items-center gap-2.5 px-5 py-5 transition-opacity hover:opacity-80">
+        <Image
+          src="/logo.png"
+          alt="Bondley"
+          width={26}
+          height={26}
+          className="h-[26px] w-[26px] object-contain"
+          priority
+        />
+        <span className="text-[16px] font-semibold tracking-tight text-foreground">
+          {tr.common.brand}
         </span>
       </Link>
 
@@ -145,7 +138,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {NAV_SECTIONS.map((section, si) => (
           <div key={si}>
             {section.title && (
-              <div className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
+              <div className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
                 {section.title}
               </div>
             )}
@@ -166,13 +159,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </nav>
 
       {/* Bottom */}
-      <div className="space-y-3 border-t border-border/60 px-3 pb-4 pt-4">
+      <div className="space-y-2 border-t border-border/30 px-3 pb-4 pt-2">
         <div className="flex items-center justify-between px-3 py-1">
           <div className="flex items-center gap-2">
             <span className="h-1.5 w-1.5 rounded-full bg-positive live-indicator" />
             <span className="text-[11px] font-medium text-muted-foreground">{tr.dashboard.sidebar.liveData}</span>
           </div>
-          <span className="font-mono-data text-[10px] text-muted-foreground/50">v{APP_VERSION}</span>
+          <span className="font-mono-data text-[10px] text-muted-foreground/40">v{APP_VERSION}</span>
         </div>
         <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-1">
@@ -195,7 +188,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ═══ Mobile Overlay ═══ */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-black/30 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -210,7 +203,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
         <button
           onClick={() => setSidebarOpen(false)}
-          className="absolute right-4 flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground"
+          className="absolute right-4 flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
           style={{ top: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
           aria-label={tr.dashboard.sidebar.closeMenu}
         >
@@ -223,7 +216,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex min-w-0 flex-1 flex-col lg:pl-[248px]">
         {/* Mobile top bar */}
         <div
-          className="sidebar sticky top-0 z-30 lg:hidden"
+          className="apple-navbar sticky top-0 z-30 lg:hidden"
           style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
         >
         <div className="flex items-center justify-between px-4 h-14">

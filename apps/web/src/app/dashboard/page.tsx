@@ -11,7 +11,6 @@ import {
   Gauge,
   Search,
   ShieldCheck,
-  Sparkles,
   Star,
 } from "lucide-react";
 
@@ -21,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { api, VerifiedInstrument } from "@/lib/api-client";
 import { getToken, getUser } from "@/lib/auth";
 import { formatDate, formatDecimal } from "@/lib/utils";
+import { tr } from "@/locales/tr";
 
 type Summary = Awaited<ReturnType<typeof api.verified.dashboardSummary>>;
 
@@ -36,10 +36,10 @@ function turkeyHour(): number {
 
 function greeting(): string {
   const hour = turkeyHour();
-  if (hour < 6) return "İyi geceler";
-  if (hour < 12) return "Günaydın";
-  if (hour < 18) return "İyi günler";
-  return "İyi akşamlar";
+  if (hour < 6) return tr.dashboard.overview.greetings.night;
+  if (hour < 12) return tr.dashboard.overview.greetings.morning;
+  if (hour < 18) return tr.dashboard.overview.greetings.day;
+  return tr.dashboard.overview.greetings.evening;
 }
 
 function BenchmarkCard({
@@ -58,21 +58,20 @@ function BenchmarkCard({
         });
 
   return (
-    <article className="data-surface relative overflow-hidden rounded-[28px] p-5 sm:p-6">
-      <div className="absolute -right-8 -top-10 h-32 w-32 rounded-full bg-primary/5 blur-2xl" />
-      <div className="relative flex items-start justify-between">
+    <article className="data-surface widget-blue rounded-3xl p-5 sm:p-6">
+      <div className="flex items-start justify-between">
         <div>
           <p className="eyebrow">{name} referans oranı</p>
-          <div className="mt-5 flex items-start gap-1">
-            <span className="mt-1.5 text-lg font-semibold text-muted-foreground">%</span>
-            <span className="metric-value text-[2.55rem] sm:text-5xl">{value}</span>
+          <div className="mt-4 flex items-start gap-1">
+            <span className="mt-1 text-base font-semibold text-muted-foreground">%</span>
+            <span className="metric-value text-3xl sm:text-4xl">{value}</span>
           </div>
         </div>
-        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/8 text-primary">
+        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
           <Gauge className="h-5 w-5" />
         </span>
       </div>
-      <div className="mt-6 flex items-center justify-between border-t border-border/60 pt-4 text-xs">
+      <div className="mt-5 flex items-center justify-between border-t border-border/60 pt-4 text-xs">
         <span className="text-muted-foreground">Yayımlanan yıllık oran</span>
         <span className="font-mono-data text-foreground">
           {item ? formatDate(item.observation_date) : "Veri bekleniyor"}
@@ -143,10 +142,10 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-40 w-full rounded-[32px]" />
+        <Skeleton className="h-32 w-full rounded-3xl" />
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[1, 2, 3, 4].map((item) => (
-            <Skeleton key={item} className="h-48 rounded-[28px]" />
+            <Skeleton key={item} className="h-44 rounded-3xl" />
           ))}
         </div>
       </div>
@@ -155,19 +154,14 @@ export default function DashboardPage() {
 
   return (
     <main className="space-y-6 lg:space-y-8">
-      <header className="data-surface relative overflow-visible rounded-[32px] px-5 py-7 sm:px-8 sm:py-9 lg:px-10">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[32px]">
-          <div className="absolute -right-24 -top-36 h-80 w-80 rounded-full bg-primary/12 blur-3xl" />
-          <div className="absolute bottom-[-9rem] left-[38%] h-72 w-72 rounded-full bg-accent/8 blur-3xl" />
-          <div className="soft-grid absolute inset-0 opacity-30" />
-        </div>
-        <div className="relative grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+      <header className="data-surface overflow-visible rounded-3xl px-5 py-6 sm:px-7 sm:py-7">
+        <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
           <div>
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/10 bg-primary/[0.055] px-3 py-1.5 text-[11px] font-medium text-primary">
-              <Sparkles className="h-3.5 w-3.5" />
+            <div className="mb-3 inline-flex items-center gap-2 text-[11px] font-semibold text-primary">
+              <ShieldCheck className="h-3.5 w-3.5" />
               BIST doğrulanmış veri çalışma alanı
             </div>
-            <h1 className="text-3xl font-semibold tracking-[-0.04em] sm:text-[2.6rem] sm:leading-[1.05]">
+            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
               {greeting()}, {userName}.
             </h1>
             <p className="mt-3 text-sm text-muted-foreground">
@@ -184,9 +178,9 @@ export default function DashboardPage() {
               <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="ISIN ya da ihraççı ile kıymet bulun"
-                className="h-14 rounded-2xl border-border/70 bg-background/70 pl-14 pr-12 text-[15px] shadow-sm placeholder:text-muted-foreground/70 focus-visible:border-primary/35 focus-visible:bg-card"
-                aria-label="Kıymet ara"
+                placeholder={tr.dashboard.bonds.filters.searchPlaceholder}
+                className="h-12 rounded-full bg-background pl-12 pr-12 text-sm shadow-none"
+                aria-label={tr.dashboard.overview.search.ariaLabel}
               />
               <kbd className="absolute right-4 top-1/2 hidden -translate-y-1/2 rounded-lg border border-border/70 bg-muted/60 px-2 py-1 text-[10px] text-muted-foreground sm:block">
                 ISIN
@@ -194,7 +188,7 @@ export default function DashboardPage() {
             </div>
             {query.trim().length >= 2 && (
               <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-border bg-card text-foreground shadow-2xl">
-                {searching && <div className="p-4 text-sm text-muted-foreground">Aranıyor…</div>}
+                {searching && <div className="p-4 text-sm text-muted-foreground">{tr.dashboard.overview.search.searching}</div>}
                 {!searching &&
                   results.map((item) => (
                     <button
@@ -235,12 +229,12 @@ export default function DashboardPage() {
 
             <Link
               href="/dashboard/bonds"
-              className="data-surface group rounded-[28px] p-5 transition-transform hover:-translate-y-0.5 sm:p-6"
+              className="data-surface widget-green group rounded-3xl p-5 transition-colors hover:border-primary/40 sm:p-6"
             >
               <div className="flex items-start justify-between">
                 <div>
                   <p className="eyebrow">Aktif kıymet evreni</p>
-                  <p className="metric-value mt-5 text-[2.55rem] sm:text-5xl">
+                  <p className="metric-value mt-4 text-3xl sm:text-4xl">
                     {formatDecimal(summary.active_instruments, 0)}
                   </p>
                 </div>
@@ -256,7 +250,7 @@ export default function DashboardPage() {
               </div>
             </Link>
 
-            <article className="data-surface rounded-[28px] p-5 sm:p-6">
+            <article className="data-surface widget-purple rounded-3xl p-5 sm:p-6">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="eyebrow">Veri bütünlüğü</p>
@@ -283,12 +277,12 @@ export default function DashboardPage() {
           </section>
 
           <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
-            <article className="data-surface overflow-hidden rounded-[28px]">
+            <article className="data-surface overflow-hidden rounded-3xl">
               <div className="flex items-center justify-between px-5 py-5 sm:px-6">
                 <div>
                   <p className="eyebrow">Vade takvimi</p>
                   <h2 className="mt-1.5 text-lg font-semibold tracking-tight">
-                    Yaklaşan geri ödemeler
+                    {tr.dashboard.overview.lists.soonMaturing.title}
                   </h2>
                 </div>
                 <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-secondary text-muted-foreground">
@@ -323,11 +317,13 @@ export default function DashboardPage() {
               </div>
             </article>
 
-            <article className="data-surface overflow-hidden rounded-[28px]">
+            <article className="data-surface overflow-hidden rounded-3xl">
               <div className="flex items-center justify-between px-5 py-5 sm:px-6">
                 <div>
                   <p className="eyebrow">Kişisel alan</p>
-                  <h2 className="mt-1.5 text-lg font-semibold tracking-tight">Favori kıymetler</h2>
+                  <h2 className="mt-1.5 text-lg font-semibold tracking-tight">
+                    {tr.dashboard.overview.lists.favorites}
+                  </h2>
                 </div>
                 <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-400/10 text-amber-500">
                   <Star className="h-5 w-5 fill-current" />

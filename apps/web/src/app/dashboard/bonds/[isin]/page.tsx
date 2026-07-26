@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { api, VerifiedInstrument, VerifiedValuationResponse } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import { formatDate, formatDecimal, formatPercentFromDecimal } from "@/lib/utils";
+import { tr } from "@/locales/tr";
 
 const DEFAULT_CLEAN_PRICE = "100";
 
@@ -154,6 +155,8 @@ export default function VerifiedInstrumentDetail({
     } | undefined;
     return ast?.benchmarks?.map((item) => item.name).filter(Boolean) ?? [];
   }, [instrument]);
+  const benchmarkMode = String(instrument?.term_rule_ast?.benchmark_mode || "");
+  const usesIndexChange = benchmarkMode === "INDEX_CHANGE";
 
   const requiredBenchmark =
     instrument?.instrument_family === "PARTICIPATION"
@@ -287,7 +290,7 @@ export default function VerifiedInstrumentDetail({
                 <Badge variant="secondary">Katılım · TLREFK</Badge>
               )}
             </div>
-            <h1 className="font-mono-data mt-4 break-all text-3xl tracking-[-0.05em] sm:text-[2.7rem]">
+            <h1 className="font-mono-data mt-4 break-all text-3xl tracking-tight sm:text-[2.7rem]">
               {instrument.isin}
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
@@ -321,25 +324,21 @@ export default function VerifiedInstrumentDetail({
       )}
 
       <section
-        className="relative overflow-hidden rounded-[32px] border border-slate-800 bg-slate-950 text-white shadow-[0_26px_80px_rgba(15,23,42,0.15)]"
+        className="data-surface overflow-hidden rounded-3xl"
         aria-label="Otomatik değerleme"
       >
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -right-32 -top-48 h-96 w-96 rounded-full bg-blue-500/20 blur-3xl" />
-          <div className="absolute -bottom-44 left-[30%] h-80 w-80 rounded-full bg-emerald-400/10 blur-3xl" />
-          <div className="soft-grid absolute inset-0 opacity-[0.08]" />
-        </div>
-
-        <div className="relative border-b border-white/10 px-5 py-5 sm:px-7 lg:px-8">
+        <div className="border-b border-border/60 px-5 py-5 sm:px-7 lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10">
-                <Sparkles className="h-5 w-5 text-blue-300" />
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10">
+                <Sparkles className="h-5 w-5 text-primary" />
               </span>
               <div>
-                <p className="text-sm font-semibold">Otomatik teorik değerleme</p>
-                <p className="mt-0.5 text-xs text-slate-400">
-                  Kullanıcı işlemi gerektirmeden hazırlanır
+                <p className="text-sm font-semibold">
+                  {tr.dashboard.bondDetails.calculatedMetrics.automaticTitle}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {tr.dashboard.bondDetails.calculatedMetrics.automaticSubtitle}
                 </p>
               </div>
             </div>
@@ -348,34 +347,32 @@ export default function VerifiedInstrumentDetail({
               type="button"
               aria-expanded={assumptionOpen}
               onClick={() => setAssumptionOpen((value) => !value)}
-              className="inline-flex h-10 items-center justify-center gap-2 self-start rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 text-xs font-semibold text-emerald-200 hover:bg-emerald-300/15 sm:self-auto"
+              className="assumption-chip inline-flex h-10 items-center justify-center gap-2 self-start rounded-full px-4 text-xs font-semibold hover:bg-primary/10 sm:self-auto"
             >
               <Check className="h-3.5 w-3.5" strokeWidth={3} />
-              Temiz fiyat varsayımı · 100
+              {tr.dashboard.bondDetails.calculatedMetrics.cleanPriceAssumption}
               <Info className="h-3.5 w-3.5 opacity-70" />
             </button>
           </div>
 
           {assumptionOpen && (
-            <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4 text-xs leading-5 text-slate-300">
-              `100`, kıymetin nominal temiz fiyat varsayımıdır; BIST piyasa fiyatı veya yatırım
-              tavsiyesi değildir. Getiri, risk ve nakit akışı metrikleri bu ortak karşılaştırma
-              bazı üzerinden hesaplanır.
+            <div className="mt-4 rounded-2xl border border-border bg-muted/45 p-4 text-xs leading-5 text-muted-foreground">
+              {tr.dashboard.bondDetails.calculatedMetrics.cleanPriceAssumptionDescription}
             </div>
           )}
         </div>
 
-        <div className="relative p-5 sm:p-7 lg:p-8">
-          <div className="mb-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-400">
+        <div className="p-5 sm:p-7 lg:p-8">
+          <div className="mb-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-2">
               <CalendarDays className="h-3.5 w-3.5" />
-              Valör: <strong className="font-mono-data text-slate-200">{formatDate(settlementDate)}</strong>
+              Valör: <strong className="font-mono-data text-foreground">{formatDate(settlementDate)}</strong>
             </span>
             <span>
-              Referans: <strong className="text-slate-200">{requiredBenchmark || (requiresCpi ? "TÜFE" : "Sabit oran")}</strong>
+              Referans: <strong className="text-foreground">{requiredBenchmark || (requiresCpi ? "TÜFE" : "Sabit oran")}</strong>
             </span>
             {calculating && (
-              <span className="inline-flex items-center gap-2 text-blue-300">
+              <span className="inline-flex items-center gap-2 text-primary">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 Hesaplanıyor
               </span>
@@ -385,9 +382,9 @@ export default function VerifiedInstrumentDetail({
           {calculating && (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {[1, 2, 3, 4].map((item) => (
-                <div key={item} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-                  <Skeleton className="h-3 w-24 bg-white/10" />
-                  <Skeleton className="mt-4 h-9 w-32 bg-white/10" />
+                <div key={item} className="rounded-2xl border border-border bg-muted/35 p-5">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="mt-4 h-9 w-32" />
                 </div>
               ))}
             </div>
@@ -396,57 +393,69 @@ export default function VerifiedInstrumentDetail({
           {!calculating && result && (
             <>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-2xl border border-blue-300/20 bg-blue-400/10 p-5">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-blue-200/70">
-                    Yıllık getiri
+                <div className="widget-blue rounded-2xl border border-primary/20 p-5">
+                  <p className="eyebrow text-primary">
+                    {tr.dashboard.bondDetails.calculatedMetrics.ytm}
                   </p>
-                  <p className="metric-value mt-4 text-[2.35rem] text-white">
+                  <p className="metric-value mt-4 text-3xl text-primary">
                     {formatPercentFromDecimal(result.annual_yield, 4)}
                   </p>
-                  <p className="mt-3 text-[11px] text-blue-100/60">Nominal 100 üzerinden</p>
+                  <p className="mt-3 text-[11px] text-muted-foreground">Temiz fiyat 100 üzerinden</p>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-5">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-slate-400">
-                    Kirli fiyat
+                <div className="widget-green rounded-2xl border border-border p-5">
+                  <p className="eyebrow">
+                    {tr.dashboard.bondDetails.calculatedMetrics.dirtyPrice}
                   </p>
-                  <p className="metric-value mt-4 text-[2.35rem]">
+                  <p className="metric-value mt-4 text-3xl">
                     {displayNumber(result.dirty_price)}
                   </p>
-                  <p className="mt-3 text-[11px] text-slate-500">İşlemiş tutar dahil</p>
+                  <p className="mt-3 text-[11px] text-muted-foreground">İşlemiş tutar dahil</p>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-5">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-slate-400">
-                    İşlemiş tutar
+                <div className="widget-purple rounded-2xl border border-border p-5">
+                  <p className="eyebrow">
+                    {tr.dashboard.bondDetails.infoCards.methods.accrued}
                   </p>
-                  <p className="metric-value mt-4 text-[2.35rem]">
+                  <p className="metric-value mt-4 text-3xl">
                     {displayNumber(result.accrued_amount)}
                   </p>
-                  <p className="mt-3 text-[11px] text-slate-500">Valör tarihindeki birikim</p>
+                  <p className="mt-3 text-[11px] text-muted-foreground">Valör tarihindeki birikim</p>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-5">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-slate-400">
-                    Etkin kupon
+                <div className="widget-orange rounded-2xl border border-border p-5">
+                  <p className="eyebrow">
+                    {usesIndexChange
+                      ? tr.dashboard.bondDetails.calculatedMetrics.modelAnnualRate
+                      : tr.dashboard.bondDetails.calculatedMetrics.annualCouponRate}
                   </p>
-                  <p className="metric-value mt-4 text-[2.35rem]">
+                  <p className="metric-value mt-4 text-3xl">
                     {formatPercentFromDecimal(result.effective_coupon_rate, 4)}
                   </p>
-                  <p className="mt-3 text-[11px] text-slate-500">
-                    {requiredBenchmark ? `${requiredBenchmark} dahil` : "Sözleşme oranı"}
+                  <p className="mt-3 text-[11px] text-muted-foreground">
+                    {usesIndexChange
+                      ? tr.dashboard.bondDetails.calculatedMetrics.modelAnnualRateDesc
+                      : requiredBenchmark
+                        ? `${requiredBenchmark} dahil`
+                        : "Sözleşme oranı"}
                   </p>
                 </div>
               </div>
+              {usesIndexChange && (
+                <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/[0.07] p-4 text-xs leading-5 text-foreground">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <p>{tr.dashboard.bondDetails.calculatedMetrics.indexChangeNotice}</p>
+                </div>
+              )}
             </>
           )}
 
           {!calculating && (calculationError || failure) && (
-            <div className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-5">
+            <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-5">
               <div className="flex items-start gap-3">
-                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-300" />
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
                 <div>
-                  <p className="text-sm font-semibold text-rose-100">
+                  <p className="text-sm font-semibold text-destructive">
                     Otomatik değerleme hazırlanamadı
                   </p>
-                  <p className="mt-1 text-xs leading-5 text-rose-100/70">
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
                     {calculationError || failure?.message}
                   </p>
                 </div>
@@ -475,8 +484,7 @@ export default function VerifiedInstrumentDetail({
               <ResultMetric label="Temiz fiyat" value={displayNumber(result.clean_price)} />
             </div>
             <p className="mt-5 rounded-2xl bg-muted/55 p-4 text-xs leading-5 text-muted-foreground">
-              Bu metrikler piyasa kotasyonu değil, nominal 100 karşılaştırma bazıyla hesaplanan
-              teorik risk göstergeleridir.
+              {tr.dashboard.bondDetails.calculatedMetrics.theoreticalNotice}
             </p>
           </article>
 
@@ -559,15 +567,30 @@ export default function VerifiedInstrumentDetail({
             </div>
           </div>
           <dl className="hairline-list mt-4">
-            <DetailRow label="İhraç tarihi" value={formatDate(instrument.first_issue_date)} numeric />
-            <DetailRow label="Vade tarihi" value={formatDate(instrument.maturity_date)} numeric />
             <DetailRow
-              label="Vadeye kalan"
+              label={tr.dashboard.bondDetails.infoCards.dates.firstIssue}
+              value={formatDate(instrument.first_issue_date)}
+              numeric
+            />
+            <DetailRow
+              label={tr.dashboard.bondDetails.infoCards.dates.maturity}
+              value={formatDate(instrument.maturity_date)}
+              numeric
+            />
+            <DetailRow
+              label={tr.dashboard.bondDetails.infoCards.dates.daysToMaturity}
               value={instrument.days_to_maturity == null ? "—" : `${formatDecimal(instrument.days_to_maturity, 0)} gün`}
               numeric
             />
-            <DetailRow label="Kupon sıklığı" value={String(instrument.coupon_frequency ?? "—")} numeric />
-            <DetailRow label="Gün sayım" value={String(fields.day_count_convention || "—")} />
+            <DetailRow
+              label={tr.dashboard.bondDetails.infoCards.general.couponFreq}
+              value={String(instrument.coupon_frequency ?? "—")}
+              numeric
+            />
+            <DetailRow
+              label={tr.dashboard.bondDetails.infoCards.general.dayCount}
+              value={String(fields.day_count_convention || "—")}
+            />
           </dl>
         </article>
 
@@ -610,8 +633,8 @@ export default function VerifiedInstrumentDetail({
           <div className="flex items-center gap-3">
             <Database className="h-4 w-4 text-muted-foreground" />
             <div>
-              <p className="eyebrow">BIST açıklaması</p>
-              <h2 className="mt-1 text-base font-semibold">Kaynak metin</h2>
+              <p className="eyebrow">{tr.dashboard.bondDetails.infoCards.remarks.title}</p>
+              <h2 className="mt-1 text-base font-semibold">BIST Kaynak Metni</h2>
             </div>
           </div>
           <p className="mt-5 whitespace-pre-wrap text-sm leading-7 text-foreground/80">
@@ -622,13 +645,13 @@ export default function VerifiedInstrumentDetail({
         <article className="data-surface rounded-[28px] p-5 sm:p-6">
           <div>
             <p className="eyebrow">Kişisel çalışma alanı</p>
-            <h2 className="mt-1 text-base font-semibold">Kıymet notu</h2>
+            <h2 className="mt-1 text-base font-semibold">{tr.dashboard.bondDetails.notes.title}</h2>
           </div>
           <Textarea
             value={note}
             onChange={(event) => setNote(event.target.value)}
             aria-label="Kıymet notu"
-            placeholder="Bu kıymetle ilgili kısa notunuzu ekleyin…"
+            placeholder={tr.dashboard.bondDetails.notes.placeholder}
             className="mt-5 min-h-32 resize-none rounded-2xl bg-muted/45"
           />
           <div className="mt-3 flex flex-wrap gap-2">
@@ -639,7 +662,9 @@ export default function VerifiedInstrumentDetail({
               className="rounded-xl"
             >
               <Save className="h-4 w-4" />
-              {savingNote ? "Kaydediliyor…" : "Notu kaydet"}
+              {savingNote
+                ? tr.dashboard.bondDetails.notes.saving
+                : tr.dashboard.bondDetails.notes.save}
             </Button>
             <Button
               variant="ghost"
@@ -648,7 +673,7 @@ export default function VerifiedInstrumentDetail({
               className="rounded-xl text-muted-foreground"
             >
               <Trash2 className="h-4 w-4" />
-              Notu sil
+              {tr.dashboard.bondDetails.notes.delete}
             </Button>
           </div>
         </article>
