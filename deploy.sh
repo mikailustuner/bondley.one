@@ -23,6 +23,12 @@ docker compose -f "$COMPOSE_FILE" config --quiet
 echo "[deploy] Image'lar oluşturuluyor ve servisler başlatılıyor."
 docker compose -f "$COMPOSE_FILE" up -d --build
 
+# Nginx şablonları bind mount ile gelir. Image kimliği değişmese bile çalışan
+# process yeni şablonu kendiliğinden yüklemez; gateway'i kontrollü biçimde
+# yeniden oluşturarak envsubst ve nginx -t adımlarını her deploy'da çalıştır.
+echo "[deploy] Nginx gateway yapılandırması yenileniyor."
+docker compose -f "$COMPOSE_FILE" up -d --no-deps --force-recreate nginx
+
 for job in bondley-bist-source-init bondley-migrate bondley-bootstrap; do
   for _attempt in $(seq 1 60); do
     status="$(docker inspect -f '{{.State.Status}}' "$job" 2>/dev/null || true)"
