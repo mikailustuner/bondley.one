@@ -13,8 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from app.tasks.celery_app import celery_app
 from app.core.config import get_settings
 from app.models.user_alert import UserAlert
-from app.models.bond import Bond
-from app.services.bond_metrics_service import BondMetricsService
+from app.models.bist_ingestion import BenchmarkObservation, Instrument, InstrumentVersion
+from app.models.valuation import ValuationRequestRecord, ValuationResultRecord
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -33,7 +33,6 @@ async def _evaluate_alerts(db: AsyncSession, today: date):
         select(UserAlert).where(UserAlert.is_active == True)
     )
     alerts = list(result.scalars().all())
-    metrics_svc = BondMetricsService(db)
     triggered_count = 0
 
     for alert in alerts:
@@ -46,16 +45,27 @@ async def _evaluate_alerts(db: AsyncSession, today: date):
                 threshold = (alert.parameters or {}).get("threshold")
                 if not isin or threshold is None:
                     continue
-                bond_result = await db.execute(select(Bond).where(Bond.isin_code == isin))
-                bond = bond_result.scalar_one_or_none()
-                if not bond:
+                result_payload = await db.scalar(
+                    select(ValuationResultRecord.result_payload)
+                    .join(
+                        ValuationRequestRecord,
+                        ValuationRequestRecord.id == ValuationResultRecord.request_id,
+                    )
+                    .join(
+                        InstrumentVersion,
+                        InstrumentVersion.id == ValuationRequestRecord.instrument_version_id,
+                    )
+                    .join(Instrument, Instrument.id == InstrumentVersion.instrument_id)
+                    .where(
+                        Instrument.isin == isin,
+                        ValuationResultRecord.success.is_(True),
+                    )
+                    .order_by(ValuationResultRecord.id.desc())
+                    .limit(1)
+                )
+                if not result_payload or result_payload.get("annual_yield") is None:
                     continue
-                metrics = await metrics_svc.compute_metrics(bond, today)
-                if metrics is None:
-                    continue
-                ytm = metrics.get("yield_to_maturity")
-                if ytm is None:
-                    continue
+                ytm = float(result_payload["annual_yield"])
                 th = float(threshold)
                 if alert.type == "ytm_above" and ytm >= th:
                     triggered = True
@@ -68,10 +78,18 @@ async def _evaluate_alerts(db: AsyncSession, today: date):
                 threshold = (alert.parameters or {}).get("threshold")
                 if threshold is None:
                     continue
-                daily_rate = await metrics_svc.get_latest_daily_rate()
-                if daily_rate is None:
+                annual_rate = await db.scalar(
+                    select(BenchmarkObservation.annual_rate_decimal)
+                    .where(
+                        BenchmarkObservation.benchmark == "TLREF",
+                        BenchmarkObservation.annual_rate_decimal.is_not(None),
+                    )
+                    .order_by(BenchmarkObservation.observation_date.desc())
+                    .limit(1)
+                )
+                if annual_rate is None:
                     continue
-                rate_pct = float(daily_rate * 100)
+                rate_pct = float(annual_rate / 365 * 100)
                 th = float(threshold)
                 if alert.type == "tlref_daily_above" and rate_pct >= th:
                     triggered = True
@@ -85,11 +103,19 @@ async def _evaluate_alerts(db: AsyncSession, today: date):
                 days_param = (alert.parameters or {}).get("days")
                 if not isin or days_param is None:
                     continue
-                bond_result = await db.execute(select(Bond).where(Bond.isin_code == isin))
-                bond = bond_result.scalar_one_or_none()
-                if not bond or bond.days_to_maturity is None:
+                maturity = await db.scalar(
+                    select(InstrumentVersion.maturity_date)
+                    .join(Instrument, Instrument.id == InstrumentVersion.instrument_id)
+                    .where(
+                        Instrument.isin == isin,
+                        InstrumentVersion.is_published.is_(True),
+                    )
+                    .order_by(InstrumentVersion.id.desc())
+                    .limit(1)
+                )
+                if maturity is None:
                     continue
-                d = int(bond.days_to_maturity)
+                d = (maturity - today).days
                 if d <= int(days_param):
                     triggered = True
                     snapshot = {"days_to_maturity": d, "days_threshold": int(days_param)}

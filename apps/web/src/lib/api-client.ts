@@ -1,4 +1,6 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API_V2_BASE = API_BASE.replace(/\/api\/v1\/?$/, "/api/v2");
+const V2_MARKER = "@v2:";
 
 type FetchOptions = RequestInit & { token?: string; skipRefresh?: boolean };
 
@@ -83,14 +85,17 @@ async function _apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promi
     headers["Authorization"] = `Bearer ${currentToken}`;
   }
 
-  let res = await resilientFetch(`${API_BASE}${endpoint}`, { headers, ...rest });
+  const isV2 = endpoint.startsWith(V2_MARKER);
+  const requestEndpoint = isV2 ? endpoint.slice(V2_MARKER.length) : endpoint;
+  const requestBase = isV2 ? API_V2_BASE : API_BASE;
+  let res = await resilientFetch(`${requestBase}${requestEndpoint}`, { headers, ...rest });
 
   if (res.status === 401 && !skipRefresh && endpoint !== "/auth/refresh" && endpoint !== "/auth/login" && endpoint !== "/auth/signup" && endpoint !== "/auth/mfa/verify") {
     const newToken = await refreshAccessToken();
 
     if (newToken) {
       headers["Authorization"] = `Bearer ${newToken}`;
-      res = await resilientFetch(`${API_BASE}${endpoint}`, { headers, ...rest });
+      res = await resilientFetch(`${requestBase}${requestEndpoint}`, { headers, ...rest });
     } else {
       if (typeof window !== "undefined") {
         window.location.href = "/login";
@@ -313,6 +318,64 @@ export interface BondNote {
   isin_code: string;
   note_text: string;
   updated_at: string;
+}
+
+export interface VerifiedInstrument {
+  id: number;
+  version_id: number;
+  isin: string;
+  isin_code: string;
+  instrument_family: "STANDARD" | "PARTICIPATION";
+  issuer: string | null;
+  maturity_date: string | null;
+  days_to_maturity: number | null;
+  currency: string;
+  security_type: string | null;
+  yield_type: string | null;
+  coupon_frequency: number | null;
+  first_issue_date: string | null;
+  next_coupon_date: string | null;
+  next_coupon_rate_pct: string | null;
+  remarks_raw: string | null;
+  term_rule_ast: Record<string, unknown>;
+  quality: {
+    parse_status: "EXACT" | "PARTIAL" | "AMBIGUOUS" | "CONFLICTING" | "REJECTED";
+    valuation_eligible: boolean;
+    diagnostics: Array<Record<string, unknown>>;
+  };
+  price_status: "USER_INPUT_REQUIRED";
+  source: {
+    source_file_id: number;
+    source_row: number;
+    parser_version: string | null;
+    ast_schema_version: string | null;
+  };
+  fields: Record<string, unknown>;
+  is_favorite?: boolean;
+  note_text?: string | null;
+}
+
+export interface VerifiedValuationResponse {
+  request_id: number;
+  success: boolean;
+  result: {
+    engine_version: string;
+    settlement_date: string;
+    quote_type: string;
+    quote_value: string;
+    clean_price: string;
+    dirty_price: string;
+    accrued_amount: string;
+    annual_yield: string;
+    macaulay_duration: string;
+    modified_duration: string;
+    convexity: string;
+    effective_coupon_rate: string;
+    cash_flows: Array<Record<string, string>>;
+    intermediates: Record<string, unknown>;
+    provenance: Record<string, unknown>;
+  } | null;
+  failure: { code: string; message: string; context: Record<string, unknown> } | null;
 }
 
 // --- Auth / User types (including MFA) ---
@@ -569,6 +632,114 @@ export const api = {
       apiFetch<{ error?: string }>("/admin/sentry-debug", { token }),
   },
 
+  verified: {
+    list: (
+      token: string,
+      params?: {
+        skip?: number;
+        limit?: number;
+        search?: string;
+        parse_status?: string;
+        valuation_eligible?: boolean;
+      },
+    ) => {
+      const query = new URLSearchParams();
+      if (params?.skip) query.set("skip", String(params.skip));
+      if (params?.limit) query.set("limit", String(params.limit));
+      if (params?.search) query.set("search", params.search);
+      if (params?.parse_status) query.set("parse_status", params.parse_status);
+      if (params?.valuation_eligible !== undefined) {
+        query.set("valuation_eligible", String(params.valuation_eligible));
+      }
+      return apiFetch<{ items: VerifiedInstrument[]; total: number; source: string }>(
+        `${V2_MARKER}/instruments?${query}`,
+        { token },
+      );
+    },
+    get: (token: string, isin: string) =>
+      apiFetch<VerifiedInstrument>(
+        `${V2_MARKER}/instruments/${encodeURIComponent(isin)}`,
+        { token },
+      ),
+    value: (
+      token: string,
+      payload: {
+        isin: string;
+        settlement_date: string;
+        quote_type: "CLEAN_PRICE" | "DIRTY_PRICE" | "ANNUAL_YIELD";
+        quote_value: string;
+        cpi_ratio?: string;
+        explicit_coupon_dates?: string[];
+      },
+    ) =>
+      apiFetch<VerifiedValuationResponse>(`${V2_MARKER}/valuations`, {
+        method: "POST",
+        token,
+        body: JSON.stringify(payload),
+      }),
+    benchmarks: (token: string, benchmark?: "TLREF" | "TLREFK", limit = 100) => {
+      const query = new URLSearchParams({ limit: String(limit) });
+      if (benchmark) query.set("benchmark", benchmark);
+      return apiFetch<{
+        items: Array<{
+          benchmark: "TLREF" | "TLREFK";
+          observation_date: string;
+          published_annual_rate_pct: string | null;
+          annual_rate_decimal: string | null;
+          index_value: string | null;
+          source_file_ids: number[];
+        }>;
+      }>(`${V2_MARKER}/benchmarks?${query}`, { token });
+    },
+    quality: (token: string) =>
+      apiFetch<{
+        published_versions: number;
+        valuation_eligible_versions: number;
+        kap_dependency: false;
+        price_policy: "USER_INPUT_ONLY";
+      }>(`${V2_MARKER}/quality`, { token }),
+    favorites: (token: string) =>
+      apiFetch<{ items: string[] }>(`${V2_MARKER}/favorites`, { token }),
+    addFavorite: (token: string, isin: string) =>
+      apiFetch<{ status: string; isin: string }>(
+        `${V2_MARKER}/favorites/${encodeURIComponent(isin)}`,
+        { method: "POST", token },
+      ),
+    removeFavorite: (token: string, isin: string) =>
+      apiFetch<void>(`${V2_MARKER}/favorites/${encodeURIComponent(isin)}`, {
+        method: "DELETE",
+        token,
+      }),
+    history: (token: string, isin: string, days = 90) =>
+      apiFetch<{
+        items: Array<{
+          date: string;
+          clean_price: string | null;
+          ytm: string | null;
+          quote_type: string;
+          source: string;
+        }>;
+      }>(
+        `${V2_MARKER}/instruments/${encodeURIComponent(isin)}/price-history?days=${days}`,
+        { token },
+      ),
+    getNote: (token: string, isin: string) =>
+      apiFetch<BondNote>(
+        `${V2_MARKER}/instruments/${encodeURIComponent(isin)}/note`,
+        { token },
+      ),
+    upsertNote: (token: string, isin: string, note_text: string) =>
+      apiFetch<BondNote>(
+        `${V2_MARKER}/instruments/${encodeURIComponent(isin)}/note`,
+        { method: "PUT", token, body: JSON.stringify({ note_text }) },
+      ),
+    deleteNote: (token: string, isin: string) =>
+      apiFetch<void>(
+        `${V2_MARKER}/instruments/${encodeURIComponent(isin)}/note`,
+        { method: "DELETE", token },
+      ),
+  },
+
   bonds: {
     list: (
       token: string,
@@ -601,13 +772,13 @@ export const api = {
         query.set("with_data_only", String(params.with_data_only));
       if (params?.min_spread != null)
         query.set("min_spread", String(params.min_spread));
-      return apiFetch<BondListResponse>(`/bonds/?${query}`, { token });
+      return apiFetch<BondListResponse>(`${V2_MARKER}/instruments?${query}`, { token });
     },
     get: (token: string, isin: string, params?: { settlement_date?: string }) => {
       const query = new URLSearchParams();
       if (params?.settlement_date) query.set("settlement_date", params.settlement_date);
       const qs = query.toString();
-      return apiFetch<BondDetail>(`/bonds/${isin}${qs ? `?${qs}` : ""}`, { token });
+      return apiFetch<BondDetail>(`${V2_MARKER}/instruments/${encodeURIComponent(isin)}${qs ? `?${qs}` : ""}`, { token });
     },
     scenario: (
       token: string,
@@ -629,60 +800,136 @@ export const api = {
     },
     history: (token: string, isin: string, days = 90) =>
       apiFetch<{ items: Array<{ date: string; clean_price: number | null; ytm: number | null }> }>(
-        `/bonds/${encodeURIComponent(isin)}/history?days=${days}`,
+        `${V2_MARKER}/instruments/${encodeURIComponent(isin)}/price-history?days=${days}`,
         { token },
       ),
-    stats: (token: string) => apiFetch<BondStats>("/bonds/stats", { token }),
-    favoritesList: (token: string) =>
-      apiFetch<{ items: BondListItem[] }>("/bonds/favorites", { token }),
-    favoritesArchived: (token: string) =>
-      apiFetch<{ items: BondListItem[] }>("/bonds/favorites/archived", { token }),
+    stats: (token: string) => apiFetch<BondStats>(`${V2_MARKER}/instrument-stats`, { token }),
+    favoritesList: async (token: string) => {
+      const [favorites, instruments] = await Promise.all([
+        apiFetch<{ items: string[] }>(`${V2_MARKER}/favorites`, { token }),
+        apiFetch<BondListResponse>(`${V2_MARKER}/instruments?limit=3000`, { token }),
+      ]);
+      const selected = new Set(favorites.items);
+      return { items: instruments.items.filter((item) => selected.has(item.isin_code)) };
+    },
+    favoritesArchived: async (token: string) => {
+      const favorites = await api.bonds.favoritesList(token);
+      return { items: favorites.items.filter((item) => !item.is_active) };
+    },
     addFavorite: (token: string, isinCode: string) =>
-      apiFetch<{ status: string }>("/bonds/favorites", {
+      apiFetch<{ status: string }>(`${V2_MARKER}/favorites/${encodeURIComponent(isinCode)}`, {
         method: "POST",
         token,
-        body: JSON.stringify({ isin_code: isinCode }),
       }),
     removeFavorite: (token: string, isinCode: string) =>
-      apiFetch<void>(`/bonds/favorites/${encodeURIComponent(isinCode)}`, {
+      apiFetch<void>(`${V2_MARKER}/favorites/${encodeURIComponent(isinCode)}`, {
         method: "DELETE",
         token,
       }),
     sync: (token: string) =>
       apiFetch<{ status: string; bonds_upserted?: number; bonds_deactivated?: number }>(
-        "/bonds/sync",
-        { method: "POST", token },
+        `${V2_MARKER}/imports/tbliste`,
+        { method: "POST", token, body: JSON.stringify({}) },
       ),
     yieldCurve: (token: string) =>
-      apiFetch<{ items: YieldCurvePoint[] }>("/bonds/yield-curve", { token }),
+      apiFetch<{ items: YieldCurvePoint[] }>(`${V2_MARKER}/yield-curve`, { token }),
     getNote: (token: string, isin: string) =>
-      apiFetch<BondNote>(`/bonds/${encodeURIComponent(isin)}/note`, { token }),
+      apiFetch<BondNote>(`${V2_MARKER}/instruments/${encodeURIComponent(isin)}/note`, { token }),
     upsertNote: (token: string, isin: string, note_text: string) =>
-      apiFetch<BondNote>(`/bonds/${encodeURIComponent(isin)}/note`, {
+      apiFetch<BondNote>(`${V2_MARKER}/instruments/${encodeURIComponent(isin)}/note`, {
         method: "PUT",
         token,
         body: JSON.stringify({ note_text }),
       }),
     deleteNote: (token: string, isin: string) =>
-      apiFetch<void>(`/bonds/${encodeURIComponent(isin)}/note`, {
+      apiFetch<void>(`${V2_MARKER}/instruments/${encodeURIComponent(isin)}/note`, {
         method: "DELETE",
         token,
       }),
   },
 
   tlref: {
-    latest: (token: string) => apiFetch<TLREFRecord | null>("/tlref/latest", { token }),
-    history: (token: string, params?: { start_date?: string; limit?: number }) => {
-      const query = new URLSearchParams();
-      if (params?.start_date) query.set("start_date", params.start_date);
-      if (params?.limit) query.set("limit", String(params.limit));
-      return apiFetch<{ items: TLREFRecord[]; total: number }>(`/tlref/history?${query}`, {
-        token,
-      });
+    latest: async (token: string) => {
+      const response = await apiFetch<{
+        items: Array<{
+          observation_date: string;
+          index_value: string | null;
+          annual_rate_decimal: string | null;
+          published_annual_rate_pct: string | null;
+        }>;
+      }>(`${V2_MARKER}/benchmarks?benchmark=TLREF&limit=1`, { token });
+      const item = response.items[0];
+      if (!item) return null;
+      const annual = item.annual_rate_decimal == null ? null : Number(item.annual_rate_decimal);
+      return {
+        id: 0,
+        rate_date: item.observation_date,
+        index_value: Number(item.index_value ?? 0),
+        daily_rate: annual == null ? null : annual / 365,
+        published_annual_rate_pct:
+          item.published_annual_rate_pct == null ? null : Number(item.published_annual_rate_pct),
+        source: "BIST_VERIFIED_V2",
+        created_at: item.observation_date,
+      } satisfies TLREFRecord;
     },
-    stats: (token: string) => apiFetch<TLREFStats>("/tlref/stats", { token }),
+    history: async (token: string, params?: { start_date?: string; limit?: number }) => {
+      const response = await apiFetch<{
+        items: Array<{
+          observation_date: string;
+          index_value: string | null;
+          annual_rate_decimal: string | null;
+          published_annual_rate_pct: string | null;
+        }>;
+      }>(`${V2_MARKER}/benchmarks?benchmark=TLREF&limit=${params?.limit ?? 365}`, { token });
+      const filtered = params?.start_date
+        ? response.items.filter((item) => item.observation_date >= params.start_date!)
+        : response.items;
+      const items: TLREFRecord[] = filtered.map((item, index) => {
+        const annual = item.annual_rate_decimal == null ? null : Number(item.annual_rate_decimal);
+        return {
+          id: index,
+          rate_date: item.observation_date,
+          index_value: Number(item.index_value ?? 0),
+          daily_rate: annual == null ? null : annual / 365,
+          published_annual_rate_pct:
+            item.published_annual_rate_pct == null ? null : Number(item.published_annual_rate_pct),
+          source: "BIST_VERIFIED_V2",
+          created_at: item.observation_date,
+        };
+      });
+      return { items, total: items.length };
+    },
+    stats: async (token: string) => {
+      const history = await api.tlref.history(token, { limit: 5000 });
+      const ordered = [...history.items].sort((a, b) => a.rate_date.localeCompare(b.rate_date));
+      const first = ordered[0];
+      const latest = ordered.at(-1);
+      if (!first || !latest) {
+        return { total_records: 0 } as TLREFStats;
+      }
+      const cumulative =
+        first.index_value > 0
+          ? ((latest.index_value - first.index_value) / first.index_value) * 100
+          : null;
+      return {
+        total_records: ordered.length,
+        latest_date: latest.rate_date,
+        latest_index_date: latest.rate_date,
+        latest_index: latest.index_value,
+        latest_daily_rate: latest.daily_rate,
+        latest_annual_rate: latest.published_annual_rate_pct,
+        latest_source: latest.source,
+        first_date: first.rate_date,
+        first_index: first.index_value,
+        cumulative_return_pct: cumulative,
+        annualized_rate_pct: latest.published_annual_rate_pct,
+      } satisfies TLREFStats;
+    },
     syncNow: (token: string) =>
-      apiFetch<{ historical: SyncStatus; daily: SyncStatus }>("/tlref/sync-now", { method: "POST", token }),
+      apiFetch<{ historical: SyncStatus; daily: SyncStatus }>(
+        `${V2_MARKER}/imports/benchmarks/historical`,
+        { method: "POST", token },
+      ),
   },
 
   metrics: {

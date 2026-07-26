@@ -1,0 +1,188 @@
+from datetime import date
+from decimal import Decimal
+
+import pytest
+
+from app.services.valuation.calendar import coupon_schedule
+from app.services.valuation.day_count import year_fraction
+from app.services.valuation.engine import (
+    BenchmarkInput,
+    InstrumentTerms,
+    PriceInput,
+    QuoteType,
+    RateType,
+    ValuationEngine,
+)
+from app.services.valuation.errors import ValuationError, ValuationFailureCode
+from app.services.valuation.formula_catalog import FORMULA_CATALOG
+
+
+def _fixed_terms(**overrides) -> InstrumentTerms:
+    values = {
+        "isin": "TRTEST000044",
+        "issue_date": date(2025, 1, 31),
+        "maturity_date": date(2027, 1, 31),
+        "coupon_frequency": 2,
+        "annual_coupon_rate": Decimal("0.10"),
+        "next_coupon_date": date(2025, 7, 31),
+    }
+    values.update(overrides)
+    return InstrumentTerms(**values)
+
+
+def test_schedule_uses_calendar_months_and_preserves_month_end():
+    assert coupon_schedule(
+        issue_date=date(2025, 1, 31),
+        maturity_date=date(2026, 1, 31),
+        frequency=2,
+        next_coupon_date=date(2025, 7, 31),
+    ) == [date(2025, 7, 31), date(2026, 1, 31)]
+
+
+def test_irregular_frequency_requires_explicit_dates():
+    with pytest.raises(ValuationError) as captured:
+        coupon_schedule(
+            issue_date=date(2025, 1, 1),
+            maturity_date=date(2026, 1, 1),
+            frequency=5,
+        )
+    assert captured.value.code == ValuationFailureCode.MISSING_SCHEDULE
+
+
+def test_day_count_golden_values():
+    start = date(2024, 1, 1)
+    end = date(2025, 1, 1)
+    assert year_fraction(start, end, "ACT/365F") == Decimal("366") / Decimal("365")
+    assert year_fraction(start, end, "ACT/ACT ISDA") == Decimal("1")
+    assert year_fraction(date(2025, 1, 30), date(2025, 7, 30), "30E/360") == Decimal("0.5")
+    assert year_fraction(start, end, "ACTACT") == Decimal("1")
+    assert year_fraction(start, end, "ACT365") == Decimal("366") / Decimal("365")
+    assert year_fraction(date(2025, 1, 30), date(2025, 7, 30), "EU30360") == Decimal("0.5")
+
+
+def test_price_yield_round_trip_and_risk_metrics():
+    engine = ValuationEngine()
+    from_yield = engine.value(
+        _fixed_terms(),
+        settlement_date=date(2025, 2, 3),
+        price_input=PriceInput(QuoteType.ANNUAL_YIELD, Decimal("0.12")),
+    )
+    from_clean = engine.value(
+        _fixed_terms(),
+        settlement_date=date(2025, 2, 3),
+        price_input=PriceInput(QuoteType.CLEAN_PRICE, from_yield.clean_price),
+    )
+    assert abs(from_clean.annual_yield - Decimal("0.12")) <= Decimal("0.00000001")
+    assert from_clean.modified_duration > 0
+    assert from_clean.convexity > 0
+    assert abs(from_clean.dirty_price - from_yield.dirty_price) <= Decimal("0.00000001")
+
+
+def test_missing_price_is_typed_failure_not_zero():
+    with pytest.raises(ValuationError) as captured:
+        ValuationEngine().value(
+            _fixed_terms(),
+            settlement_date=date(2025, 2, 3),
+            price_input=None,
+        )
+    assert captured.value.code == ValuationFailureCode.PRICE_REQUIRED
+
+
+def test_ambiguous_terms_cannot_be_valued():
+    with pytest.raises(ValuationError) as captured:
+        ValuationEngine().value(
+            _fixed_terms(parse_status="AMBIGUOUS"),
+            settlement_date=date(2025, 2, 3),
+            price_input=PriceInput(QuoteType.CLEAN_PRICE, Decimal("100")),
+        )
+    assert captured.value.code == ValuationFailureCode.AMBIGUOUS_TERMS
+
+
+def test_trd_tlrefk_is_strictly_separate_from_tlref():
+    terms = _fixed_terms(
+        isin="TRDTEST00045",
+        rate_type=RateType.TLREFK,
+        annual_coupon_rate=None,
+        benchmark_spread_decimal=Decimal("0.0025"),
+    )
+    with pytest.raises(ValuationError) as captured:
+        ValuationEngine().value(
+            terms,
+            settlement_date=date(2025, 2, 3),
+            price_input=PriceInput(QuoteType.CLEAN_PRICE, Decimal("100")),
+            benchmark=BenchmarkInput("TLREF", date(2025, 2, 3), Decimal("0.40")),
+        )
+    assert captured.value.code == ValuationFailureCode.BENCHMARK_MISMATCH
+
+    result = ValuationEngine().value(
+        terms,
+        settlement_date=date(2025, 2, 3),
+        price_input=PriceInput(QuoteType.CLEAN_PRICE, Decimal("100")),
+        benchmark=BenchmarkInput("TLREFK", date(2025, 2, 3), Decimal("0.39")),
+    )
+    assert result.effective_coupon_rate == Decimal("0.3925000000")
+
+
+def test_cpi_requires_explicit_ratio():
+    terms = _fixed_terms(rate_type=RateType.CPI)
+    with pytest.raises(ValuationError) as captured:
+        ValuationEngine().value(
+            terms,
+            settlement_date=date(2025, 2, 3),
+            price_input=PriceInput(QuoteType.CLEAN_PRICE, Decimal("100")),
+        )
+    assert captured.value.code == ValuationFailureCode.MISSING_CPI_RATIO
+
+
+@pytest.mark.parametrize(
+    ("formula_code", "rate_type", "benchmark", "cpi_ratio"),
+    [
+        ("BAP_DISCOUNTED_CASH_FLOW", RateType.FIXED, None, None),
+        ("BAP_FIXED_RATE", RateType.FIXED, None, None),
+        (
+            "BAP_FLOATING_RATE",
+            RateType.TLREF,
+            BenchmarkInput("TLREF", date(2025, 2, 3), Decimal("0.40")),
+            None,
+        ),
+        (
+            "BAP_TLREF",
+            RateType.TLREF,
+            BenchmarkInput("TLREF", date(2025, 2, 3), Decimal("0.40")),
+            None,
+        ),
+        (
+            "BAP_TLREFK",
+            RateType.TLREFK,
+            BenchmarkInput("TLREFK", date(2025, 2, 3), Decimal("0.39")),
+            None,
+        ),
+        ("BAP_CPI_LINKED", RateType.CPI, None, Decimal("1.20")),
+    ],
+)
+def test_every_catalog_formula_has_a_golden_execution(
+    formula_code,
+    rate_type,
+    benchmark,
+    cpi_ratio,
+):
+    terms = _fixed_terms(
+        rate_type=rate_type,
+        formula_code=formula_code,
+        annual_coupon_rate=(
+            None if rate_type in {RateType.TLREF, RateType.TLREFK} else Decimal("0.10")
+        ),
+    )
+    result = ValuationEngine().value(
+        terms,
+        settlement_date=date(2025, 2, 3),
+        price_input=PriceInput(QuoteType.CLEAN_PRICE, Decimal("100")),
+        benchmark=benchmark,
+        cpi_ratio=cpi_ratio,
+    )
+    assert result.provenance["formula_code"] == formula_code
+    assert result.dirty_price > 0
+
+
+def test_formula_catalog_and_engine_dispatch_are_in_sync():
+    assert ValuationEngine.SUPPORTED_FORMULAS == frozenset(FORMULA_CATALOG)

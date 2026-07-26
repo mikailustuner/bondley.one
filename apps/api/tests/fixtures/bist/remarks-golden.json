@@ -1,0 +1,84 @@
+[
+  {
+    "name": "explicit_percent",
+    "isin": "TRTEST000001",
+    "yield_type": "Değişken / Variable-TLREF",
+    "spread": "",
+    "remarks": "TLREF + %4,50",
+    "status": "EXACT",
+    "benchmark": "TLREF_RATE",
+    "spread_decimal": "0.045"
+  },
+  {
+    "name": "explicit_basis_points",
+    "isin": "TRTEST000002",
+    "yield_type": "Değişken / Variable-TLREF",
+    "spread": "",
+    "remarks": "BIST TLREF Endeksi Değişimi + 125 bps yıllık basit ek getiri",
+    "status": "EXACT",
+    "benchmark": "BIST_TLREF_INDEX",
+    "spread_decimal": "0.0125"
+  },
+  {
+    "name": "trd_infers_tlrefk",
+    "isin": "TRDTEST00003",
+    "yield_type": "Değişken / Variable",
+    "spread": "",
+    "remarks": "",
+    "status": "EXACT",
+    "benchmark": "TLREFK_RATE",
+    "diagnostic": "TRD_TLREFK_INFERRED"
+  },
+  {
+    "name": "trd_explicit_tlref_conflict",
+    "isin": "TRDTEST00011",
+    "yield_type": "Değişken / Variable-TLREF",
+    "spread": "",
+    "remarks": "TLREF + 100 baz puan",
+    "status": "CONFLICTING",
+    "benchmark": "TLREF_RATE",
+    "diagnostic": "TRD_EXPECTED_TLREFK_CONFLICT"
+  },
+  {
+    "name": "unknown_unit",
+    "isin": "TRDTEST00029",
+    "yield_type": "Değişken / Variable-TLREFK",
+    "spread": "",
+    "remarks": "TLREFK+4",
+    "status": "AMBIGUOUS",
+    "benchmark": "TLREFK_RATE",
+    "diagnostic": "AMBIGUOUS_SPREAD_UNIT"
+  },
+  {
+    "name": "first_coupon_floor",
+    "isin": "TRTEST000010",
+    "yield_type": "Değişken / Variable-TLREF",
+    "spread": "",
+    "remarks": "İlk Kupon için %51,00 Yıllık Basit, Diğer Kuponlar için %51,00 Yıllık Basit ile TLREF + %1,00 Ek Getiriden Yüksek Olanı",
+    "status": "PARTIAL",
+    "benchmark": "TLREF_RATE",
+    "comparison": "MAX"
+  },
+  {
+    "name": "two_business_day_lag",
+    "isin": "TRTEST000028",
+    "yield_type": "Değişken / Variable-TLREF",
+    "spread": "",
+    "remarks": "Kupon dönem bitiş gününden 2 iş günü önce ilan edilen BIST TLREF Endeksi + 50 baz puan",
+    "status": "EXACT",
+    "benchmark": "BIST_TLREF_INDEX",
+    "lag": 2
+  },
+  {
+    "name": "periodic_spread_and_rounding",
+    "isin": "TRDTEST00037",
+    "yield_type": "Değişken / Variable-TLREFK",
+    "spread": "",
+    "remarks": "BIST TLREFK Endeksi Değişimi + %0,50 dönemsel ek getiri. Dönemsel kupon oranı virgülden sonra 4 hane dikkate alınarak yuvarlanacaktır.",
+    "status": "PARTIAL",
+    "benchmark": "BIST_TLREFK_INDEX",
+    "spread_decimal": "0.005",
+    "annuality": "PERIODIC",
+    "rounding": 4
+  }
+]

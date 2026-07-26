@@ -1,639 +1,265 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertCircle, Database, Search, ShieldCheck, Star } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/empty-state";
-import { AlertCircle, Inbox, Star, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { api, BondListItem, BondStats, TLREFRecord } from "@/lib/api-client";
+import { api, VerifiedInstrument } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
-import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
-import { tr } from "@/locales/tr";
-import { SwipeableCard } from "@/components/swipeable-card";
+import { formatDate } from "@/lib/utils";
 
-const CURRENCY_COLORS: Record<string, string> = {
-  TRY: "default",
-  USD: "secondary",
-  EUR: "outline",
+
+const STATUS_VARIANT: Record<
+  VerifiedInstrument["quality"]["parse_status"],
+  "default" | "secondary" | "destructive" | "outline"
+> = {
+  EXACT: "default",
+  PARTIAL: "secondary",
+  AMBIGUOUS: "outline",
+  CONFLICTING: "destructive",
+  REJECTED: "destructive",
 };
 
+
 export default function BondsListPage() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    document.title = `${tr.dashboard.bonds.title} — ${tr.common.brand}`;
-    return () => {
-      document.title = tr.common.brand;
-    };
-  }, []);
-  const [bonds, setBonds] = useState<BondListItem[]>([]);
-  const [recentBonds, setRecentBonds] = useState<BondListItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [stats, setStats] = useState<BondStats | null>(null);
+  const [items, setItems] = useState<VerifiedInstrument[]>([]);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [eligibleOnly, setEligibleOnly] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [fullListLoading, setFullListLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
-  const [currencyFilter, setCurrencyFilter] = useState<string>(() => searchParams.get("currency") ?? "");
-  const [typeFilter, setTypeFilter] = useState<string>(() => searchParams.get("type") ?? "");
-  const [favoriteIsins, setFavoriteIsins] = useState<Set<string>>(new Set());
-  const [favoriteToggling, setFavoriteToggling] = useState<string | null>(null);
-  const [withDataOnly, setWithDataOnly] = useState(() => searchParams.get("data") !== "0");
+  const [quality, setQuality] = useState<{
+    published_versions: number;
+    valuation_eligible_versions: number;
+  } | null>(null);
 
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (search) params.set("q", search);
-    if (currencyFilter) params.set("currency", currencyFilter);
-    if (typeFilter) params.set("type", typeFilter);
-    if (!withDataOnly) params.set("data", "0");
-    const qs = params.toString();
-    router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
-  }, [search, currencyFilter, typeFilter, withDataOnly]);
-
-  const tableContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
+    document.title = "Doğrulanmış BIST Kıymetleri — Bondley";
     const token = getToken();
     if (!token) {
-      setError(tr.dashboard.bonds.errors.loginRequired);
+      setError("Bu ekranı görüntülemek için giriş yapmalısınız.");
       setLoading(false);
       return;
     }
-
     Promise.all([
-      api.bonds.list(token, { active_only: true, with_data_only: withDataOnly, limit: 10, order_by: "updated_at_desc" }),
-      api.bonds.stats(token),
-      api.bonds.favoritesList(token),
+      api.verified.list(token, { limit: 3000 }),
+      api.verified.favorites(token),
+      api.verified.quality(token),
     ])
-      .then(([recentRes, statsRes, favRes]) => {
-        setRecentBonds(recentRes.items || []);
-        setTotal(recentRes.total ?? 0);
-        setStats(statsRes);
-        setFavoriteIsins(new Set((favRes.items || []).map((b) => b.isin_code)));
-        setLoading(false);
-
-        setFullListLoading(true);
-        api.bonds
-          .list(token, { active_only: true, with_data_only: withDataOnly, limit: 3000 })
-          .then((fullRes) => {
-            setBonds(fullRes.items || []);
-            setTotal(fullRes.total ?? 0);
-          })
-          .catch(() => { })
-          .finally(() => setFullListLoading(false));
+      .then(([instruments, favoriteResult, qualityResult]) => {
+        setItems(instruments.items);
+        setFavorites(new Set(favoriteResult.items));
+        setQuality(qualityResult);
       })
-      .catch((e) => {
-        setError(e?.message || tr.dashboard.bonds.errors.loadFailed);
-        setLoading(false);
-      });
-  }, [withDataOnly]);
-
-  const toggleFavorite = (e: React.MouseEvent, isinCode: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const token = getToken();
-    if (!token || favoriteToggling) return;
-    const isFavorite = favoriteIsins.has(isinCode);
-    setFavoriteToggling(isinCode);
-    if (isFavorite) {
-      api.bonds
-        .removeFavorite(token, isinCode)
-        .then(() => setFavoriteIsins((prev) => { const s = new Set(prev); s.delete(isinCode); return s; }))
-        .catch(() => { })
-        .finally(() => setFavoriteToggling(null));
-    } else {
-      api.bonds
-        .addFavorite(token, isinCode)
-        .then(() => setFavoriteIsins((prev) => new Set(prev).add(isinCode)))
-        .catch(() => { })
-        .finally(() => setFavoriteToggling(null));
-    }
-  };
-
-  const swipeAddFavorite = (isinCode: string) => {
-    const token = getToken();
-    if (!token || favoriteToggling) return;
-    setFavoriteToggling(isinCode);
-    api.bonds
-      .addFavorite(token, isinCode)
-      .then(() => setFavoriteIsins((prev) => new Set(prev).add(isinCode)))
-      .catch(() => { })
-      .finally(() => setFavoriteToggling(null));
-  };
-
-  const swipeRemoveFavorite = (isinCode: string) => {
-    const token = getToken();
-    if (!token || favoriteToggling) return;
-    setFavoriteToggling(isinCode);
-    api.bonds
-      .removeFavorite(token, isinCode)
-      .then(() => setFavoriteIsins((prev) => { const s = new Set(prev); s.delete(isinCode); return s; }))
-      .catch(() => { })
-      .finally(() => setFavoriteToggling(null));
-  };
-
-  const activeBonds = bonds.length > 0 ? bonds : recentBonds;
+      .catch((reason) => setError(reason instanceof Error ? reason.message : "Veriler yüklenemedi."))
+      .finally(() => setLoading(false));
+  }, []);
 
   const filtered = useMemo(() => {
-    let result = activeBonds;
-    if (search.trim()) {
-      const q = search.toUpperCase();
-      result = result.filter(
-        (b) =>
-          b.isin_code.toUpperCase().includes(q) ||
-          (b.issuer && b.issuer.toUpperCase().includes(q)),
-      );
-    }
-    if (currencyFilter) {
-      result = result.filter((b) => b.currency === currencyFilter);
-    }
-    if (typeFilter) {
-      result = result.filter((b) => b.security_type && b.security_type.includes(typeFilter));
-    }
-    return result;
-  }, [activeBonds, search, currencyFilter, typeFilter]);
-
-  const securityTypes = useMemo(() => {
-    const types = new Set<string>();
-    activeBonds.forEach((b) => {
-      if (b.security_type) types.add(b.security_type);
+    const candidate = search.trim().toLocaleUpperCase("tr-TR");
+    return items.filter((item) => {
+      if (
+        candidate &&
+        !item.isin.includes(candidate) &&
+        !item.issuer?.toLocaleUpperCase("tr-TR").includes(candidate)
+      ) {
+        return false;
+      }
+      if (statusFilter && item.quality.parse_status !== statusFilter) return false;
+      if (eligibleOnly && !item.quality.valuation_eligible) return false;
+      return true;
     });
-    return Array.from(types).sort();
-  }, [activeBonds]);
+  }, [eligibleOnly, items, search, statusFilter]);
 
-  const currencies = useMemo(() => {
-    const curs = new Set<string>();
-    activeBonds.forEach((b) => curs.add(b.currency));
-    return Array.from(curs).sort();
-  }, [activeBonds]);
+  const toggleFavorite = async (instrument: VerifiedInstrument) => {
+    const token = getToken();
+    if (!token) return;
+    const next = new Set(favorites);
+    if (next.has(instrument.isin)) {
+      await api.verified.removeFavorite(token, instrument.isin);
+      next.delete(instrument.isin);
+    } else {
+      await api.verified.addFavorite(token, instrument.isin);
+      next.add(instrument.isin);
+    }
+    setFavorites(next);
+  };
 
-  const rowVirtualizer = useVirtualizer({
-    count: filtered.length,
-    getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => 52,
-    overscan: 8,
-  });
-  const virtualRows = rowVirtualizer.getVirtualItems();
-  const paddingTop = virtualRows.length > 0 ? virtualRows[0].start : 0;
-  const paddingBottom = virtualRows.length > 0
-    ? rowVirtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end
-    : 0;
+  if (loading) {
+    return (
+      <div className="space-y-5" aria-busy="true">
+        <Skeleton className="h-10 w-80" />
+        <Skeleton className="h-28 w-full rounded-3xl" />
+        <Skeleton className="h-96 w-full rounded-3xl" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div role="alert" className="rounded-3xl border border-destructive/30 bg-destructive/5 p-6">
+        <div className="flex items-center gap-2 font-semibold text-destructive">
+          <AlertCircle className="h-5 w-5" />
+          {error}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between animate-fade-up">
-        <div>
-          <h1 className="text-display-md text-foreground">{tr.dashboard.bonds.title}</h1>
-          <p className="text-[15px] text-muted-foreground mt-1.5">
-            {withDataOnly && stats
-              ? tr.dashboard.bonds.description
-                  .replace("{total}", formatDecimal(stats.total_bonds, 0))
-                  .replace("{count}", formatDecimal(total, 0))
-              : tr.dashboard.bonds.descriptionFull.replace("{total}", formatDecimal(total, 0))}
-          </p>
+    <main className="space-y-6">
+      <header>
+        <div className="flex items-center gap-2 text-primary">
+          <ShieldCheck className="h-5 w-5" aria-hidden />
+          <span className="text-sm font-semibold">BIST doğrulanmış veri hattı</span>
         </div>
-      </div>
+        <h1 className="mt-2 text-display-md text-foreground">Borçlanma araçları</h1>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          Kaynak, parse kalitesi ve değerleme uygunluğu birbirinden ayrıdır. Piyasa fiyatı
+          gösterilmez; değerleme için temiz fiyat, kirli fiyat veya getiri girmelisiniz.
+        </p>
+      </header>
 
-      {/* Stats */}
-      {loading && (
-        <div className="grid gap-4 md:grid-cols-4 animate-fade-up">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-card rounded-3xl border border-border p-5">
-              <Skeleton className="h-3 w-24 mb-2" />
-              <Skeleton className="h-8 w-16 mb-1" />
-              <Skeleton className="h-3 w-20" />
-            </div>
-          ))}
-        </div>
-      )}
-      {stats && !loading && (
-        <div className="grid gap-4 md:grid-cols-4 animate-fade-up">
-          <div className="bg-card rounded-3xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="text-[13px] font-medium text-muted-foreground mb-2">{tr.dashboard.bonds.stats.total}</div>
-            <div className="font-mono-data text-stat text-primary">
-              {formatDecimal(stats.total_bonds, 0)}
-            </div>
-            <div className="text-[13px] text-muted-foreground mt-1.5">{tr.dashboard.bonds.stats.totalDesc}</div>
-          </div>
-          <div className="bg-card rounded-3xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="text-[13px] font-medium text-muted-foreground mb-2">{tr.dashboard.bonds.stats.avgMaturity}</div>
-            <div className="font-mono-data text-stat text-foreground">
-              {stats.avg_days_to_maturity != null
-                ? `${Math.round(stats.avg_days_to_maturity)} gün`
-                : "—"}
-            </div>
-            <div className="text-[13px] text-muted-foreground mt-1.5">{tr.dashboard.bonds.stats.avgMaturityDesc}</div>
-          </div>
-          <div className="bg-card rounded-3xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="text-[13px] font-medium text-muted-foreground mb-2">{tr.dashboard.bonds.stats.currency}</div>
-            <div className="font-mono-data text-stat text-foreground">
-              {Object.keys(stats.by_currency).length}
-            </div>
-            <div className="text-[13px] text-muted-foreground mt-1.5">
-              {tr.dashboard.bonds.stats.currencyDesc.replace("{count}", Object.keys(stats.by_currency).length.toString())}
-            </div>
-          </div>
-          <div className="bg-card rounded-3xl border border-border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="text-[13px] font-medium text-muted-foreground mb-2">{tr.dashboard.bonds.stats.securityType}</div>
-            <div className="font-mono-data text-stat text-foreground">
-              {Object.keys(stats.by_security_type).length}
-            </div>
-            <div className="text-[13px] text-muted-foreground mt-1.5">
-              {tr.dashboard.bonds.stats.securityTypeDesc.replace("{count}", Object.keys(stats.by_security_type).length.toString())}
-            </div>
-          </div>
-        </div>
-      )}
-
-
-
-      {/* Recent Bonds */}
-      {!loading && recentBonds.length > 0 && (
-        <Card className="animate-fade-up-delay-1">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardDescription>{tr.dashboard.bonds.recent.title}</CardDescription>
-                <CardTitle className="mt-1">{tr.dashboard.bonds.recent.subtitle}</CardTitle>
-              </div>
-              {fullListLoading && (
-                <span className="text-[13px] text-muted-foreground animate-pulse">
-                  {tr.dashboard.bonds.recent.loadingFull}
-                </span>
-              )}
-            </div>
+      <section className="grid gap-4 sm:grid-cols-3" aria-label="Veri kalitesi özeti">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Yayımlanan sürüm</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {recentBonds.map((b) => (
-                <Link
-                  key={b.isin_code}
-                  href={`/dashboard/bonds/${encodeURIComponent(b.isin_code)}`}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/50 px-3 py-1.5 text-[13px] text-foreground hover:bg-secondary transition-colors"
-                >
-                  <span className="font-mono-data font-medium">{b.isin_code}</span>
-                  {b.issuer && (
-                    <span className="text-muted-foreground truncate max-w-[240px]">{b.issuer}</span>
-                  )}
-                  <Badge variant={(CURRENCY_COLORS[b.currency] as any) || "outline"} className="text-[10px]">
-                    {b.currency}
-                  </Badge>
-                  {b.last_issue_yield != null && (
-                    <span className="font-mono-data text-primary text-[11px]">
-                      {formatPercent(b.last_issue_yield)}
-                    </span>
-                  )}
-                </Link>
-              ))}
-            </div>
+          <CardContent className="font-mono-data text-3xl font-bold">
+            {quality?.published_versions ?? items.length}
           </CardContent>
         </Card>
-      )}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Değerlemeye uygun</CardTitle>
+          </CardHeader>
+          <CardContent className="font-mono-data text-3xl font-bold text-primary">
+            {quality?.valuation_eligible_versions ?? items.filter((item) => item.quality.valuation_eligible).length}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Fiyat politikası</CardTitle>
+          </CardHeader>
+          <CardContent className="text-base font-semibold">Yalnız kullanıcı girdisi</CardContent>
+        </Card>
+      </section>
 
-      {/* Search & Filters */}
-      <div className="flex flex-wrap gap-3 animate-fade-up-delay-1">
-        <div className="flex-1 min-w-[200px] relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-[18px] w-[18px] pointer-events-none text-muted-foreground/70" />
-          <Input
-            placeholder={tr.dashboard.bonds.filters.searchPlaceholder}
-            className="pl-11 h-12 rounded-full bg-background border-border shadow-md hover:border-primary/50 focus-visible:ring-4 focus-visible:ring-primary/10 focus-visible:border-primary text-[15px] transition-all"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+      <section className="rounded-3xl border border-border bg-card p-4">
+        <div className="grid gap-3 md:grid-cols-[1fr_180px_auto]">
+          <label className="relative">
+            <span className="sr-only">ISIN veya ihraççı ara</span>
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" aria-hidden />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="ISIN veya ihraççı ara"
+              className="pl-9"
+            />
+          </label>
+          <label>
+            <span className="sr-only">Parse durumu</span>
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">Tüm parse durumları</option>
+              <option value="EXACT">Exact</option>
+              <option value="PARTIAL">Partial</option>
+              <option value="AMBIGUOUS">Ambiguous</option>
+              <option value="CONFLICTING">Conflicting</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-2 rounded-xl border border-border px-3 text-sm">
+            <input
+              type="checkbox"
+              checked={eligibleOnly}
+              onChange={(event) => setEligibleOnly(event.target.checked)}
+            />
+            Yalnız değerlemeye uygun
+          </label>
         </div>
-        <select
-          className="h-11 rounded-xl border border-border bg-card px-4 py-2.5 text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-          value={currencyFilter}
-          onChange={(e) => setCurrencyFilter(e.target.value)}
-        >
-          <option value="">{tr.dashboard.bonds.filters.allCurrencies}</option>
-          {currencies.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-        <select
-          className="h-11 rounded-xl border border-border bg-card px-4 py-2.5 text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all max-w-[280px]"
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-        >
-          <option value="">{tr.dashboard.bonds.filters.allTypes}</option>
-          {securityTypes.map((t) => (
-            <option key={t} value={t}>
-              {t.length > 40 ? t.substring(0, 40) + "…" : t}
-            </option>
-          ))}
-        </select>
+      </section>
 
-        <div className="flex items-center gap-2 px-3 py-1 bg-secondary/30 rounded-xl border border-border/50">
-          <Switch
-            id="with-data-toggle"
-            checked={withDataOnly}
-            onCheckedChange={setWithDataOnly}
-          />
-          <Label htmlFor="with-data-toggle" className="text-[13px] font-medium cursor-pointer select-none">
-            {tr.dashboard.bonds.filters.withDataOnly}
-          </Label>
+      <section className="overflow-hidden rounded-3xl border border-border bg-card">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <caption className="sr-only">Doğrulanmış BIST kıymetleri</caption>
+            <thead className="border-b border-border bg-muted/40 text-xs uppercase text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3">ISIN / ihraççı</th>
+                <th className="px-4 py-3">Vade</th>
+                <th className="px-4 py-3">Tür</th>
+                <th className="px-4 py-3">Kalite</th>
+                <th className="px-4 py-3">Fiyat</th>
+                <th className="px-4 py-3"><span className="sr-only">İşlemler</span></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filtered.map((item) => (
+                <tr key={item.id} className="hover:bg-muted/25">
+                  <td className="px-4 py-3">
+                    <Link
+                      href={`/dashboard/bonds/${item.isin}`}
+                      className="font-mono-data font-semibold text-primary hover:underline"
+                    >
+                      {item.isin}
+                    </Link>
+                    <div className="mt-1 max-w-md truncate text-xs text-muted-foreground">
+                      {item.issuer || "İhraççı belirtilmemiş"}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div>{formatDate(item.maturity_date)}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {item.days_to_maturity == null ? "—" : `${item.days_to_maturity} gün`}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge variant="outline">
+                      {item.instrument_family === "PARTICIPATION" ? "Katılım / TLREFK" : item.yield_type || "Standart"}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge variant={STATUS_VARIANT[item.quality.parse_status]}>
+                      {item.quality.parse_status}
+                    </Badge>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {item.quality.valuation_eligible ? "Değerlemeye uygun" : "İnceleme gerekli"}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                    Kullanıcı girdisi gerekli
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void toggleFavorite(item)}
+                      aria-label={favorites.has(item.isin) ? "Favoriden çıkar" : "Favoriye ekle"}
+                    >
+                      <Star className={`h-4 w-4 ${favorites.has(item.isin) ? "fill-yellow-400 text-yellow-500" : ""}`} />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      </div>
-
-      {/* Bonds Table */}
-      <Card className="animate-fade-up-delay-1 overflow-hidden">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardDescription>{tr.dashboard.bonds.table.subtitle}</CardDescription>
-              <CardTitle className="mt-1">{tr.dashboard.bonds.table.title}</CardTitle>
-            </div>
-            <span className="text-[13px] font-medium text-muted-foreground">
-              {fullListLoading
-                ? tr.dashboard.bonds.table.loadingCount.replace("{count}", total.toString())
-                : search || currencyFilter || typeFilter
-                  ? tr.dashboard.bonds.table.filteredCount.replace("{count}", filtered.length.toString()).replace("{total}", total.toString())
-                  : tr.dashboard.bonds.table.count.replace("{count}", total.toString())
-              }
-            </span>
+        {filtered.length === 0 && (
+          <div className="flex flex-col items-center gap-2 p-12 text-muted-foreground">
+            <Database className="h-7 w-7" aria-hidden />
+            Filtrelerle eşleşen kıymet bulunamadı.
           </div>
-        </CardHeader>
-        <CardContent>
-          {loading && (
-            <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-              <table className="w-full">
-                <thead className="sticky top-0 z-10 bg-card">
-                  <tr className="border-b border-border">
-                    <th scope="col" className="w-10 pb-3" />
-                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.isin}</th>
-                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.issuer}</th>
-                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.type}</th>
-                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.yieldType}</th>
-                    <th scope="col" className="pb-3 text-center text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.currency}</th>
-                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.maturity}</th>
-                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.lastPrice}</th>
-                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.yield}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Array.from({ length: 18 }).map((_, i) => (
-                    <tr key={i} className="border-b border-border/30 last:border-0">
-                      <td className="py-3.5 w-10 text-center"><Skeleton className="h-5 w-5 mx-auto" /></td>
-                      <td className="py-3.5"><Skeleton className="h-5 w-28" /></td>
-                      <td className="py-3.5"><Skeleton className="h-5 w-40" /></td>
-                      <td className="py-3.5"><Skeleton className="h-5 w-24" /></td>
-                      <td className="py-3.5"><Skeleton className="h-5 w-20" /></td>
-                      <td className="py-3.5 text-center"><Skeleton className="h-5 w-10 mx-auto" /></td>
-                      <td className="py-3.5 text-right"><Skeleton className="h-5 w-16 ml-auto" /></td>
-                      <td className="py-3.5 text-right"><Skeleton className="h-5 w-14 ml-auto" /></td>
-                      <td className="py-3.5 text-right"><Skeleton className="h-5 w-12 ml-auto" /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {error && !loading && (
-            <EmptyState
-              variant="error"
-              title={tr.dashboard.bonds.errors.loadFailed}
-              description={error}
-              icon={<AlertCircle className="h-7 w-7" />}
-              action={{ label: tr.dashboard.bonds.empty.refresh, onClick: () => window.location.reload() }}
-            />
-          )}
-          {!loading && !error && filtered.length === 0 && (
-            <EmptyState
-              title={
-                search || currencyFilter || typeFilter
-                  ? tr.dashboard.bonds.empty.noMatches
-                  : tr.dashboard.bonds.empty.noBonds
-              }
-              description={
-                search || currencyFilter || typeFilter
-                  ? tr.dashboard.bonds.empty.noMatchesDesc
-                  : tr.dashboard.bonds.empty.noBondsDesc
-              }
-              icon={<Inbox className="h-7 w-7" />}
-              action={
-                search || currencyFilter || typeFilter
-                  ? {
-                    label: tr.dashboard.bonds.empty.clearFilters,
-                    onClick: () => {
-                      setSearch("");
-                      setCurrencyFilter("");
-                      setTypeFilter("");
-                    },
-                  }
-                  : undefined
-              }
-            />
-          )}
-          {!loading && !error && filtered.length > 0 && (
-            <>
-              {/* Mobile Cards */}
-              <div className="block md:hidden space-y-3 max-h-[600px] overflow-y-auto">
-                {filtered.map((bond) => (
-                  <SwipeableCard
-                    key={bond.isin_code}
-                    onSwipeRight={!favoriteIsins.has(bond.isin_code) ? () => swipeAddFavorite(bond.isin_code) : undefined}
-                    onSwipeLeft={favoriteIsins.has(bond.isin_code) ? () => swipeRemoveFavorite(bond.isin_code) : undefined}
-                    rightLabel={tr.dashboard.bondDetails.actions.addFavorite}
-                    leftLabel={tr.dashboard.bondDetails.actions.removeFavorite}
-                  >
-                  <Link
-                    href={`/dashboard/bonds/${bond.isin_code}`}
-                    onClick={() => {
-                      try {
-                        sessionStorage.setItem(
-                          "bondley_bonds_isins",
-                          JSON.stringify(filtered.map((b) => b.isin_code))
-                        );
-                      } catch { }
-                    }}
-                    className="block rounded-3xl border border-border bg-card p-4 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono-data text-[13px] font-medium text-primary">
-                        {bond.isin_code}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-10 w-10 shrink-0"
-                          onClick={(e) => toggleFavorite(e, bond.isin_code)}
-                          disabled={favoriteToggling === bond.isin_code}
-                          aria-label={favoriteIsins.has(bond.isin_code) ? tr.dashboard.bonds.table.cols.favorite : tr.dashboard.bonds.table.cols.favorite}
-                        >
-                          <Star
-                            className={`h-4 w-4 ${favoriteIsins.has(bond.isin_code) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`}
-                          />
-                        </Button>
-                        <Badge
-                          variant={(CURRENCY_COLORS[bond.currency] as any) || "outline"}
-                          className="shrink-0"
-                        >
-                          {bond.currency}
-                        </Badge>
-                      </div>
-                    </div>
-                    <p className="text-[13px] text-muted-foreground truncate mt-1">
-                      {bond.issuer || "—"}
-                    </p>
-                    {bond.fund_user && (
-                      <p className="text-[11px] text-muted-foreground/70 truncate flex items-center gap-1 mt-0.5">
-                        <span className="shrink-0 text-primary/40">↳</span>
-                        {bond.fund_user}
-                      </p>
-                    )}
-                    <div className="flex justify-between text-[13px] mt-2.5 text-muted-foreground">
-                      <span>
-                        Vade:{" "}
-                        {bond.days_to_maturity != null
-                          ? `${bond.days_to_maturity} gün`
-                          : formatDate(bond.maturity_date)}
-                      </span>
-                      <span className="text-foreground font-mono-data">
-                        {formatDecimal(bond.last_issue_price, 3)}
-                      </span>
-                    </div>
-                    <div className="text-[13px] text-positive font-mono-data mt-1">
-                      {bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"}
-                    </div>
-                  </Link>
-                  </SwipeableCard>
-                ))}
-              </div>
-
-              {/* Desktop Table */}
-              <div ref={tableContainerRef} className="hidden md:block overflow-x-auto max-h-[70vh] overflow-y-auto">
-                <table className="w-full">
-                  <thead className="sticky top-0 z-10 bg-card">
-                    <tr className="border-b border-border">
-                      <th scope="col" className="w-10 text-center pb-3 text-[13px] font-medium text-muted-foreground">
-                        <span className="sr-only">{tr.dashboard.bonds.table.cols.favorite}</span>
-                      </th>
-                      <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.isin}</th>
-                      <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.issuer}</th>
-                      <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.type}</th>
-                      <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.yieldType}</th>
-                      <th scope="col" className="pb-3 text-center text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.currency}</th>
-                      <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.maturity}</th>
-                      <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.lastPrice}</th>
-                      <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">{tr.dashboard.bonds.table.cols.yield}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paddingTop > 0 && (
-                      <tr><td colSpan={9} style={{ height: paddingTop }} /></tr>
-                    )}
-                    {virtualRows.map((virtualRow) => {
-                      const bond = filtered[virtualRow.index];
-                      return (
-                      <tr
-                        key={bond.isin_code}
-                        className="border-b border-border/30 last:border-0 hover:bg-secondary/40 transition-colors group"
-                      >
-                        <td className="py-3.5 text-center">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={(e) => toggleFavorite(e, bond.isin_code)}
-                            disabled={favoriteToggling === bond.isin_code}
-                            aria-label={favoriteIsins.has(bond.isin_code) ? tr.dashboard.bonds.table.cols.favorite : tr.dashboard.bonds.table.cols.favorite}
-                          >
-                            <Star
-                              className={`h-4 w-4 ${favoriteIsins.has(bond.isin_code) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`}
-                            />
-                          </Button>
-                        </td>
-                        <td className="py-3.5">
-                          <Link
-                            href={`/dashboard/bonds/${bond.isin_code}`}
-                            className="font-mono-data text-[13px] text-foreground group-hover:text-primary transition-colors"
-                            onClick={() => {
-                              try {
-                                sessionStorage.setItem(
-                                  "bondley_bonds_isins",
-                                  JSON.stringify(filtered.map((b) => b.isin_code))
-                                );
-                              } catch { }
-                            }}
-                          >
-                            {bond.isin_code}
-                          </Link>
-                        </td>
-                        <td className="py-3.5 text-[13px] text-muted-foreground max-w-[400px] truncate">
-                          <div className="truncate" title={bond.issuer ?? ""}>
-                            {bond.issuer ?? "—"}
-                          </div>
-                          {bond.fund_user && (
-                            <div className="truncate text-[11px] text-muted-foreground/70 flex items-center gap-1 mt-0.5" title={bond.fund_user}>
-                              <span className="shrink-0 text-primary/40">↳</span>
-                              {bond.fund_user}
-                            </div>
-                          )}
-                        </td>
-                        <td className="py-3.5">
-                          {bond.security_type ? (
-                            <span className="text-[13px] text-muted-foreground">
-                              {bond.security_type.split("/")[0].trim()}
-                            </span>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="py-3.5">
-                          {bond.yield_type ? (
-                            <span className="text-[13px] text-muted-foreground">
-                              {bond.yield_type.split("/")[0].trim()}
-                            </span>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="py-3.5 text-center">
-                          <Badge
-                            variant={
-                              (CURRENCY_COLORS[bond.currency] as any) || "outline"
-                            }
-                          >
-                            {bond.currency}
-                          </Badge>
-                        </td>
-                        <td className="py-3.5 text-right font-mono-data text-[13px] text-muted-foreground">
-                          {bond.days_to_maturity != null
-                            ? `${bond.days_to_maturity} gün`
-                            : formatDate(bond.maturity_date)}
-                        </td>
-                        <td className="py-3.5 text-right font-mono-data text-[13px] text-foreground">
-                          {formatDecimal(bond.last_issue_price, 3)}
-                        </td>
-                        <td className="py-3.5 text-right font-mono-data text-[13px] text-positive">
-                          {bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"}
-                        </td>
-                      </tr>
-                      );
-                    })}
-                    {paddingBottom > 0 && (
-                      <tr><td colSpan={9} style={{ height: paddingBottom }} /></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+        )}
+      </section>
+    </main>
   );
 }

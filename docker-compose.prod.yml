@@ -121,8 +121,19 @@ services:
       RATE_LIMIT_LOGIN_PER_MINUTE: ${RATE_LIMIT_LOGIN_PER_MINUTE:-5}
       RATE_LIMIT_SIGNUP_PER_HOUR: ${RATE_LIMIT_SIGNUP_PER_HOUR:-3}
       BIST_TLREF_DAILY_URL: https://borsaistanbul.com/datum/bisttlrefendeksi.csv
+      BIST_TLREF_RATE_DAILY_URL: https://www.borsaistanbul.com/datum/tlreforani.csv
+      BIST_TLREF_INDEX_DAILY_URL: https://www.borsaistanbul.com/datum/bisttlrefendeksi.csv
       BIST_TLREF_HISTORICAL_URL: https://borsaistanbul.com/datum/BISTTLREFENDEKSI_D.zip
+      BIST_TLREF_RATE_HISTORICAL_URL: https://www.borsaistanbul.com/datum/TLREFORANI_D.zip
+      BIST_TLREFK_RATE_URL: https://www.borsaistanbul.com/datum/tlrefkorani.csv
+      BIST_TLREFK_INDEX_URL: https://www.borsaistanbul.com/datum/bisttlrefkendeksi.csv
+      BIST_TLREFK_RATE_HISTORICAL_URL: https://www.borsaistanbul.com/datum/TLREFKORANI_D.zip
+      BIST_TLREFK_INDEX_HISTORICAL_URL: https://www.borsaistanbul.com/datum/BISTTLREFKENDEKSI_D.zip
       BIST_BOND_LIST_URL: https://borsaistanbul.com/datum/tbliste.zip
+      BIST_RAW_ARCHIVE_DIR: /data/bist-source-files
+      VALUATION_V2_READ_ENABLED: ${VALUATION_V2_READ_ENABLED:-true}
+      VALUATION_V2_WRITE_ENABLED: ${VALUATION_V2_WRITE_ENABLED:-true}
+      VALUATION_SHADOW_ENABLED: ${VALUATION_SHADOW_ENABLED:-true}
       SENTRY_DSN: ${SENTRY_DSN:-}
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}
@@ -145,6 +156,7 @@ services:
       retries: 3
     volumes:
       - ./sirket_kap_idleri.csv:/data/sirket_kap_idleri.csv:ro
+      - bist_source_data:/data/bist-source-files
     networks:
       - frontend
       - backend
@@ -188,8 +200,19 @@ services:
       RATE_LIMIT_LOGIN_PER_MINUTE: ${RATE_LIMIT_LOGIN_PER_MINUTE:-5}
       RATE_LIMIT_SIGNUP_PER_HOUR: ${RATE_LIMIT_SIGNUP_PER_HOUR:-3}
       BIST_TLREF_DAILY_URL: https://borsaistanbul.com/datum/bisttlrefendeksi.csv
+      BIST_TLREF_RATE_DAILY_URL: https://www.borsaistanbul.com/datum/tlreforani.csv
+      BIST_TLREF_INDEX_DAILY_URL: https://www.borsaistanbul.com/datum/bisttlrefendeksi.csv
       BIST_TLREF_HISTORICAL_URL: https://borsaistanbul.com/datum/BISTTLREFENDEKSI_D.zip
+      BIST_TLREF_RATE_HISTORICAL_URL: https://www.borsaistanbul.com/datum/TLREFORANI_D.zip
+      BIST_TLREFK_RATE_URL: https://www.borsaistanbul.com/datum/tlrefkorani.csv
+      BIST_TLREFK_INDEX_URL: https://www.borsaistanbul.com/datum/bisttlrefkendeksi.csv
+      BIST_TLREFK_RATE_HISTORICAL_URL: https://www.borsaistanbul.com/datum/TLREFKORANI_D.zip
+      BIST_TLREFK_INDEX_HISTORICAL_URL: https://www.borsaistanbul.com/datum/BISTTLREFKENDEKSI_D.zip
       BIST_BOND_LIST_URL: https://borsaistanbul.com/datum/tbliste.zip
+      BIST_RAW_ARCHIVE_DIR: /data/bist-source-files
+      VALUATION_V2_READ_ENABLED: ${VALUATION_V2_READ_ENABLED:-true}
+      VALUATION_V2_WRITE_ENABLED: ${VALUATION_V2_WRITE_ENABLED:-true}
+      VALUATION_SHADOW_ENABLED: ${VALUATION_SHADOW_ENABLED:-true}
       SENTRY_DSN: ${SENTRY_DSN:-}
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}
@@ -214,6 +237,7 @@ services:
       retries: 3
     volumes:
       - ./sirket_kap_idleri.csv:/data/sirket_kap_idleri.csv:ro
+      - bist_source_data:/data/bist-source-files
     networks:
       - frontend
       - backend
@@ -247,6 +271,10 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       ENVIRONMENT: ${ENVIRONMENT:-production}
       SENTRY_DSN: ${SENTRY_DSN:-}
+      BIST_RAW_ARCHIVE_DIR: /data/bist-source-files
+      VALUATION_V2_READ_ENABLED: ${VALUATION_V2_READ_ENABLED:-true}
+      VALUATION_V2_WRITE_ENABLED: ${VALUATION_V2_WRITE_ENABLED:-true}
+      VALUATION_SHADOW_ENABLED: ${VALUATION_SHADOW_ENABLED:-true}
     depends_on:
       postgres:
         condition: service_healthy
@@ -260,6 +288,7 @@ services:
       start_period: 30s
     volumes:
       - ./sirket_kap_idleri.csv:/data/sirket_kap_idleri.csv:ro
+      - bist_source_data:/data/bist-source-files
     networks:
       - backend
       - frontend
@@ -354,6 +383,7 @@ services:
 
 volumes:
   postgres_data:
+  bist_source_data:
 
 networks:
   frontend:

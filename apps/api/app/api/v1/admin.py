@@ -1,4 +1,4 @@
-from datetime import datetime, date, timedelta, timezone
+from datetime import date, datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -6,20 +6,23 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.models.bond import Bond
-from app.models.tlref_rate import TLREFRate
+from app.core.config import get_settings
+from app.models.bist_ingestion import (
+    BenchmarkObservation,
+    ImportDiagnostic,
+    InstrumentVersion,
+)
 from app.models.user import User
 from app.models.audit_log import AuditLog
 from app.models.system_setting import SystemSetting
-from app.models.kap_disclosure import KapDisclosure
 from app.api.deps import get_admin_user
 from app.schemas.user import UserUpdate, UserResponse
-from app.services.bond_fetcher import BondFetcher
-from app.services.tlref_fetcher import TLREFFetcher
+from app.services.bist_ingestion.import_service import VerifiedBistImportService
 from app.services.audit_service import AuditService
 from app.services.metrics_service import MetricsService
 
 router = APIRouter()
+settings = get_settings()
 
 
 @router.get("/stats")
@@ -27,14 +30,21 @@ async def get_admin_stats(
     db: AsyncSession = Depends(get_db),
     _admin: User = Depends(get_admin_user),
 ):
-    """Sadece admin: genel istatistikler (tahvil, TLREF, kullanici sayisi)."""
+    """Sadece admin: doğrulanmış enstrüman, benchmark ve kullanıcı sayıları."""
     bonds_count = (
         await db.execute(
-            select(func.count(Bond.id))
-            .where(Bond.is_active == True, Bond.maturity_date >= date.today())
+            select(func.count(func.distinct(InstrumentVersion.instrument_id))).where(
+                InstrumentVersion.is_published.is_(True)
+            )
         )
     ).scalar() or 0
-    tlref_count = (await db.execute(select(func.count(TLREFRate.id)))).scalar() or 0
+    tlref_count = (
+        await db.execute(
+            select(func.count(BenchmarkObservation.id)).where(
+                BenchmarkObservation.benchmark == "TLREF"
+            )
+        )
+    ).scalar() or 0
     users_count = (await db.execute(select(func.count(User.id)))).scalar() or 0
     return {
         "bonds_count": bonds_count,
@@ -48,64 +58,40 @@ async def get_data_health(
     db: AsyncSession = Depends(get_db),
     _admin: User = Depends(get_admin_user),
 ):
-    """Admin: Eksik KAP verisi veya guncel olmayan tbliste verisi olan aktif tahvilleri getir."""
-    
-    today = datetime.now(timezone.utc)
-    two_days_ago = today - timedelta(days=2)
-    
-    # Left Outer Join ile veritabanında sorgu atıyoruz
-    query = (
-        select(Bond, KapDisclosure.isin_code)
-        .outerjoin(KapDisclosure, Bond.isin_code == KapDisclosure.isin_code)
-        .where(Bond.is_active == True, Bond.maturity_date >= date.today())
+    """Admin: doğrulanmış parser tanıları; temel sağlık KAP'a bağlı değildir."""
+    total_active_bonds = (
+        await db.scalar(
+            select(func.count(func.distinct(InstrumentVersion.instrument_id))).where(
+                InstrumentVersion.is_published.is_(True)
+            )
+        )
+        or 0
     )
-    
-    result = await db.execute(query)
-    rows = result.all()
-    
-    health_issues = []
-    total_active_bonds = 0
-    bond_kap_map = {}
-    
-    for bond, kap_isin in rows:
-        if bond.isin_code not in bond_kap_map:
-            bond_kap_map[bond.isin_code] = {"bond": bond, "has_kap": False}
-        if kap_isin:
-            bond_kap_map[bond.isin_code]["has_kap"] = True
-            
-    total_active_bonds = len(bond_kap_map)
-            
-    for isin, data in bond_kap_map.items():
-        bond = data["bond"]
-        has_kap = data["has_kap"]
-        
-        issues = []
-        updated_at = bond.updated_at
-        if updated_at and updated_at.tzinfo is None:
-            updated_at = updated_at.replace(tzinfo=timezone.utc)
-            
-        is_tbliste_outdated = updated_at is None or updated_at < two_days_ago
-        is_kap_missing = not has_kap
-        
-        if is_tbliste_outdated:
-            issues.append("tbliste_outdated")
-        if is_kap_missing:
-            issues.append("kap_missing")
-            
-        if issues:
-            health_issues.append({
-                "isin_code": bond.isin_code,
-                "issuer": bond.issuer,
-                "maturity_date": bond.maturity_date.isoformat() if bond.maturity_date else None,
-                "first_issue_date": bond.first_issue_date.isoformat() if bond.first_issue_date else None,
-                "tbliste_updated_at": bond.updated_at.isoformat() if bond.updated_at else None,
-                "issues": issues,
-            })
-            
+    rows = (
+        await db.execute(
+            select(ImportDiagnostic)
+            .where(ImportDiagnostic.severity.in_(["ERROR", "FATAL"]))
+            .order_by(ImportDiagnostic.id.desc())
+            .limit(500)
+        )
+    ).scalars()
+    health_issues = [
+        {
+            "diagnostic_id": item.id,
+            "import_run_id": item.import_run_id,
+            "code": item.code,
+            "message": item.message,
+            "sheet_name": item.sheet_name,
+            "row_number": item.row_number,
+            "issues": [item.code.lower()],
+        }
+        for item in rows
+    ]
     return {
         "total_active_bonds": total_active_bonds,
         "total_issues": len(health_issues),
-        "bonds_with_issues": health_issues
+        "bonds_with_issues": health_issues,
+        "kap_dependency": False,
     }
 
 
@@ -114,17 +100,24 @@ async def sync_all_data(
     db: AsyncSession = Depends(get_db),
     _admin: User = Depends(get_admin_user),
 ):
-    """Admin-only: Hem TLREF endeks hem tahvil listesini guncelle."""
-    tlref_fetcher = TLREFFetcher(db)
-    bond_fetcher = BondFetcher(db)
-
-    historical = await tlref_fetcher.fetch_historical()
-    daily = await tlref_fetcher.fetch_daily()
-    bonds = await bond_fetcher.fetch_and_sync()
-
+    """Admin-only: doğrulanmış tbliste, TLREF ve TLREFK kaynaklarını güncelle."""
+    service = VerifiedBistImportService(db, archive_root=settings.BIST_RAW_ARCHIVE_DIR)
+    bonds = await service.import_tbliste(settings.BIST_BOND_LIST_URL)
+    tlref = await service.import_benchmark_pair(
+        "TLREF",
+        rate_url=settings.BIST_TLREF_RATE_HISTORICAL_URL,
+        index_url=settings.BIST_TLREF_HISTORICAL_URL,
+        historical=True,
+    )
+    tlrefk = await service.import_benchmark_pair(
+        "TLREFK",
+        rate_url=settings.BIST_TLREFK_RATE_HISTORICAL_URL,
+        index_url=settings.BIST_TLREFK_INDEX_HISTORICAL_URL,
+        historical=True,
+    )
     return {
-        "tlref_historical": historical,
-        "tlref_daily": daily,
+        "tlref_historical": tlref,
+        "tlrefk_historical": tlrefk,
         "bonds": bonds,
     }
 

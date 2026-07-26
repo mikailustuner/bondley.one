@@ -14,10 +14,41 @@ from app.models.kap_disclosure import KapCompany, KapDisclosure, KapDisclosureDe
 from app.models.system_setting import SystemSetting
 from app.models.notification import Notification
 from app.models.bond_user_note import BondUserNote
+from app.models.bist_ingestion import (
+    BenchmarkObservation,
+    BenchmarkValidationResult,
+    BistGroupCodeVersion,
+    BistInstrumentClassificationVersion,
+    ImportDiagnostic,
+    ImportRun,
+    Instrument,
+    InstrumentConflict,
+    InstrumentTermRule,
+    InstrumentVersion,
+    RawWorkbookRow,
+    SourceNote,
+    SourceFile,
+)
+from app.models.valuation import (
+    InstrumentUserNote,
+    LegacyBondInstrumentMap,
+    PriceObservation,
+    ShadowValuationComparison,
+    UserFavoriteInstrument,
+    ValuationRequestRecord,
+    ValuationResultRecord,
+)
 
 __all__ = [
     "Bond", "MarketData", "Calculation", "TLREFRate", "User", "AuditLog",
     "BondView", "UserMetric", "RefreshToken", "UserAlert", "UserFavoriteBond",
     "UserMfaBackupCode", "KapCompany", "KapDisclosure", "KapDisclosureDetail",
     "SystemSetting", "Notification", "BondUserNote",
+    "SourceFile", "ImportRun", "RawWorkbookRow", "SourceNote", "ImportDiagnostic",
+    "BistGroupCodeVersion", "BistInstrumentClassificationVersion",
+    "Instrument", "InstrumentVersion", "InstrumentTermRule", "InstrumentConflict",
+    "BenchmarkObservation", "BenchmarkValidationResult",
+    "LegacyBondInstrumentMap", "UserFavoriteInstrument", "InstrumentUserNote",
+    "PriceObservation", "ValuationRequestRecord", "ValuationResultRecord",
+    "ShadowValuationComparison",
 ]

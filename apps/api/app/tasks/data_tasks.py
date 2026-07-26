@@ -1,159 +1,129 @@
-"""
-Celery tasks for automated TLREF and bond data fetching.
+"""Celery tasks for the verified BIST ingestion pipeline.
 
-Daily schedule (weekdays):
-- 16:45 Istanbul time: Fetch TLREF rate+index from BIST
-- 17:10 Istanbul time: Fetch bond list from BIST
+KAP, legacy bond parsing, synthetic market prices and legacy calculations are
+intentionally absent from this module.
 """
 
 import asyncio
 import logging
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.tasks.celery_app import celery_app
 from app.core.config import get_settings
+from app.tasks.celery_app import celery_app
+
 
 logger = logging.getLogger(__name__)
-
 settings = get_settings()
-sync_engine = create_engine(settings.DATABASE_URL_SYNC)
-SyncSession = sessionmaker(bind=sync_engine)
 
 
-def _run_async(coro):
-    """
-    Helper to run async code in a sync Celery task.
-    Ensures a clean event loop and disposes the engine pool to avoid 
-    asyncpg 'another operation is in progress' errors due to loop mismatch.
-    """
-    import asyncio
-    from app.core.database import engine
-    
+def _run_async(coroutine):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        return loop.run_until_complete(coro)
+        return loop.run_until_complete(coroutine)
     finally:
-        try:
-            # Dispose engine pool so next task in this worker process gets fresh connections
-            loop.run_until_complete(engine.dispose())
-        except Exception:
-            pass
         loop.close()
         asyncio.set_event_loop(None)
 
 
-@celery_app.task(name="app.tasks.data_tasks.fetch_daily_tlref", bind=True, max_retries=3)
-def fetch_daily_tlref(self):
-    """Gunluk TLREF endeks degerini BIST'ten cek ve DB'ye yaz."""
-    logger.info("Task: Fetching daily TLREF index...")
+async def _service_context():
+    from app.services.bist_ingestion.import_service import VerifiedBistImportService
 
+    engine = create_async_engine(settings.DATABASE_URL)
+    session_factory = async_sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+    return engine, session_factory, VerifiedBistImportService
+
+
+@celery_app.task(
+    name="app.tasks.data_tasks.fetch_verified_bist_snapshot",
+    bind=True,
+    max_retries=3,
+)
+def fetch_verified_bist_snapshot(self):
     async def _fetch():
-        from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-        from app.services.tlref_fetcher import TLREFFetcher
-
-        eng = create_async_engine(settings.DATABASE_URL)
-        session_factory = async_sessionmaker(eng, class_=AsyncSession, expire_on_commit=False)
-
-        async with session_factory() as db:
-            fetcher = TLREFFetcher(db)
-            return await fetcher.fetch_daily()
+        engine, session_factory, service_type = await _service_context()
+        try:
+            async with session_factory() as db:
+                service = service_type(db, archive_root=settings.BIST_RAW_ARCHIVE_DIR)
+                return await service.import_tbliste(settings.BIST_BOND_LIST_URL)
+        finally:
+            await engine.dispose()
 
     try:
-        result = _run_async(_fetch())
-        logger.info(f"Daily TLREF fetch result: {result}")
-        return result
+        return _run_async(_fetch())
     except Exception as exc:
-        logger.error(f"Daily TLREF fetch failed: {exc}")
+        logger.exception("Verified tbliste import failed")
         raise self.retry(exc=exc, countdown=60 * 5)
 
 
-@celery_app.task(name="app.tasks.data_tasks.fetch_historical_tlref")
-def fetch_historical_tlref():
-    """Tarihsel TLREF endeks verilerini BIST'ten cek."""
-    logger.info("Task: Fetching historical TLREF index data...")
-
+@celery_app.task(
+    name="app.tasks.data_tasks.fetch_verified_daily_benchmarks",
+    bind=True,
+    max_retries=3,
+)
+def fetch_verified_daily_benchmarks(self):
     async def _fetch():
-        from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-        from app.services.tlref_fetcher import TLREFFetcher
+        engine, session_factory, service_type = await _service_context()
+        try:
+            async with session_factory() as db:
+                service = service_type(db, archive_root=settings.BIST_RAW_ARCHIVE_DIR)
+                tlref = await service.import_benchmark_pair(
+                    "TLREF",
+                    rate_url=settings.BIST_TLREF_RATE_DAILY_URL,
+                    index_url=settings.BIST_TLREF_INDEX_DAILY_URL,
+                    historical=False,
+                )
+                tlrefk = await service.import_benchmark_pair(
+                    "TLREFK",
+                    rate_url=settings.BIST_TLREFK_RATE_URL,
+                    index_url=settings.BIST_TLREFK_INDEX_URL,
+                    historical=False,
+                )
+                return {"TLREF": tlref, "TLREFK": tlrefk}
+        finally:
+            await engine.dispose()
 
-        eng = create_async_engine(settings.DATABASE_URL)
-        session_factory = async_sessionmaker(eng, class_=AsyncSession, expire_on_commit=False)
-
-        async with session_factory() as db:
-            fetcher = TLREFFetcher(db)
-            return await fetcher.fetch_historical()
-
-    result = _run_async(_fetch())
-    logger.info(f"Historical TLREF fetch result: {result}")
-    return result
+    try:
+        return _run_async(_fetch())
+    except Exception as exc:
+        logger.exception("Verified daily benchmark import failed")
+        raise self.retry(exc=exc, countdown=60 * 5)
 
 
-@celery_app.task(name="app.tasks.data_tasks.fetch_bond_list", bind=True, max_retries=3)
-def fetch_bond_list(self):
-    """BIST tbliste.zip tahvil listesini indir, parse et, DB'ye yaz."""
-    logger.info("Task: Fetching bond list from BIST...")
-
+@celery_app.task(
+    name="app.tasks.data_tasks.fetch_verified_historical_benchmarks",
+    bind=True,
+    max_retries=3,
+)
+def fetch_verified_historical_benchmarks(self):
     async def _fetch():
-        from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-        from app.services.bond_fetcher import BondFetcher
-
-        eng = create_async_engine(settings.DATABASE_URL)
-        session_factory = async_sessionmaker(eng, class_=AsyncSession, expire_on_commit=False)
-
-        async with session_factory() as db:
-            fetcher = BondFetcher(db)
-            result = await fetcher.fetch_and_sync()
-        from app.core.cache import cache_delete_pattern, cache_delete
-        await cache_delete_pattern("bond_list:*")
-        await cache_delete("bond_stats")
-        return result
-
-    try:
-        result = _run_async(_fetch())
-        logger.info(f"Bond list fetch result: {result}")
-        return result
-    except Exception as exc:
-        logger.error(f"Bond list fetch failed: {exc}")
-        raise self.retry(exc=exc, countdown=60 * 5)
-
-
-@celery_app.task(name="app.tasks.data_tasks.populate_daily_market_data", bind=True, max_retries=3)
-def populate_daily_market_data(self):
-    """Bonds tablosundaki clean_price_text degerlerini parse edip bugunun market_data'sini olustur."""
-    logger.info("Task: Populating daily market data...")
-    from datetime import date
-    from app.services.market_data_populator import populate_market_data
+        engine, session_factory, service_type = await _service_context()
+        try:
+            async with session_factory() as db:
+                service = service_type(db, archive_root=settings.BIST_RAW_ARCHIVE_DIR)
+                tlref = await service.import_benchmark_pair(
+                    "TLREF",
+                    rate_url=settings.BIST_TLREF_RATE_HISTORICAL_URL,
+                    index_url=settings.BIST_TLREF_HISTORICAL_URL,
+                    historical=True,
+                )
+                tlrefk = await service.import_benchmark_pair(
+                    "TLREFK",
+                    rate_url=settings.BIST_TLREFK_RATE_HISTORICAL_URL,
+                    index_url=settings.BIST_TLREFK_INDEX_HISTORICAL_URL,
+                    historical=True,
+                )
+                return {"TLREF": tlref, "TLREFK": tlrefk}
+        finally:
+            await engine.dispose()
 
     try:
-        _run_async(populate_market_data(date.today(), dry_run=False, debug=False))
-        logger.info("Daily market data populated successfully")
-        return {"status": "success", "date": str(date.today())}
+        return _run_async(_fetch())
     except Exception as exc:
-        logger.error(f"Daily market data population failed: {exc}")
-        raise self.retry(exc=exc, countdown=60 * 5)
-
-
-@celery_app.task(name="app.tasks.data_tasks.run_daily_calculations", bind=True, max_retries=3)
-def run_daily_calculations(self):
-    """Bugunun market_data'si olan tahviller icin hesaplamalari yap ve DB'ye yaz."""
-    logger.info("Task: Running daily calculations...")
-    from datetime import date
-    from app.services.calculations_populator import populate_calculations
-
-    async def _calculate_and_invalidate():
-        from app.services.calculations_populator import populate_calculations
-        from app.core.cache import cache_delete_pattern, cache_delete
-        await populate_calculations(date.today(), dry_run=False)
-        await cache_delete_pattern("bond_list:*")
-        await cache_delete("bond_stats")
-
-    try:
-        _run_async(_calculate_and_invalidate())
-        logger.info("Daily calculations completed successfully")
-        return {"status": "success", "date": str(date.today())}
-    except Exception as exc:
-        logger.error(f"Daily calculations failed: {exc}")
-        raise self.retry(exc=exc, countdown=60 * 5)
+        logger.exception("Verified historical benchmark import failed")
+        raise self.retry(exc=exc, countdown=60 * 10)

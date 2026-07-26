@@ -17,6 +17,7 @@ from app.core.security import hash_password
 from app.models.user import User
 from app.models import Bond, MarketData, Calculation, TLREFRate, AuditLog, BondView, UserMetric  # noqa: F401
 from app.api.v1.router import api_router
+from app.api.v2.router import api_v2_router
 from app.middleware.audit_middleware import AuditMiddleware
 
 import logging
@@ -161,6 +162,7 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+app.include_router(api_v2_router, prefix="/api/v2", tags=["Verified v2"])
 
 
 @app.get("/health")

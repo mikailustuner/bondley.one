@@ -1,0 +1,40 @@
+{
+  "verified_at": "2026-07-26",
+  "effective_date": "2026-07-24",
+  "sources": {
+    "tbliste.zip": {
+      "url": "https://borsaistanbul.com/datum/tbliste.zip",
+      "sha256": "abfaf23f854bacaa0a657576dcddd208ce1c77ab4b79413ed3edcef3f887be74"
+    },
+    "TLREFORANI_D.zip": {
+      "url": "https://www.borsaistanbul.com/datum/TLREFORANI_D.zip",
+      "sha256": "76144105e6062a514130dc78aa4b3ab9127819b38440591281ff3b5da24b55fa"
+    },
+    "BISTTLREFENDEKSI_D.zip": {
+      "url": "https://www.borsaistanbul.com/datum/BISTTLREFENDEKSI_D.zip",
+      "sha256": "8ca625b779e22ccba2d95a50f6ab9e790345a0cdaa4ce440186ea624dfc3e645"
+    },
+    "TLREFKORANI_D.zip": {
+      "url": "https://www.borsaistanbul.com/datum/TLREFKORANI_D.zip",
+      "sha256": "e6b6ded1d6bad19c408b5078e3ceecd0723f4a732810bd1ff44d3b1a7874315c"
+    },
+    "BISTTLREFKENDEKSI_D.zip": {
+      "url": "https://www.borsaistanbul.com/datum/BISTTLREFKENDEKSI_D.zip",
+      "sha256": "dc55d286b02d6937fb499d5c5ca69595923004ee95e832bf3e458f75f4768d22"
+    }
+  },
+  "expected": {
+    "instrument_rows": 2136,
+    "unique_isins": 2135,
+    "source_notes": 4,
+    "group_codes": 30,
+    "classifications": 18,
+    "conflicting_duplicate_isin": "TRDKTLME2631",
+    "tlref_rate_records": 1896,
+    "tlref_index_records": 1782,
+    "tlref_validations": 1780,
+    "tlrefk_rate_records": 1026,
+    "tlrefk_index_records": 1027,
+    "tlrefk_validations": 1025
+  }
+}

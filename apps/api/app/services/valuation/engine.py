@@ -1,0 +1,548 @@
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass, field
+from datetime import date
+from decimal import Decimal, InvalidOperation, localcontext
+from enum import StrEnum
+from typing import Any
+
+from app.services.valuation.calendar import (
+    BusinessCalendar,
+    BusinessDayConvention,
+    coupon_schedule,
+)
+from app.services.valuation.day_count import DayCountConvention, parse_day_count, year_fraction
+from app.services.valuation.errors import ValuationError, ValuationFailureCode
+from app.services.valuation.formula_catalog import FORMULA_CATALOG
+
+
+class RateType(StrEnum):
+    FIXED = "FIXED"
+    TLREF = "TLREF"
+    TLREFK = "TLREFK"
+    CPI = "CPI"
+
+
+class QuoteType(StrEnum):
+    CLEAN_PRICE = "CLEAN_PRICE"
+    DIRTY_PRICE = "DIRTY_PRICE"
+    ANNUAL_YIELD = "ANNUAL_YIELD"
+
+
+@dataclass(frozen=True)
+class BenchmarkInput:
+    name: str
+    observation_date: date
+    annual_rate_decimal: Decimal
+    source_file_id: int | None = None
+    source_row: int | None = None
+
+
+@dataclass(frozen=True)
+class PriceInput:
+    quote_type: QuoteType
+    value: Decimal
+    source: str = "USER_INPUT"
+
+
+@dataclass(frozen=True)
+class InstrumentTerms:
+    isin: str
+    issue_date: date
+    maturity_date: date
+    coupon_frequency: int
+    annual_coupon_rate: Decimal | None
+    rate_type: RateType = RateType.FIXED
+    benchmark_spread_decimal: Decimal = Decimal("0")
+    nominal: Decimal = Decimal("100")
+    day_count: DayCountConvention | str = DayCountConvention.ACT_365F
+    next_coupon_date: date | None = None
+    explicit_coupon_dates: tuple[date, ...] = ()
+    business_day_convention: BusinessDayConvention = BusinessDayConvention.NONE
+    parse_status: str = "EXACT"
+    formula_code: str = "BAP_DISCOUNTED_CASH_FLOW"
+    source_file_id: int | None = None
+    source_row: int | None = None
+    parser_version: str | None = None
+
+
+@dataclass(frozen=True)
+class CashFlow:
+    payment_date: date
+    coupon_amount: Decimal
+    principal_amount: Decimal
+    total_amount: Decimal
+    accrual_start: date
+    accrual_end: date
+    year_fraction: Decimal
+    discount_time: Decimal | None = None
+    present_value: Decimal | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            key: (value.isoformat() if isinstance(value, date) else str(value))
+            for key, value in asdict(self).items()
+            if value is not None
+        }
+
+
+@dataclass
+class ValuationResult:
+    engine_version: str
+    settlement_date: date
+    quote_type: QuoteType
+    quote_value: Decimal
+    clean_price: Decimal
+    dirty_price: Decimal
+    accrued_amount: Decimal
+    annual_yield: Decimal
+    macaulay_duration: Decimal
+    modified_duration: Decimal
+    convexity: Decimal
+    effective_coupon_rate: Decimal
+    cash_flows: list[CashFlow]
+    intermediates: dict[str, Any] = field(default_factory=dict)
+    provenance: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "engine_version": self.engine_version,
+            "settlement_date": self.settlement_date.isoformat(),
+            "quote_type": self.quote_type.value,
+            "quote_value": str(self.quote_value),
+            "clean_price": str(self.clean_price),
+            "dirty_price": str(self.dirty_price),
+            "accrued_amount": str(self.accrued_amount),
+            "annual_yield": str(self.annual_yield),
+            "macaulay_duration": str(self.macaulay_duration),
+            "modified_duration": str(self.modified_duration),
+            "convexity": str(self.convexity),
+            "effective_coupon_rate": str(self.effective_coupon_rate),
+            "cash_flows": [item.to_dict() for item in self.cash_flows],
+            "intermediates": self.intermediates,
+            "provenance": self.provenance,
+        }
+
+
+class ValuationEngine:
+    VERSION = "valuation-engine-v2.0.0"
+    SUPPORTED_FORMULAS = frozenset(FORMULA_CATALOG)
+    PRICE_QUANTUM = Decimal("0.00000001")
+    RATE_QUANTUM = Decimal("0.0000000001")
+
+    def __init__(self, business_calendar: BusinessCalendar | None = None):
+        self.business_calendar = business_calendar or BusinessCalendar()
+
+    def value(
+        self,
+        terms: InstrumentTerms,
+        *,
+        settlement_date: date,
+        price_input: PriceInput | None,
+        benchmark: BenchmarkInput | None = None,
+        cpi_ratio: Decimal | None = None,
+    ) -> ValuationResult:
+        self._validate(terms, settlement_date, price_input)
+        convention = parse_day_count(terms.day_count)
+        effective_rate, indexed_nominal = self._effective_rate_and_nominal(
+            terms,
+            benchmark,
+            cpi_ratio,
+        )
+        dates = coupon_schedule(
+            issue_date=terms.issue_date,
+            maturity_date=terms.maturity_date,
+            frequency=terms.coupon_frequency,
+            next_coupon_date=terms.next_coupon_date,
+            explicit_coupon_dates=terms.explicit_coupon_dates,
+            business_calendar=self.business_calendar,
+            business_day_convention=terms.business_day_convention,
+        )
+        all_flows = self._cash_flows(
+            terms,
+            dates,
+            convention,
+            effective_rate,
+            indexed_nominal,
+        )
+        future_flows = [item for item in all_flows if item.payment_date > settlement_date]
+        if not future_flows:
+            raise ValuationError(
+                ValuationFailureCode.INVALID_SETTLEMENT_DATE,
+                "Valör tarihinde gelecekte nakit akışı bulunmuyor.",
+            )
+        accrued = self._accrued(
+            terms,
+            dates,
+            convention,
+            effective_rate,
+            indexed_nominal,
+            settlement_date,
+        )
+        assert price_input is not None
+        quote_value = self._decimal(price_input.value, "quote_value")
+        if price_input.quote_type == QuoteType.CLEAN_PRICE:
+            clean_price = quote_value
+            dirty_price = clean_price + accrued
+            annual_yield = self._solve_yield(
+                future_flows,
+                settlement_date,
+                dirty_price,
+                terms.coupon_frequency,
+                convention,
+            )
+        elif price_input.quote_type == QuoteType.DIRTY_PRICE:
+            dirty_price = quote_value
+            clean_price = dirty_price - accrued
+            if clean_price <= 0:
+                raise ValuationError(
+                    ValuationFailureCode.INVALID_PRICE,
+                    "Kirli fiyat, işlemiş tutardan büyük olmalıdır.",
+                )
+            annual_yield = self._solve_yield(
+                future_flows,
+                settlement_date,
+                dirty_price,
+                terms.coupon_frequency,
+                convention,
+            )
+        else:
+            annual_yield = quote_value
+            dirty_price, discounted = self._price_from_yield(
+                future_flows,
+                settlement_date,
+                annual_yield,
+                terms.coupon_frequency,
+                convention,
+            )
+            clean_price = dirty_price - accrued
+            future_flows = discounted
+
+        dirty_price, discounted = self._price_from_yield(
+            future_flows,
+            settlement_date,
+            annual_yield,
+            terms.coupon_frequency,
+            convention,
+        )
+        if price_input.quote_type != QuoteType.ANNUAL_YIELD:
+            supplied_dirty = (
+                quote_value
+                if price_input.quote_type == QuoteType.DIRTY_PRICE
+                else quote_value + accrued
+            )
+            if abs(dirty_price - supplied_dirty) > Decimal("0.000001"):
+                raise ValuationError(
+                    ValuationFailureCode.NUMERIC_FAILURE,
+                    "Fiyat-getiri round-trip toleransı aşıldı.",
+                    context={
+                        "supplied_dirty": str(supplied_dirty),
+                        "reconstructed_dirty": str(dirty_price),
+                    },
+                )
+            dirty_price = supplied_dirty
+            clean_price = dirty_price - accrued
+
+        macaulay, modified, convexity = self._risk_metrics(
+            discounted,
+            dirty_price,
+            annual_yield,
+            terms.coupon_frequency,
+        )
+        return ValuationResult(
+            engine_version=self.VERSION,
+            settlement_date=settlement_date,
+            quote_type=price_input.quote_type,
+            quote_value=quote_value,
+            clean_price=clean_price.quantize(self.PRICE_QUANTUM),
+            dirty_price=dirty_price.quantize(self.PRICE_QUANTUM),
+            accrued_amount=accrued.quantize(self.PRICE_QUANTUM),
+            annual_yield=annual_yield.quantize(self.RATE_QUANTUM),
+            macaulay_duration=macaulay.quantize(self.RATE_QUANTUM),
+            modified_duration=modified.quantize(self.RATE_QUANTUM),
+            convexity=convexity.quantize(self.RATE_QUANTUM),
+            effective_coupon_rate=effective_rate.quantize(self.RATE_QUANTUM),
+            cash_flows=discounted,
+            intermediates={
+                "day_count": convention.value,
+                "coupon_schedule": [item.isoformat() for item in dates],
+                "frequency": terms.coupon_frequency,
+                "indexed_nominal": str(indexed_nominal),
+                "round_trip_tolerance": "0.000001",
+            },
+            provenance={
+                "instrument_source_file_id": terms.source_file_id,
+                "instrument_source_row": terms.source_row,
+                "parser_version": terms.parser_version,
+                "formula_code": terms.formula_code,
+                "calendar_version": self.business_calendar.version,
+                "benchmark": (
+                    {
+                        "name": benchmark.name,
+                        "observation_date": benchmark.observation_date.isoformat(),
+                        "source_file_id": benchmark.source_file_id,
+                        "source_row": benchmark.source_row,
+                    }
+                    if benchmark
+                    else None
+                ),
+                "price_source": price_input.source,
+            },
+        )
+
+    def _validate(
+        self,
+        terms: InstrumentTerms,
+        settlement_date: date,
+        price_input: PriceInput | None,
+    ) -> None:
+        if terms.parse_status in {"AMBIGUOUS", "CONFLICTING", "REJECTED"}:
+            raise ValuationError(
+                ValuationFailureCode.AMBIGUOUS_TERMS,
+                f"Enstrüman terimleri otomatik değerlemeye uygun değil: {terms.parse_status}",
+            )
+        formula = FORMULA_CATALOG.get(terms.formula_code)
+        if formula is None:
+            raise ValuationError(
+                ValuationFailureCode.UNSUPPORTED_FORMULA,
+                f"Desteklenmeyen formül kodu: {terms.formula_code}",
+            )
+        if terms.rate_type.value not in formula.supported_rate_types:
+            raise ValuationError(
+                ValuationFailureCode.UNSUPPORTED_FORMULA,
+                (
+                    f"{terms.formula_code} formülü {terms.rate_type.value} "
+                    "oran türüyle uyumlu değil."
+                ),
+            )
+        if not terms.issue_date <= settlement_date < terms.maturity_date:
+            raise ValuationError(
+                ValuationFailureCode.INVALID_SETTLEMENT_DATE,
+                "Valör tarihi ihraç tarihi ile vade arasında olmalıdır.",
+            )
+        if price_input is None:
+            raise ValuationError(
+                ValuationFailureCode.PRICE_REQUIRED,
+                "Temiz fiyat, kirli fiyat veya yıllık getiri açıkça girilmelidir.",
+            )
+        value = self._decimal(price_input.value, "quote_value")
+        if value <= 0:
+            raise ValuationError(
+                ValuationFailureCode.INVALID_PRICE,
+                "Fiyat/getiri girdisi pozitif olmalıdır.",
+            )
+
+    def _effective_rate_and_nominal(
+        self,
+        terms: InstrumentTerms,
+        benchmark: BenchmarkInput | None,
+        cpi_ratio: Decimal | None,
+    ) -> tuple[Decimal, Decimal]:
+        nominal = self._decimal(terms.nominal, "nominal")
+        if terms.rate_type == RateType.FIXED:
+            if terms.annual_coupon_rate is None:
+                raise ValuationError(
+                    ValuationFailureCode.MISSING_COUPON_RATE,
+                    "Sabit kıymet için yıllık kupon oranı gerekli.",
+                )
+            return self._decimal(terms.annual_coupon_rate, "annual_coupon_rate"), nominal
+        if terms.rate_type in {RateType.TLREF, RateType.TLREFK}:
+            if benchmark is None:
+                raise ValuationError(
+                    ValuationFailureCode.MISSING_BENCHMARK,
+                    f"{terms.rate_type.value} gözlemi gerekli.",
+                )
+            if benchmark.name != terms.rate_type.value:
+                raise ValuationError(
+                    ValuationFailureCode.BENCHMARK_MISMATCH,
+                    f"{terms.rate_type.value} beklenirken {benchmark.name} verildi.",
+                )
+            rate = self._decimal(benchmark.annual_rate_decimal, "benchmark_rate")
+            return rate + self._decimal(terms.benchmark_spread_decimal, "spread"), nominal
+        if cpi_ratio is None:
+            raise ValuationError(
+                ValuationFailureCode.MISSING_CPI_RATIO,
+                "TÜFE bağlantılı kıymet için doğrulanmış endeks oranı gerekli.",
+            )
+        if terms.annual_coupon_rate is None:
+            raise ValuationError(
+                ValuationFailureCode.MISSING_COUPON_RATE,
+                "TÜFE bağlantılı kıymet için reel kupon oranı gerekli.",
+            )
+        ratio = self._decimal(cpi_ratio, "cpi_ratio")
+        if ratio <= 0:
+            raise ValuationError(
+                ValuationFailureCode.MISSING_CPI_RATIO,
+                "TÜFE endeks oranı pozitif olmalıdır.",
+            )
+        return self._decimal(terms.annual_coupon_rate, "annual_coupon_rate"), nominal * ratio
+
+    @staticmethod
+    def _cash_flows(
+        terms: InstrumentTerms,
+        dates: list[date],
+        convention: DayCountConvention,
+        annual_rate: Decimal,
+        nominal: Decimal,
+    ) -> list[CashFlow]:
+        flows: list[CashFlow] = []
+        accrual_start = terms.issue_date
+        for payment_date in dates:
+            fraction = year_fraction(accrual_start, payment_date, convention)
+            coupon = nominal * annual_rate * fraction
+            principal = nominal if payment_date == dates[-1] else Decimal("0")
+            flows.append(
+                CashFlow(
+                    payment_date=payment_date,
+                    coupon_amount=coupon,
+                    principal_amount=principal,
+                    total_amount=coupon + principal,
+                    accrual_start=accrual_start,
+                    accrual_end=payment_date,
+                    year_fraction=fraction,
+                )
+            )
+            accrual_start = payment_date
+        return flows
+
+    @staticmethod
+    def _accrued(
+        terms: InstrumentTerms,
+        dates: list[date],
+        convention: DayCountConvention,
+        annual_rate: Decimal,
+        nominal: Decimal,
+        settlement_date: date,
+    ) -> Decimal:
+        previous = terms.issue_date
+        for payment_date in dates:
+            if settlement_date < payment_date:
+                return nominal * annual_rate * year_fraction(
+                    previous,
+                    settlement_date,
+                    convention,
+                )
+            previous = payment_date
+        return Decimal("0")
+
+    def _price_from_yield(
+        self,
+        flows: list[CashFlow],
+        settlement_date: date,
+        annual_yield: Decimal,
+        frequency: int,
+        convention: DayCountConvention,
+    ) -> tuple[Decimal, list[CashFlow]]:
+        annual_yield = self._decimal(annual_yield, "annual_yield")
+        base = Decimal("1") + annual_yield / Decimal(frequency)
+        if base <= 0:
+            raise ValuationError(
+                ValuationFailureCode.INVALID_PRICE,
+                "Getiri iskonto tabanını sıfır veya negatif yaptı.",
+            )
+        price = Decimal("0")
+        discounted: list[CashFlow] = []
+        with localcontext() as context:
+            context.prec = 34
+            for flow in flows:
+                years = year_fraction(settlement_date, flow.payment_date, convention)
+                periods = years * Decimal(frequency)
+                discount = context.power(base, periods)
+                present_value = flow.total_amount / discount
+                price += present_value
+                discounted.append(
+                    CashFlow(
+                        **{
+                            **asdict(flow),
+                            "discount_time": periods,
+                            "present_value": present_value,
+                        }
+                    )
+                )
+        return price, discounted
+
+    def _solve_yield(
+        self,
+        flows: list[CashFlow],
+        settlement_date: date,
+        dirty_price: Decimal,
+        frequency: int,
+        convention: DayCountConvention,
+    ) -> Decimal:
+        low = Decimal("-0.99")
+        high = Decimal("10")
+
+        def residual(candidate: Decimal) -> Decimal:
+            value, _ = self._price_from_yield(
+                flows,
+                settlement_date,
+                candidate,
+                frequency,
+                convention,
+            )
+            return value - dirty_price
+
+        f_low = residual(low)
+        f_high = residual(high)
+        if f_low == 0:
+            return low
+        if f_high == 0:
+            return high
+        if f_low * f_high > 0:
+            raise ValuationError(
+                ValuationFailureCode.NO_ROOT,
+                "Belirlenen güvenli getiri aralığında fiyat kökü bulunamadı.",
+                context={"lower": str(low), "upper": str(high)},
+            )
+        for _ in range(256):
+            middle = (low + high) / Decimal("2")
+            value = residual(middle)
+            if abs(value) <= Decimal("0.000000000001"):
+                return middle
+            if f_low * value <= 0:
+                high = middle
+            else:
+                low = middle
+                f_low = value
+        return (low + high) / Decimal("2")
+
+    @staticmethod
+    def _risk_metrics(
+        flows: list[CashFlow],
+        dirty_price: Decimal,
+        annual_yield: Decimal,
+        frequency: int,
+    ) -> tuple[Decimal, Decimal, Decimal]:
+        if dirty_price <= 0:
+            raise ValuationError(
+                ValuationFailureCode.NUMERIC_FAILURE,
+                "Risk ölçüleri için pozitif kirli fiyat gerekli.",
+            )
+        weighted = Decimal("0")
+        convex_weighted = Decimal("0")
+        for flow in flows:
+            assert flow.discount_time is not None and flow.present_value is not None
+            years = flow.discount_time / Decimal(frequency)
+            weighted += years * flow.present_value
+            convex_weighted += years * (years + Decimal("1") / Decimal(frequency)) * flow.present_value
+        macaulay = weighted / dirty_price
+        base = Decimal("1") + annual_yield / Decimal(frequency)
+        modified = macaulay / base
+        convexity = convex_weighted / (dirty_price * base * base)
+        return macaulay, modified, convexity
+
+    @staticmethod
+    def _decimal(value: Decimal | str | int, field_name: str) -> Decimal:
+        try:
+            parsed = Decimal(str(value))
+        except (InvalidOperation, ValueError):
+            raise ValuationError(
+                ValuationFailureCode.NUMERIC_FAILURE,
+                f"{field_name} Decimal olarak çözümlenemedi.",
+            )
+        if not parsed.is_finite():
+            raise ValuationError(
+                ValuationFailureCode.NUMERIC_FAILURE,
+                f"{field_name} sonlu olmalıdır.",
+            )
+        return parsed

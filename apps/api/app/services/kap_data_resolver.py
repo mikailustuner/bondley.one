@@ -150,8 +150,7 @@ async def apply_kap_data_to_bond(db: AsyncSession, bond: Bond, kap_data: dict) -
     kap_spread = kap_data.get("additional_return_pct")
     if kap_spread:
         try:
-            from app.services.bond_metrics_service import _spread_to_decimal
-            k_spread = _spread_to_decimal(kap_spread)
+            k_spread = Decimal(str(kap_spread).replace(",", ".")) / Decimal("100")
             # Eger BIST verisiyle (bond.spread) belirgin fark varsa guncelle
             if bond.spread != k_spread:
                 bond.spread = k_spread
@@ -180,8 +179,7 @@ async def apply_kap_data_to_bond(db: AsyncSession, bond: Bond, kap_data: dict) -
                 changed = True
             
             if next_coupon["rate"]:
-                from app.services.bond_metrics_service import _coupon_rate_to_decimal
-                k_rate = _coupon_rate_to_decimal(next_coupon["rate"])
+                k_rate = Decimal(str(next_coupon["rate"]).replace(",", ".")) / Decimal("100")
                 if k_rate > 0 and bond.next_coupon_rate != k_rate:
                     bond.next_coupon_rate = k_rate
                     changed = True

@@ -58,7 +58,13 @@ class Settings(BaseSettings):
     # Katılım (Participation) için gerekirse alternatifler:
     BIST_TLREFK_RATE_URL: str = "https://www.borsaistanbul.com/datum/tlrefkorani.csv"
     BIST_TLREFK_INDEX_URL: str = "https://www.borsaistanbul.com/datum/bisttlrefkendeksi.csv"
+    BIST_TLREFK_RATE_HISTORICAL_URL: str = "https://www.borsaistanbul.com/datum/TLREFKORANI_D.zip"
+    BIST_TLREFK_INDEX_HISTORICAL_URL: str = "https://www.borsaistanbul.com/datum/BISTTLREFKENDEKSI_D.zip"
     BIST_BOND_LIST_URL: str = "https://borsaistanbul.com/datum/tbliste.zip"
+    BIST_RAW_ARCHIVE_DIR: str = "/data/bist-source-files"
+    VALUATION_V2_READ_ENABLED: bool = True
+    VALUATION_V2_WRITE_ENABLED: bool = True
+    VALUATION_SHADOW_ENABLED: bool = True
 
     CORS_ORIGINS: str = "http://localhost:3000,http://landing.localhost:3000,http://dashboard.localhost:3000,http://admin.localhost:3000"
 

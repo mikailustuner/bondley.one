@@ -9,7 +9,7 @@ celery_app = Celery(
     "fincalc",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
-    include=["app.tasks.data_tasks", "app.tasks.alerts_tasks", "app.tasks.kap_tasks"],
+    include=["app.tasks.data_tasks", "app.tasks.alerts_tasks"],
 )
 
 celery_app.conf.update(
@@ -25,39 +25,19 @@ celery_app.conf.update(
 )
 
 celery_app.conf.beat_schedule = {
-    "fetch-kap-disclosures": {
-        "task": "app.tasks.kap_tasks.fetch_kap_disclosures",
-        "schedule": crontab(hour=18, minute=0, day_of_week="1-5"),
-        "options": {"queue": "default"},
-    },
-    "fetch-daily-tlref": {
-        "task": "app.tasks.data_tasks.fetch_daily_tlref",
+    "fetch-verified-daily-benchmarks": {
+        "task": "app.tasks.data_tasks.fetch_verified_daily_benchmarks",
         "schedule": crontab(hour=16, minute=5, day_of_week="1-5"),
         "options": {"queue": "default"},
     },
-    "fetch-bond-list": {
-        "task": "app.tasks.data_tasks.fetch_bond_list",
+    "fetch-verified-bist-snapshot": {
+        "task": "app.tasks.data_tasks.fetch_verified_bist_snapshot",
         "schedule": crontab(hour=16, minute=10, day_of_week="1-5"),
-        "options": {"queue": "default"},
-    },
-    "populate-daily-market-data": {
-        "task": "app.tasks.data_tasks.populate_daily_market_data",
-        "schedule": crontab(hour=16, minute=15, day_of_week="1-5"),
-        "options": {"queue": "default"},
-    },
-    "run-daily-calculations": {
-        "task": "app.tasks.data_tasks.run_daily_calculations",
-        "schedule": crontab(hour=16, minute=20, day_of_week="1-5"),
         "options": {"queue": "default"},
     },
     "check-user-alerts": {
         "task": "app.tasks.alerts_tasks.check_user_alerts",
         "schedule": crontab(minute="*/15"),
-        "options": {"queue": "default"},
-    },
-    "refetch-empty-kap-details": {
-        "task": "app.tasks.kap_tasks.refetch_empty_kap_details",
-        "schedule": crontab(hour=23, minute=30),
         "options": {"queue": "default"},
     },
 }

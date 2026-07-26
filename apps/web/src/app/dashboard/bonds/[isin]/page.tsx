@@ -1,1101 +1,371 @@
 "use client";
 
-import { use, useEffect, useRef, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Calculator,
+  Database,
+  FileJson,
+  Save,
+  ShieldCheck,
+  Star,
+} from "lucide-react";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
-import { FileQuestion, AlertCircle, ChevronLeft, ChevronRight, Star, ArchiveX, StickyNote, Trash2, Save, X } from "lucide-react";
-import { api, BondDetail, TLREFRecord, BondNote } from "@/lib/api-client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { api, VerifiedInstrument, VerifiedValuationResponse } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
-import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate, formatLastIssueDateText } from "@/lib/utils";
-import { tr } from "@/locales/tr";
-import dynamic from "next/dynamic";
+import { formatDate } from "@/lib/utils";
 
-const BondHistoryChart = dynamic(
-  () => import("@/components/charts/bond-history-chart").then((m) => ({ default: m.BondHistoryChart })),
-  { ssr: false, loading: () => <div className="h-64 flex items-center justify-center text-[13px] text-muted-foreground">Yükleniyor…</div> }
-);
 
-function todayISO(): string {
+function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function lastBusinessDayISO(): string {
-  const d = new Date();
-  const day = d.getDay();
-  if (day === 0) d.setDate(d.getDate() - 2);
-  else if (day === 6) d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10);
+
+function DecimalValue({ value }: { value: string | null | undefined }) {
+  return <span className="font-mono-data">{value ?? "—"}</span>;
 }
 
-function weekAgoISO(): string {
-  const d = new Date();
-  d.setDate(d.getDate() - 7);
-  return d.toISOString().slice(0, 10);
-}
 
-function monthAgoISO(): string {
-  const d = new Date();
-  d.setMonth(d.getMonth() - 1);
-  return d.toISOString().slice(0, 10);
-}
-
-function daysAgo(isoString: string): number {
-  return Math.floor((Date.now() - new Date(isoString).getTime()) / 86_400_000);
-}
-
-/* ── Reusable info-row renderer ── */
-function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
-  return (
-    <div className="flex justify-between items-center py-3 border-b border-border/20 last:border-0">
-      <span className="text-[13px] text-muted-foreground">{label}</span>
-      <span className="font-mono-data text-[13px] text-foreground text-right max-w-[60%]">
-        {value ?? "—"}
-      </span>
-    </div>
-  );
-}
-
-export default function BondDetailPage({
+export default function VerifiedInstrumentDetail({
   params,
 }: {
   params: Promise<{ isin: string }>;
 }) {
   const { isin } = use(params);
-  const [bond, setBond] = useState<BondDetail | null>(null);
+  const [instrument, setInstrument] = useState<VerifiedInstrument | null>(null);
+  const [benchmarks, setBenchmarks] = useState<Record<string, string | null>>({});
   const [loading, setLoading] = useState(true);
-  const [metricsLoading, setMetricsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>(() => todayISO());
-  const [prevIsin, setPrevIsin] = useState<string | null>(null);
-  const [nextIsin, setNextIsin] = useState<string | null>(null);
-
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [favoriteToggling, setFavoriteToggling] = useState(false);
-  const [tlrefLatest, setTlrefLatest] = useState<TLREFRecord | null>(null);
-  const [historyData, setHistoryData] = useState<Array<{ date: string; clean_price: number | null; ytm: number | null }>>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [noteText, setNoteText] = useState("");
-  const [savedNote, setSavedNote] = useState<BondNote | null>(null);
-  const [noteSaving, setNoteSaving] = useState(false);
-  const [noteDeleting, setNoteDeleting] = useState(false);
-  const [noteOpen, setNoteOpen] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [settlementDate, setSettlementDate] = useState(todayISO());
+  const [quoteType, setQuoteType] = useState<"CLEAN_PRICE" | "DIRTY_PRICE" | "ANNUAL_YIELD">("CLEAN_PRICE");
+  const [quoteValue, setQuoteValue] = useState("");
+  const [cpiRatio, setCpiRatio] = useState("");
+  const [explicitDates, setExplicitDates] = useState("");
+  const [valuation, setValuation] = useState<VerifiedValuationResponse | null>(null);
+  const [calculating, setCalculating] = useState(false);
+  const [note, setNote] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
 
   useEffect(() => {
-    if (bond) setIsFavorite(!!bond.is_favorite);
-  }, [bond]);
-
-  useEffect(() => {
-    if (!isin) {
-      setError(tr.dashboard.bondDetails.errors.noIsin);
-      setLoading(false);
-      return;
-    }
+    document.title = `${isin} — Doğrulanmış Değerleme`;
     const token = getToken();
     if (!token) {
-      setError(tr.dashboard.bondDetails.errors.loginRequired);
+      setError("Bu ekranı görüntülemek için giriş yapmalısınız.");
       setLoading(false);
       return;
     }
-    const isInitial = bond === null || bond?.isin_code !== isin;
-    if (isInitial) setLoading(true);
-    else setMetricsLoading(true);
-    setError(null);
-    api.bonds
-      .get(token, isin, { settlement_date: selectedDate })
-      .then(setBond)
-      .catch((e) => setError(e?.message || tr.dashboard.bondDetails.errors.notFound))
-      .finally(() => {
-        setLoading(false);
-        setMetricsLoading(false);
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isin, selectedDate]);
-
-  useEffect(() => {
-    document.title = `${isin} — ${tr.common.brand}`;
-    return () => {
-      document.title = tr.common.brand;
-    };
-  }, [isin]);
-
-  useEffect(() => {
-    const token = getToken();
-    if (!token) return;
-    api.tlref
-      .latest(token)
-      .then(setTlrefLatest)
-      .catch(() => setTlrefLatest(null));
-  }, []);
-
-  useEffect(() => {
-    if (!isin) return;
-    const token = getToken();
-    if (!token) return;
-    setHistoryLoading(true);
-    api.bonds
-      .history(token, isin, 90)
-      .then((r) => setHistoryData(r.items))
-      .catch(() => setHistoryData([]))
-      .finally(() => setHistoryLoading(false));
-  }, [isin]);
-
-  useEffect(() => {
-    if (!isin) return;
-    const token = getToken();
-    if (!token) return;
-    api.bonds
-      .getNote(token, isin)
-      .then((n) => { setSavedNote(n); setNoteText(n.note_text); })
-      .catch(() => { setSavedNote(null); setNoteText(""); });
-  }, [isin]);
-
-  useEffect(() => {
-    if (!isin) return;
-    try {
-      const raw = sessionStorage.getItem("bondley_bonds_isins");
-      const list: string[] = raw ? JSON.parse(raw) : [];
-      const idx = list.indexOf(isin);
-      if (idx > 0) setPrevIsin(list[idx - 1] ?? null);
-      else setPrevIsin(null);
-      if (idx >= 0 && idx < list.length - 1) setNextIsin(list[idx + 1] ?? null);
-      else setNextIsin(null);
-    } catch {
-      setPrevIsin(null);
-      setNextIsin(null);
-    }
-  }, [isin]);
-
-
-
-  useEffect(() => {
-    if (noteOpen) {
-      setTimeout(() => textareaRef.current?.focus(), 50);
-    }
-  }, [noteOpen]);
-
-  const handleNoteSave = async () => {
-    const token = getToken();
-    if (!token || !isin || noteSaving) return;
-    setNoteSaving(true);
-    try {
-      const updated = await api.bonds.upsertNote(token, isin, noteText);
-      setSavedNote(updated);
-    } catch {
-      // silent
-    } finally {
-      setNoteSaving(false);
-    }
-  };
-
-  const handleNoteDelete = async () => {
-    const token = getToken();
-    if (!token || !isin || noteDeleting) return;
-    setNoteDeleting(true);
-    try {
-      await api.bonds.deleteNote(token, isin);
-      setSavedNote(null);
-      setNoteText("");
-    } catch {
-      // silent
-    } finally {
-      setNoteDeleting(false);
-    }
-  };
-
-  if (!isin)
-    return (
-      <EmptyState
-        variant="error"
-        title={tr.dashboard.bondDetails.errors.noIsin}
-        icon={<AlertCircle className="h-7 w-7" />}
-        action={{ label: tr.dashboard.bondDetails.actions.backToList, href: "/dashboard/bonds" }}
-      />
-    );
-  if (loading)
-    return (
-      <div className="space-y-6">
-        {/* Header skeleton */}
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-8 w-8 rounded-full" />
-          <div className="space-y-1.5 flex-1">
-            <Skeleton className="h-5 w-40" />
-            <Skeleton className="h-4 w-64" />
-          </div>
-          <Skeleton className="h-8 w-8 rounded-full" />
-        </div>
-        {/* Top metrics skeleton */}
-        <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-card rounded-3xl border border-border p-4">
-              <Skeleton className="h-3 w-20 mb-3" />
-              <Skeleton className="h-7 w-16" />
-            </div>
-          ))}
-        </div>
-        {/* Info + metrics cards skeleton */}
-        <div className="grid gap-4 md:grid-cols-2">
-          {[1, 2].map((i) => (
-            <Card key={i}>
-              <CardHeader className="pb-2"><Skeleton className="h-5 w-32" /></CardHeader>
-              <CardContent className="space-y-3">
-                {[1, 2, 3, 4, 5].map((j) => (
-                  <div key={j} className="flex justify-between">
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-4 w-20" />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        {/* History chart skeleton */}
-        <Card>
-          <CardHeader className="pb-2"><Skeleton className="h-5 w-40" /></CardHeader>
-          <CardContent><Skeleton className="h-[200px] w-full rounded-xl" /></CardContent>
-        </Card>
-      </div>
-    );
-  if (error)
-    return (
-      <EmptyState
-        variant="error"
-        title={error === tr.dashboard.bondDetails.errors.loginRequired ? tr.dashboard.bondDetails.errors.loginRequiredTitle : tr.dashboard.bondDetails.errors.errorTitle}
-        description={error}
-        icon={<AlertCircle className="h-7 w-7" />}
-        action={
-          error === tr.dashboard.bondDetails.errors.loginRequired
-            ? { label: tr.dashboard.bondDetails.errors.login, href: "/login" }
-            : { label: tr.dashboard.bondDetails.errors.backToList, href: "/dashboard/bonds" }
+    Promise.all([
+      api.verified.get(token, isin),
+      api.verified.benchmarks(token, undefined, 10),
+    ])
+      .then(([detail, benchmarkResult]) => {
+        setInstrument(detail);
+        setNote(detail.note_text || "");
+        const latest: Record<string, string | null> = {};
+        for (const observation of benchmarkResult.items) {
+          if (!(observation.benchmark in latest)) {
+            latest[observation.benchmark] =
+              observation.published_annual_rate_pct;
+          }
         }
-      />
-    );
-  if (!bond)
+        setBenchmarks(latest);
+      })
+      .catch((reason) => setError(reason instanceof Error ? reason.message : "Kıymet yüklenemedi."))
+      .finally(() => setLoading(false));
+  }, [isin]);
+
+  const benchmarkNames = useMemo(() => {
+    const ast = instrument?.term_rule_ast as {
+      benchmarks?: Array<{ name?: string }>;
+    } | undefined;
+    return ast?.benchmarks?.map((item) => item.name).filter(Boolean) ?? [];
+  }, [instrument]);
+
+  const calculate = async () => {
+    const token = getToken();
+    if (!token || !quoteValue) return;
+    setCalculating(true);
+    setValuation(null);
+    try {
+      const dates = explicitDates
+        .split(/[\s,;]+/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+      const result = await api.verified.value(token, {
+        isin,
+        settlement_date: settlementDate,
+        quote_type: quoteType,
+        quote_value: quoteValue,
+        ...(cpiRatio ? { cpi_ratio: cpiRatio } : {}),
+        ...(dates.length ? { explicit_coupon_dates: dates } : {}),
+      });
+      setValuation(result);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Değerleme çalıştırılamadı.");
+    } finally {
+      setCalculating(false);
+    }
+  };
+
+  const toggleFavorite = async () => {
+    const token = getToken();
+    if (!token || !instrument) return;
+    if (instrument.is_favorite) {
+      await api.verified.removeFavorite(token, isin);
+    } else {
+      await api.verified.addFavorite(token, isin);
+    }
+    setInstrument({ ...instrument, is_favorite: !instrument.is_favorite });
+  };
+
+  const saveNote = async () => {
+    const token = getToken();
+    if (!token || !note.trim()) return;
+    setSavingNote(true);
+    try {
+      await api.verified.upsertNote(token, isin, note.trim());
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  if (loading) return <div className="p-8 text-sm text-muted-foreground">Doğrulanmış kaynak yükleniyor…</div>;
+  if (!instrument || error) {
     return (
-      <EmptyState
-        title={tr.dashboard.bondDetails.errors.notFound}
-        description={tr.dashboard.bondDetails.errors.notFoundDesc}
-        icon={<FileQuestion className="h-7 w-7" />}
-        action={{ label: tr.dashboard.bondDetails.errors.backToList, href: "/dashboard/bonds" }}
-      />
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Kıymet açılamadı</AlertTitle>
+        <AlertDescription>{error || "Kayıt bulunamadı."}</AlertDescription>
+      </Alert>
     );
+  }
 
-  const daysToNextCoupon = (() => {
-    if (!bond.next_coupon_date) return null;
-    const ncd = new Date(bond.next_coupon_date);
-    const ref = new Date(selectedDate);
-    if (Number.isNaN(ncd.getTime()) || Number.isNaN(ref.getTime())) return null;
-    const MS_PER_DAY = 1000 * 60 * 60 * 24;
-    return Math.round(
-      (Date.UTC(ncd.getFullYear(), ncd.getMonth(), ncd.getDate()) -
-        Date.UTC(ref.getFullYear(), ref.getMonth(), ref.getDate())) /
-      MS_PER_DAY
-    );
-  })();
-
-  const topMetrics = [
-    {
-      label: tr.dashboard.bondDetails.topMetrics.lastPrice,
-      value: formatDecimal(bond.last_issue_price, 3),
-      highlight: true,
-    },
-    {
-      label: tr.dashboard.bondDetails.topMetrics.lastYield,
-      value: bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—",
-    },
-    {
-      label: tr.dashboard.bondDetails.topMetrics.maturity,
-      value: bond.days_to_maturity != null ? tr.dashboard.bondDetails.topMetrics.days.replace("{count}", bond.days_to_maturity.toString()) : "—",
-    },
-    {
-      label: tr.dashboard.bondDetails.topMetrics.nextCoupon,
-      value:
-        daysToNextCoupon != null
-          ? daysToNextCoupon > 0
-            ? tr.dashboard.bondDetails.topMetrics.days.replace("{count}", daysToNextCoupon.toString())
-            : daysToNextCoupon === 0
-              ? tr.dashboard.bondDetails.topMetrics.today
-              : tr.dashboard.bondDetails.topMetrics.past
-          : "—",
-    },
-  ];
-
-  const generalInfo = [
-    [tr.dashboard.bondDetails.infoCards.general.isin, bond.isin_code],
-    [tr.dashboard.bondDetails.infoCards.general.issuer, bond.issuer],
-    ...(bond.fund_user ? [[tr.dashboard.bondDetails.infoCards.general.fundUser, bond.fund_user]] : []),
-    ...(bond.source_institution ? [[tr.dashboard.bondDetails.infoCards.general.sourceInst, bond.source_institution]] : []),
-    [tr.dashboard.bondDetails.infoCards.general.issuanceType, bond.issuance_type],
-    [tr.dashboard.bondDetails.infoCards.general.yieldType, bond.yield_type],
-    [tr.dashboard.bondDetails.infoCards.general.securityType, bond.security_type],
-    [tr.dashboard.bondDetails.infoCards.general.couponFreq, bond.coupon_frequency],
-    [tr.dashboard.bondDetails.infoCards.general.currency, bond.currency],
-    [tr.dashboard.bondDetails.infoCards.general.groupCode, bond.group_code],
-    [tr.dashboard.bondDetails.infoCards.general.detailType, bond.security_type_detail],
-    [tr.dashboard.bondDetails.infoCards.general.dayCount, bond.day_count_convention],
-    [tr.dashboard.bondDetails.infoCards.general.quotation, bond.quotation_method],
-  ];
-
-  const dateInfo = [
-    [tr.dashboard.bondDetails.infoCards.dates.firstIssue, formatDate(bond.first_issue_date)],
-    [tr.dashboard.bondDetails.infoCards.dates.maturity, formatDate(bond.maturity_date)],
-    [tr.dashboard.bondDetails.infoCards.dates.lastIssue, formatLastIssueDateText(bond.last_issue_date_text)],
-    [tr.dashboard.bondDetails.infoCards.dates.nextCoupon, formatDate(bond.next_coupon_date)],
-    [
-      tr.dashboard.bondDetails.infoCards.dates.daysToCoupon,
-      daysToNextCoupon != null
-        ? daysToNextCoupon > 0
-          ? `${daysToNextCoupon}`
-          : daysToNextCoupon === 0
-            ? tr.dashboard.bondDetails.topMetrics.today
-            : tr.dashboard.bondDetails.topMetrics.past
-        : "—",
-    ],
-    [tr.dashboard.bondDetails.infoCards.dates.daysToMaturity, bond.days_to_maturity != null ? `${bond.days_to_maturity}` : "—"],
-  ];
-
-  const financialInfo = [
-    [tr.dashboard.bondDetails.infoCards.financial.firstPrice, formatDecimal(bond.first_issue_price, 3)],
-    [tr.dashboard.bondDetails.infoCards.financial.lastPrice, formatDecimal(bond.last_issue_price, 3)],
-    [tr.dashboard.bondDetails.infoCards.financial.firstYield, bond.first_issue_yield != null ? formatPercent(bond.first_issue_yield) : "—"],
-    [tr.dashboard.bondDetails.infoCards.financial.lastYield, bond.last_issue_yield != null ? formatPercent(bond.last_issue_yield) : "—"],
-    [tr.dashboard.bondDetails.infoCards.financial.nextCouponRate, bond.next_coupon_rate != null ? formatPercent(bond.next_coupon_rate) : "—"],
-    [tr.dashboard.bondDetails.infoCards.financial.spread, bond.spread != null ? formatPercent(bond.spread) : "—"],
-    ["Sözleşmesel Ek Getiri (Dinamik)", bond.calculated_metrics?.contractual_spread != null ? formatPercentFromDecimal(bond.calculated_metrics.contractual_spread, 4) : "—"],
-    [
-      tr.dashboard.bondDetails.infoCards.financial.lastTlref,
-      tlrefLatest?.daily_rate != null ? formatPercentFromDecimal(tlrefLatest.daily_rate * 365, 4) : "—",
-    ],
-    [
-      tr.dashboard.bondDetails.infoCards.financial.lastTlrefk,
-      tlrefLatest?.index_value != null ? formatDecimal(tlrefLatest.index_value, 5, 5) : "—",
-    ],
-    [
-      tr.dashboard.bondDetails.infoCards.financial.calcTlrefDate,
-      bond.calculated_metrics?.tlref_rate_date ? formatDate(bond.calculated_metrics.tlref_rate_date) : "—",
-    ],
-    [
-      tr.dashboard.bondDetails.infoCards.financial.totalIssue,
-      bond.total_issue_amount != null
-        ? tr.dashboard.bondDetails.infoCards.financial.issueAmountText.replace("{amount}", formatDecimal(bond.total_issue_amount, 0)).replace("{currency}", bond.currency)
-        : "—",
-    ],
-  ];
-
-  const formulaInfo = [
-    [tr.dashboard.bondDetails.infoCards.methods.accrued, bond.accrued_interest_text],
-    [tr.dashboard.bondDetails.infoCards.methods.cleanPrice, bond.clean_price_text],
-    [tr.dashboard.bondDetails.infoCards.methods.dirtyPrice, bond.dirty_price_formula],
-    [tr.dashboard.bondDetails.infoCards.methods.settlementPrice, bond.settlement_price_formula],
-    [tr.dashboard.bondDetails.infoCards.methods.yield, bond.yield_formula],
-    [tr.dashboard.bondDetails.infoCards.methods.compoundYield, bond.compound_yield_formula],
-  ];
+  const fields = instrument.fields;
 
   return (
-    <div className="space-y-6">
-      {/* ═══ Hero Header ═══ */}
-      <div className="animate-fade-up">
-        <nav aria-label="Breadcrumb" className="mb-3">
-          <ol className="flex flex-wrap items-center gap-2 text-[13px]">
-            <li>
-              <Link href="/dashboard/bonds" className="text-muted-foreground hover:text-primary transition-colors">
-                {tr.dashboard.bondDetails.breadcrumb}
-              </Link>
-            </li>
-            <li className="text-muted-foreground/30" aria-hidden>/</li>
-            <li aria-current="page" className="font-mono-data text-foreground">{bond.isin_code}</li>
-          </ol>
-        </nav>
-
-        {/* ISIN Hero */}
-        <div className="flex flex-wrap items-start justify-between gap-4">
+    <main className="space-y-6">
+      <header>
+        <Link href="/dashboard/bonds" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
+          <ArrowLeft className="h-4 w-4" /> Listeye dön
+        </Link>
+        <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-display-md font-mono-data text-foreground">{bond.isin_code}</h1>
-              <Badge>{bond.currency}</Badge>
-              {!bond.is_active && <Badge variant="destructive">{tr.dashboard.bondDetails.hero.passive}</Badge>}
-              {bond.is_active && bond.maturity_date && bond.maturity_date < todayISO() && (
-                <Badge variant="secondary">{tr.dashboard.bondDetails.hero.expired}</Badge>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="font-mono-data text-3xl font-bold">{instrument.isin}</h1>
+              <Badge>{instrument.currency}</Badge>
+              <Badge variant={instrument.quality.valuation_eligible ? "default" : "destructive"}>
+                {instrument.quality.parse_status}
+              </Badge>
+              {instrument.instrument_family === "PARTICIPATION" && (
+                <Badge variant="secondary">Katılım / TLREFK</Badge>
               )}
             </div>
-            {bond.fund_user ? (
-              <p className="text-[15px] text-muted-foreground mt-1">
-                {tr.dashboard.bondDetails.hero.issuerVksh}: <span className="font-medium text-foreground">{bond.issuer || tr.dashboard.bondDetails.hero.unknown}</span> · {tr.dashboard.bondDetails.hero.fundUser}: <span className="font-medium text-foreground">{bond.fund_user}</span>
-              </p>
-            ) : (
-              <p className="text-[15px] text-muted-foreground mt-1">
-                {bond.issuer || tr.dashboard.bondDetails.hero.unknown} · {bond.security_type ? bond.security_type.split("/")[0].trim() : "—"}
-              </p>
-            )}
+            <p className="mt-2 text-muted-foreground">{instrument.issuer || "İhraççı belirtilmemiş"}</p>
           </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 rounded-xl"
-              onClick={() => {
-                const token = getToken();
-                if (!token || favoriteToggling) return;
-                setFavoriteToggling(true);
-                if (isFavorite) {
-                  api.bonds
-                    .removeFavorite(token, bond.isin_code)
-                    .then(() => setIsFavorite(false))
-                    .catch(() => { })
-                    .finally(() => setFavoriteToggling(false));
-                } else {
-                  api.bonds
-                    .addFavorite(token, bond.isin_code)
-                    .then(() => setIsFavorite(true))
-                    .catch(() => { })
-                    .finally(() => setFavoriteToggling(false));
-                }
-              }}
-              disabled={favoriteToggling}
-              aria-label={isFavorite ? tr.dashboard.bondDetails.actions.removeFavorite : tr.dashboard.bondDetails.actions.addFavorite}
-            >
-              <Star className={`h-4 w-4 ${isFavorite ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
-              {isFavorite ? tr.dashboard.bondDetails.actions.favorite : tr.dashboard.bondDetails.actions.addFavorite}
-            </Button>
-            <div className="flex items-center gap-1">
-              {prevIsin ? (
-                <Link href={`/dashboard/bonds/${prevIsin}`}>
-                  <Button variant="outline" size="sm" className="rounded-xl"><ChevronLeft className="h-4 w-4" /></Button>
-                </Link>
-              ) : (
-                <Button variant="outline" size="sm" className="rounded-xl" disabled><ChevronLeft className="h-4 w-4" /></Button>
-              )}
-              {nextIsin ? (
-                <Link href={`/dashboard/bonds/${nextIsin}`}>
-                  <Button variant="outline" size="sm" className="rounded-xl"><ChevronRight className="h-4 w-4" /></Button>
-                </Link>
-              ) : (
-                <Button variant="outline" size="sm" className="rounded-xl" disabled><ChevronRight className="h-4 w-4" /></Button>
-              )}
-            </div>
-          </div>
+          <Button variant="outline" onClick={() => void toggleFavorite()}>
+            <Star className={`mr-2 h-4 w-4 ${instrument.is_favorite ? "fill-yellow-400 text-yellow-500" : ""}`} />
+            {instrument.is_favorite ? "Favoride" : "Favoriye ekle"}
+          </Button>
         </div>
-      </div>
+      </header>
 
-      {/* ═══ Archived Notice ═══ */}
-      {(!bond.is_active || (bond.maturity_date && bond.maturity_date < todayISO())) && (
-        <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/40 px-5 py-3.5 animate-fade-up">
-          <ArchiveX className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <p className="text-[13px] text-muted-foreground">{tr.dashboard.bondDetails.hero.archivedNotice}</p>
-        </div>
+      {!instrument.quality.valuation_eligible && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Otomatik değerleme kapalı</AlertTitle>
+          <AlertDescription>
+            Bu kaydın terimleri {instrument.quality.parse_status} durumunda. Kaynak görüntülenebilir,
+            ancak belirsizlik çözülmeden sonuç üretilmez.
+          </AlertDescription>
+        </Alert>
       )}
 
-      {/* ═══ Top Metrics ═══ */}
-      <div className="grid gap-4 md:grid-cols-4 animate-fade-up">
-        {topMetrics.map((m) => (
-          <div key={m.label} className="rounded-3xl border border-border bg-card p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="text-[12px] font-medium text-muted-foreground/70 uppercase tracking-wider mb-2.5">{m.label}</div>
-            <div className={`font-mono-data text-[1.75rem] font-bold leading-none tracking-tight ${m.highlight ? "text-primary" : "text-foreground"}`}>
-              {m.value}
+      <section className="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <CardHeader><CardTitle className="text-base">Kaynak</CardTitle></CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="flex justify-between"><span>Dosya ID</span><DecimalValue value={String(instrument.source.source_file_id)} /></div>
+            <div className="flex justify-between"><span>Satır</span><DecimalValue value={String(instrument.source.source_row)} /></div>
+            <div className="flex justify-between"><span>Parser</span><span>{instrument.source.parser_version || "—"}</span></div>
+            <div className="flex justify-between"><span>AST şeması</span><span>{instrument.source.ast_schema_version || "—"}</span></div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle className="text-base">Sözleşme</CardTitle></CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="flex justify-between"><span>İhraç</span><span>{formatDate(instrument.first_issue_date)}</span></div>
+            <div className="flex justify-between"><span>Vade</span><span>{formatDate(instrument.maturity_date)}</span></div>
+            <div className="flex justify-between"><span>Kupon sıklığı</span><DecimalValue value={String(instrument.coupon_frequency ?? "—")} /></div>
+            <div className="flex justify-between"><span>Day-count</span><span>{String(fields.day_count_convention || "—")}</span></div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle className="text-base">Benchmark</CardTitle></CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="flex justify-between"><span>AST referansı</span><span>{benchmarkNames.join(", ") || "Sabit"}</span></div>
+            <div className="flex justify-between"><span>TLREF yıllık %</span><DecimalValue value={benchmarks.TLREF} /></div>
+            <div className="flex justify-between"><span>TLREFK yıllık %</span><DecimalValue value={benchmarks.TLREFK} /></div>
+            <div className="text-xs text-muted-foreground">TLREF ve TLREFK ayrı serilerdir; birbirinin yerine kullanılmaz.</div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calculator className="h-5 w-5 text-primary" />
+            Açık girdili değerleme
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert>
+            <ShieldCheck className="h-4 w-4" />
+            <AlertTitle>Fiyat kaynağı</AlertTitle>
+            <AlertDescription>
+              Son ihraç fiyatı piyasa fiyatı değildir. Bu istek yalnız aşağıdaki kullanıcı girdisini kaydeder ve kullanır.
+            </AlertDescription>
+          </Alert>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="settlement">Valör tarihi</Label>
+              <Input id="settlement" type="date" value={settlementDate} onChange={(event) => setSettlementDate(event.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="quote-type">Girdi türü</Label>
+              <select
+                id="quote-type"
+                value={quoteType}
+                onChange={(event) => setQuoteType(event.target.value as typeof quoteType)}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="CLEAN_PRICE">Temiz fiyat</option>
+                <option value="DIRTY_PRICE">Kirli fiyat</option>
+                <option value="ANNUAL_YIELD">Yıllık getiri (decimal)</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="quote-value">Değer</Label>
+              <Input
+                id="quote-value"
+                inputMode="decimal"
+                value={quoteValue}
+                onChange={(event) => setQuoteValue(event.target.value.replace(",", "."))}
+                placeholder={quoteType === "ANNUAL_YIELD" ? "0.42" : "100.25"}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cpi-ratio">TÜFE endeks oranı (gerekiyorsa)</Label>
+              <Input id="cpi-ratio" inputMode="decimal" value={cpiRatio} onChange={(event) => setCpiRatio(event.target.value.replace(",", "."))} placeholder="1.2345" />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="coupon-dates">Açık kupon tarihleri (düzensiz frekans için)</Label>
+              <Input
+                id="coupon-dates"
+                value={explicitDates}
+                onChange={(event) => setExplicitDates(event.target.value)}
+                placeholder="2026-03-15, 2026-05-28, 2026-08-10"
+              />
             </div>
           </div>
-        ))}
-      </div>
+          <Button
+            onClick={() => void calculate()}
+            disabled={calculating || !quoteValue || !instrument.quality.valuation_eligible}
+          >
+            {calculating ? "Hesaplanıyor…" : "Doğrulanmış değerlemeyi çalıştır"}
+          </Button>
+        </CardContent>
+      </Card>
 
-      {/* ═══ Date Selector ═══ */}
-      <div className="animate-fade-up rounded-3xl border border-border bg-card p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-[13px] font-medium text-muted-foreground">{tr.dashboard.bondDetails.dateSelector.label}</span>
-          <input
-            id="bond-settlement-date"
-            type="date"
-            value={selectedDate}
-            max={todayISO()}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="rounded-xl border border-border bg-background px-3 py-2 font-mono-data text-[13px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-          />
-          <div className="flex flex-wrap gap-1.5">
+      {valuation?.failure && (
+        <Alert variant="destructive" role="alert">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{valuation.failure.code}</AlertTitle>
+          <AlertDescription>{valuation.failure.message}</AlertDescription>
+        </Alert>
+      )}
+
+      {valuation?.result && (
+        <section className="space-y-4" aria-label="Değerleme sonucu">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { label: tr.dashboard.bondDetails.dateSelector.today, fn: todayISO },
-              { label: tr.dashboard.bondDetails.dateSelector.lastBusinessDay, fn: lastBusinessDayISO },
-              { label: tr.dashboard.bondDetails.dateSelector.week, fn: weekAgoISO },
-              { label: tr.dashboard.bondDetails.dateSelector.month, fn: monthAgoISO },
-            ].map((btn) => (
-              <Button
-                key={btn.label}
-                variant="outline"
-                size="sm"
-                onClick={() => setSelectedDate(btn.fn())}
-                className="text-[12px] rounded-xl h-8"
-              >
-                {btn.label}
-              </Button>
+              ["Temiz fiyat", valuation.result.clean_price],
+              ["Kirli fiyat", valuation.result.dirty_price],
+              ["İşlemiş tutar", valuation.result.accrued_amount],
+              ["Yıllık getiri", valuation.result.annual_yield],
+              ["Macaulay duration", valuation.result.macaulay_duration],
+              ["Modified duration", valuation.result.modified_duration],
+              ["Convexity", valuation.result.convexity],
+              ["Etkin kupon", valuation.result.effective_coupon_rate],
+            ].map(([label, value]) => (
+              <Card key={label}>
+                <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">{label}</CardTitle></CardHeader>
+                <CardContent><DecimalValue value={value} /></CardContent>
+              </Card>
             ))}
           </div>
-        </div>
-        {!bond.calculated_metrics && !metricsLoading && (
-          <div className="flex items-center gap-2 mt-3 text-[13px] text-muted-foreground">
-            <AlertCircle className="h-4 w-4" />
-            {tr.dashboard.bondDetails.dateSelector.noData}
-          </div>
-        )}
-        {metricsLoading && (
-          <span className="text-[13px] text-muted-foreground mt-3 block">{tr.dashboard.bondDetails.dateSelector.calculating}</span>
-        )}
-      </div>
-
-      {/* ═══ Calculated Metrics ═══ */}
-      {bond.calculated_metrics && !metricsLoading && (
-        <Card className="animate-fade-up border-primary/20 bg-primary/[0.02]">
-          <CardHeader>
-            <CardDescription>{tr.dashboard.bondDetails.calculatedMetrics.title}</CardDescription>
-            <CardTitle className="mt-1 flex items-center gap-2">
-              {tr.dashboard.bondDetails.calculatedMetrics.subtitle.replace("{date}", formatDate(selectedDate))}
-              {bond.calculated_metrics.is_theoretical && (
-                <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-500/20 font-normal">
-                  {tr.dashboard.bondDetails.calculatedMetrics.theoreticalBadge}
-                </Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                { label: tr.dashboard.bondDetails.calculatedMetrics.dirtyPrice, value: formatDecimal(bond.calculated_metrics.dirty_price, 8, 8), primary: true },
-                { label: tr.dashboard.bondDetails.calculatedMetrics.accruedInterest, value: formatDecimal(bond.calculated_metrics.accrued_interest, 8, 8) },
-                { label: "Sözleşmesel Ek Getiri", value: bond.calculated_metrics.contractual_spread != null ? formatPercentFromDecimal(bond.calculated_metrics.contractual_spread, 4) : "—" },
-                { label: "Ek Getiri Kaynağı (Remarks)", value: bond.calculated_metrics.remarks ? (bond.calculated_metrics.remarks.length > 30 ? bond.calculated_metrics.remarks.substring(0, 30) + "..." : bond.calculated_metrics.remarks) : "—" },
-                { label: tr.dashboard.bondDetails.calculatedMetrics.rateChange, value: bond.calculated_metrics.rate_change_today_pct != null ? formatPercent(bond.calculated_metrics.rate_change_today_pct) : "—" },
-                { label: tr.dashboard.bondDetails.calculatedMetrics.cleanPrice, value: formatDecimal(bond.calculated_metrics.clean_price_used, 8, 8) },
-                ...(bond.calculated_metrics.annual_reference_rate != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.annualRefRate, value: formatPercentFromDecimal(bond.calculated_metrics.annual_reference_rate, 4) }] : []),
-                ...(bond.calculated_metrics.annual_coupon_rate != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.annualCouponRate, value: formatPercentFromDecimal(bond.calculated_metrics.annual_coupon_rate, 4) }] : []),
-                ...(bond.calculated_metrics.annual_compound_coupon_rate != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.annualCompoundCouponRate, value: formatPercentFromDecimal(bond.calculated_metrics.annual_compound_coupon_rate, 4) }] : []),
-                ...(bond.calculated_metrics.periodic_coupon_rate != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.periodicCouponRate, value: formatPercentFromDecimal(bond.calculated_metrics.periodic_coupon_rate, 4) }] : []),
-                ...(bond.calculated_metrics.yield_to_maturity != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.ytm, value: formatPercentFromDecimal(bond.calculated_metrics.yield_to_maturity, 4) }] : []),
-                ...(bond.calculated_metrics.return_to_date_pct != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.returnToDate, value: formatPercent(bond.calculated_metrics.return_to_date_pct) }] : []),
-                ...(bond.calculated_metrics.modified_duration != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.modDuration, value: formatDecimal(bond.calculated_metrics.modified_duration, 4) }] : []),
-                ...(bond.calculated_metrics.macaulay_duration != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.macDuration, value: formatDecimal(bond.calculated_metrics.macaulay_duration, 4) }] : []),
-                ...(bond.calculated_metrics.convexity != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.convexity, value: formatDecimal(bond.calculated_metrics.convexity, 4) }] : []),
-                ...(bond.calculated_metrics.coupon_payment_amount != null ? [{ label: tr.dashboard.bondDetails.calculatedMetrics.couponAmount, value: formatDecimal(bond.calculated_metrics.coupon_payment_amount, 4) }] : []),
-              ].map((item) => (
-                <div key={item.label} className="rounded-2xl border border-border/50 bg-card p-4">
-                  <div className="text-[12px] font-medium text-muted-foreground/70 mb-1.5">{item.label}</div>
-                  <div className={`font-mono-data text-[1.25rem] font-bold leading-tight ${(item as any).primary ? "text-primary" : "text-foreground"}`}>
-                    {item.value}
-                  </div>
-                </div>
-              ))}
-            </div>
-            {bond.calculated_metrics.return_to_date_used_fallback_price && (
-              <p className="text-[12px] text-muted-foreground mt-3">
-                {tr.dashboard.bondDetails.calculatedMetrics.fallbackNotice}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-
-
-      {/* ═══ Price / YTM History Chart ═══ */}
-      {(historyLoading || historyData.length > 0) && (
-        <Card className="animate-fade-up">
-          <CardHeader>
-            <CardDescription>Son 90 Gün</CardDescription>
-            <CardTitle className="mt-1">Fiyat ve YTM Geçmişi</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {historyLoading ? (
-              <div className="h-64 flex items-center justify-center text-[13px] text-muted-foreground">
-                Yükleniyor…
-              </div>
-            ) : (
-              <BondHistoryChart data={historyData} />
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* No metrics fallback */}
-      {!bond.calculated_metrics && !metricsLoading && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{tr.dashboard.bondDetails.noMetrics.title}</CardTitle>
-            <CardDescription>
-              {selectedDate === todayISO() ? tr.dashboard.bondDetails.noMetrics.subtitleToday : tr.dashboard.bondDetails.noMetrics.subtitle.replace("{date}", formatDate(selectedDate))}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="p-5 bg-secondary/30 border border-border/30 rounded-2xl text-center">
-              <p className="text-[14px] text-muted-foreground">
-                {selectedDate === todayISO()
-                  ? tr.dashboard.bondDetails.noMetrics.descriptionToday
-                  : tr.dashboard.bondDetails.noMetrics.description.replace("{date}", formatDate(selectedDate))}
-              </p>
-              <p className="text-[12px] text-muted-foreground mt-2">
-                {tr.dashboard.bondDetails.noMetrics.footer}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Fallback market data notice */}
-      {bond.calculated_metrics?.used_fallback_market_data && bond.calculated_metrics?.market_data_date && (
-        <div className="p-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 text-[13px] text-muted-foreground animate-fade-up">
-          <span className="font-medium text-amber-600 dark:text-amber-400">{tr.dashboard.bondDetails.fallbackNotice.note}</span>{" "}
-          {tr.dashboard.bondDetails.fallbackNotice.description.replace("{date}", formatDate(bond.calculated_metrics.market_data_date))}
-        </div>
-      )}
-
-      {/* ═══ Info Cards — 2 column grid ═══ */}
-      <div className="grid gap-5 lg:grid-cols-2 animate-fade-up-delay-1">
-        <Card>
-          <CardHeader>
-            <CardDescription>{tr.dashboard.bondDetails.infoCards.general.desc}</CardDescription>
-            <CardTitle className="mt-1">{tr.dashboard.bondDetails.infoCards.general.title}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-0">
-              {generalInfo.map(([label, value]) => (
-                <InfoRow key={label} label={label as string} value={value as string} />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardDescription>{tr.dashboard.bondDetails.infoCards.dates.desc}</CardDescription>
-            <CardTitle className="mt-1">{tr.dashboard.bondDetails.infoCards.dates.title}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-0">
-              {dateInfo.map(([label, value]) => (
-                <InfoRow key={label} label={label as string} value={value as string} />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-2 animate-fade-up-delay-2">
-        <Card>
-          <CardHeader>
-            <CardDescription>{tr.dashboard.bondDetails.infoCards.financial.desc}</CardDescription>
-            <CardTitle className="mt-1">{tr.dashboard.bondDetails.infoCards.financial.title}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-0">
-              {financialInfo.map(([label, value]) => (
-                <InfoRow key={label} label={label as string} value={value as string} />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardDescription>{tr.dashboard.bondDetails.infoCards.methods.desc}</CardDescription>
-            <CardTitle className="mt-1">{tr.dashboard.bondDetails.infoCards.methods.title}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-0">
-              {formulaInfo.map(([label, value]) => (
-                <InfoRow key={label} label={label as string} value={value as string} />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ═══ Remarks ═══ */}
-      {bond.remarks && (
-        <Card className="animate-fade-up-delay-2">
-          <CardHeader>
-            <CardDescription>{tr.dashboard.bondDetails.infoCards.remarks.desc}</CardDescription>
-            <CardTitle className="mt-1">{tr.dashboard.bondDetails.infoCards.remarks.title}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="whitespace-pre-wrap text-[14px] text-muted-foreground">{bond.remarks}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ═══ Data Conflicts ═══ */}
-      {bond.data_conflicts && bond.data_conflicts.length > 0 && (
-        <Card className="animate-fade-up-delay-2 border-amber-500/20 bg-amber-500/[0.02]">
-          <CardHeader>
-            <CardDescription>{tr.dashboard.bondDetails.infoCards.conflicts.desc}</CardDescription>
-            <CardTitle className="mt-1">{tr.dashboard.bondDetails.infoCards.conflicts.title}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-[13px]">
-                <thead>
-                  <tr className="border-b border-border/50">
-                    <th className="text-left py-2.5 text-muted-foreground font-medium">{tr.dashboard.bondDetails.infoCards.conflicts.cols.field}</th>
-                    <th className="text-left py-2.5 text-muted-foreground font-medium">{tr.dashboard.bondDetails.infoCards.conflicts.cols.tbliste}</th>
-                    <th className="text-left py-2.5 text-muted-foreground font-medium">{tr.dashboard.bondDetails.infoCards.conflicts.cols.kap}</th>
-                    <th className="text-left py-2.5 text-muted-foreground font-medium">{tr.dashboard.bondDetails.infoCards.conflicts.cols.used}</th>
-                  </tr>
-                </thead>
+          <Card>
+            <CardHeader><CardTitle>Nakit akışları</CardTitle></CardHeader>
+            <CardContent className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead><tr className="border-b"><th className="py-2">Tarih</th><th>Kupon</th><th>Anapara</th><th>Toplam</th><th>Bugünkü değer</th></tr></thead>
                 <tbody>
-                  {bond.data_conflicts.map((c: any, idx: number) => (
-                    <tr key={idx} className="border-b border-border/20">
-                      <td className="py-2.5 text-foreground font-medium">{c.field}</td>
-                      <td className={`py-2.5 font-mono-data ${c.resolved_source === 'tbliste' ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>{c.tbliste_value}</td>
-                      <td className={`py-2.5 font-mono-data ${c.resolved_source === 'kap' ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>{c.kap_value}</td>
-                      <td className="py-2.5">
-                        <Badge variant={c.resolved_source === 'kap' ? 'default' : 'secondary'}>{c.resolved_source === 'kap' ? tr.dashboard.bondDetails.infoCards.conflicts.kapBadge : tr.dashboard.bondDetails.infoCards.conflicts.tblisteBadge}</Badge>
-                      </td>
+                  {valuation.result.cash_flows.map((flow, index) => (
+                    <tr key={`${flow.payment_date}-${index}`} className="border-b border-border/50">
+                      <td className="py-2">{flow.payment_date}</td>
+                      <td><DecimalValue value={flow.coupon_amount} /></td>
+                      <td><DecimalValue value={flow.principal_amount} /></td>
+                      <td><DecimalValue value={flow.total_amount} /></td>
+                      <td><DecimalValue value={flow.present_value} /></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle>İzlenebilirlik</CardTitle></CardHeader>
+            <CardContent>
+              <pre className="overflow-x-auto rounded-xl bg-muted p-4 text-xs">
+                {JSON.stringify(valuation.result.provenance, null, 2)}
+              </pre>
+            </CardContent>
+          </Card>
+        </section>
       )}
 
-      {/* ═══ KAP Data ═══ */}
-      {bond.kap_data && (
-        <Card className="animate-fade-up-delay-2">
-          <CardHeader>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <CardDescription>{tr.dashboard.bondDetails.kap.desc}</CardDescription>
-                <CardTitle className="mt-1">
-                  {tr.dashboard.bondDetails.kap.title}
-                  {bond.kap_data.disclosure_url && (
-                    <a href={bond.kap_data.disclosure_url} target="_blank" rel="noopener noreferrer" className="ml-3 text-[13px] font-normal text-primary hover:underline">
-                      {tr.dashboard.bondDetails.kap.disclosure}
-                    </a>
-                  )}
-                </CardTitle>
-              </div>
-              {bond.kap_data.fetched_at && (() => {
-                const d = daysAgo(bond.kap_data.fetched_at!);
-                const stale = d > 30;
-                return (
-                  <span className={`shrink-0 text-[12px] mt-0.5 ${stale ? "text-yellow-500" : "text-muted-foreground/50"}`}>
-                    {d === 0
-                      ? tr.dashboard.bondDetails.kap.updatedToday
-                      : tr.dashboard.bondDetails.kap.updatedAgo.replace("{days}", d.toString())}
-                    {stale && <span className="ml-1">⚠</span>}
-                  </span>
-                );
-              })()}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div className="space-y-0">
-                <h4 className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">{tr.dashboard.bondDetails.kap.instrument.title}</h4>
-                {[
-                  [tr.dashboard.bondDetails.kap.instrument.isin, bond.kap_data.isin_code],
-                  [tr.dashboard.bondDetails.kap.instrument.type, bond.kap_data.instrument_type],
-                  ...(bond.kap_data.fund_user ? [[tr.dashboard.bondDetails.kap.instrument.fundUser, bond.kap_data.fund_user]] : []),
-                  ...(bond.kap_data.source_institution ? [[tr.dashboard.bondDetails.kap.instrument.sourceInst, bond.kap_data.source_institution]] : []),
-                  [tr.dashboard.bondDetails.kap.instrument.maturity, bond.kap_data.maturity_date ? formatDate(bond.kap_data.maturity_date) : null],
-                  [tr.dashboard.bondDetails.kap.instrument.days, bond.kap_data.maturity_days],
-                  [tr.dashboard.bondDetails.kap.instrument.nominal, bond.kap_data.nominal_value ? `${Number(bond.kap_data.nominal_value).toLocaleString('tr-TR')} ${bond.kap_data.currency || 'TRY'}` : null],
-                  [tr.dashboard.bondDetails.kap.instrument.price, bond.kap_data.issue_price],
-                  [tr.dashboard.bondDetails.kap.instrument.interestType, bond.kap_data.interest_rate_type],
-                  [tr.dashboard.bondDetails.kap.instrument.floatingRef, bond.kap_data.floating_rate_reference],
-                  [tr.dashboard.bondDetails.kap.instrument.additionalReturn, bond.kap_data.additional_return_pct],
-                  [tr.dashboard.bondDetails.kap.instrument.coupons, bond.kap_data.coupon_number],
-                  [tr.dashboard.bondDetails.kap.instrument.frequency, bond.kap_data.coupon_frequency],
-                  [tr.dashboard.bondDetails.kap.instrument.paymentType, bond.kap_data.payment_type],
-                ].map(([label, value]) => (
-                  <InfoRow key={label as string} label={label as string} value={value as string} />
-                ))}
-              </div>
-              <div className="space-y-0">
-                <h4 className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">{tr.dashboard.bondDetails.kap.sale.title}</h4>
-                {[
-                  [tr.dashboard.bondDetails.kap.sale.type, bond.kap_data.sale_type],
-                  [tr.dashboard.bondDetails.kap.sale.start, bond.kap_data.starting_date_sale ? formatDate(bond.kap_data.starting_date_sale) : null],
-                  [tr.dashboard.bondDetails.kap.sale.end, bond.kap_data.ending_date_sale ? formatDate(bond.kap_data.ending_date_sale) : null],
-                  [tr.dashboard.bondDetails.kap.sale.traded, bond.kap_data.traded_in_exchange === true ? tr.dashboard.bondDetails.kap.sale.yes : bond.kap_data.traded_in_exchange === false ? tr.dashboard.bondDetails.kap.sale.no : null],
-                  [tr.dashboard.bondDetails.kap.sale.broker, bond.kap_data.intermediary_brokerage],
-                  [tr.dashboard.bondDetails.kap.sale.limit, bond.kap_data.issue_limit ? `${Number(bond.kap_data.issue_limit).toLocaleString('tr-TR')} TRY` : null],
-                  [tr.dashboard.bondDetails.kap.sale.ratingCompany, bond.kap_data.issuer_rating_company],
-                  [tr.dashboard.bondDetails.kap.sale.ratingNote, bond.kap_data.issuer_rating_note],
-                  [tr.dashboard.bondDetails.kap.sale.ratingDate, bond.kap_data.issuer_rating_date ? formatDate(bond.kap_data.issuer_rating_date) : null],
-                  [tr.dashboard.bondDetails.kap.sale.investmentGrade, bond.kap_data.issuer_rating_investment_grade === true ? tr.dashboard.bondDetails.kap.sale.yes : bond.kap_data.issuer_rating_investment_grade === false ? tr.dashboard.bondDetails.kap.sale.no : null],
-                ].map(([label, value]) => (
-                  <InfoRow key={label as string} label={label as string} value={value as string} />
-                ))}
-              </div>
-            </div>
-
-            {/* Coupon Payments */}
-            {bond.kap_data.coupon_payments && bond.kap_data.coupon_payments.length > 0 && (
-              <div>
-                <h4 className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">{tr.dashboard.bondDetails.kap.plan.title}</h4>
-
-                {/* Mobile cards */}
-                <div className="block md:hidden space-y-2">
-                  {bond.kap_data.coupon_payments.map((cp: any, idx: number) => (
-                    <div key={idx} className="rounded-2xl border border-border/30 bg-secondary/20 px-4 py-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono-data text-[13px] font-semibold text-foreground">
-                          {cp.coupon_number === "principal" ? tr.dashboard.bondDetails.kap.plan.principal : `#${cp.coupon_number}`}
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono-data text-[12px] text-muted-foreground">{cp.payment_date || "—"}</span>
-                          {cp.was_payment_made === "Yes" ? (
-                            <Badge variant="default" className="text-[10px]">{tr.dashboard.bondDetails.kap.plan.cols.paid}</Badge>
-                          ) : cp.was_payment_made === "No" ? (
-                            <Badge variant="secondary" className="text-[10px]">Bekliyor</Badge>
-                          ) : null}
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-2.5">
-                        <div>
-                          <div className="text-[10px] text-muted-foreground/60">{tr.dashboard.bondDetails.kap.plan.cols.compound}</div>
-                          <div className="font-mono-data text-[12px] text-foreground">
-                            {cp.yearly_compound_rate ? `%${Number(cp.yearly_compound_rate).toFixed(4)}` : "—"}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-[10px] text-muted-foreground/60">{tr.dashboard.bondDetails.kap.plan.cols.amount}</div>
-                          <div className="font-mono-data text-[12px] text-foreground">
-                            {cp.payment_amount ? Number(cp.payment_amount.replace(/\./g, '').replace(',', '.')).toLocaleString('tr-TR') : "—"}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-[10px] text-muted-foreground/60">{tr.dashboard.bondDetails.kap.plan.cols.periodic}</div>
-                          <div className="font-mono-data text-[12px] text-muted-foreground">
-                            {cp.periodic_rate ? `%${Number(cp.periodic_rate).toFixed(4)}` : "—"}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-[10px] text-muted-foreground/60">{tr.dashboard.bondDetails.kap.plan.cols.simple}</div>
-                          <div className="font-mono-data text-[12px] text-muted-foreground">
-                            {cp.yearly_simple_rate ? `%${Number(cp.yearly_simple_rate).toFixed(4)}` : "—"}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Desktop table */}
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full text-[13px]">
-                    <thead>
-                      <tr className="border-b border-border/50">
-                        <th className="text-left py-2.5 text-muted-foreground font-medium">{tr.dashboard.bondDetails.kap.plan.cols.coupon}</th>
-                        <th className="text-left py-2.5 text-muted-foreground font-medium">{tr.dashboard.bondDetails.kap.plan.cols.date}</th>
-                        <th className="text-right py-2.5 text-muted-foreground font-medium">{tr.dashboard.bondDetails.kap.plan.cols.periodic}</th>
-                        <th className="text-right py-2.5 text-muted-foreground font-medium">{tr.dashboard.bondDetails.kap.plan.cols.simple}</th>
-                        <th className="text-right py-2.5 text-muted-foreground font-medium">{tr.dashboard.bondDetails.kap.plan.cols.compound}</th>
-                        <th className="text-right py-2.5 text-muted-foreground font-medium">{tr.dashboard.bondDetails.kap.plan.cols.amount}</th>
-                        <th className="text-center py-2.5 text-muted-foreground font-medium">{tr.dashboard.bondDetails.kap.plan.cols.paid}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bond.kap_data.coupon_payments.map((cp: any, idx: number) => (
-                        <tr key={idx} className="border-b border-border/20 hover:bg-secondary/30 transition-colors">
-                          <td className="py-2.5 font-mono-data text-foreground font-medium">
-                            {cp.coupon_number === "principal" ? tr.dashboard.bondDetails.kap.plan.principal : `#${cp.coupon_number}`}
-                          </td>
-                          <td className="py-2.5 font-mono-data text-foreground">{cp.payment_date || "—"}</td>
-                          <td className="py-2.5 font-mono-data text-foreground text-right">
-                            {cp.periodic_rate ? `%${Number(cp.periodic_rate).toFixed(4)}` : "—"}
-                          </td>
-                          <td className="py-2.5 font-mono-data text-foreground text-right">
-                            {cp.yearly_simple_rate ? `%${Number(cp.yearly_simple_rate).toFixed(4)}` : "—"}
-                          </td>
-                          <td className="py-2.5 font-mono-data text-foreground text-right">
-                            {cp.yearly_compound_rate ? `%${Number(cp.yearly_compound_rate).toFixed(4)}` : "—"}
-                          </td>
-                          <td className="py-2.5 font-mono-data text-foreground text-right">
-                            {cp.payment_amount ? Number(cp.payment_amount.replace(/\./g, '').replace(',', '.')).toLocaleString('tr-TR') : "—"}
-                          </td>
-                          <td className="py-2.5 text-center">
-                            {cp.was_payment_made === "Yes" ? (
-                              <Badge variant="default" className="text-[10px]">Evet</Badge>
-                            ) : cp.was_payment_made === "No" ? (
-                              <Badge variant="secondary" className="text-[10px]">Hayır</Badge>
-                            ) : "—"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {bond.kap_data.additional_explanation && (
-              <div>
-                <h4 className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2">Ek Açıklama</h4>
-                <p className="text-[13px] text-muted-foreground bg-secondary/30 rounded-2xl p-4 border border-border/30">
-                  {bond.kap_data.additional_explanation}
-                </p>
-              </div>
-            )}
-          </CardContent>
+      <section className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><Database className="h-4 w-4" /> Ham açıklama</CardTitle></CardHeader>
+          <CardContent className="whitespace-pre-wrap text-sm">{instrument.remarks_raw || "Açıklama yok."}</CardContent>
         </Card>
-      )}
-
-      {/* ═══ KAP Disclosures List ═══ */}
-      {bond.kap_disclosures && bond.kap_disclosures.length > 0 && (
-        <Card className="animate-fade-up-delay-2">
-          <CardHeader>
-            <CardDescription>KAP Bildirimleri</CardDescription>
-            <CardTitle className="mt-1">Bu ISIN ile İlgili Tüm Bildirimler ({bond.kap_disclosures.length})</CardTitle>
-          </CardHeader>
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><FileJson className="h-4 w-4" /> Parser AST</CardTitle></CardHeader>
           <CardContent>
-            <div className="space-y-0">
-              {bond.kap_disclosures.slice(0, 10).map((d: any, idx: number) => (
-                <div key={idx} className="flex items-start justify-between py-3 border-b border-border/20 last:border-0 gap-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] text-foreground truncate">{d.title}</p>
-                    <p className="text-[12px] text-muted-foreground mt-0.5">
-                      {d.publish_date ? formatDate(d.publish_date.split('T')[0]) : '—'}
-                      {d.is_changed && <Badge variant="secondary" className="ml-2 text-[10px]">{d.is_changed}</Badge>}
-                    </p>
-                  </div>
-                  {d.disclosure_url && (
-                    <a href={d.disclosure_url} target="_blank" rel="noopener noreferrer" className="text-[13px] text-primary hover:underline whitespace-nowrap shrink-0">
-                      Görüntüle →
-                    </a>
-                  )}
-                </div>
-              ))}
-            </div>
+            <pre className="max-h-96 overflow-auto rounded-xl bg-muted p-4 text-xs">
+              {JSON.stringify(instrument.term_rule_ast, null, 2)}
+            </pre>
           </CardContent>
         </Card>
-      )}
+      </section>
 
-      {/* ═══ Data Sources ═══ */}
-      {bond.data_sources && bond.data_sources.length > 0 && (
-        <div className="animate-fade-up-delay-2 rounded-3xl border border-border/50 bg-secondary/20 p-5">
-          <h4 className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">Veri Kaynakları</h4>
-          <div className="flex flex-wrap gap-4">
-            {bond.data_sources.map((ds: any, idx: number) => (
-              <div key={idx} className="flex items-center gap-2 text-[13px]">
-                <div className={`w-2 h-2 rounded-full ${ds.source === 'kap' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
-                <span className="text-foreground font-medium">{ds.label}</span>
-                {ds.updated_at && (
-                  <span className="text-muted-foreground">— {formatDate(ds.updated_at.split('T')[0])}</span>
-                )}
-                {ds.disclosure_url && (
-                  <a href={ds.disclosure_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-mono-data text-[11px]">
-                    {ds.source === 'kap' ? 'KAP' : 'BİST'} ↗
-                  </a>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ═══ Notes FAB ═══ */}
-      {noteOpen && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setNoteOpen(false)}
-        />
-      )}
-      <div className="fixed z-50 right-4 lg:right-8 notes-fab">
-        {/* Panel */}
-        <div
-          className={`absolute bottom-[calc(100%+0.75rem)] right-0 w-[320px] max-w-[calc(100vw-2rem)] rounded-3xl border border-border/60 shadow-2xl overflow-hidden transition-all duration-300 origin-bottom-right notes-panel-bg ${
-            noteOpen
-              ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"
-              : "opacity-0 translate-y-3 scale-95 pointer-events-none"
-          }`}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-border/30">
-            <div className="flex items-center gap-2">
-              <StickyNote className="h-4 w-4 text-primary" />
-              <span className="text-[14px] font-semibold text-foreground">{tr.dashboard.bondDetails.notes.title}</span>
-            </div>
-            <button
-              onClick={() => setNoteOpen(false)}
-              className="h-7 w-7 rounded-full bg-secondary/70 flex items-center justify-center text-muted-foreground hover:bg-secondary transition-colors"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-
-          {/* Body */}
-          <div className="p-4 space-y-3">
-            <textarea
-              ref={textareaRef}
-              className="w-full min-h-[120px] resize-none rounded-xl border border-border/50 bg-secondary/40 px-3.5 py-3 text-[13.5px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
-              placeholder={tr.dashboard.bondDetails.notes.placeholder}
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-              onKeyDown={(e) => {
-                if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-                  e.preventDefault();
-                  handleNoteSave();
-                }
-              }}
-            />
-
-            {savedNote?.updated_at && (
-              <p className="text-[11px] text-muted-foreground/70">
-                {tr.dashboard.bondDetails.notes.savedAt.replace(
-                  "{date}",
-                  new Date(savedNote.updated_at).toLocaleDateString("tr-TR", {
-                    day: "2-digit",
-                    month: "long",
-                    year: "numeric",
-                  }),
-                )}
-              </p>
-            )}
-
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                onClick={handleNoteSave}
-                disabled={noteSaving || noteText.trim() === ""}
-                className="flex-1 h-9 gap-1.5 text-[13px]"
-              >
-                <Save className="h-3.5 w-3.5" />
-                {noteSaving ? tr.dashboard.bondDetails.notes.saving : tr.dashboard.bondDetails.notes.save}
-              </Button>
-              {savedNote && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleNoteDelete}
-                  disabled={noteDeleting}
-                  className="h-9 w-9 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* FAB button */}
-        <button
-          onClick={() => setNoteOpen((v) => !v)}
-          className={`relative h-14 w-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
-            noteOpen
-              ? "bg-primary text-primary-foreground scale-90 shadow-primary/25"
-              : "bg-card border border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:shadow-md"
-          }`}
-          aria-label={tr.dashboard.bondDetails.notes.title}
-        >
-          <StickyNote className={`h-5 w-5 transition-transform duration-300 ${noteOpen ? "rotate-[-8deg]" : ""}`} />
-          {savedNote && !noteOpen && (
-            <span className="absolute top-0.5 right-0.5 h-2.5 w-2.5 rounded-full bg-primary border-2 border-background" />
-          )}
-        </button>
-      </div>
-    </div>
+      <Card>
+        <CardHeader><CardTitle>Kişisel not</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <Textarea value={note} onChange={(event) => setNote(event.target.value)} aria-label="Kıymet notu" />
+          <Button variant="outline" onClick={() => void saveNote()} disabled={savingNote || !note.trim()}>
+            <Save className="mr-2 h-4 w-4" /> {savingNote ? "Kaydediliyor…" : "Notu kaydet"}
+          </Button>
+        </CardContent>
+      </Card>
+    </main>
   );
 }
