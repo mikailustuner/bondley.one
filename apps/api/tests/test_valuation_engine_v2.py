@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import pytest
 
-from app.services.valuation.calendar import coupon_schedule
+from app.services.valuation.calendar import coupon_schedule, current_coupon_period
 from app.services.valuation.day_count import year_fraction
 from app.services.valuation.engine import (
     BenchmarkInput,
@@ -37,6 +37,38 @@ def test_schedule_uses_calendar_months_and_preserves_month_end():
         frequency=2,
         next_coupon_date=date(2025, 7, 31),
     ) == [date(2025, 7, 31), date(2026, 1, 31)]
+
+
+def test_current_period_is_derived_backwards_from_next_coupon_anchor():
+    payment_dates = coupon_schedule(
+        issue_date=date(2024, 10, 8),
+        maturity_date=date(2026, 10, 8),
+        frequency=4,
+        next_coupon_date=date(2026, 10, 8),
+    )
+    assert current_coupon_period(
+        issue_date=date(2024, 10, 8),
+        settlement_date=date(2026, 7, 24),
+        payment_dates=payment_dates,
+        frequency=4,
+        next_coupon_date=date(2026, 10, 8),
+    ) == (date(2026, 7, 8), date(2026, 10, 8))
+
+
+def test_current_period_backward_derivation_preserves_month_end():
+    payment_dates = coupon_schedule(
+        issue_date=date(2024, 2, 29),
+        maturity_date=date(2026, 8, 31),
+        frequency=2,
+        next_coupon_date=date(2026, 8, 31),
+    )
+    assert current_coupon_period(
+        issue_date=date(2024, 2, 29),
+        settlement_date=date(2026, 7, 24),
+        payment_dates=payment_dates,
+        frequency=2,
+        next_coupon_date=date(2026, 8, 31),
+    ) == (date(2026, 2, 28), date(2026, 8, 31))
 
 
 def test_irregular_frequency_requires_explicit_dates():
@@ -76,6 +108,27 @@ def test_price_yield_round_trip_and_risk_metrics():
     assert from_clean.modified_duration > 0
     assert from_clean.convexity > 0
     assert abs(from_clean.dirty_price - from_yield.dirty_price) <= Decimal("0.00000001")
+    assert from_yield.periodic_coupon_rate == Decimal("0.0500000000")
+    assert from_yield.annual_simple_coupon_rate == Decimal("0.1000000000")
+    assert from_yield.annual_compound_coupon_rate == Decimal("0.1025000000")
+    assert from_yield.cash_flows[0].coupon_amount == Decimal("5.00")
+
+
+def test_next_coupon_anchor_does_not_accrue_from_original_issue_date():
+    result = ValuationEngine().value(
+        _fixed_terms(
+            issue_date=date(2024, 10, 8),
+            maturity_date=date(2026, 10, 8),
+            coupon_frequency=4,
+            next_coupon_date=date(2026, 10, 8),
+        ),
+        settlement_date=date(2026, 7, 24),
+        price_input=PriceInput(QuoteType.ANNUAL_YIELD, Decimal("0.12")),
+    )
+
+    assert result.cash_flows[0].accrual_start == date(2026, 7, 8)
+    assert result.cash_flows[0].coupon_amount == Decimal("2.500")
+    assert result.periodic_coupon_rate == Decimal("0.0250000000")
 
 
 def test_missing_price_is_typed_failure_not_zero():

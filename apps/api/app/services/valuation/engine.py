@@ -10,7 +10,9 @@ from app.services.valuation.calendar import (
     BusinessCalendar,
     BusinessDayConvention,
     coupon_schedule,
+    current_coupon_period,
 )
+from app.services.valuation.coupon_rates import CouponRateMetrics, from_annual_simple_coupon
 from app.services.valuation.day_count import DayCountConvention, parse_day_count, year_fraction
 from app.services.valuation.errors import ValuationError, ValuationFailureCode
 from app.services.valuation.formula_catalog import FORMULA_CATALOG
@@ -64,6 +66,7 @@ class InstrumentTerms:
     source_file_id: int | None = None
     source_row: int | None = None
     parser_version: str | None = None
+    coupon_rate_metrics: CouponRateMetrics | None = None
 
 
 @dataclass(frozen=True)
@@ -100,6 +103,12 @@ class ValuationResult:
     modified_duration: Decimal
     convexity: Decimal
     effective_coupon_rate: Decimal
+    periodic_coupon_rate: Decimal
+    annual_simple_coupon_rate: Decimal
+    annual_compound_coupon_rate: Decimal
+    coupon_rate_status: str
+    coupon_rate_confidence: str
+    coupon_rate_is_final: bool
     cash_flows: list[CashFlow]
     intermediates: dict[str, Any] = field(default_factory=dict)
     provenance: dict[str, Any] = field(default_factory=dict)
@@ -118,6 +127,12 @@ class ValuationResult:
             "modified_duration": str(self.modified_duration),
             "convexity": str(self.convexity),
             "effective_coupon_rate": str(self.effective_coupon_rate),
+            "periodic_coupon_rate": str(self.periodic_coupon_rate),
+            "annual_simple_coupon_rate": str(self.annual_simple_coupon_rate),
+            "annual_compound_coupon_rate": str(self.annual_compound_coupon_rate),
+            "coupon_rate_status": self.coupon_rate_status,
+            "coupon_rate_confidence": self.coupon_rate_confidence,
+            "coupon_rate_is_final": self.coupon_rate_is_final,
             "cash_flows": [item.to_dict() for item in self.cash_flows],
             "intermediates": self.intermediates,
             "provenance": self.provenance,
@@ -125,7 +140,7 @@ class ValuationResult:
 
 
 class ValuationEngine:
-    VERSION = "valuation-engine-v2.0.0"
+    VERSION = "valuation-engine-v2.2.0"
     SUPPORTED_FORMULAS = frozenset(FORMULA_CATALOG)
     PRICE_QUANTUM = Decimal("0.00000001")
     RATE_QUANTUM = Decimal("0.0000000001")
@@ -158,12 +173,38 @@ class ValuationEngine:
             business_calendar=self.business_calendar,
             business_day_convention=terms.business_day_convention,
         )
+        coupon_metrics = terms.coupon_rate_metrics
+        if coupon_metrics is None:
+            period_start, period_end = current_coupon_period(
+                issue_date=terms.issue_date,
+                settlement_date=settlement_date,
+                payment_dates=dates,
+                frequency=terms.coupon_frequency,
+                next_coupon_date=terms.next_coupon_date,
+            )
+            coupon_metrics = from_annual_simple_coupon(
+                annual_simple_rate=effective_rate,
+                period_start=period_start,
+                period_end=period_end,
+                coupon_frequency=terms.coupon_frequency,
+                full_period_year_fraction=year_fraction(
+                    period_start,
+                    period_end,
+                    convention,
+                ),
+                calculation_as_of=settlement_date,
+                status="INDICATIVE",
+                confidence="EXACT_CONTRACT",
+                is_final=False,
+            )
         all_flows = self._cash_flows(
             terms,
             dates,
             convention,
             effective_rate,
             indexed_nominal,
+            settlement_date,
+            coupon_metrics,
         )
         future_flows = [item for item in all_flows if item.payment_date > settlement_date]
         if not future_flows:
@@ -178,6 +219,7 @@ class ValuationEngine:
             effective_rate,
             indexed_nominal,
             settlement_date,
+            coupon_metrics,
         )
         assert price_input is not None
         quote_value = self._decimal(price_input.value, "quote_value")
@@ -262,6 +304,12 @@ class ValuationEngine:
             modified_duration=modified.quantize(self.RATE_QUANTUM),
             convexity=convexity.quantize(self.RATE_QUANTUM),
             effective_coupon_rate=effective_rate.quantize(self.RATE_QUANTUM),
+            periodic_coupon_rate=coupon_metrics.periodic_coupon_rate,
+            annual_simple_coupon_rate=coupon_metrics.annual_simple_rate,
+            annual_compound_coupon_rate=coupon_metrics.annual_compound_rate,
+            coupon_rate_status=coupon_metrics.status,
+            coupon_rate_confidence=coupon_metrics.confidence,
+            coupon_rate_is_final=coupon_metrics.is_final,
             cash_flows=discounted,
             intermediates={
                 "day_count": convention.value,
@@ -269,6 +317,7 @@ class ValuationEngine:
                 "frequency": terms.coupon_frequency,
                 "indexed_nominal": str(indexed_nominal),
                 "round_trip_tolerance": "0.000001",
+                "coupon_rates": coupon_metrics.to_dict(),
             },
             provenance={
                 "instrument_source_file_id": terms.source_file_id,
@@ -276,6 +325,7 @@ class ValuationEngine:
                 "parser_version": terms.parser_version,
                 "formula_code": terms.formula_code,
                 "calendar_version": self.business_calendar.version,
+                "coupon_rate": coupon_metrics.to_dict(),
                 "benchmark": (
                     {
                         "name": benchmark.name,
@@ -339,6 +389,14 @@ class ValuationEngine:
         cpi_ratio: Decimal | None,
     ) -> tuple[Decimal, Decimal]:
         nominal = self._decimal(terms.nominal, "nominal")
+        if terms.coupon_rate_metrics is not None:
+            return (
+                self._decimal(
+                    terms.coupon_rate_metrics.annual_simple_rate,
+                    "resolved_annual_simple_coupon_rate",
+                ),
+                nominal,
+            )
         if terms.rate_type == RateType.FIXED:
             if terms.annual_coupon_rate is None:
                 raise ValuationError(
@@ -384,12 +442,26 @@ class ValuationEngine:
         convention: DayCountConvention,
         annual_rate: Decimal,
         nominal: Decimal,
+        settlement_date: date,
+        coupon_metrics: CouponRateMetrics,
     ) -> list[CashFlow]:
         flows: list[CashFlow] = []
         accrual_start = terms.issue_date
+        if terms.next_coupon_date is not None and dates:
+            accrual_start, _ = current_coupon_period(
+                issue_date=terms.issue_date,
+                settlement_date=settlement_date,
+                payment_dates=dates,
+                frequency=terms.coupon_frequency,
+                next_coupon_date=terms.next_coupon_date,
+            )
         for payment_date in dates:
             fraction = year_fraction(accrual_start, payment_date, convention)
-            coupon = nominal * annual_rate * fraction
+            coupon = (
+                nominal * coupon_metrics.periodic_coupon_rate
+                if not terms.explicit_coupon_dates
+                else nominal * annual_rate * fraction
+            )
             principal = nominal if payment_date == dates[-1] else Decimal("0")
             flows.append(
                 CashFlow(
@@ -413,17 +485,27 @@ class ValuationEngine:
         annual_rate: Decimal,
         nominal: Decimal,
         settlement_date: date,
+        coupon_metrics: CouponRateMetrics,
     ) -> Decimal:
-        previous = terms.issue_date
-        for payment_date in dates:
-            if settlement_date < payment_date:
-                return nominal * annual_rate * year_fraction(
-                    previous,
-                    settlement_date,
-                    convention,
-                )
-            previous = payment_date
-        return Decimal("0")
+        del annual_rate
+        del dates
+        elapsed = year_fraction(
+            coupon_metrics.period_start,
+            settlement_date,
+            convention,
+        )
+        full_period = year_fraction(
+            coupon_metrics.period_start,
+            coupon_metrics.period_end,
+            convention,
+        )
+        if elapsed <= 0 or full_period <= 0:
+            return Decimal("0")
+        fraction = elapsed / full_period
+        return nominal * coupon_metrics.periodic_coupon_rate * min(
+            fraction,
+            Decimal("1"),
+        )
 
     def _price_from_yield(
         self,

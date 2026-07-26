@@ -12,6 +12,7 @@ from app.api.deps import get_admin_user, get_current_user
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.time import turkey_today, utc_now
+from app.core.time import BistBusinessCalendar, parse_holiday_list
 from app.models.bist_ingestion import (
     BenchmarkObservation,
     BootstrapRun,
@@ -50,6 +51,14 @@ from app.services.valuation.engine import (
     RateType,
     ValuationEngine,
 )
+from app.services.valuation.calendar import coupon_schedule, current_coupon_period
+from app.services.valuation.coupon_rates import (
+    CouponRateMetrics,
+    from_annual_simple_coupon,
+    from_index_change,
+    from_periodic_coupon,
+)
+from app.services.valuation.day_count import parse_day_count, year_fraction
 from app.services.valuation.errors import ValuationError
 from app.services.metrics_service import MetricsService
 
@@ -108,6 +117,220 @@ def _spread(ast: dict[str, Any]) -> Decimal:
         if item.get("decimal") is not None
     ]
     return next((item for item in explicit if item is not None), Decimal("0"))
+
+
+def _coupon_period(
+    *,
+    issue_date: date,
+    maturity_date: date,
+    coupon_frequency: int,
+    next_coupon_date: date | None,
+    settlement_date: date,
+    day_count: str | None,
+    explicit_coupon_dates: tuple[date, ...],
+) -> tuple[date, date, Decimal]:
+    dates = coupon_schedule(
+        issue_date=issue_date,
+        maturity_date=maturity_date,
+        frequency=coupon_frequency,
+        next_coupon_date=next_coupon_date,
+        explicit_coupon_dates=explicit_coupon_dates,
+    )
+    period_start, period_end = current_coupon_period(
+        issue_date=issue_date,
+        settlement_date=settlement_date,
+        payment_dates=dates,
+        frequency=coupon_frequency,
+        next_coupon_date=next_coupon_date,
+    )
+    factor = year_fraction(period_start, period_end, parse_day_count(day_count))
+    return period_start, period_end, factor
+
+
+def _observation_lag(ast: dict[str, Any]) -> int:
+    lags = {
+        int(item["lag_business_days"])
+        for item in ast.get("observation_lags", [])
+        if item.get("lag_business_days") is not None
+    }
+    return next(iter(lags)) if len(lags) == 1 else 0
+
+
+def _lagged_business_date(boundary: date, lag: int) -> date:
+    if lag <= 0:
+        return boundary
+    calendar = BistBusinessCalendar(
+        extra_holidays=parse_holiday_list(settings.BIST_HOLIDAYS)
+    )
+    target = boundary
+    for _ in range(lag):
+        target = calendar.previous_business_day(target)
+    return target
+
+
+def _next_business_day(boundary: date) -> date:
+    calendar = BistBusinessCalendar(
+        extra_holidays=parse_holiday_list(settings.BIST_HOLIDAYS)
+    )
+    target = boundary + timedelta(days=1)
+    while not calendar.is_business_day(target):
+        target += timedelta(days=1)
+    return target
+
+
+def _on_or_previous_business_day(boundary: date) -> date:
+    calendar = BistBusinessCalendar(
+        extra_holidays=parse_holiday_list(settings.BIST_HOLIDAYS)
+    )
+    target = boundary
+    while not calendar.is_business_day(target):
+        target -= timedelta(days=1)
+    return target
+
+
+async def _index_observation(
+    db: AsyncSession,
+    benchmark: str,
+    target_date: date,
+) -> BenchmarkObservation | None:
+    return await db.scalar(
+        select(BenchmarkObservation)
+        .where(
+            BenchmarkObservation.benchmark == benchmark,
+            BenchmarkObservation.observation_date <= target_date,
+            BenchmarkObservation.index_value.is_not(None),
+        )
+        .order_by(BenchmarkObservation.observation_date.desc())
+        .limit(1)
+    )
+
+
+async def _resolve_coupon_rate_metrics(
+    db: AsyncSession,
+    *,
+    fields: dict[str, Any],
+    ast: dict[str, Any],
+    rate_type: RateType,
+    issue_date: date,
+    maturity_date: date,
+    coupon_frequency: int,
+    settlement_date: date,
+    explicit_coupon_dates: tuple[date, ...],
+    benchmark_input: BenchmarkInput | None,
+) -> CouponRateMetrics | None:
+    if rate_type == RateType.CPI:
+        return None
+
+    next_coupon_date = _date(fields.get("next_coupon_date"))
+    coupon_day_count = (
+        "ACT/365F"
+        if rate_type in {RateType.TLREF, RateType.TLREFK}
+        else fields.get("day_count_convention")
+    )
+    try:
+        period_start, period_end, full_factor = _coupon_period(
+            issue_date=issue_date,
+            maturity_date=maturity_date,
+            coupon_frequency=coupon_frequency,
+            next_coupon_date=next_coupon_date,
+            settlement_date=settlement_date,
+            day_count=coupon_day_count,
+            explicit_coupon_dates=explicit_coupon_dates,
+        )
+    except ValuationError:
+        # Coupon-rate enrichment must not mask the engine's typed schedule
+        # failure or prevent valuation records from being persisted.
+        return None
+    published_coupon_pct = _decimal(fields.get("next_coupon_rate_pct"))
+    if published_coupon_pct is not None and (
+        published_coupon_pct > 0 or rate_type == RateType.FIXED
+    ):
+        return from_periodic_coupon(
+            periodic_coupon_rate=published_coupon_pct / Decimal("100"),
+            period_start=period_start,
+            period_end=period_end,
+            coupon_frequency=coupon_frequency,
+            full_period_year_fraction=full_factor,
+            calculation_as_of=settlement_date,
+        )
+
+    if ast.get("benchmark_mode") == "INDEX_CHANGE" and rate_type in {
+        RateType.TLREF,
+        RateType.TLREFK,
+    }:
+        benchmark_name = rate_type.value
+        lag = _observation_lag(ast)
+        start_target = _lagged_business_date(period_start, lag)
+        required_end_target = _lagged_business_date(period_end, lag)
+        start_observation = await _index_observation(db, benchmark_name, start_target)
+        is_final = required_end_target <= settlement_date
+        end_target = required_end_target if is_final else min(settlement_date, period_end)
+        end_observation = await _index_observation(db, benchmark_name, end_target)
+        if (
+            start_observation is None
+            or end_observation is None
+            or start_observation.index_value is None
+            or end_observation.index_value is None
+            or end_observation.observation_date <= start_observation.observation_date
+        ):
+            return None
+        if (
+            is_final
+            and end_observation.observation_date
+            != _on_or_previous_business_day(required_end_target)
+        ):
+            is_final = False
+        elapsed_projection_days = (
+            _next_business_day(end_observation.observation_date)
+            - _next_business_day(start_observation.observation_date)
+        ).days
+        if elapsed_projection_days <= 0:
+            # There is no elapsed index return on the first day of a coupon
+            # period, so an annualized indicative coupon cannot be calculated.
+            return None
+        annuality = str(ast.get("spread_annuality") or "UNKNOWN")
+        if annuality not in {"ANNUAL_SIMPLE", "PERIODIC"}:
+            annuality = "UNKNOWN"
+        return from_index_change(
+            start_index_value=start_observation.index_value,
+            end_index_value=end_observation.index_value,
+            start_index_date=start_observation.observation_date,
+            end_index_date=end_observation.observation_date,
+            period_start=period_start,
+            period_end=period_end,
+            coupon_frequency=coupon_frequency,
+            full_period_year_fraction=full_factor,
+            full_period_days=(period_end - period_start).days,
+            elapsed_projection_days=elapsed_projection_days,
+            spread_decimal=_spread(ast),
+            spread_annuality=annuality,
+            calculation_as_of=end_observation.observation_date,
+            is_final=is_final,
+        )
+
+    if rate_type in {RateType.TLREF, RateType.TLREFK} and benchmark_input is not None:
+        spread = _spread(ast)
+        annuality = str(ast.get("spread_annuality") or "UNKNOWN")
+        assumptions: tuple[str, ...] = ()
+        if annuality == "PERIODIC":
+            annual_spread = spread / full_factor
+        else:
+            annual_spread = spread
+            if annuality == "UNKNOWN" and spread:
+                assumptions = ("UNQUALIFIED_SPREAD_TREATED_AS_ANNUAL_SIMPLE",)
+        return from_annual_simple_coupon(
+            annual_simple_rate=benchmark_input.annual_rate_decimal + annual_spread,
+            period_start=period_start,
+            period_end=period_end,
+            coupon_frequency=coupon_frequency,
+            full_period_year_fraction=full_factor,
+            calculation_as_of=benchmark_input.observation_date,
+            status="INDICATIVE",
+            confidence="ASSUMPTION_REQUIRED" if assumptions else "EXACT_CONTRACT",
+            is_final=False,
+            assumptions=assumptions,
+        )
+    return None
 
 
 def _instrument_payload(
@@ -525,6 +748,21 @@ async def create_valuation(
                 source_row=benchmark_row.rate_source_row,
             )
 
+    coupon_rate_metrics = await _resolve_coupon_rate_metrics(
+        db,
+        fields=fields,
+        ast=ast,
+        rate_type=rate_type,
+        issue_date=issue_date,
+        maturity_date=maturity_date,
+        coupon_frequency=int(frequency),
+        settlement_date=payload.settlement_date,
+        explicit_coupon_dates=tuple(payload.explicit_coupon_dates),
+        benchmark_input=benchmark_input,
+    )
+    if coupon_rate_metrics is not None:
+        annual_coupon_rate = coupon_rate_metrics.annual_simple_rate
+
     price = PriceObservation(
         instrument_id=instrument.id,
         instrument_version_id=version.id,
@@ -578,6 +816,7 @@ async def create_valuation(
         source_file_id=version.source_file_id,
         source_row=version.source_row_number,
         parser_version=rule.parser_version if rule else None,
+        coupon_rate_metrics=coupon_rate_metrics,
     )
     try:
         result = ValuationEngine().value(

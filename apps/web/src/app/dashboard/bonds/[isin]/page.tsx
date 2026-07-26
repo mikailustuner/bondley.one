@@ -155,9 +155,6 @@ export default function VerifiedInstrumentDetail({
     } | undefined;
     return ast?.benchmarks?.map((item) => item.name).filter(Boolean) ?? [];
   }, [instrument]);
-  const benchmarkMode = String(instrument?.term_rule_ast?.benchmark_mode || "");
-  const usesIndexChange = benchmarkMode === "INDEX_CHANGE";
-
   const requiredBenchmark =
     instrument?.instrument_family === "PARTICIPATION"
       ? "TLREFK"
@@ -266,6 +263,25 @@ export default function VerifiedInstrumentDetail({
   const fields = instrument.fields;
   const result = valuation?.result;
   const failure = valuation?.failure;
+  const couponDetails = result?.intermediates?.coupon_rates as
+    | {
+        calculation_as_of?: string;
+        assumptions?: string[];
+        period_start?: string;
+        period_end?: string;
+      }
+    | undefined;
+  const publishedCouponRate =
+    instrument.next_coupon_rate_pct != null &&
+    Number(instrument.next_coupon_rate_pct) > 0
+      ? `%${displayNumber(instrument.next_coupon_rate_pct, 4)}`
+      : "Henüz ilan edilmedi";
+  const couponStatusLabel =
+    result?.coupon_rate_status === "PUBLISHED"
+      ? tr.dashboard.bondDetails.calculatedMetrics.publishedCouponStatus
+      : result?.coupon_rate_status === "CALCULATED_FINAL"
+        ? tr.dashboard.bondDetails.calculatedMetrics.calculatedFinalCouponStatus
+        : tr.dashboard.bondDetails.calculatedMetrics.indicativeCouponStatus;
 
   return (
     <main className="space-y-6 lg:space-y-8">
@@ -380,8 +396,8 @@ export default function VerifiedInstrumentDetail({
           </div>
 
           {calculating && (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {[1, 2, 3, 4].map((item) => (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {[1, 2, 3, 4, 5, 6].map((item) => (
                 <div key={item} className="rounded-2xl border border-border bg-muted/35 p-5">
                   <Skeleton className="h-3 w-24" />
                   <Skeleton className="mt-4 h-9 w-32" />
@@ -392,17 +408,48 @@ export default function VerifiedInstrumentDetail({
 
           {!calculating && result && (
             <>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 <div className="widget-blue rounded-2xl border border-primary/20 p-5">
                   <p className="eyebrow text-primary">
-                    {tr.dashboard.bondDetails.calculatedMetrics.ytm}
+                    {tr.dashboard.bondDetails.calculatedMetrics.periodicCouponRate}
                   </p>
                   <p className="metric-value mt-4 text-3xl text-primary">
+                    {formatPercentFromDecimal(result.periodic_coupon_rate, 4)}
+                  </p>
+                  <p className="mt-3 text-[11px] font-medium text-primary">{couponStatusLabel}</p>
+                </div>
+                <div className="widget-green rounded-2xl border border-border p-5">
+                  <p className="eyebrow">
+                    {tr.dashboard.bondDetails.calculatedMetrics.annualSimpleInterest}
+                  </p>
+                  <p className="metric-value mt-4 text-3xl">
+                    {formatPercentFromDecimal(result.annual_simple_coupon_rate, 4)}
+                  </p>
+                  <p className="mt-3 text-[11px] text-muted-foreground">
+                    Dönemsel kuponun yıllık basit eşdeğeri
+                  </p>
+                </div>
+                <div className="widget-purple rounded-2xl border border-border p-5">
+                  <p className="eyebrow">
+                    {tr.dashboard.bondDetails.calculatedMetrics.annualCompoundInterest}
+                  </p>
+                  <p className="metric-value mt-4 text-3xl">
+                    {formatPercentFromDecimal(result.annual_compound_coupon_rate, 4)}
+                  </p>
+                  <p className="mt-3 text-[11px] text-muted-foreground">
+                    Dönemsel kuponun bileşik eşdeğeri
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-border bg-card p-5">
+                  <p className="eyebrow">
+                    {tr.dashboard.bondDetails.calculatedMetrics.ytm}
+                  </p>
+                  <p className="metric-value mt-4 text-3xl">
                     {formatPercentFromDecimal(result.annual_yield, 4)}
                   </p>
                   <p className="mt-3 text-[11px] text-muted-foreground">Temiz fiyat 100 üzerinden</p>
                 </div>
-                <div className="widget-green rounded-2xl border border-border p-5">
+                <div className="rounded-2xl border border-border bg-card p-5">
                   <p className="eyebrow">
                     {tr.dashboard.bondDetails.calculatedMetrics.dirtyPrice}
                   </p>
@@ -411,7 +458,7 @@ export default function VerifiedInstrumentDetail({
                   </p>
                   <p className="mt-3 text-[11px] text-muted-foreground">İşlemiş tutar dahil</p>
                 </div>
-                <div className="widget-purple rounded-2xl border border-border p-5">
+                <div className="rounded-2xl border border-border bg-card p-5">
                   <p className="eyebrow">
                     {tr.dashboard.bondDetails.infoCards.methods.accrued}
                   </p>
@@ -420,28 +467,27 @@ export default function VerifiedInstrumentDetail({
                   </p>
                   <p className="mt-3 text-[11px] text-muted-foreground">Valör tarihindeki birikim</p>
                 </div>
-                <div className="widget-orange rounded-2xl border border-border p-5">
-                  <p className="eyebrow">
-                    {usesIndexChange
-                      ? tr.dashboard.bondDetails.calculatedMetrics.modelAnnualRate
-                      : tr.dashboard.bondDetails.calculatedMetrics.annualCouponRate}
-                  </p>
-                  <p className="metric-value mt-4 text-3xl">
-                    {formatPercentFromDecimal(result.effective_coupon_rate, 4)}
-                  </p>
-                  <p className="mt-3 text-[11px] text-muted-foreground">
-                    {usesIndexChange
-                      ? tr.dashboard.bondDetails.calculatedMetrics.modelAnnualRateDesc
-                      : requiredBenchmark
-                        ? `${requiredBenchmark} dahil`
-                        : "Sözleşme oranı"}
-                  </p>
-                </div>
               </div>
-              {usesIndexChange && (
+              {result.coupon_rate_status === "INDICATIVE" && (
                 <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/[0.07] p-4 text-xs leading-5 text-foreground">
                   <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                  <p>{tr.dashboard.bondDetails.calculatedMetrics.indexChangeNotice}</p>
+                  <div>
+                    <p>{tr.dashboard.bondDetails.calculatedMetrics.unfinishedCouponPeriod}</p>
+                    {couponDetails?.calculation_as_of && (
+                      <p className="mt-1 font-medium">
+                        {tr.dashboard.bondDetails.calculatedMetrics.couponAsOf.replace(
+                          "{date}",
+                          formatDate(couponDetails.calculation_as_of),
+                        )}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+              {result.coupon_rate_confidence === "ASSUMPTION_REQUIRED" && (
+                <div className="mt-3 flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-4 text-xs leading-5 text-foreground">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                  <p>{tr.dashboard.bondDetails.calculatedMetrics.spreadAnnualityAssumption}</p>
                 </div>
               )}
             </>
@@ -605,6 +651,30 @@ export default function VerifiedInstrumentDetail({
             </div>
           </div>
           <dl className="hairline-list mt-4">
+            <DetailRow
+              label={tr.dashboard.bondDetails.infoCards.financial.nextCouponRate}
+              value={publishedCouponRate}
+              numeric={publishedCouponRate.startsWith("%")}
+            />
+            {result && (
+              <>
+                <DetailRow
+                  label={tr.dashboard.bondDetails.calculatedMetrics.periodicCouponRate}
+                  value={formatPercentFromDecimal(result.periodic_coupon_rate, 4)}
+                  numeric
+                />
+                <DetailRow
+                  label={tr.dashboard.bondDetails.calculatedMetrics.annualSimpleInterest}
+                  value={formatPercentFromDecimal(result.annual_simple_coupon_rate, 4)}
+                  numeric
+                />
+                <DetailRow
+                  label={tr.dashboard.bondDetails.calculatedMetrics.annualCompoundInterest}
+                  value={formatPercentFromDecimal(result.annual_compound_coupon_rate, 4)}
+                  numeric
+                />
+              </>
+            )}
             <DetailRow label="Kullanılan referans" value={requiredBenchmark || (requiresCpi ? "TÜFE" : "Sabit oran")} />
             {requiredBenchmark && (
               <DetailRow
@@ -620,6 +690,14 @@ export default function VerifiedInstrumentDetail({
             <DetailRow label="Çözümleme" value={instrument.quality.parse_status} />
             <DetailRow label="Formül" value={String(fields.formula_code || "BAP DCF")} />
           </dl>
+          {instrument.remarks_raw && (
+            <div className="mt-4 rounded-xl bg-muted/55 p-3">
+              <p className="eyebrow">Kaynak Kupon Açıklaması</p>
+              <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
+                {instrument.remarks_raw}
+              </p>
+            </div>
+          )}
           {instrument.instrument_family === "PARTICIPATION" && (
             <p className="mt-3 rounded-xl bg-muted/55 p-3 text-[11px] leading-5 text-muted-foreground">
               TRD ile başlayan katılım kıymetlerinde yalnız TLREFK referansı kullanılır.

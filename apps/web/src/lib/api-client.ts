@@ -366,6 +366,15 @@ export interface VerifiedValuationResponse {
     modified_duration: string;
     convexity: string;
     effective_coupon_rate: string;
+    periodic_coupon_rate: string;
+    annual_simple_coupon_rate: string;
+    annual_compound_coupon_rate: string;
+    coupon_rate_status: "PUBLISHED" | "CALCULATED_FINAL" | "INDICATIVE";
+    coupon_rate_confidence:
+      | "SOURCE_PUBLISHED"
+      | "EXACT_CONTRACT"
+      | "ASSUMPTION_REQUIRED";
+    coupon_rate_is_final: boolean;
     cash_flows: Array<Record<string, string>>;
     intermediates: Record<string, unknown>;
     provenance: Record<string, unknown>;

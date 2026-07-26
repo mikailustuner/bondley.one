@@ -134,3 +134,52 @@ def coupon_schedule(
             "İş günü düzeltmesi iki kuponu aynı tarihe taşıdı.",
         )
     return adjusted
+
+
+def current_coupon_period(
+    *,
+    issue_date: date,
+    settlement_date: date,
+    payment_dates: list[date],
+    frequency: int,
+    next_coupon_date: date | None = None,
+) -> tuple[date, date]:
+    """Return the accrual period containing ``settlement_date``.
+
+    A published next-coupon anchor only generates future cash flows. When that
+    date is the first item in ``payment_dates``, derive the preceding coupon
+    boundary by the same calendar-month convention instead of incorrectly
+    treating the original issue date as the current period start.
+    """
+    try:
+        position = next(
+            index
+            for index, payment_date in enumerate(payment_dates)
+            if payment_date > settlement_date
+        )
+    except StopIteration as exc:
+        raise ValuationError(
+            ValuationFailureCode.INVALID_SETTLEMENT_DATE,
+            "Valör tarihinde gelecekte kupon ödemesi bulunmuyor.",
+        ) from exc
+
+    period_end = payment_dates[position]
+    if position > 0:
+        return payment_dates[position - 1], period_end
+    if next_coupon_date is None or period_end != next_coupon_date:
+        return issue_date, period_end
+    if 12 % frequency:
+        raise ValuationError(
+            ValuationFailureCode.MISSING_SCHEDULE,
+            (
+                f"Yılda {frequency} kupon için cari dönem başlangıcı "
+                "açık kupon tarihleri olmadan belirlenemez."
+            ),
+        )
+
+    previous = _shift_months(
+        period_end,
+        -(12 // frequency),
+        _is_month_end(period_end),
+    )
+    return max(issue_date, previous), period_end
