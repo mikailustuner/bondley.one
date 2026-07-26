@@ -3,7 +3,8 @@
 ## 1. Ön koşullar
 
 - Sunucuda güncel Docker Engine ve `docker compose` eklentisi bulunmalı.
-- Host proxy/TLS, `127.0.0.1:3050` hedefine yönlenmeli.
+- Host Apache/TLS, `127.0.0.1:3050` hedefine yönlenmeli. Kurulum için
+  `docs/runbooks/AUTO-DEPLOY-APACHE.md` izlenmeli.
 - Borsa İstanbul kaynaklarına HTTPS/DNS çıkışı açık olmalı.
 - `.env.example`, `.env` olarak kopyalanmalı; placeholder kalmamalı.
 - `BIST_HOLIDAYS`, ilgili yılın BIST tam gün kapanışlarıyla güncellenmeli.

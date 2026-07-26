@@ -25,7 +25,3 @@
     }
   }
 }
-
-
-
-sudo certbot --apache -d bondley.one -d www.bondley.one -d api.bondley.one -d dashboard.bondley.one -d admin.bondley.one

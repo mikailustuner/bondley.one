@@ -93,6 +93,8 @@ ayrı ayrı doğrulanır.
 - Sağlık kontrolü: `./scripts/health-check.sh`
 - Ayrıntılı ilk açılış/arıza prosedürü:
   [docs/runbooks/PRODUCTION-FIRST-BOOT.md](docs/runbooks/PRODUCTION-FIRST-BOOT.md)
+- Main auto-deploy ve Apache kurulumu:
+  [docs/runbooks/AUTO-DEPLOY-APACHE.md](docs/runbooks/AUTO-DEPLOY-APACHE.md)
 
 Ham kaynaklar `bist_source_data`, PostgreSQL verisi `postgres_data` Docker
 volume’unda saklanır. İç Nginx yalnız HTTP `3050` yayınlar; TLS host proxy/load
