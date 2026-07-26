@@ -1,42 +1,22 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-# ============================================
-# FinCalc Database Backup Script
-# PostgreSQL -> GZIP -> Google Cloud Storage
-# ============================================
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BACKUP_DIR="${PROJECT_DIR}/backups"
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+BACKUP_PATH="${BACKUP_DIR}/bondley-${STAMP}.sql.gz"
 
-# Environment variables should ideally be loaded from a secure location or passed at runtime
-# This script expects to run on the host machine where docker-compose is running
-source "$(dirname "$0")/../.env"
-
-BACKUP_DIR="/tmp/fincalc_backups"
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-BACKUP_FILENAME="fincalc_db_${TIMESTAMP}.sql.gz"
-BACKUP_PATH="${BACKUP_DIR}/${BACKUP_FILENAME}"
-CONTAINER_NAME="fincalc-postgres"
-
-# Create local backup directory if it doesn't exist
+cd "$PROJECT_DIR"
+test -f .env || { echo "HATA: .env bulunamadı."; exit 1; }
 mkdir -p "$BACKUP_DIR"
 
-echo "Starting database backup at $(date)"
+echo "[backup] PostgreSQL yedeği alınıyor: $BACKUP_PATH"
+docker compose -f docker-compose.prod.yml exec -T postgres \
+  sh -c 'exec pg_dump --clean --if-exists -U "$POSTGRES_USER" "$POSTGRES_DB"' \
+  | gzip -9 > "$BACKUP_PATH"
+gzip -t "$BACKUP_PATH"
+echo "[backup] Tamamlandı: $(du -h "$BACKUP_PATH" | cut -f1)"
 
-# 1. Dump the database and compress it
-echo "Dumping database from container $CONTAINER_NAME..."
-docker exec "$CONTAINER_NAME" pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB" | gzip > "$BACKUP_PATH"
-
-if [ $? -ne 0 ]; then
-    echo "Error: Database dump failed."
-    exit 1
-fi
-
-echo "Database dumped successfully to $BACKUP_PATH"
-
-# (Optional) You can add your own custom sync logic here (e.g., rsync, scp, AWS CLI)
-# if you decide to push backups to another server in the future.
-
-# 3. Cleanup old local backups (keep last 7 days)
-echo "Cleaning up local backups older than 7 days..."
-find "$BACKUP_DIR" -type f -name "*.sql.gz" -mtime +7 -delete
-
-echo "Backup process completed successfully at $(date)."
+# Retention can be overridden by BACKUP_RETENTION_DAYS.
+find "$BACKUP_DIR" -type f -name 'bondley-*.sql.gz' \
+  -mtime "+${BACKUP_RETENTION_DAYS:-14}" -delete

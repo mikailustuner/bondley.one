@@ -21,26 +21,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.base import Base
 
 
-class LegacyBondInstrumentMap(Base):
-    __tablename__ = "legacy_bond_instrument_map"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    bond_id: Mapped[int] = mapped_column(
-        ForeignKey("bonds.id", ondelete="CASCADE"),
-        nullable=False,
-        unique=True,
-    )
-    instrument_id: Mapped[int] = mapped_column(
-        ForeignKey("instruments.id", ondelete="CASCADE"),
-        nullable=False,
-        unique=True,
-    )
-    mapped_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-    )
-
-
 class UserFavoriteInstrument(Base):
     __tablename__ = "user_favorite_instruments"
     __table_args__ = (
@@ -199,28 +179,3 @@ class ValuationResultRecord(Base):
     )
 
     request = relationship("ValuationRequestRecord", back_populates="result")
-
-
-class ShadowValuationComparison(Base):
-    __tablename__ = "shadow_valuation_comparisons"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    instrument_version_id: Mapped[int] = mapped_column(
-        ForeignKey("instrument_versions.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    valuation_request_id: Mapped[int | None] = mapped_column(
-        ForeignKey("valuation_requests.id", ondelete="SET NULL"),
-        index=True,
-    )
-    comparison_key: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
-    legacy_payload: Mapped[dict[str, Any] | None] = mapped_column(JSON)
-    verified_payload: Mapped[dict[str, Any] | None] = mapped_column(JSON)
-    differences: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
-    classification: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
-    explanation: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-    )

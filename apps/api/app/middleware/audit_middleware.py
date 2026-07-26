@@ -34,7 +34,14 @@ class AuditMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         # Skip logging for health check and docs endpoints
-        if request.url.path in ("/health", "/api/docs", "/api/openapi.json", "/api/redoc"):
+        if request.url.path in (
+            "/health",
+            "/health/live",
+            "/health/ready",
+            "/api/docs",
+            "/api/openapi.json",
+            "/api/redoc",
+        ):
             return await call_next(request)
 
         # Get user ID from Authorization header if available

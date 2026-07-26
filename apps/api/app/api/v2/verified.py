@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import delete, func, inspect, select
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_admin_user, get_current_user
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.core.time import turkey_today, utc_now
 from app.models.bist_ingestion import (
     BenchmarkObservation,
+    BootstrapRun,
     ImportDiagnostic,
     ImportRun,
     Instrument,
@@ -20,13 +22,10 @@ from app.models.bist_ingestion import (
     InstrumentVersion,
     SourceFile,
 )
-from app.models.calculation import Calculation
 from app.models.user import User
 from app.models.valuation import (
     InstrumentUserNote,
-    LegacyBondInstrumentMap,
     PriceObservation,
-    ShadowValuationComparison,
     UserFavoriteInstrument,
     ValuationRequestRecord,
     ValuationResultRecord,
@@ -39,6 +38,10 @@ from app.schemas.valuation_v2 import (
     ValuationResponse,
 )
 from app.services.bist_ingestion.import_service import VerifiedBistImportService
+from app.services.bist_ingestion.bootstrap import (
+    BootstrapAlreadyRunning,
+    VerifiedBistBootstrapService,
+)
 from app.services.valuation.engine import (
     BenchmarkInput,
     InstrumentTerms,
@@ -48,7 +51,7 @@ from app.services.valuation.engine import (
     ValuationEngine,
 )
 from app.services.valuation.errors import ValuationError
-from app.services.valuation.shadow import compare_legacy_and_verified
+from app.services.metrics_service import MetricsService
 
 
 router = APIRouter()
@@ -115,7 +118,8 @@ def _instrument_payload(
     fields = version.canonical_fields_json
     ast = rule.ast_json if rule else {}
     maturity = version.maturity_date
-    days_to_maturity = (maturity - date.today()).days if maturity else None
+    today = turkey_today()
+    days_to_maturity = (maturity - today).days if maturity else None
     return {
         "id": instrument.id,
         "version_id": version.id,
@@ -147,7 +151,7 @@ def _instrument_payload(
         "first_issue_yield": fields.get("first_issue_yield_annual_simple_pct"),
         "spread": None,
         "contractual_spread_decimal": str(_spread(ast)),
-        "is_active": bool(maturity is None or maturity >= date.today()),
+        "is_active": bool(maturity is None or maturity >= today),
         "calculated_metrics": None,
         "term_rule_ast": ast,
         "quality": {
@@ -195,6 +199,13 @@ async def list_instruments(
     search: str | None = None,
     parse_status: str | None = None,
     valuation_eligible: bool | None = None,
+    security_type: str | None = None,
+    yield_type: str | None = None,
+    currency: str | None = None,
+    active_only: bool = True,
+    maturity_within_days: int | None = Query(None, ge=1, le=36500),
+    order_by: str = Query("isin", pattern="^(isin|issuer|maturity)$"),
+    order_direction: str = Query("asc", pattern="^(asc|desc)$"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=3000),
     db: AsyncSession = Depends(get_db),
@@ -219,7 +230,37 @@ async def list_instruments(
         query = query.where(InstrumentVersion.parse_status == parse_status.upper())
     if valuation_eligible is not None:
         query = query.where(InstrumentVersion.valuation_eligible.is_(valuation_eligible))
-    rows = (await db.execute(query.order_by(Instrument.isin, InstrumentVersion.id.desc()))).all()
+    if security_type:
+        query = query.where(InstrumentVersion.security_type_raw == security_type)
+    if yield_type:
+        query = query.where(InstrumentVersion.yield_type_raw == yield_type)
+    if currency:
+        query = query.where(
+            InstrumentVersion.canonical_fields_json["currency_or_unit"].as_string()
+            == currency
+        )
+    today = turkey_today()
+    if active_only:
+        query = query.where(
+            (InstrumentVersion.maturity_date.is_(None))
+            | (InstrumentVersion.maturity_date >= today)
+        )
+    if maturity_within_days is not None:
+        query = query.where(
+            InstrumentVersion.maturity_date.between(
+                today,
+                today + timedelta(days=maturity_within_days),
+            )
+        )
+    order_column = {
+        "isin": Instrument.isin,
+        "issuer": InstrumentVersion.issuer_name,
+        "maturity": InstrumentVersion.maturity_date,
+    }[order_by]
+    direction = order_column.desc() if order_direction == "desc" else order_column.asc()
+    rows = (
+        await db.execute(query.order_by(direction, InstrumentVersion.id.desc()))
+    ).all()
     unique: dict[int, tuple[Instrument, InstrumentVersion, InstrumentTermRule | None]] = {}
     for row in rows:
         unique.setdefault(row[0].id, row)
@@ -236,6 +277,7 @@ async def list_instruments(
 @router.get("/instruments/{isin}")
 async def get_instrument(
     isin: str,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -245,6 +287,26 @@ async def get_instrument(
         raise HTTPException(status_code=404, detail="Instrument not found")
     instrument, version, rule = row
     payload = _instrument_payload(instrument, version, rule)
+    source = await db.get(SourceFile, version.source_file_id)
+    if source is not None:
+        payload["source"].update(
+            {
+                "filename": source.filename,
+                "effective_date": (
+                    source.effective_date.isoformat()
+                    if source.effective_date
+                    else None
+                ),
+                "requested_business_date": (
+                    source.requested_business_date.isoformat()
+                    if source.requested_business_date
+                    else None
+                ),
+                "date_origin": source.date_origin,
+                "freshness_status": source.freshness_status,
+                "sha256": source.sha256,
+            }
+        )
     favorite = await db.scalar(
         select(UserFavoriteInstrument.id).where(
             UserFavoriteInstrument.user_id == user.id,
@@ -259,6 +321,13 @@ async def get_instrument(
     )
     payload["is_favorite"] = favorite is not None
     payload["note_text"] = note
+    await MetricsService.track_instrument_view(
+        db,
+        instrument_id=instrument.id,
+        user_id=user.id,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
     return payload
 
 
@@ -332,7 +401,7 @@ async def instrument_stats(
         return result
 
     maturity_days = [
-        (item.maturity_date - date.today()).days
+        (item.maturity_date - turkey_today()).days
         for item in versions
         if item.maturity_date is not None
     ]
@@ -462,7 +531,7 @@ async def create_valuation(
         user_id=user.id,
         quote_type=payload.quote_type,
         quote_value=payload.quote_value,
-        quote_date=payload.quote_date or date.today(),
+        quote_date=payload.quote_date or turkey_today(),
         settlement_date=payload.settlement_date,
         currency=fields.get("currency_or_unit") or "TRY",
         source_type="USER_INPUT",
@@ -470,7 +539,7 @@ async def create_valuation(
         raw_payload={
             "quote_type": payload.quote_type,
             "quote_value": str(payload.quote_value),
-            "quote_date": (payload.quote_date or date.today()).isoformat(),
+            "quote_date": (payload.quote_date or turkey_today()).isoformat(),
             "settlement_date": payload.settlement_date.isoformat(),
         },
     )
@@ -519,7 +588,7 @@ async def create_valuation(
         )
         result_payload = result.to_dict()
         request_record.status = "COMPLETED"
-        request_record.completed_at = datetime.now(timezone.utc)
+        request_record.completed_at = utc_now()
         db.add(
             ValuationResultRecord(
                 request_id=request_record.id,
@@ -529,64 +598,6 @@ async def create_valuation(
                 provenance=result.provenance,
             )
         )
-        if settings.VALUATION_SHADOW_ENABLED:
-            connection = await db.connection()
-            has_legacy_calculations = await connection.run_sync(
-                lambda sync_connection: inspect(sync_connection).has_table("calculations")
-            )
-            legacy = (
-                await db.scalar(
-                    select(Calculation)
-                    .join(
-                        LegacyBondInstrumentMap,
-                        LegacyBondInstrumentMap.bond_id == Calculation.bond_id,
-                    )
-                    .where(
-                        LegacyBondInstrumentMap.instrument_id == instrument.id,
-                        Calculation.calc_date == payload.settlement_date,
-                    )
-                    .order_by(Calculation.id.desc())
-                    .limit(1)
-                )
-                if has_legacy_calculations
-                else None
-            )
-            legacy_payload = (
-                {
-                    "dirty_price": str(legacy.dirty_price),
-                    "accrued_interest": str(legacy.accrued_interest),
-                    "yield_to_maturity": str(legacy.yield_to_maturity),
-                    "modified_duration": (
-                        str(legacy.modified_duration)
-                        if legacy.modified_duration is not None
-                        else None
-                    ),
-                    "macaulay_duration": (
-                        str(legacy.macaulay_duration)
-                        if legacy.macaulay_duration is not None
-                        else None
-                    ),
-                    "is_theoretical": legacy.is_theoretical,
-                }
-                if legacy is not None
-                else None
-            )
-            differences, classification, explanation = compare_legacy_and_verified(
-                legacy_payload,
-                result_payload,
-            )
-            db.add(
-                ShadowValuationComparison(
-                    instrument_version_id=version.id,
-                    valuation_request_id=request_record.id,
-                    comparison_key=f"{instrument.isin}:{payload.settlement_date.isoformat()}",
-                    legacy_payload=legacy_payload,
-                    verified_payload=result_payload,
-                    differences=differences,
-                    classification=classification,
-                    explanation=explanation,
-                )
-            )
         await db.commit()
         return ValuationResponse(
             request_id=request_record.id,
@@ -595,7 +606,7 @@ async def create_valuation(
         )
     except ValuationError as exc:
         request_record.status = "FAILED"
-        request_record.completed_at = datetime.now(timezone.utc)
+        request_record.completed_at = utc_now()
         failure = exc.to_dict()
         db.add(
             ValuationResultRecord(
@@ -666,16 +677,154 @@ async def list_favorites(
     _require_read_enabled()
     rows = (
         await db.execute(
-            select(Instrument.isin)
+            select(Instrument, InstrumentVersion, InstrumentTermRule)
             .join(
                 UserFavoriteInstrument,
                 UserFavoriteInstrument.instrument_id == Instrument.id,
             )
-            .where(UserFavoriteInstrument.user_id == user.id)
-            .order_by(Instrument.isin)
+            .join(
+                InstrumentVersion,
+                InstrumentVersion.instrument_id == Instrument.id,
+            )
+            .outerjoin(
+                InstrumentTermRule,
+                InstrumentTermRule.instrument_version_id == InstrumentVersion.id,
+            )
+            .where(
+                UserFavoriteInstrument.user_id == user.id,
+                InstrumentVersion.is_published.is_(True),
+            )
+            .order_by(Instrument.isin, InstrumentVersion.id.desc())
+        )
+    ).all()
+    unique: dict[int, tuple[Instrument, InstrumentVersion, InstrumentTermRule | None]] = {}
+    for row in rows:
+        unique.setdefault(row[0].id, row)
+    details = [
+        _instrument_payload(instrument, version, rule)
+        for instrument, version, rule in unique.values()
+    ]
+    return {
+        "items": [item["isin"] for item in details],
+        "details": details,
+        "total": len(details),
+    }
+
+
+@router.get("/dashboard-summary")
+async def dashboard_summary(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    _require_read_enabled()
+    today = turkey_today()
+    version_rows = (
+        await db.execute(
+            select(InstrumentVersion)
+            .where(InstrumentVersion.is_published.is_(True))
+            .order_by(InstrumentVersion.instrument_id, InstrumentVersion.id.desc())
         )
     ).scalars()
-    return {"items": list(rows)}
+    latest_versions: dict[int, InstrumentVersion] = {}
+    for version in version_rows:
+        latest_versions.setdefault(version.instrument_id, version)
+    versions = list(latest_versions.values())
+    isin_by_id = dict(
+        (
+            await db.execute(
+                select(Instrument.id, Instrument.isin).where(
+                    Instrument.id.in_([version.instrument_id for version in versions])
+                )
+            )
+        ).all()
+    ) if versions else {}
+    favorite_count = (
+        await db.scalar(
+            select(func.count(UserFavoriteInstrument.id)).where(
+                UserFavoriteInstrument.user_id == user.id
+            )
+        )
+        or 0
+    )
+    benchmarks: dict[str, Any] = {}
+    for name in ("TLREF", "TLREFK"):
+        observation = await db.scalar(
+            select(BenchmarkObservation)
+            .where(BenchmarkObservation.benchmark == name)
+            .order_by(BenchmarkObservation.observation_date.desc())
+            .limit(1)
+        )
+        benchmarks[name] = (
+            {
+                "observation_date": observation.observation_date.isoformat(),
+                "published_annual_rate_pct": (
+                    str(observation.published_annual_rate_pct)
+                    if observation.published_annual_rate_pct is not None
+                    else None
+                ),
+                "index_value": (
+                    str(observation.index_value)
+                    if observation.index_value is not None
+                    else None
+                ),
+            }
+            if observation
+            else None
+        )
+    latest_source = await db.scalar(
+        select(SourceFile)
+        .where(SourceFile.source_kind == "TBLISTE", SourceFile.status == "PUBLISHED")
+        .order_by(SourceFile.effective_date.desc(), SourceFile.id.desc())
+        .limit(1)
+    )
+    due = sorted(
+        (
+            version
+            for version in versions
+            if version.maturity_date is not None
+            and today <= version.maturity_date <= today + timedelta(days=90)
+        ),
+        key=lambda version: version.maturity_date,
+    )
+    return {
+        "as_of_date": today.isoformat(),
+        "total_instruments": len(versions),
+        "active_instruments": sum(
+            version.maturity_date is None or version.maturity_date >= today
+            for version in versions
+        ),
+        "valuation_eligible": sum(version.valuation_eligible for version in versions),
+        "favorite_count": favorite_count,
+        "benchmarks": benchmarks,
+        "source": (
+            {
+                "filename": latest_source.filename,
+                "effective_date": (
+                    latest_source.effective_date.isoformat()
+                    if latest_source.effective_date
+                    else None
+                ),
+                "requested_business_date": (
+                    latest_source.requested_business_date.isoformat()
+                    if latest_source.requested_business_date
+                    else None
+                ),
+                "freshness_status": latest_source.freshness_status,
+                "date_origin": latest_source.date_origin,
+            }
+            if latest_source
+            else None
+        ),
+        "maturing_soon": [
+            {
+                "isin": isin_by_id.get(version.instrument_id),
+                "issuer": version.issuer_name,
+                "maturity_date": version.maturity_date.isoformat(),
+                "days_to_maturity": (version.maturity_date - today).days,
+            }
+            for version in due[:10]
+        ],
+    }
 
 
 @router.post("/favorites/{isin}", status_code=201)
@@ -815,6 +964,15 @@ async def get_quality(
             ImportRun.finished_at.desc()
         )
     )
+    latest_source = await db.scalar(
+        select(SourceFile)
+        .where(SourceFile.status == "PUBLISHED")
+        .order_by(SourceFile.effective_date.desc(), SourceFile.id.desc())
+        .limit(1)
+    )
+    latest_bootstrap = await db.scalar(
+        select(BootstrapRun).order_by(BootstrapRun.id.desc()).limit(1)
+    )
     return {
         "published_versions": published or 0,
         "valuation_eligible_versions": eligible or 0,
@@ -829,9 +987,121 @@ async def get_quality(
             if latest
             else None
         ),
-        "kap_dependency": False,
+        "latest_source": (
+            {
+                "kind": latest_source.source_kind,
+                "filename": latest_source.filename,
+                "effective_date": (
+                    latest_source.effective_date.isoformat()
+                    if latest_source.effective_date
+                    else None
+                ),
+                "freshness_status": latest_source.freshness_status,
+            }
+            if latest_source
+            else None
+        ),
+        "bootstrap": (
+            {
+                "id": latest_bootstrap.id,
+                "status": latest_bootstrap.status,
+                "current_step": latest_bootstrap.current_step,
+                "requested_business_date": latest_bootstrap.requested_business_date.isoformat(),
+                "failure_code": latest_bootstrap.failure_code,
+                "failure_message": latest_bootstrap.failure_message,
+                "started_at": latest_bootstrap.started_at,
+                "completed_at": latest_bootstrap.completed_at,
+            }
+            if latest_bootstrap
+            else None
+        ),
         "price_policy": "USER_INPUT_ONLY",
     }
+
+
+@router.get("/operations/imports")
+async def import_operations(
+    limit: int = Query(50, ge=1, le=250),
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_admin_user),
+):
+    runs = (
+        await db.execute(
+            select(ImportRun, SourceFile)
+            .join(SourceFile, SourceFile.id == ImportRun.source_file_id)
+            .order_by(ImportRun.id.desc())
+            .limit(limit)
+        )
+    ).all()
+    bootstraps = (
+        await db.execute(
+            select(BootstrapRun).order_by(BootstrapRun.id.desc()).limit(10)
+        )
+    ).scalars()
+    return {
+        "imports": [
+            {
+                "id": run.id,
+                "status": run.status,
+                "parser": run.parser_name,
+                "parser_version": run.parser_version,
+                "row_count": run.row_count,
+                "instrument_count": run.instrument_count,
+                "warning_count": run.warning_count,
+                "error_count": run.error_count,
+                "failure_message": run.failure_message,
+                "started_at": run.started_at,
+                "finished_at": run.finished_at,
+                "source": {
+                    "id": source.id,
+                    "kind": source.source_kind,
+                    "filename": source.filename,
+                    "effective_date": (
+                        source.effective_date.isoformat()
+                        if source.effective_date
+                        else None
+                    ),
+                    "requested_business_date": (
+                        source.requested_business_date.isoformat()
+                        if source.requested_business_date
+                        else None
+                    ),
+                    "freshness_status": source.freshness_status,
+                    "sha256": source.sha256,
+                },
+            }
+            for run, source in runs
+        ],
+        "bootstraps": [
+            {
+                "id": run.id,
+                "status": run.status,
+                "current_step": run.current_step,
+                "attempt": run.attempt,
+                "requested_business_date": run.requested_business_date.isoformat(),
+                "source_file_ids": run.source_file_ids,
+                "published_effective_dates": run.published_effective_dates,
+                "failure_code": run.failure_code,
+                "failure_message": run.failure_message,
+                "started_at": run.started_at,
+                "completed_at": run.completed_at,
+            }
+            for run in bootstraps
+        ],
+    }
+
+
+@router.post("/operations/bootstrap")
+async def run_bootstrap(
+    force: bool = Query(False),
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_admin_user),
+):
+    try:
+        result = await VerifiedBistBootstrapService(db, settings).run(force=force)
+        return result.to_dict()
+    except BootstrapAlreadyRunning as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("/imports/review")
@@ -873,7 +1143,12 @@ async def import_tbliste(
     _admin: User = Depends(get_admin_user),
 ):
     service = VerifiedBistImportService(db, archive_root=settings.BIST_RAW_ARCHIVE_DIR)
-    return await service.import_tbliste(payload.source_url or settings.BIST_BOND_LIST_URL)
+    calendar = VerifiedBistBootstrapService(db, settings).calendar
+    requested_date = calendar.resolve_expected_source_date().requested_business_date
+    return await service.import_tbliste(
+        payload.source_url or settings.BIST_BOND_LIST_URL,
+        requested_business_date=requested_date,
+    )
 
 
 @router.post("/imports/benchmarks/historical")
@@ -895,24 +1170,3 @@ async def import_historical_benchmarks(
         historical=True,
     )
     return {"TLREF": tlref, "TLREFK": tlrefk}
-
-
-@router.get("/shadow-report")
-async def shadow_report(
-    db: AsyncSession = Depends(get_db),
-    _admin: User = Depends(get_admin_user),
-):
-    _require_read_enabled()
-    grouped = (
-        await db.execute(
-            select(
-                ShadowValuationComparison.classification,
-                func.count(ShadowValuationComparison.id),
-            ).group_by(ShadowValuationComparison.classification)
-        )
-    ).all()
-    return {
-        "enabled": settings.VALUATION_SHADOW_ENABLED,
-        "counts": {classification: count for classification, count in grouped},
-        "rollback_switch": "VALUATION_V2_READ_ENABLED / VALUATION_V2_WRITE_ENABLED",
-    }

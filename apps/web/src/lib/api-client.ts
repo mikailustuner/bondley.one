@@ -141,7 +141,6 @@ export interface TLREFRecord {
   id: number;
   rate_date: string;
   index_value: number;
-  daily_rate: number | null;
   published_annual_rate_pct: number | null;
   source: string;
   created_at: string;
@@ -152,7 +151,6 @@ export interface TLREFStats {
   latest_date: string;
   latest_index_date?: string;
   latest_index: number;
-  latest_daily_rate: number | null;
   latest_annual_rate?: number | null;
   latest_source?: string;
   first_date: string;
@@ -164,8 +162,7 @@ export interface TLREFStats {
 export interface PublicSummary {
     tlref_index: number | null;
     tlref_date: string | null;
-    tlref_daily_rate: number | null;
-    tlref_annualized_rate: number | null;
+    tlref_published_annual_rate_pct: number | null;
     tlref_index_change_pct: number | null;
     total_tlref_records: number;
     total_bonds: number;
@@ -271,14 +268,6 @@ export interface BondDetail {
   updated_at: string;
   calculated_metrics?: BondCalculatedMetrics | null;
   is_favorite?: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  kap_data?: Record<string, any> | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  kap_disclosures?: Record<string, any>[] | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data_conflicts?: Record<string, any>[] | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data_sources?: Record<string, any>[] | null;
 }
 
 export interface BondListResponse {
@@ -349,6 +338,12 @@ export interface VerifiedInstrument {
     source_row: number;
     parser_version: string | null;
     ast_schema_version: string | null;
+    filename?: string;
+    effective_date?: string | null;
+    requested_business_date?: string | null;
+    date_origin?: string;
+    freshness_status?: "CURRENT" | "STALE" | "HISTORICAL";
+    sha256?: string;
   };
   fields: Record<string, unknown>;
   is_favorite?: boolean;
@@ -628,8 +623,6 @@ export const api = {
         total_calculations: number;
       }>(`/admin/metrics/overview?${query}`, { token });
     },
-    triggerSentryError: (token: string) =>
-      apiFetch<{ error?: string }>("/admin/sentry-debug", { token }),
   },
 
   verified: {
@@ -641,6 +634,13 @@ export const api = {
         search?: string;
         parse_status?: string;
         valuation_eligible?: boolean;
+        security_type?: string;
+        yield_type?: string;
+        currency?: string;
+        active_only?: boolean;
+        maturity_within_days?: number;
+        order_by?: "isin" | "issuer" | "maturity";
+        order_direction?: "asc" | "desc";
       },
     ) => {
       const query = new URLSearchParams();
@@ -651,6 +651,13 @@ export const api = {
       if (params?.valuation_eligible !== undefined) {
         query.set("valuation_eligible", String(params.valuation_eligible));
       }
+      if (params?.security_type) query.set("security_type", params.security_type);
+      if (params?.yield_type) query.set("yield_type", params.yield_type);
+      if (params?.currency) query.set("currency", params.currency);
+      if (params?.active_only !== undefined) query.set("active_only", String(params.active_only));
+      if (params?.maturity_within_days) query.set("maturity_within_days", String(params.maturity_within_days));
+      if (params?.order_by) query.set("order_by", params.order_by);
+      if (params?.order_direction) query.set("order_direction", params.order_direction);
       return apiFetch<{ items: VerifiedInstrument[]; total: number; source: string }>(
         `${V2_MARKER}/instruments?${query}`,
         { token },
@@ -695,11 +702,107 @@ export const api = {
       apiFetch<{
         published_versions: number;
         valuation_eligible_versions: number;
-        kap_dependency: false;
         price_policy: "USER_INPUT_ONLY";
+        latest_source: {
+          kind: string;
+          filename: string;
+          effective_date: string | null;
+          freshness_status: string;
+        } | null;
+        bootstrap: {
+          id: number;
+          status: string;
+          current_step: string | null;
+          requested_business_date: string;
+          failure_code: string | null;
+          failure_message: string | null;
+          started_at: string;
+          completed_at: string | null;
+        } | null;
       }>(`${V2_MARKER}/quality`, { token }),
+    importOperations: (token: string) =>
+      apiFetch<{
+        imports: Array<{
+          id: number;
+          status: string;
+          parser: string;
+          parser_version: string;
+          row_count: number;
+          instrument_count: number;
+          warning_count: number;
+          error_count: number;
+          failure_message: string | null;
+          started_at: string;
+          finished_at: string | null;
+          source: {
+            id: number;
+            kind: string;
+            filename: string;
+            effective_date: string | null;
+            requested_business_date: string | null;
+            freshness_status: string;
+            sha256: string;
+          };
+        }>;
+        bootstraps: Array<{
+          id: number;
+          status: string;
+          current_step: string | null;
+          attempt: number;
+          requested_business_date: string;
+          source_file_ids: number[] | null;
+          published_effective_dates: Record<string, string> | null;
+          failure_code: string | null;
+          failure_message: string | null;
+          started_at: string;
+          completed_at: string | null;
+        }>;
+      }>(`${V2_MARKER}/operations/imports`, { token }),
+    runBootstrap: (token: string, force = false) =>
+      apiFetch<{
+        run_id: number | null;
+        status: string;
+        requested_business_date: string;
+        skipped: boolean;
+        steps: Record<string, unknown>;
+      }>(`${V2_MARKER}/operations/bootstrap?force=${force}`, {
+        method: "POST",
+        token,
+      }),
     favorites: (token: string) =>
-      apiFetch<{ items: string[] }>(`${V2_MARKER}/favorites`, { token }),
+      apiFetch<{ items: string[]; details: VerifiedInstrument[]; total: number }>(
+        `${V2_MARKER}/favorites`,
+        { token },
+      ),
+    dashboardSummary: (token: string) =>
+      apiFetch<{
+        as_of_date: string;
+        total_instruments: number;
+        active_instruments: number;
+        valuation_eligible: number;
+        favorite_count: number;
+        benchmarks: Record<
+          "TLREF" | "TLREFK",
+          {
+            observation_date: string;
+            published_annual_rate_pct: string | null;
+            index_value: string | null;
+          } | null
+        >;
+        source: {
+          filename: string;
+          effective_date: string | null;
+          requested_business_date: string | null;
+          freshness_status: "CURRENT" | "STALE";
+          date_origin: string;
+        } | null;
+        maturing_soon: Array<{
+          isin: string;
+          issuer: string | null;
+          maturity_date: string;
+          days_to_maturity: number;
+        }>;
+      }>(`${V2_MARKER}/dashboard-summary`, { token }),
     addFavorite: (token: string, isin: string) =>
       apiFetch<{ status: string; isin: string }>(
         `${V2_MARKER}/favorites/${encodeURIComponent(isin)}`,
@@ -805,12 +908,11 @@ export const api = {
       ),
     stats: (token: string) => apiFetch<BondStats>(`${V2_MARKER}/instrument-stats`, { token }),
     favoritesList: async (token: string) => {
-      const [favorites, instruments] = await Promise.all([
-        apiFetch<{ items: string[] }>(`${V2_MARKER}/favorites`, { token }),
-        apiFetch<BondListResponse>(`${V2_MARKER}/instruments?limit=3000`, { token }),
-      ]);
-      const selected = new Set(favorites.items);
-      return { items: instruments.items.filter((item) => selected.has(item.isin_code)) };
+      const favorites = await apiFetch<{
+        items: string[];
+        details: VerifiedInstrument[];
+      }>(`${V2_MARKER}/favorites`, { token });
+      return { items: favorites.details as unknown as BondListItem[] };
     },
     favoritesArchived: async (token: string) => {
       const favorites = await api.bonds.favoritesList(token);
@@ -860,12 +962,10 @@ export const api = {
       }>(`${V2_MARKER}/benchmarks?benchmark=TLREF&limit=1`, { token });
       const item = response.items[0];
       if (!item) return null;
-      const annual = item.annual_rate_decimal == null ? null : Number(item.annual_rate_decimal);
       return {
         id: 0,
         rate_date: item.observation_date,
         index_value: Number(item.index_value ?? 0),
-        daily_rate: annual == null ? null : annual / 365,
         published_annual_rate_pct:
           item.published_annual_rate_pct == null ? null : Number(item.published_annual_rate_pct),
         source: "BIST_VERIFIED_V2",
@@ -885,12 +985,10 @@ export const api = {
         ? response.items.filter((item) => item.observation_date >= params.start_date!)
         : response.items;
       const items: TLREFRecord[] = filtered.map((item, index) => {
-        const annual = item.annual_rate_decimal == null ? null : Number(item.annual_rate_decimal);
         return {
           id: index,
           rate_date: item.observation_date,
           index_value: Number(item.index_value ?? 0),
-          daily_rate: annual == null ? null : annual / 365,
           published_annual_rate_pct:
             item.published_annual_rate_pct == null ? null : Number(item.published_annual_rate_pct),
           source: "BIST_VERIFIED_V2",
@@ -916,7 +1014,6 @@ export const api = {
         latest_date: latest.rate_date,
         latest_index_date: latest.rate_date,
         latest_index: latest.index_value,
-        latest_daily_rate: latest.daily_rate,
         latest_annual_rate: latest.published_annual_rate_pct,
         latest_source: latest.source,
         first_date: first.rate_date,

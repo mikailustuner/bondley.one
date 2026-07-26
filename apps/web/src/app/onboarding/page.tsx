@@ -273,7 +273,7 @@ export default function OnboardingPage() {
                     <div className="flex items-center justify-center gap-4 text-xs font-mono text-white/40 tracking-widest">
                         <span>BIST</span>
                         <span className="w-1 h-1 rounded-full bg-white/20" />
-                        <span>KAP</span>
+                        <span>TLREFK</span>
                         <span className="w-1 h-1 rounded-full bg-white/20" />
                         <span>TLREF</span>
                     </div>

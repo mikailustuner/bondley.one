@@ -255,14 +255,14 @@ export default function LandingPage() {
                   : [{ label: tr.landing.ticker.labels.comparedToYesterday, value: "—" }]),
                 {
                   label: tr.landing.ticker.labels.dailyRate,
-                  value: formatPercent(summary?.tlref_daily_rate, 4),
+                  value: formatPercent(summary?.tlref_published_annual_rate_pct),
                   positive: true,
                 },
                 {
                   label: tr.landing.ticker.labels.annualizedRate,
                   value:
-                    summary?.tlref_annualized_rate != null
-                      ? formatPercent(summary.tlref_annualized_rate)
+                    summary?.tlref_published_annual_rate_pct != null
+                      ? "BIST yayımlanan yıllık oran"
                       : "—",
                 },
                 {

@@ -1,49 +1,40 @@
 # FastAPI
-fastapi[standard]
-uvicorn[standard]
-python-multipart
+fastapi==0.140.0
+uvicorn[standard]==0.51.0
+python-multipart==0.0.32
+email-validator==2.3.0
 
 # Database
-sqlalchemy[asyncio]
-asyncpg
-psycopg2-binary  # For sync connections in Celery tasks
-alembic
+sqlalchemy[asyncio]==2.0.51
+asyncpg==0.31.0
+psycopg2-binary==2.9.12
+alembic==1.18.5
 
 # Auth
-python-jose[cryptography]
-bcrypt
-slowapi
-pyotp
-cryptography
+python-jose[cryptography]==3.5.0
+bcrypt==5.0.0
+slowapi==0.1.10
+pyotp==2.10.0
+cryptography==49.0.0
 
-# Data & Finance
-numpy
-numpy-financial
-pandas
-openpyxl
-xlrd
-lxml
+# Verified BIST XLS parsing and calendar math
+xlrd==2.0.2
+python-dateutil==2.9.0.post0
 
 # Task Queue
-celery[redis]
-redis
+celery[redis]==5.6.3
+redis==6.4.0
 
 # HTTP Client (for BIST data fetching)
-httpx
-aiofiles
+httpx==0.28.1
 
 # Config
-pydantic-settings
-python-dotenv
+pydantic-settings==2.14.2
+python-dotenv==1.2.2
 
 # Utilities
-python-dateutil
-selenium
-sentry-sdk[fastapi]
-tzdata
+sentry-sdk[fastapi]==2.66.1
+tzdata==2026.3
 
 # Email Sending
-aiosmtplib
-
-# Testing
-pytest
+aiosmtplib==5.1.2

@@ -14,41 +14,8 @@ from alembic import context
 from app.core.config import get_settings
 from app.core.base import Base
 
-# Import all models so Base.metadata has every table
-from app.models import (
-    Bond,
-    MarketData,
-    Calculation,
-    TLREFRate,
-    User,
-    RefreshToken,
-    AuditLog,
-    BondView,
-    UserMetric,
-    UserAlert,
-    UserFavoriteBond,
-    UserMfaBackupCode,
-    SourceFile,
-    ImportRun,
-    RawWorkbookRow,
-    SourceNote,
-    ImportDiagnostic,
-    BistGroupCodeVersion,
-    BistInstrumentClassificationVersion,
-    Instrument,
-    InstrumentVersion,
-    InstrumentTermRule,
-    InstrumentConflict,
-    BenchmarkObservation,
-    BenchmarkValidationResult,
-    LegacyBondInstrumentMap,
-    UserFavoriteInstrument,
-    InstrumentUserNote,
-    PriceObservation,
-    ValuationRequestRecord,
-    ValuationResultRecord,
-    ShadowValuationComparison,
-)
+# Import package so every retained model is registered with Base.metadata.
+import app.models  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None and config.get_section("formatters"):

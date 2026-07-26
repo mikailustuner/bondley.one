@@ -18,6 +18,7 @@ from app.models.system_setting import SystemSetting
 from app.api.deps import get_admin_user
 from app.schemas.user import UserUpdate, UserResponse
 from app.services.bist_ingestion.import_service import VerifiedBistImportService
+from app.services.bist_ingestion.bootstrap import VerifiedBistBootstrapService
 from app.services.audit_service import AuditService
 from app.services.metrics_service import MetricsService
 
@@ -58,7 +59,7 @@ async def get_data_health(
     db: AsyncSession = Depends(get_db),
     _admin: User = Depends(get_admin_user),
 ):
-    """Admin: doğrulanmış parser tanıları; temel sağlık KAP'a bağlı değildir."""
+    """Admin: doğrulanmış parser ve veri kalitesi tanıları."""
     total_active_bonds = (
         await db.scalar(
             select(func.count(func.distinct(InstrumentVersion.instrument_id))).where(
@@ -91,7 +92,6 @@ async def get_data_health(
         "total_active_bonds": total_active_bonds,
         "total_issues": len(health_issues),
         "bonds_with_issues": health_issues,
-        "kap_dependency": False,
     }
 
 
@@ -102,18 +102,28 @@ async def sync_all_data(
 ):
     """Admin-only: doğrulanmış tbliste, TLREF ve TLREFK kaynaklarını güncelle."""
     service = VerifiedBistImportService(db, archive_root=settings.BIST_RAW_ARCHIVE_DIR)
-    bonds = await service.import_tbliste(settings.BIST_BOND_LIST_URL)
+    requested_date = (
+        VerifiedBistBootstrapService(db, settings)
+        .calendar.resolve_expected_source_date()
+        .requested_business_date
+    )
+    bonds = await service.import_tbliste(
+        settings.BIST_BOND_LIST_URL,
+        requested_business_date=requested_date,
+    )
     tlref = await service.import_benchmark_pair(
         "TLREF",
         rate_url=settings.BIST_TLREF_RATE_HISTORICAL_URL,
         index_url=settings.BIST_TLREF_HISTORICAL_URL,
         historical=True,
+        requested_business_date=requested_date,
     )
     tlrefk = await service.import_benchmark_pair(
         "TLREFK",
         rate_url=settings.BIST_TLREFK_RATE_HISTORICAL_URL,
         index_url=settings.BIST_TLREFK_INDEX_HISTORICAL_URL,
         historical=True,
+        requested_business_date=requested_date,
     )
     return {
         "tlref_historical": tlref,
@@ -359,7 +369,7 @@ async def get_bond_metrics(
     db: AsyncSession = Depends(get_db),
 ):
     """Admin: En cok goruntulenen tahviller."""
-    stats = await MetricsService.get_bond_view_stats(
+    stats = await MetricsService.get_instrument_view_stats(
         db=db,
         limit=limit,
         start_date=start_date,
@@ -433,12 +443,3 @@ async def toggle_maintenance_mode(
     
     await db.commit()
     return {"message": "Bakım modu güncellendi.", "maintenance_mode": is_active}
-
-
-@router.get("/sentry-debug")
-async def trigger_sentry_error(
-    _admin: User = Depends(get_admin_user),
-):
-    """Admin-only: Sentry entegrasyonunu test etmek için kasti hata fırlatır."""
-    # Sentry'nin yakalaması için kasti bir uygulama hatası
-    raise Exception("Sentry Production Test Error: Backend error captured successfully.")

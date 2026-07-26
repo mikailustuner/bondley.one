@@ -38,7 +38,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   { href: "/admin/metrics", label: tr.dashboard.admin.sidebar.metrics },
                   { href: "/admin/notifications", label: tr.dashboard.admin.sidebar.notifications },
                   { href: "/admin/import", label: tr.dashboard.admin.sidebar.import },
-                  { href: "/admin/sentry-debug", label: tr.dashboard.admin.sidebar.sentry },
                 ].map((item) => (
                   <Link
                     key={item.href}

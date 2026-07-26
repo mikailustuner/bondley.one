@@ -1,216 +1,99 @@
-# Bondley - Türk Devlet Tahvil Analiz Platformu
+# Bondley
 
-Türk Devlet Tahvilleri (TRT/TRB) için değerleme, fiyat takibi ve analiz sistemi.
+Bondley, Borsa İstanbul’un resmî `tbliste`, TLREF ve TLREFK dosyalarını değişmez
+ham kaynak olarak arşivleyen; terimleri açıklamalardan ayrıştıran ve yalnız açık
+kullanıcı fiyat/getiri girdisiyle değerleme yapan bir borçlanma araçları
+uygulamasıdır.
 
-## Teknoloji Yığını
+KAP bu sürümün veri hattında yoktur. Son ihraç fiyatı piyasa fiyatı sayılmaz.
+`TRD` ile başlayan katılım kıymetleri TLREFK kullanır.
 
-- **Frontend:** Next.js 16 (App Router), TypeScript, Tailwind CSS, Shadcn/UI, Recharts
-- **Backend:** Python FastAPI, SQLAlchemy (async), numpy-financial
-- **Veritabanı:** PostgreSQL (tüm parasal değerler DECIMAL)
-- **Kuyruk:** Celery + Redis
-- **Altyapı:** Docker Compose, Turborepo, Nginx
-
-## Hızlı Başlangıç
-
-### Docker ile (Önerilen)
-
-```bash
-# Tüm servisleri başlat
-docker-compose up -d
-
-# Servisler:
-# - API: http://localhost:8000/api/docs
-# - Web: http://localhost:3000
-# - PostgreSQL: localhost:5432
-# - Redis: localhost:6379
-```
-
-### Manuel Geliştirme
-
-```bash
-# 1. PostgreSQL ve Redis başlat
-docker-compose up -d postgres redis
-
-# 2. Python backend
-cd apps/api
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-
-# 3. Celery worker (ayrı terminal)
-celery -A app.tasks.celery_app worker --loglevel=info
-
-# 4. Celery beat (ayrı terminal)
-celery -A app.tasks.celery_app beat --loglevel=info
-
-# 5. Next.js frontend (ayrı terminal)
-cd apps/web
-npm install
-npm run dev
-```
-
-## Proje Yapısı
-
-```
-FinCalc/
-├── apps/
-│   ├── web/          # Next.js 14 Frontend
-│   └── api/          # Python FastAPI Backend
-├── packages/
-│   └── shared/       # Paylaşımlı TypeScript tipleri
-├── database/
-│   └── init.sql      # PostgreSQL schema
-├── nginx/            # Nginx configuration
-├── scripts/           # Deployment ve utility scriptleri
-├── docs/              # Detaylı dokümantasyon
-├── docker-compose.yml              # Development
-└── docker-compose.prod.yml         # Production
-```
-
-## Sistem Mimarisi
-
-```mermaid
-graph TB
-    subgraph "Client Layer"
-        Browser[Web Browser]
-    end
-    
-    subgraph "Frontend - Next.js"
-        Web[Next.js App<br/>Dashboard, Admin, Auth]
-    end
-    
-    subgraph "Reverse Proxy"
-        Nginx[Nginx<br/>SSL, Load Balancing]
-    end
-    
-    subgraph "API - FastAPI"
-        API[FastAPI<br/>REST API]
-    end
-    
-    subgraph "Background Tasks"
-        Celery[Celery Worker + Beat<br/>Scheduled Tasks]
-    end
-    
-    subgraph "Data Layer"
-        PostgreSQL[(PostgreSQL<br/>Database)]
-        Redis[(Redis<br/>Queue & Cache)]
-    end
-    
-    subgraph "External"
-        BIST[Borsa İstanbul<br/>BIST API]
-    end
-    
-    Browser --> Nginx
-    Nginx --> Web
-    Nginx --> API
-    Web --> API
-    API --> PostgreSQL
-    API --> Redis
-    Celery --> Redis
-    Celery --> PostgreSQL
-    Celery --> BIST
-    
-    style API fill:#10b981,stroke:#059669,stroke-width:2px
-    style Nginx fill:#3b82f6,stroke:#2563eb,stroke-width:2px
-    style PostgreSQL fill:#f59e0b,stroke:#d97706,stroke-width:2px
-```
-
-## Önemli Endpoint'ler
-
-- `POST /api/v1/auth/login` - Giriş
-- `GET /api/v1/bonds/` - Tahvil listesi
-- `GET /api/v1/bonds/{isin}` - Tahvil detay ve hesaplamalar
-- `GET /api/v1/tlref/latest` - Son TLREF oranı
-- `GET /api/v1/market-data/{isin}` - Piyasa verileri
-
-Tüm API dokümantasyonu: `http://localhost:8000/api/docs`
-
-## Geliştirme
-
-### Ortam Değişkenleri
-
-`.env.example` dosyasını `.env` olarak kopyalayın ve değerleri doldurun:
+## Üretim ilk açılışı
 
 ```bash
 cp .env.example .env
+./scripts/generate_secrets.sh
+# Üretilen değerleri ve domain/SMTP ayarlarını .env içine girin.
+./deploy.sh
 ```
 
-### Veritabanı Migrasyonları
+Deploy sırası tek ve deterministiktir:
 
-Schema otomatik olarak `database/init.sql` ile oluşturulur. Manuel migration için:
-
-```bash
-docker exec -i fincalc-postgres psql -U fincalc -d fincalc < database/init.sql
+```text
+PostgreSQL hazır
+  → Alembic 001 temiz şema
+  → tek-seferlik bootstrap
+     → TLREF geçmiş
+     → TLREFK geçmiş
+     → TLREF günlük
+     → TLREFK günlük
+     → tbliste
+  → API / worker / beat
+  → web
+  → iç Nginx ağ geçidi (:3050)
 ```
 
-### Test ve Lint
+Bootstrap `Europe/Istanbul` saatini kullanır. Hafta sonu, resmî tatil ve iş günü
+16:15’ten önceki ilk açılışta önceki BIST iş günü beklenir. Örneğin pazar günü
+ilk açılışta veri tarihi cuma olarak çözülür. Kaynak içeriği beklenen tarihten
+eskiyse `STALE`, gelecekteyse kalite hatasıdır. Eski snapshot yeni verinin
+üzerine yayımlanmaz.
+
+Kullanıma açılma koşulu `/health/ready` yanıtının 200 dönmesidir. Bu uç, şema
+migration’ı ile bootstrap’ın `READY` veya `DEGRADED` sonucunu ve kullanılabilir
+kıymet/benchmark verisini denetler.
+
+## Yerel geliştirme
+
+Web:
 
 ```bash
-# Frontend
-cd apps/web
-npm run lint
-npm run build
+npm ci
+npm run dev --workspace @fincalc/web
+```
 
-# Backend
+API bağımlılıkları ve test:
+
+```bash
 cd apps/api
-ruff check .
+python -m venv .venv
+. .venv/bin/activate
+pip install -r requirements-dev.txt
+pytest
 ```
 
-## Production Deployment
-
-Production deployment için detaylı rehber: [docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md)
-
-### CI/CD ve Canary Deployment
-
-Otomatik CI/CD pipeline ve canary deployment sistemi kurulumu: [docs/CI_CD_SETUP.md](docs/CI_CD_SETUP.md)
-
-### SSL Sertifikası
-
-SSL sertifikası kurulumu: [scripts/obtain-ssl.sh](scripts/obtain-ssl.sh)
+## Doğrulama
 
 ```bash
-chmod +x scripts/obtain-ssl.sh
-./scripts/obtain-ssl.sh
+python3 -m compileall -q apps/api/app apps/api/tests
+npm exec tsc --workspace @fincalc/web -- --noEmit --incremental false
+npm run build --workspace @fincalc/web
+docker compose -f docker-compose.prod.yml config --quiet
 ```
 
-## Sorun Giderme
-
-### Celery Sorunları
-
-Celery beat ve worker sorunlarını teşhis etmek için:
+Resmî tam dosya denetimi `BIST_AUDIT_FIXTURE_DIR` ile çalışır:
 
 ```bash
-chmod +x scripts/diagnose-celery.sh
-./scripts/diagnose-celery.sh
+cd apps/api
+BIST_AUDIT_FIXTURE_DIR=/path/to/bist-audit pytest -q \
+  tests/test_verified_real_bist_fixtures.py
 ```
 
-Detaylı rehber: [docs/CELERY_TROUBLESHOOTING.md](docs/CELERY_TROUBLESHOOTING.md)
+26.07.2026 kanıt manifesti 24.07.2026 `tbliste` dosyasında 2.136 satır,
+2.135 tekil ISIN, 4 kaynak açıklaması, 30 grup kodu, 18 sınıflandırma ve tek
+çelişkili duplicate bekler. TLREF ve TLREFK geçmişleri endeks rekonstrüksiyonuyla
+ayrı ayrı doğrulanır.
 
-### Container Durumu
+## Operasyon
 
-```bash
-# Tüm container'ların durumunu kontrol et
-docker-compose ps
+- Admin import görünümü: `/admin/import`
+- Liveness: `/health/live`
+- Readiness ve bootstrap durumu: `/health/ready`
+- Yedek: `./scripts/backup_db.sh`
+- Sağlık kontrolü: `./scripts/health-check.sh`
+- Ayrıntılı ilk açılış/arıza prosedürü:
+  [docs/runbooks/PRODUCTION-FIRST-BOOT.md](docs/runbooks/PRODUCTION-FIRST-BOOT.md)
 
-# Logları görüntüle
-docker-compose logs -f [service-name]
-```
-
-## Dokümantasyon
-
-- [Sistem Mimarisi](docs/SYSTEM-ARCHITECTURE.md) - Detaylı mimari ve akış şemaları
-- [Production Checklist](docs/PRODUCTION_CHECKLIST.md) - Production hazırlık kontrol listesi
-- [CI/CD Setup](docs/CI_CD_SETUP.md) - CI/CD ve canary deployment kurulumu
-- [Celery Troubleshooting](docs/CELERY_TROUBLESHOOTING.md) - Celery sorun giderme rehberi
-- [Security Scorecard](docs/SECURITY_SCORECARD.md) - Güvenlik değerlendirmesi
-
-## Varsayılan Giriş (Sadece Geliştirme)
-
-- **Email:** `admin@fincalc.com`
-- **Şifre:** `admin123`
-
-**Önemli:** Production'da `.env.production` dosyasındaki `ADMIN_INIT_PASSWORD` ile ilk admin oluşturulur. İlk girişte şifreyi mutlaka değiştirin.
-
-## Lisans
-
-Bu proje özel bir projedir.
-
+Ham kaynaklar `bist_source_data`, PostgreSQL verisi `postgres_data` Docker
+volume’unda saklanır. İç Nginx yalnız HTTP `3050` yayınlar; TLS host proxy/load
+balancer katmanında sonlandırılır.

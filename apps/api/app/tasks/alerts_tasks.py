@@ -12,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 
 from app.tasks.celery_app import celery_app
 from app.core.config import get_settings
+from app.core.rates import decimal_rate_to_percent
+from app.core.time import turkey_today
 from app.models.user_alert import UserAlert
 from app.models.bist_ingestion import BenchmarkObservation, Instrument, InstrumentVersion
 from app.models.valuation import ValuationRequestRecord, ValuationResultRecord
@@ -65,16 +67,18 @@ async def _evaluate_alerts(db: AsyncSession, today: date):
                 )
                 if not result_payload or result_payload.get("annual_yield") is None:
                     continue
-                ytm = float(result_payload["annual_yield"])
+                # Valuation results store annual yield as a decimal (0.42),
+                # while alert thresholds are entered and displayed as percent (42).
+                ytm_pct = decimal_rate_to_percent(result_payload["annual_yield"])
                 th = float(threshold)
-                if alert.type == "ytm_above" and ytm >= th:
+                if alert.type == "ytm_above" and ytm_pct >= th:
                     triggered = True
-                    snapshot = {"ytm": ytm, "threshold": th}
-                elif alert.type == "ytm_below" and ytm <= th:
+                    snapshot = {"ytm_pct": ytm_pct, "threshold_pct": th}
+                elif alert.type == "ytm_below" and ytm_pct <= th:
                     triggered = True
-                    snapshot = {"ytm": ytm, "threshold": th}
+                    snapshot = {"ytm_pct": ytm_pct, "threshold_pct": th}
 
-            elif alert.type in ("tlref_daily_above", "tlref_daily_below"):
+            elif alert.type in ("tlref_annual_above", "tlref_annual_below"):
                 threshold = (alert.parameters or {}).get("threshold")
                 if threshold is None:
                     continue
@@ -89,14 +93,14 @@ async def _evaluate_alerts(db: AsyncSession, today: date):
                 )
                 if annual_rate is None:
                     continue
-                rate_pct = float(annual_rate / 365 * 100)
+                rate_pct = decimal_rate_to_percent(annual_rate)
                 th = float(threshold)
-                if alert.type == "tlref_daily_above" and rate_pct >= th:
+                if alert.type == "tlref_annual_above" and rate_pct >= th:
                     triggered = True
-                    snapshot = {"daily_rate_pct": rate_pct, "threshold": th}
-                elif alert.type == "tlref_daily_below" and rate_pct <= th:
+                    snapshot = {"published_annual_rate_pct": rate_pct, "threshold": th}
+                elif alert.type == "tlref_annual_below" and rate_pct <= th:
                     triggered = True
-                    snapshot = {"daily_rate_pct": rate_pct, "threshold": th}
+                    snapshot = {"published_annual_rate_pct": rate_pct, "threshold": th}
 
             elif alert.type == "days_to_maturity":
                 isin = (alert.parameters or {}).get("isin")
@@ -140,7 +144,7 @@ def check_user_alerts():
         engine = create_async_engine(settings.DATABASE_URL)
         session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
         async with session_factory() as db:
-            today = date.today()
+            today = turkey_today()
             count = await _evaluate_alerts(db, today)
             logger.info("User alerts: %s triggered", count)
             return count

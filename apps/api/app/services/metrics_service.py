@@ -1,41 +1,39 @@
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Any
 
 from sqlalchemy import select, func, and_, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.bond_view import BondView
+from app.core.time import turkey_today
+from app.models.instrument_view import InstrumentView
 from app.models.user_metric import UserMetric
-from app.models.bond import Bond
+from app.models.bist_ingestion import Instrument, InstrumentVersion
 
 
 class MetricsService:
     """Service for tracking and retrieving metrics."""
 
     @staticmethod
-    async def track_bond_view(
+    async def track_instrument_view(
         db: AsyncSession,
-        bond_id: int,
+        instrument_id: int,
         user_id: int | None = None,
         ip_address: str | None = None,
         user_agent: str | None = None,
         settlement_date: date | None = None,
-    ) -> BondView:
-        """Track a bond view. Uses unique constraint to prevent duplicate views per user per day."""
-        # Try to create a new view record
-        # The unique constraint on (bond_id, user_id, DATE(viewed_at)) will prevent duplicates
-        bond_view = BondView(
-            bond_id=bond_id,
+    ) -> InstrumentView | None:
+        """Track one instrument view per authenticated user and Turkey date."""
+        instrument_view = InstrumentView(
+            instrument_id=instrument_id,
             user_id=user_id,
+            view_date=turkey_today(),
             ip_address=ip_address,
             user_agent=user_agent,
             settlement_date=settlement_date,
         )
-        db.add(bond_view)
+        db.add(instrument_view)
         try:
             await db.flush()
-            # Important: We need a commit here because this is often called from GET requests
-            # which don't automatically commit the transaction.
             await db.commit()
         except Exception:
             # If unique constraint violation or any other error, rollback and skip tracking
@@ -46,7 +44,7 @@ class MetricsService:
             return None
 
         # Update user metrics for today
-        if user_id and bond_view:
+        if user_id and instrument_view:
             try:
                 await MetricsService._update_user_metrics(db, user_id, increment_bonds_viewed=True)
                 await db.commit()
@@ -56,7 +54,7 @@ class MetricsService:
                 except Exception:
                     pass
         
-        return bond_view
+        return instrument_view
 
     @staticmethod
     async def _update_user_metrics(
@@ -67,7 +65,7 @@ class MetricsService:
         increment_calculations_run: bool = False,
     ) -> UserMetric:
         """Update or create user metrics for today."""
-        today = date.today()
+        today = turkey_today()
         result = await db.execute(
             select(UserMetric).where(
                 and_(
@@ -117,30 +115,36 @@ class MetricsService:
             await MetricsService._update_user_metrics(db, user_id, increment_calculations_run=True)
 
     @staticmethod
-    async def get_bond_view_stats(
+    async def get_instrument_view_stats(
         db: AsyncSession,
         limit: int = 10,
         start_date: date | None = None,
         end_date: date | None = None,
     ) -> list[dict[str, Any]]:
-        """Get statistics about most viewed bonds."""
+        """Get statistics about most viewed verified instruments."""
         query = select(
-            BondView.bond_id,
-            Bond.isin_code,
-            Bond.issuer,
-            func.count(BondView.id).label("view_count"),
-            func.count(func.distinct(BondView.user_id)).label("unique_users")
+            InstrumentView.instrument_id,
+            Instrument.isin.label("isin_code"),
+            InstrumentVersion.issuer_name.label("issuer"),
+            func.count(InstrumentView.id).label("view_count"),
+            func.count(func.distinct(InstrumentView.user_id)).label("unique_users")
         ).join(
-            Bond, BondView.bond_id == Bond.id
+            Instrument, InstrumentView.instrument_id == Instrument.id
+        ).join(
+            InstrumentVersion,
+            and_(
+                InstrumentVersion.instrument_id == Instrument.id,
+                InstrumentVersion.is_published.is_(True),
+            ),
         ).group_by(
-            BondView.bond_id, Bond.isin_code, Bond.issuer
+            InstrumentView.instrument_id, Instrument.isin, InstrumentVersion.issuer_name
         )
 
         conditions = []
         if start_date:
-            conditions.append(func.date(BondView.viewed_at) >= start_date)
+            conditions.append(InstrumentView.view_date >= start_date)
         if end_date:
-            conditions.append(func.date(BondView.viewed_at) <= end_date)
+            conditions.append(InstrumentView.view_date <= end_date)
 
         if conditions:
             query = query.where(and_(*conditions))
@@ -151,7 +155,7 @@ class MetricsService:
         stats = []
         for row in result.all():
             stats.append({
-                "bond_id": row.bond_id,
+                "instrument_id": row.instrument_id,
                 "isin_code": row.isin_code,
                 "issuer": row.issuer,
                 "view_count": row.view_count,
@@ -226,21 +230,21 @@ class MetricsService:
     ) -> dict[str, Any]:
         """Get personal usage summary: distinct bonds viewed in period and top most viewed bonds."""
         # Distinct bond count for this user in date range
-        distinct_query = select(func.count(func.distinct(BondView.bond_id))).where(
+        distinct_query = select(func.count(func.distinct(InstrumentView.instrument_id))).where(
             and_(
-                BondView.user_id == user_id,
-                func.date(BondView.viewed_at) >= start_date,
-                func.date(BondView.viewed_at) <= end_date,
+                InstrumentView.user_id == user_id,
+                InstrumentView.view_date >= start_date,
+                InstrumentView.view_date <= end_date,
             )
         )
         this_month_bonds_viewed = (await db.execute(distinct_query)).scalar() or 0
 
         # Total views in period (optional)
-        total_query = select(func.count(BondView.id)).where(
+        total_query = select(func.count(InstrumentView.id)).where(
             and_(
-                BondView.user_id == user_id,
-                func.date(BondView.viewed_at) >= start_date,
-                func.date(BondView.viewed_at) <= end_date,
+                InstrumentView.user_id == user_id,
+                InstrumentView.view_date >= start_date,
+                InstrumentView.view_date <= end_date,
             )
         )
         total_views_this_month = (await db.execute(total_query)).scalar() or 0
@@ -248,20 +252,31 @@ class MetricsService:
         # Top N most viewed bonds for this user in period
         top_query = (
             select(
-                BondView.bond_id,
-                Bond.isin_code,
-                Bond.issuer,
-                func.count(BondView.id).label("view_count"),
+                InstrumentView.instrument_id,
+                Instrument.isin.label("isin_code"),
+                InstrumentVersion.issuer_name.label("issuer"),
+                func.count(InstrumentView.id).label("view_count"),
             )
-            .join(Bond, BondView.bond_id == Bond.id)
+            .join(Instrument, InstrumentView.instrument_id == Instrument.id)
+            .join(
+                InstrumentVersion,
+                and_(
+                    InstrumentVersion.instrument_id == Instrument.id,
+                    InstrumentVersion.is_published.is_(True),
+                ),
+            )
             .where(
                 and_(
-                    BondView.user_id == user_id,
-                    func.date(BondView.viewed_at) >= start_date,
-                    func.date(BondView.viewed_at) <= end_date,
+                    InstrumentView.user_id == user_id,
+                    InstrumentView.view_date >= start_date,
+                    InstrumentView.view_date <= end_date,
                 )
             )
-            .group_by(BondView.bond_id, Bond.isin_code, Bond.issuer)
+            .group_by(
+                InstrumentView.instrument_id,
+                Instrument.isin,
+                InstrumentVersion.issuer_name,
+            )
             .order_by(desc("view_count"))
             .limit(most_viewed_limit)
         )
@@ -289,23 +304,23 @@ class MetricsService:
         days: int = 30,
     ) -> dict[str, Any]:
         """Get overall metrics overview for the last N days."""
-        end_date = date.today()
+        end_date = turkey_today()
         start_date = end_date - timedelta(days=days)
 
         # Total bond views
-        bond_views_query = select(func.count(BondView.id)).where(
+        bond_views_query = select(func.count(InstrumentView.id)).where(
             and_(
-                func.date(BondView.viewed_at) >= start_date,
-                func.date(BondView.viewed_at) <= end_date
+                InstrumentView.view_date >= start_date,
+                InstrumentView.view_date <= end_date
             )
         )
         total_bond_views = (await db.execute(bond_views_query)).scalar() or 0
 
         # Unique users who viewed bonds
-        unique_users_query = select(func.count(func.distinct(BondView.user_id))).where(
+        unique_users_query = select(func.count(func.distinct(InstrumentView.user_id))).where(
             and_(
-                func.date(BondView.viewed_at) >= start_date,
-                func.date(BondView.viewed_at) <= end_date
+                InstrumentView.view_date >= start_date,
+                InstrumentView.view_date <= end_date
             )
         )
         unique_users = (await db.execute(unique_users_query)).scalar() or 0

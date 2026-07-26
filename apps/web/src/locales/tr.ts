@@ -157,7 +157,7 @@ export const tr = {
             signup: "Ücretsiz Başlat",
         },
         hero: {
-            badge: "Borsa İstanbul ve MKK-E-KAP Verileri ile her gün güncel",
+            badge: "Doğrulanmış Borsa İstanbul verileri",
             titleLine1: "Bondley ile Takip Edin",
             titleLine2: "Hesaplamaları Kontrol Edin",
             description: "Yatırım yaptığınız veya yapacağınız sermaye piyayası entrümanlarının kupon oranlarını, kirli fiyatlarını, teorik fiyalarını, en kolay, güncel, hızlı ve doğru yerden takip ederek zamandan tasarruf ederken beşeri hataların ve üçüncü parti yazılımlardan kaynaklanan fiyat dalgalanmalarından kurtulun. Bondley sizin için takip etsin ve dilediğiniz zaman dilediğiniz enstrümanın detaylarını ilk siz öğrenin. Hesaplamalarınızı kontrol edin, gün sonu işlemlerinizi vaktinde tamamlayın. Ertesi iş günlerinizi bugünden planlayın.",
@@ -165,12 +165,12 @@ export const tr = {
             ctaLogin: "Giriş Yap",
         },
         ticker: {
-            title: "Borsa İstanbul ve MKK-E-KAP Verileri ile her gün güncel",
+            title: "Doğrulanmış Borsa İstanbul verileri",
             labels: {
                 tlrefIndex: "TLREF Endeks",
                 comparedToYesterday: "Düne Göre",
-                dailyRate: "Günlük Oran",
-                annualizedRate: "Yıllık Oran",
+                dailyRate: "Yıllık TLREF",
+                annualizedRate: "Oran Niteliği",
                 totalBonds: "Aktif Araç",
                 totalRecords: "TLREF Kayıt",
                 lastDate: "Son Tarih",
@@ -223,7 +223,7 @@ export const tr = {
                 },
                 {
                     title: "Değişken Getirililer için TLREF ve Endeks Grafikleri",
-                    desc: "Tarihsel endeks değeri ve günlük oran grafikleri. İnteraktif ve dışa aktarılabilir.",
+                    desc: "Tarihsel endeks değeri ve BIST tarafından yayımlanan yıllık oran grafikleri.",
                 },
                 {
                     title: "Favoriler & Watchlist",
@@ -239,7 +239,7 @@ export const tr = {
                 },
                 {
                     title: "Piyasa Verisi",
-                    desc: "Temiz fiyat, kirli fiyat, kupon ödeme planı, oranları ve KAP bildirim verileri tek ekranda.",
+                    desc: "Kaynak terimleri, kupon planı ve açık kullanıcı girdili değerleme tek ekranda.",
                 }
             ]
         },
@@ -593,71 +593,6 @@ export const tr = {
                 remarks: {
                     title: "Açıklamalar",
                     desc: "Notlar",
-                },
-                conflicts: {
-                    title: "tbliste vs KAP Farklılıkları",
-                    desc: "Veri Uyuşmazlıkları",
-                    cols: {
-                        field: "Alan",
-                        tbliste: "BIST tbliste",
-                        kap: "KAP",
-                        used: "Kullanılan",
-                    },
-                    kapBadge: "KAP (güncel)",
-                    tblisteBadge: "tbliste (güncel)",
-                }
-            },
-            kap: {
-                title: "İhraç Detayları",
-                desc: "KAP Bildirim Verileri",
-                disclosure: "KAP Bildirimi →",
-                updatedToday: "Bugün güncellendi",
-                updatedAgo: "{days} gün önce güncellendi",
-                staleWarning: "Veri 30 günden eski",
-                instrument: {
-                    title: "Araç Bilgileri",
-                    isin: "ISIN Kodu",
-                    type: "Araç Tipi",
-                    fundUser: "Fon Kullanıcısı/Kaynak Kuruluş",
-                    sourceInst: "Kaynak Kuruluş",
-                    maturity: "İtfa Tarihi",
-                    days: "Vade (Gün)",
-                    nominal: "Nominal Değer",
-                    price: "İhraç Fiyatı",
-                    interestType: "Faiz Tipi",
-                    floatingRef: "Değişken Faiz Ref.",
-                    additionalReturn: "Ek Getiri (%)",
-                    coupons: "Kupon Sayısı",
-                    frequency: "Kupon Sıklığı",
-                    paymentType: "Ödeme Tipi",
-                },
-                sale: {
-                    title: "Satış ve Derecelendirme",
-                    type: "Satış Tipi",
-                    start: "Satış Başlangıç",
-                    end: "Satış Bitiş",
-                    traded: "Borsada İşlem",
-                    broker: "Aracı Kurum",
-                    limit: "İhraç Tavanı",
-                    ratingCompany: "Rating Kuruluşu",
-                    ratingNote: "Rating Notu",
-                    ratingDate: "Rating Tarihi",
-                    investmentGrade: "Yatırım Yapılabilir",
-                    yes: "Evet",
-                    no: "Hayır",
-                },
-                plan: {
-                    title: "Kupon Ödeme Planı",
-                    cols: {
-                        coupon: "Kupon",
-                        date: "Ödeme Tarihi",
-                        periodic: "Dönemsel %",
-                        simple: "Yıllık Basit %",
-                        compound: "Yıllık Bileşik %",
-                        amount: "Ödeme Tutarı",
-                        paid: "Ödendi",
-                    },
-                    principal: "Anapara",
                 }
             },
             notes: {
@@ -758,8 +693,8 @@ export const tr = {
             types: {
                 ytm_above: "YTM şu değerin üzerinde",
                 ytm_below: "YTM şu değerin altında",
-                tlref_daily_above: "TLREF günlük oran şu değerin üzerinde (%)",
-                tlref_daily_below: "TLREF günlük oran şu değerin altında (%)",
+                tlref_daily_above: "Yayımlanan yıllık TLREF şu değerin üzerinde (%)",
+                tlref_daily_below: "Yayımlanan yıllık TLREF şu değerin altında (%)",
                 days_to_maturity: "Vadeye X gün kala",
             },
             triggered: {
@@ -1074,7 +1009,7 @@ export const tr = {
                     noSession: "Oturum açık değil.",
                     tlrefSuccess: "TLREF sync tamamlandı.",
                     tlrefHistorical: "{count} tarihsel endeks kaydı",
-                    tlrefRates: "{count} günlük oran hesaplandı",
+                    tlrefRates: "{count} yayımlanmış yıllık oran alındı",
                     tlrefDaily: "{count} günlük kayıt",
                     tlrefHistError: "Tarihsel hata: {error}",
                     tlrefDailyError: "Günlük hata: {error}",
@@ -1103,29 +1038,6 @@ export const tr = {
                     noResults: "Sonuç bulunamadı",
                     results: "Sonuçlar",
                 },
-                health: {
-                    label: "VERİ SAĞLIĞI & EKSİKLİKLER",
-                    title: "KAP ve tbliste Veri Kontrolü",
-                    export: "CSV Olarak İndir",
-                    checking: "Kontrol ediliyor...",
-                    activeBonds: "Aktif Tahvil Sayısı",
-                    issuesCount: "Sorunlu / Eksik Kayıt Sayısı",
-                    description: "Aşağıdaki tahvillerin ya hiç KAP verisi yok, ya da BİAŞ (tbliste) listesinde güncellenmemiş durumda.",
-                    downloadIssues: "Eksik Listesini İndir (CSV)",
-                    allGood: "✓ Tüm aktif tahvillerin KAP ve güncel tbliste verileri eksiksiz bulunuyor.",
-                    error: "Veri sağlığı durumu alınamadı.",
-                    csvHeaders: {
-                        isin: "ISIN",
-                        issuer: "Şirket",
-                        issues: "Sorunlar",
-                        tblisteUpdate: "tbliste Son Güncelleme",
-                        maturityDate: "İtfa Tarihi",
-                    },
-                    issues: {
-                        outdated: "tbliste güncellenmedi",
-                        kapMissing: "KAP verisi eksik",
-                    }
-                }
             },
             bonds: {
                 title: "Tahvil Yönetimi",

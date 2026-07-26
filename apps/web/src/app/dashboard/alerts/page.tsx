@@ -15,8 +15,8 @@ import { tr } from "@/locales/tr";
 const ALERT_TYPES: { value: string; label: string }[] = [
   { value: "ytm_above", label: tr.dashboard.alerts.types.ytm_above },
   { value: "ytm_below", label: tr.dashboard.alerts.types.ytm_below },
-  { value: "tlref_daily_above", label: tr.dashboard.alerts.types.tlref_daily_above },
-  { value: "tlref_daily_below", label: tr.dashboard.alerts.types.tlref_daily_below },
+  { value: "tlref_annual_above", label: "Yayımlanan yıllık TLREF bu değerin üzerinde (%)" },
+  { value: "tlref_annual_below", label: "Yayımlanan yıllık TLREF bu değerin altında (%)" },
   { value: "days_to_maturity", label: tr.dashboard.alerts.types.days_to_maturity },
 ];
 

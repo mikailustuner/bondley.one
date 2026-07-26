@@ -1,15 +1,28 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class AlertCreate(BaseModel):
-    type: str = Field(..., description="ytm_above | ytm_below | tlref_daily_above | tlref_daily_below | days_to_maturity")
+    type: Literal[
+        "ytm_above",
+        "ytm_below",
+        "tlref_annual_above",
+        "tlref_annual_below",
+        "days_to_maturity",
+    ]
     parameters: dict = Field(default_factory=dict)
 
 
 class AlertUpdate(BaseModel):
-    type: str | None = None
+    type: Literal[
+        "ytm_above",
+        "ytm_below",
+        "tlref_annual_above",
+        "tlref_annual_below",
+        "days_to_maturity",
+    ] | None = None
     parameters: dict | None = None
     is_active: bool | None = None
 

@@ -1,6 +1,6 @@
 # BIST Doğrulanmış Yeniden Yazım Planı
 
-Durum (26.07.2026): **Faz 0–9 tamamlandı.**
+Durum (26.07.2026): **Faz 0–11 uygulandı; son doğrulama çıktıları README’de tutulur.**
 
 ## Kapsam kararları
 
@@ -22,8 +22,10 @@ Durum (26.07.2026): **Faz 0–9 tamamlandı.**
 6. **Faz 5 — Finansal çekirdek:** Decimal, takvim/day-count, formül dispatcher, typed failure.
 7. **Faz 6 — v2 şema/API:** Fiyat gözlemi, değerleme kayıtları, provenance ve kullanıcı geçişi.
 8. **Faz 7 — Web:** Kaynak/AST/değerleme ayrımı, fiyat formu ve kalite ekranları.
-9. **Faz 8 — Gölge geçiş:** Eski/yeni farkları, rollback anahtarları ve runbook.
-10. **Faz 9 — Legacy temizliği:** Eski parser/motor/sentetik fiyat/yazma yollarının kaldırılması.
+9. **Faz 8 — Operasyon UI:** Bootstrap/import gözlemi, tazelik ve hata tanıları.
+10. **Faz 9 — Üretim:** Tek migration, ilk-açılış bootstrap, readiness ve deploy.
+11. **Faz 10 — Doğrulama:** Resmî fixture, unit/integration, TypeScript/build/Compose.
+12. **Faz 11 — Temizlik:** Legacy/KAP/canary/scratch ve yinelenen dosyaların kaldırılması.
 
 ## Kabul kriterleri
 
@@ -36,11 +38,10 @@ Durum (26.07.2026): **Faz 0–9 tamamlandı.**
 - Her sonuç dosya, satır, parser, benchmark, formül, takvim ve engine sürümüne izlenir.
 - GET çağrıları dış veri çekmez veya DB düzeltmez.
 - KAP olmadan temel akış çalışır.
-- Favori/not geçişi rollback sırasında da korunur.
+- Favori/not yalnız temiz enstrüman kimliğine bağlıdır.
 
 Kanıtlar:
 
-- `docs/rewrite/PHASE-0-4-IMPLEMENTATION.md`
-- `docs/rewrite/PHASE-5-9-IMPLEMENTATION.md`
-- `docs/runbooks/VERIFIED-V2-CUTOVER.md`
-
+- `README.md`
+- `docs/runbooks/PRODUCTION-FIRST-BOOT.md`
+- `apps/api/tests/fixtures/bist/manifest.json`

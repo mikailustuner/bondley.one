@@ -55,7 +55,7 @@ const faqs = [
   {
     question: "Spread nedir ve nasıl hesaplanır?",
     answer:
-      "Spread, bir tahvilin YTM'si ile referans faiz oranı (TLREF) arasındaki farktır. Bondley, piyasa fiyatına göre hesaplanan anlık YTM ile TLREF günlük oranını karşılaştırarak spread'i baz puan (bp) cinsinden gösterir. Pozitif spread, tahvilin TLREF'in üzerinde getiri sunduğunu ifade eder.",
+      "Spread, değerleme girdileriyle hesaplanan yıllık YTM ile Borsa İstanbul'un yayımladığı yıllık TLREF oranı arasındaki farktır. Son ihraç fiyatı piyasa fiyatı kabul edilmez; kullanıcı bir fiyat girmedikçe anlık piyasa getirisi iddiasında bulunulmaz. TRD ile başlayan katılım kıymetlerinde referans TLREFK'dir.",
   },
   {
     question: "Modifiye durasyon ve Macaulay durasyon nedir?",

@@ -32,6 +32,18 @@ class SourceFile(Base):
     source_kind: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     source_url: Mapped[str] = mapped_column(Text, nullable=False)
     effective_date: Mapped[date | None] = mapped_column(Date, index=True)
+    requested_business_date: Mapped[date | None] = mapped_column(Date, index=True)
+    date_origin: Mapped[str] = mapped_column(
+        String(40),
+        nullable=False,
+        default="SOURCE_CONTENT",
+    )
+    freshness_status: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        default="CURRENT",
+        index=True,
+    )
     downloaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     content_type: Mapped[str | None] = mapped_column(String(255))
@@ -336,3 +348,37 @@ class BenchmarkValidationResult(Base):
         nullable=False,
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BootstrapRun(Base):
+    __tablename__ = "bootstrap_runs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    status: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        default="PENDING",
+        index=True,
+    )
+    current_step: Mapped[str | None] = mapped_column(String(80))
+    attempt: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    requested_business_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    timezone_name: Mapped[str] = mapped_column(
+        String(80),
+        nullable=False,
+        default="Europe/Istanbul",
+    )
+    app_version: Mapped[str | None] = mapped_column(String(50))
+    parser_versions: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    source_file_ids: Mapped[list[int] | None] = mapped_column(JSON)
+    published_effective_dates: Mapped[dict[str, str] | None] = mapped_column(JSON)
+    warning_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    error_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    failure_code: Mapped[str | None] = mapped_column(String(100))
+    failure_message: Mapped[str | None] = mapped_column(Text)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

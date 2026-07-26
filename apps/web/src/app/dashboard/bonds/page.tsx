@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertCircle, Database, Search, ShieldCheck, Star } from "lucide-react";
 
@@ -33,6 +33,8 @@ export default function BondsListPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [eligibleOnly, setEligibleOnly] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [quality, setQuality] = useState<{
     published_versions: number;
@@ -41,41 +43,41 @@ export default function BondsListPage() {
 
   useEffect(() => {
     document.title = "Doğrulanmış BIST Kıymetleri — Bondley";
+  }, []);
+
+  useEffect(() => {
     const token = getToken();
     if (!token) {
       setError("Bu ekranı görüntülemek için giriş yapmalısınız.");
       setLoading(false);
       return;
     }
-    Promise.all([
-      api.verified.list(token, { limit: 3000 }),
+    const timer = window.setTimeout(() => {
+      setLoading(true);
+      Promise.all([
+      api.verified.list(token, {
+        skip: page * 50,
+        limit: 50,
+        search: search.trim() || undefined,
+        parse_status: statusFilter || undefined,
+        valuation_eligible: eligibleOnly ? true : undefined,
+        active_only: true,
+        order_by: "maturity",
+      }),
       api.verified.favorites(token),
       api.verified.quality(token),
     ])
       .then(([instruments, favoriteResult, qualityResult]) => {
         setItems(instruments.items);
+        setTotal(instruments.total);
         setFavorites(new Set(favoriteResult.items));
         setQuality(qualityResult);
       })
       .catch((reason) => setError(reason instanceof Error ? reason.message : "Veriler yüklenemedi."))
       .finally(() => setLoading(false));
-  }, []);
-
-  const filtered = useMemo(() => {
-    const candidate = search.trim().toLocaleUpperCase("tr-TR");
-    return items.filter((item) => {
-      if (
-        candidate &&
-        !item.isin.includes(candidate) &&
-        !item.issuer?.toLocaleUpperCase("tr-TR").includes(candidate)
-      ) {
-        return false;
-      }
-      if (statusFilter && item.quality.parse_status !== statusFilter) return false;
-      if (eligibleOnly && !item.quality.valuation_eligible) return false;
-      return true;
-    });
-  }, [eligibleOnly, items, search, statusFilter]);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [eligibleOnly, page, search, statusFilter]);
 
   const toggleFavorite = async (instrument: VerifiedInstrument) => {
     const token = getToken();
@@ -126,7 +128,7 @@ export default function BondsListPage() {
         </p>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-3" aria-label="Veri kalitesi özeti">
+      <section className="grid gap-4 sm:grid-cols-2" aria-label="Veri kalitesi özeti">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-muted-foreground">Yayımlanan sürüm</CardTitle>
@@ -143,12 +145,6 @@ export default function BondsListPage() {
             {quality?.valuation_eligible_versions ?? items.filter((item) => item.quality.valuation_eligible).length}
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Fiyat politikası</CardTitle>
-          </CardHeader>
-          <CardContent className="text-base font-semibold">Yalnız kullanıcı girdisi</CardContent>
-        </Card>
       </section>
 
       <section className="rounded-3xl border border-border bg-card p-4">
@@ -158,7 +154,7 @@ export default function BondsListPage() {
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" aria-hidden />
             <Input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => { setSearch(event.target.value); setPage(0); }}
               placeholder="ISIN veya ihraççı ara"
               className="pl-9"
             />
@@ -167,21 +163,21 @@ export default function BondsListPage() {
             <span className="sr-only">Parse durumu</span>
             <select
               value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
+              onChange={(event) => { setStatusFilter(event.target.value); setPage(0); }}
               className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
               <option value="">Tüm parse durumları</option>
-              <option value="EXACT">Exact</option>
-              <option value="PARTIAL">Partial</option>
-              <option value="AMBIGUOUS">Ambiguous</option>
-              <option value="CONFLICTING">Conflicting</option>
+              <option value="EXACT">Tam çözümlendi</option>
+              <option value="PARTIAL">Kısmen çözümlendi</option>
+              <option value="AMBIGUOUS">Belirsiz</option>
+              <option value="CONFLICTING">Çelişkili</option>
             </select>
           </label>
           <label className="flex items-center gap-2 rounded-xl border border-border px-3 text-sm">
             <input
               type="checkbox"
               checked={eligibleOnly}
-              onChange={(event) => setEligibleOnly(event.target.checked)}
+              onChange={(event) => { setEligibleOnly(event.target.checked); setPage(0); }}
             />
             Yalnız değerlemeye uygun
           </label>
@@ -203,7 +199,7 @@ export default function BondsListPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((item) => (
+              {items.map((item) => (
                 <tr key={item.id} className="hover:bg-muted/25">
                   <td className="px-4 py-3">
                     <Link
@@ -229,7 +225,13 @@ export default function BondsListPage() {
                   </td>
                   <td className="px-4 py-3">
                     <Badge variant={STATUS_VARIANT[item.quality.parse_status]}>
-                      {item.quality.parse_status}
+                      {{
+                        EXACT: "Tam",
+                        PARTIAL: "Kısmi",
+                        AMBIGUOUS: "Belirsiz",
+                        CONFLICTING: "Çelişkili",
+                        REJECTED: "Reddedildi",
+                      }[item.quality.parse_status]}
                     </Badge>
                     <div className="mt-1 text-xs text-muted-foreground">
                       {item.quality.valuation_eligible ? "Değerlemeye uygun" : "İnceleme gerekli"}
@@ -253,13 +255,30 @@ export default function BondsListPage() {
             </tbody>
           </table>
         </div>
-        {filtered.length === 0 && (
+        {items.length === 0 && (
           <div className="flex flex-col items-center gap-2 p-12 text-muted-foreground">
             <Database className="h-7 w-7" aria-hidden />
             Filtrelerle eşleşen kıymet bulunamadı.
           </div>
         )}
       </section>
+      <nav className="flex items-center justify-between" aria-label="Sayfalama">
+        <span className="text-sm text-muted-foreground">
+          {total} kayıttan {total === 0 ? 0 : page * 50 + 1}–{Math.min((page + 1) * 50, total)}
+        </span>
+        <div className="flex gap-2">
+          <Button variant="outline" disabled={page === 0} onClick={() => setPage((value) => value - 1)}>
+            Önceki
+          </Button>
+          <Button
+            variant="outline"
+            disabled={(page + 1) * 50 >= total}
+            onClick={() => setPage((value) => value + 1)}
+          >
+            Sonraki
+          </Button>
+        </div>
+      </nav>
     </main>
   );
 }

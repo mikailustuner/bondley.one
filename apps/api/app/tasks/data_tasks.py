@@ -1,6 +1,6 @@
 """Celery tasks for the verified BIST ingestion pipeline.
 
-KAP, legacy bond parsing, synthetic market prices and legacy calculations are
+Legacy parsing, synthetic market prices and legacy calculations are
 intentionally absent from this module.
 """
 
@@ -10,11 +10,20 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import get_settings
+from app.core.time import BistBusinessCalendar, parse_holiday_list, parse_local_time
 from app.tasks.celery_app import celery_app
 
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+
+def _requested_business_date():
+    calendar = BistBusinessCalendar(
+        extra_holidays=parse_holiday_list(settings.BIST_HOLIDAYS),
+        publication_ready_time=parse_local_time(settings.BIST_EXPECTED_READY_TIME),
+    )
+    return calendar.resolve_expected_source_date().requested_business_date
 
 
 def _run_async(coroutine):
@@ -50,7 +59,10 @@ def fetch_verified_bist_snapshot(self):
         try:
             async with session_factory() as db:
                 service = service_type(db, archive_root=settings.BIST_RAW_ARCHIVE_DIR)
-                return await service.import_tbliste(settings.BIST_BOND_LIST_URL)
+                return await service.import_tbliste(
+                    settings.BIST_BOND_LIST_URL,
+                    requested_business_date=_requested_business_date(),
+                )
         finally:
             await engine.dispose()
 
@@ -77,12 +89,14 @@ def fetch_verified_daily_benchmarks(self):
                     rate_url=settings.BIST_TLREF_RATE_DAILY_URL,
                     index_url=settings.BIST_TLREF_INDEX_DAILY_URL,
                     historical=False,
+                    requested_business_date=_requested_business_date(),
                 )
                 tlrefk = await service.import_benchmark_pair(
                     "TLREFK",
                     rate_url=settings.BIST_TLREFK_RATE_URL,
                     index_url=settings.BIST_TLREFK_INDEX_URL,
                     historical=False,
+                    requested_business_date=_requested_business_date(),
                 )
                 return {"TLREF": tlref, "TLREFK": tlrefk}
         finally:

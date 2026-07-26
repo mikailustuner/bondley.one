@@ -1,68 +1,52 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-# ============================================
-# Bondley Production Deployment Script
-# Shared Server Mode (Behind Host Proxy)
-# ============================================
+COMPOSE_FILE="docker-compose.prod.yml"
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+test -f .env || {
+  echo "HATA: .env yok. Önce 'cp .env.example .env' ve gerçek secret/değerleri girin."
+  exit 1
+}
 
-log() { echo -e "${GREEN}[BONDLEY-DEPLOY]${NC} $1"; }
-warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
-error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
-
-# --- Pre-flight checks ---
-if [ ! -f .env ]; then
-    error ".env file not found. Please copy .env.example to .env and configure it."
-fi
-
-source .env
-
-log "Starting deployment for domain: $DOMAIN"
-
-# --- Step 1: Build & Deploy ---
-log "Building containers (this may take a few minutes)..."
-docker-compose -f docker-compose.prod.yml build
-
-log "Starting Bondley services..."
-docker-compose -f docker-compose.prod.yml up -d
-
-# --- Step 2: Health check ---
-log "Verifying service status..."
-sleep 10
-
-SERVICES=("fincalc-postgres" "fincalc-redis" "fincalc-api" "fincalc-web" "fincalc-nginx")
-for svc in "${SERVICES[@]}"; do
-    if docker ps --format '{{.Names}}' | grep -q "$svc"; then
-        log "  $svc: [UP]"
-    else
-        warn "  $svc: [DOWN] - Check 'docker logs $svc'"
-    fi
+required=(DOMAIN POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB REDIS_PASSWORD JWT_SECRET_KEY JWT_REFRESH_SECRET_KEY MFA_ENCRYPTION_KEY ADMIN_INIT_PASSWORD CORS_ORIGINS FRONTEND_URL)
+for key in "${required[@]}"; do
+  value="$(sed -n "s/^${key}=//p" .env | tail -n 1)"
+  if [ -z "$value" ] || [[ "$value" == replace-* ]]; then
+    echo "HATA: .env içinde $key gerçek bir değer olmalı."
+    exit 1
+  fi
 done
-eline Senkronizasyon
-# --- Step 3: Database Migrations ---
-log "Running database migrations (Alembic)..."
-if docker ps --format '{{.Names}}' | grep -q "fincalc-api"; then
-    docker exec -i fincalc-api alembic upgrade head
-    log "Database migrations applied successfully."
-else
-    error "fincalc-api is not running. Cannot apply migrations."
-fi
 
-# --- Step 4: Final Summary ---
-echo ""
-log "============================================"
-log "  Bondley Deployment Complete!"
-log "============================================"
-log ""
-log "  Local Gateway: http://localhost:3050"
-log "  Public URL:    https://$DOMAIN"
-log ""
-log "  NEXT STEPS:"
-log "  1. Ensure Host Apache2 is configured to proxy requests to port 3050."
-log "  2. Restart Apache: sudo systemctl restart apache2"
-log ""
+echo "[deploy] Compose yapılandırması doğrulanıyor."
+docker compose -f "$COMPOSE_FILE" config --quiet
+
+echo "[deploy] Image'lar oluşturuluyor ve servisler başlatılıyor."
+docker compose -f "$COMPOSE_FILE" up -d --build
+
+for job in bondley-migrate bondley-bootstrap; do
+  for _attempt in $(seq 1 60); do
+    status="$(docker inspect -f '{{.State.Status}}' "$job" 2>/dev/null || true)"
+    [ "$status" = "exited" ] && break
+    sleep 2
+  done
+  exit_code="$(docker inspect -f '{{.State.ExitCode}}' "$job" 2>/dev/null || echo 1)"
+  if [ "$exit_code" != "0" ]; then
+    echo "HATA: $job başarısız. Loglar:"
+    docker logs "$job" 2>&1 || true
+    exit 1
+  fi
+done
+
+for _attempt in $(seq 1 60); do
+  if curl -fsS http://localhost:3050/health/ready >/dev/null 2>&1; then
+    echo "[deploy] Hazır: http://localhost:3050"
+    ./scripts/health-check.sh
+    exit 0
+  fi
+  sleep 2
+done
+
+echo "HATA: readiness zaman aşımına uğradı."
+docker compose -f "$COMPOSE_FILE" ps
+docker compose -f "$COMPOSE_FILE" logs --tail=100 api bootstrap
+exit 1

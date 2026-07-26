@@ -3,6 +3,7 @@ from functools import lru_cache
 from urllib.parse import quote_plus
 
 from pydantic_settings import BaseSettings
+from cryptography.fernet import Fernet
 
 # Project root (apps/api/app/core/config.py -> 5 levels up) for consistent .env path
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
@@ -62,9 +63,13 @@ class Settings(BaseSettings):
     BIST_TLREFK_INDEX_HISTORICAL_URL: str = "https://www.borsaistanbul.com/datum/BISTTLREFKENDEKSI_D.zip"
     BIST_BOND_LIST_URL: str = "https://borsaistanbul.com/datum/tbliste.zip"
     BIST_RAW_ARCHIVE_DIR: str = "/data/bist-source-files"
+    BIST_EXPECTED_READY_TIME: str = "16:15"
+    BIST_HOLIDAYS: str = ""
+    BIST_BOOTSTRAP_ENABLED: bool = True
+    BIST_BOOTSTRAP_IF_EMPTY: bool = True
+    BIST_BOOTSTRAP_REQUIRED_FOR_READINESS: bool = True
     VALUATION_V2_READ_ENABLED: bool = True
     VALUATION_V2_WRITE_ENABLED: bool = True
-    VALUATION_SHADOW_ENABLED: bool = True
 
     CORS_ORIGINS: str = "http://localhost:3000,http://landing.localhost:3000,http://dashboard.localhost:3000,http://admin.localhost:3000"
 
@@ -75,9 +80,6 @@ class Settings(BaseSettings):
     
     # Sentry DSN configuration for error tracking
     SENTRY_DSN: str = ""
-    RATE_LIMIT_LOGIN_PER_MINUTE: int = 5
-    RATE_LIMIT_SIGNUP_PER_HOUR: int = 3
-
     # SMTP Settings for Email Verification
     SMTP_HOST: str = "smtp.hostinger.com" # Default placeholder, user configures via .env
     SMTP_PORT: int = 465 
@@ -112,6 +114,13 @@ class Settings(BaseSettings):
             errors.append("POSTGRES_PASSWORD must be changed from default in production")
         if not self.MFA_ENCRYPTION_KEY:
             errors.append("MFA_ENCRYPTION_KEY must be set in production")
+        else:
+            try:
+                Fernet(self.MFA_ENCRYPTION_KEY.encode("utf-8"))
+            except (TypeError, ValueError):
+                errors.append("MFA_ENCRYPTION_KEY must be a valid Fernet key")
+        if not self.ADMIN_INIT_PASSWORD or len(self.ADMIN_INIT_PASSWORD) < 12:
+            errors.append("ADMIN_INIT_PASSWORD must be set and at least 12 characters in production")
         if errors:
             raise ValueError("Production config invalid: " + "; ".join(errors))
 

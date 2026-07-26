@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.api.v2.verified import create_valuation
 from app.models.valuation import (
     PriceObservation,
-    ShadowValuationComparison,
     ValuationRequestRecord,
     ValuationResultRecord,
 )
@@ -34,7 +33,6 @@ async def _run_check():
             price_count = await db.scalar(select(func.count(PriceObservation.id))) or 0
             request_count = await db.scalar(select(func.count(ValuationRequestRecord.id))) or 0
             result_count = await db.scalar(select(func.count(ValuationResultRecord.id))) or 0
-            shadow_count = await db.scalar(select(func.count(ShadowValuationComparison.id))) or 0
             response = await create_valuation(
                 ValuationCreate(
                     isin="TRD030227F16",
@@ -56,6 +54,5 @@ async def _run_check():
             assert await db.scalar(select(func.count(PriceObservation.id))) == price_count + 1
             assert await db.scalar(select(func.count(ValuationRequestRecord.id))) == request_count + 1
             assert await db.scalar(select(func.count(ValuationResultRecord.id))) == result_count + 1
-            assert await db.scalar(select(func.count(ShadowValuationComparison.id))) == shadow_count + 1
     finally:
         await engine.dispose()

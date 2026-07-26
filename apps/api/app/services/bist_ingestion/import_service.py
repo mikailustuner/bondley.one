@@ -53,14 +53,33 @@ class VerifiedBistImportService:
         self.tbliste_parser = TblisteParser()
         self.benchmark_parser = BenchmarkParser()
 
-    async def import_tbliste(self, url: str) -> dict[str, Any]:
+    async def import_tbliste(
+        self,
+        url: str,
+        *,
+        requested_business_date: date | None = None,
+    ) -> dict[str, Any]:
         artifact = await self.downloader.fetch(url, expected_kind="tbliste_zip")
         xls_bytes, xls_name = self._extract_single(artifact.content, ".xls")
-        effective_date = self._date_from_filename(xls_name)
+        filename_date = self._date_from_filename(xls_name)
+        effective_date = filename_date or requested_business_date
+        date_origin = "SOURCE_FILENAME" if filename_date else "INFERRED_BUSINESS_DATE"
+        freshness_status = self._freshness_status(
+            effective_date,
+            requested_business_date,
+        )
+        if freshness_status == "FUTURE":
+            raise QualityGateError(
+                f"tbliste source date {effective_date} is after expected business date "
+                f"{requested_business_date}"
+            )
         source_file = await self._source_file(
             artifact,
             source_kind="TBLISTE",
             effective_date=effective_date,
+            requested_business_date=requested_business_date,
+            date_origin=date_origin,
+            freshness_status=freshness_status,
         )
         existing = await self._published_run(source_file.id, self.tbliste_parser.VERSION)
         if existing is not None:
@@ -69,6 +88,16 @@ class VerifiedBistImportService:
                 "source_file_id": source_file.id,
                 "import_run_id": existing.id,
                 "sha256": artifact.sha256,
+                "effective_date": (
+                    effective_date.isoformat() if effective_date else None
+                ),
+                "requested_business_date": (
+                    requested_business_date.isoformat()
+                    if requested_business_date
+                    else None
+                ),
+                "date_origin": date_origin,
+                "freshness_status": freshness_status,
             }
 
         run = ImportRun(
@@ -108,6 +137,13 @@ class VerifiedBistImportService:
                 "import_run_id": run.id,
                 "sha256": artifact.sha256,
                 "effective_date": effective_date.isoformat() if effective_date else None,
+                "requested_business_date": (
+                    requested_business_date.isoformat()
+                    if requested_business_date
+                    else None
+                ),
+                "date_origin": date_origin,
+                "freshness_status": freshness_status,
                 "quality": parsed.quality_summary,
             }
         except Exception as exc:
@@ -129,6 +165,7 @@ class VerifiedBistImportService:
         rate_url: str,
         index_url: str,
         historical: bool,
+        requested_business_date: date | None = None,
     ) -> dict[str, Any]:
         expected_kind = "benchmark_zip" if historical else "csv"
         rate_artifact = await self.downloader.fetch(rate_url, expected_kind=expected_kind)
@@ -146,16 +183,32 @@ class VerifiedBistImportService:
                 index_content=index_artifact.content,
             )
         effective_date = max(item.observation_date for item in dataset.observations)
+        freshness_status = (
+            "HISTORICAL"
+            if historical
+            else self._freshness_status(effective_date, requested_business_date)
+        )
+        if freshness_status == "FUTURE":
+            raise QualityGateError(
+                f"{benchmark} source date {effective_date} is after expected business "
+                f"date {requested_business_date}"
+            )
         suffix = "HISTORICAL" if historical else "DAILY"
         rate_source = await self._source_file(
             rate_artifact,
             source_kind=f"{benchmark}_RATE_{suffix}",
             effective_date=effective_date,
+            requested_business_date=requested_business_date,
+            date_origin="SOURCE_CONTENT",
+            freshness_status=freshness_status,
         )
         index_source = await self._source_file(
             index_artifact,
             source_kind=f"{benchmark}_INDEX_{suffix}",
             effective_date=effective_date,
+            requested_business_date=requested_business_date,
+            date_origin="SOURCE_CONTENT",
+            freshness_status=freshness_status,
         )
         parser_version = self.benchmark_parser.VERSION
         existing = await self._published_run(rate_source.id, parser_version)
@@ -164,6 +217,10 @@ class VerifiedBistImportService:
                 "status": "already_published",
                 "benchmark": benchmark,
                 "import_run_id": existing.id,
+                "rate_source_file_id": rate_source.id,
+                "index_source_file_id": index_source.id,
+                "effective_date": effective_date.isoformat(),
+                "freshness_status": freshness_status,
                 "quality": dataset.quality_summary,
             }
 
@@ -206,6 +263,15 @@ class VerifiedBistImportService:
                 "status": "published",
                 "benchmark": benchmark,
                 "import_run_id": run.id,
+                "rate_source_file_id": rate_source.id,
+                "index_source_file_id": index_source.id,
+                "effective_date": effective_date.isoformat(),
+                "requested_business_date": (
+                    requested_business_date.isoformat()
+                    if requested_business_date
+                    else None
+                ),
+                "freshness_status": freshness_status,
                 "quality": dataset.quality_summary,
             }
         except Exception as exc:
@@ -226,6 +292,9 @@ class VerifiedBistImportService:
         *,
         source_kind: str,
         effective_date: date | None,
+        requested_business_date: date | None,
+        date_origin: str,
+        freshness_status: str,
     ) -> SourceFile:
         result = await self.db.execute(
             select(SourceFile).where(
@@ -241,6 +310,9 @@ class VerifiedBistImportService:
             source_kind=source_kind,
             source_url=artifact.source_url,
             effective_date=effective_date,
+            requested_business_date=requested_business_date,
+            date_origin=date_origin,
+            freshness_status=freshness_status,
             downloaded_at=artifact.downloaded_at,
             filename=artifact.filename,
             content_type=artifact.content_type,
@@ -380,6 +452,23 @@ class VerifiedBistImportService:
         await self.db.flush()
 
         if effective_date is not None:
+            latest_effective_date = await self.db.scalar(
+                select(InstrumentVersion.valid_from)
+                .where(
+                    InstrumentVersion.is_published.is_(True),
+                    InstrumentVersion.valid_from.is_not(None),
+                )
+                .order_by(InstrumentVersion.valid_from.desc())
+                .limit(1)
+            )
+            if (
+                latest_effective_date is not None
+                and effective_date < latest_effective_date
+            ):
+                raise QualityGateError(
+                    f"Refusing to publish older tbliste snapshot {effective_date}; "
+                    f"current snapshot is {latest_effective_date}"
+                )
             await self.db.execute(
                 update(InstrumentVersion)
                 .where(
@@ -536,6 +625,19 @@ class VerifiedBistImportService:
         if not match:
             return None
         return datetime.strptime(match.group(1), "%Y%m%d").date()
+
+    @staticmethod
+    def _freshness_status(
+        effective_date: date | None,
+        requested_business_date: date | None,
+    ) -> str:
+        if effective_date is None or requested_business_date is None:
+            return "UNKNOWN"
+        if effective_date == requested_business_date:
+            return "CURRENT"
+        if effective_date < requested_business_date:
+            return "STALE"
+        return "FUTURE"
 
     @staticmethod
     def _optional_date(value: str | None) -> date | None:

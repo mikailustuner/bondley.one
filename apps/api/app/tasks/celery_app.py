@@ -27,12 +27,12 @@ celery_app.conf.update(
 celery_app.conf.beat_schedule = {
     "fetch-verified-daily-benchmarks": {
         "task": "app.tasks.data_tasks.fetch_verified_daily_benchmarks",
-        "schedule": crontab(hour=16, minute=5, day_of_week="1-5"),
+        "schedule": crontab(hour=16, minute=30, day_of_week="1-5"),
         "options": {"queue": "default"},
     },
     "fetch-verified-bist-snapshot": {
         "task": "app.tasks.data_tasks.fetch_verified_bist_snapshot",
-        "schedule": crontab(hour=16, minute=10, day_of_week="1-5"),
+        "schedule": crontab(hour=16, minute=35, day_of_week="1-5"),
         "options": {"queue": "default"},
     },
     "check-user-alerts": {

@@ -3,530 +3,285 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, ArrowRight, TrendingUp, Clock, Star as StarIcon, BarChart3 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ArrowRight,
+  CalendarClock,
+  Database,
+  Search,
+  ShieldCheck,
+  Star,
+} from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import dynamic from "next/dynamic";
-
-const TlrefIndexChart = dynamic(
-  () => import("@/components/charts/tlref-index-chart").then((m) => ({ default: m.TlrefIndexChart })),
-  { ssr: false, loading: () => <Skeleton className="h-[200px] w-full rounded-xl" /> }
-);
-const TlrefRateTVChart = dynamic(
-  () => import("@/components/charts/tlref-rate-tv-chart").then((m) => ({ default: m.TlrefRateTVChart })),
-  { ssr: false, loading: () => <Skeleton className="h-[200px] w-full rounded-xl" /> }
-);
-import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton-components";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useTlrefHistory } from "@/hooks/use-tlref-history";
-import { useUsageSummary } from "@/hooks/use-usage-summary";
-import { api, BondListItem } from "@/lib/api-client";
+import { api, VerifiedInstrument } from "@/lib/api-client";
 import { getToken, getUser } from "@/lib/auth";
-import { formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
-import { tr } from "@/locales/tr";
+import { formatDate, formatDecimal } from "@/lib/utils";
 
-function getGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 6) return tr.dashboard.overview.greetings.night;
-  if (h < 12) return tr.dashboard.overview.greetings.morning;
-  if (h < 18) return tr.dashboard.overview.greetings.day;
-  return tr.dashboard.overview.greetings.evening;
+type Summary = Awaited<ReturnType<typeof api.verified.dashboardSummary>>;
+
+function turkeyHour(): number {
+  return Number(
+    new Intl.DateTimeFormat("tr-TR", {
+      timeZone: "Europe/Istanbul",
+      hour: "2-digit",
+      hour12: false,
+    }).format(new Date()),
+  );
 }
 
-function getTodayText(): string {
-  return new Date().toLocaleDateString("tr-TR", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+function greeting(): string {
+  const hour = turkeyHour();
+  if (hour < 6) return "İyi geceler";
+  if (hour < 12) return "Günaydın";
+  if (hour < 18) return "İyi günler";
+  return "İyi akşamlar";
 }
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [favoriteBonds, setFavoriteBonds] = useState<BondListItem[]>([]);
-  const [quickSearchQuery, setQuickSearchQuery] = useState("");
-  const [quickSearchResults, setQuickSearchResults] = useState<BondListItem[]>([]);
-  const [quickSearchLoading, setQuickSearchLoading] = useState(false);
-  const [quickSearchOpen, setQuickSearchOpen] = useState(false);
-  const quickSearchRef = useRef<HTMLDivElement>(null);
-  const [soonMaturing, setSoonMaturing] = useState<BondListItem[]>([]);
-  const [highYield, setHighYield] = useState<BondListItem[]>([]);
-  const userName = getUser()?.full_name || "User";
-
-  useEffect(() => {
-    document.title = `Dashboard — ${tr.common.brand}`;
-    return () => {
-      document.title = tr.common.brand;
-    };
-  }, []);
-
-  useEffect(() => {
-    const token = getToken();
-    if (!token) return;
-    api.bonds
-      .favoritesList(token)
-      .then((res) => setFavoriteBonds(res.items || []))
-      .catch(() => setFavoriteBonds([]));
-  }, []);
-
-  useEffect(() => {
-    if (quickSearchQuery.trim().length < 2) {
-      setQuickSearchResults([]);
-      setQuickSearchOpen(false);
-      return;
-    }
-    const token = getToken();
-    if (!token) return;
-    const t = setTimeout(() => {
-      setQuickSearchLoading(true);
-      api.bonds
-        .list(token, { search: quickSearchQuery.trim(), limit: 8, active_only: true })
-        .then((res) => {
-          setQuickSearchResults(res.items || []);
-          setQuickSearchOpen((res.items?.length ?? 0) > 0);
-        })
-        .catch(() => {
-          setQuickSearchResults([]);
-          setQuickSearchOpen(false);
-        })
-        .finally(() => setQuickSearchLoading(false));
-    }, 250);
-    return () => clearTimeout(t);
-  }, [quickSearchQuery]);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (quickSearchRef.current && !quickSearchRef.current.contains(event.target as Node)) {
-        setQuickSearchOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [favorites, setFavorites] = useState<VerifiedInstrument[]>([]);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<VerifiedInstrument[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const userName = getUser()?.full_name?.split(" ")[0] || "Kullanıcı";
 
   useEffect(() => {
     const token = getToken();
     if (!token) return;
     Promise.all([
-      api.bonds.list(token, { limit: 5, order_by: "days_to_maturity_asc", max_days_to_maturity: 90, active_only: true }),
-      api.bonds.list(token, { limit: 5, order_by: "last_issue_yield_desc", active_only: true }),
+      api.verified.dashboardSummary(token),
+      api.verified.favorites(token),
     ])
-      .then(([soonRes, yieldRes]) => {
-        setSoonMaturing(soonRes.items || []);
-        setHighYield(yieldRes.items || []);
+      .then(([summaryResult, favoriteResult]) => {
+        setSummary(summaryResult);
+        setFavorites(favoriteResult.details);
       })
-      .catch(() => { });
+      .catch((reason) =>
+        setError(reason instanceof Error ? reason.message : "Dashboard yüklenemedi."),
+      )
+      .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      setResults([]);
+      return;
+    }
+    const token = getToken();
+    if (!token) return;
+    const timer = window.setTimeout(() => {
+      setSearching(true);
+      api.verified
+        .list(token, { search: query.trim(), limit: 8, active_only: true })
+        .then((response) => setResults(response.items))
+        .catch(() => setResults([]))
+        .finally(() => setSearching(false));
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [query]);
 
+  useEffect(() => {
+    const close = (event: MouseEvent) => {
+      if (!searchRef.current?.contains(event.target as Node)) setResults([]);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
 
-  const { history, indexData, annualRateData, stats, bondStats, loading, error } = useTlrefHistory();
-  const { summary: usageSummary } = useUsageSummary();
+  const goToInstrument = (isin: string) => {
+    setQuery("");
+    setResults([]);
+    router.push(`/dashboard/bonds/${encodeURIComponent(isin)}`);
+  };
 
-  return (
-    <div className="space-y-8">
-      {/* ═══ Greeting + Search ═══ */}
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-5 animate-fade-up">
-        <div>
-          <h1 className="text-display-lg text-foreground tracking-tight">
-            {getGreeting()}, {userName.split(" ")[0]}.
-          </h1>
-          <p className="text-[15px] text-muted-foreground mt-1">
-            {getTodayText()}
-          </p>
-        </div>
-        <div ref={quickSearchRef} className="relative w-full md:max-w-[600px]">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-[18px] w-[18px] pointer-events-none text-muted-foreground/70" />
-          <Input
-            type="search"
-            placeholder={tr.dashboard.overview.search.placeholder}
-            value={quickSearchQuery}
-            onChange={(e) => setQuickSearchQuery(e.target.value)}
-            onFocus={() => quickSearchResults.length > 0 && setQuickSearchOpen(true)}
-            className="pl-11 h-12 rounded-full bg-background border-border hover:border-primary/50 focus-visible:ring-4 focus-visible:ring-primary/10 focus-visible:border-primary text-[15px] transition-all shadow-md search-glow"
-            aria-label={tr.dashboard.overview.search.ariaLabel}
-            autoComplete="off"
-          />
-          {quickSearchOpen && (
-            <ul className="absolute top-full left-0 right-0 z-50 mt-3 max-h-80 overflow-auto rounded-3xl border border-border bg-card/95 backdrop-blur-xl py-2 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
-              <li className="px-4 py-2 text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
-                {tr.dashboard.overview.search.results || "Sonuçlar"}
-              </li>
-              {quickSearchLoading && (
-                <li className="px-4 py-3 text-[13px] text-muted-foreground">{tr.dashboard.overview.search.searching}</li>
-              )}
-              {!quickSearchLoading &&
-                quickSearchResults.map((b) => (
-                  <li key={b.isin_code} role="option">
-                    <button
-                      type="button"
-                      className="flex w-full items-center justify-between px-4 py-3 text-[13px] hover:bg-secondary/60 focus:bg-secondary/60 focus:outline-none transition-colors"
-                      onClick={() => {
-                        setQuickSearchQuery("");
-                        setQuickSearchOpen(false);
-                        setQuickSearchResults([]);
-                        router.push(`/dashboard/bonds/${encodeURIComponent(b.isin_code)}`);
-                      }}
-                    >
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-mono font-medium text-foreground">{b.isin_code}</span>
-                        {b.issuer && <span className="truncate text-muted-foreground text-[12px]">{b.issuer}</span>}
-                      </div>
-                      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
-                    </button>
-                  </li>
-                ))}
-              {!quickSearchLoading && quickSearchResults.length === 0 && quickSearchQuery.trim().length >= 2 && (
-                <li className="px-4 py-3 text-[13px] text-muted-foreground">{tr.dashboard.overview.search.noResults}</li>
-              )}
-            </ul>
-          )}
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-16 w-full rounded-2xl" />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {[1, 2, 3, 4].map((item) => <Skeleton key={item} className="h-32 rounded-3xl" />)}
         </div>
       </div>
+    );
+  }
 
-      {/* ═══ Loading ═══ */}
-      {loading && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="rounded-3xl border border-border bg-card p-6">
-              <Skeleton className="h-3 w-20 mb-3" />
-              <Skeleton className="h-9 w-24 mb-2" />
-              <Skeleton className="h-3 w-16" />
-            </div>
-          ))}
+  return (
+    <main className="space-y-7">
+      <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="text-display-lg tracking-tight">{greeting()}, {userName}.</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {new Intl.DateTimeFormat("tr-TR", {
+              timeZone: "Europe/Istanbul",
+              dateStyle: "full",
+            }).format(new Date())}
+          </p>
         </div>
-      )}
+        <div ref={searchRef} className="relative w-full lg:max-w-xl">
+          <Search className="pointer-events-none absolute left-4 top-3.5 h-5 w-5 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="ISIN veya ihraççı ara"
+            className="h-12 rounded-full pl-12"
+            aria-label="Kıymet ara"
+          />
+          {query.trim().length >= 2 && (
+            <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border bg-card shadow-xl">
+              {searching && <div className="p-4 text-sm text-muted-foreground">Aranıyor…</div>}
+              {!searching && results.map((item) => (
+                <button
+                  key={item.isin}
+                  type="button"
+                  onClick={() => goToInstrument(item.isin)}
+                  className="flex w-full items-center justify-between border-b px-4 py-3 text-left last:border-0 hover:bg-muted/50"
+                >
+                  <span>
+                    <span className="block font-mono-data text-sm font-semibold">{item.isin}</span>
+                    <span className="block max-w-md truncate text-xs text-muted-foreground">
+                      {item.issuer || "İhraççı belirtilmemiş"}
+                    </span>
+                  </span>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              ))}
+              {!searching && results.length === 0 && (
+                <div className="p-4 text-sm text-muted-foreground">Eşleşen kıymet yok.</div>
+              )}
+            </div>
+          )}
+        </div>
+      </header>
 
-      {/* ═══ Error ═══ */}
       {error && (
-        <div className="p-5 rounded-3xl border border-destructive/20 bg-destructive/5 text-destructive text-[15px]">
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
           {error}
         </div>
       )}
 
-      {/* ═══ Stat Widgets ═══ */}
-      {stats && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 animate-fade-up">
-          {/* TLREF Endeks — highlight */}
-          <div className="widget-blue rounded-3xl border border-primary/10 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="text-[12px] font-semibold text-primary/70 uppercase tracking-wider mb-3">{tr.dashboard.overview.widgets.tlrefIndex}</div>
-            <div className="font-mono-data text-display-lg font-bold text-primary leading-none tracking-tight">
-              {formatDecimal(stats.latest_index, 2)}
-            </div>
-            <div className="text-[13px] text-muted-foreground mt-2.5">
-              {stats.latest_date ? formatDate(stats.latest_date) : ""}
-            </div>
-          </div>
-
-          {/* Günlük Oran */}
-          <div className="widget-green rounded-3xl border border-border p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">{tr.dashboard.overview.widgets.dailyRate}</div>
-            <div className="font-mono-data text-display-lg font-bold text-positive leading-none tracking-tight">
-              {formatPercent(stats.latest_daily_rate, 4)}
-            </div>
-            <div className="text-[13px] text-muted-foreground mt-2.5">{tr.dashboard.overview.widgets.dailyRateDesc}</div>
-          </div>
-
-          {/* Yıllık Oran */}
-          <div className="widget-purple rounded-3xl border border-border p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">{tr.dashboard.overview.widgets.annualizedRate}</div>
-            <div className="font-mono-data text-display-lg font-bold text-foreground leading-none tracking-tight">
-              {stats.annualized_rate_pct != null ? formatPercent(stats.annualized_rate_pct) : "—"}
-            </div>
-            <div className="text-[13px] text-muted-foreground mt-2.5">{tr.dashboard.overview.widgets.annualizedRateDesc}</div>
-          </div>
-
-          {/* Aktif Araç */}
-          <Link href="/dashboard/bonds">
-            <div className="widget-orange rounded-3xl border border-border p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] cursor-pointer hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] hover:border-border transition-all group">
-              <div className="text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-3">{tr.dashboard.overview.widgets.activeBonds}</div>
-              <div className="font-mono-data text-display-lg font-bold text-foreground leading-none tracking-tight">
-                {bondStats ? formatDecimal(bondStats.total_bonds, 0) : "—"}
-              </div>
-              <div className="flex items-center gap-1.5 mt-2.5">
-                <span className="text-[13px] text-muted-foreground">
-                  {bondStats?.avg_days_to_maturity 
-                    ? tr.dashboard.overview.widgets.avgMaturity.replace("{days}", Math.round(bondStats.avg_days_to_maturity).toString()) 
-                    : tr.dashboard.overview.widgets.bondsDesc}
-                </span>
-                <ArrowRight className="h-3 w-3 text-muted-foreground/40 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-              </div>
-            </div>
-          </Link>
-        </div>
-      )}
-
-      {/* ═══ Maturity Buckets — Pill Bar ═══ */}
-      {bondStats?.by_maturity_bucket && (bondStats.by_maturity_bucket.short + bondStats.by_maturity_bucket.medium + bondStats.by_maturity_bucket.long) > 0 && (
-        <div className="animate-fade-up-delay-1">
-          <div className="rounded-3xl border border-border bg-card p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-[13px] font-medium text-muted-foreground">{tr.dashboard.overview.maturity.title}</div>
-              {bondStats?.avg_days_to_maturity && (
-                <div className="text-[12px] font-medium text-primary/80 bg-primary/5 px-3 py-1 rounded-xl border border-primary/10">
-                  {tr.dashboard.overview.widgets.avgMaturity.replace("{days}", Math.round(bondStats.avg_days_to_maturity).toString())}
-                </div>
-              )}
-            </div>
-            <div className="flex rounded-full overflow-hidden h-3 bg-secondary">
-              {(() => {
-                const total = bondStats.by_maturity_bucket.short + bondStats.by_maturity_bucket.medium + bondStats.by_maturity_bucket.long;
-                return (
-                  <>
-                    <div className="bg-primary h-full transition-all" style={{ width: `${(bondStats.by_maturity_bucket.short / total) * 100}%` }} />
-                    <div className="bg-primary/50 h-full transition-all" style={{ width: `${(bondStats.by_maturity_bucket.medium / total) * 100}%` }} />
-                    <div className="bg-primary/20 h-full transition-all" style={{ width: `${(bondStats.by_maturity_bucket.long / total) * 100}%` }} />
-                  </>
-                );
-              })()}
-            </div>
-            <div className="flex justify-between mt-3 text-[12px] text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-primary" />
-                {tr.dashboard.overview.maturity.short.replace("{count}", formatDecimal(bondStats.by_maturity_bucket.short, 0))}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-primary/50" />
-                {tr.dashboard.overview.maturity.medium.replace("{count}", formatDecimal(bondStats.by_maturity_bucket.medium, 0))}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-primary/20" />
-                {tr.dashboard.overview.maturity.long.replace("{count}", formatDecimal(bondStats.by_maturity_bucket.long, 0))}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══ Lists: Soon Maturing + High Yield + High Spread ═══ */}
-      {(soonMaturing.length > 0 || highYield.length > 0) && (
-        <div className="grid gap-5 lg:grid-cols-2 animate-fade-up-delay-1">
-          {soonMaturing.length > 0 && (
+      {summary && (
+        <>
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {(["TLREF", "TLREFK"] as const).map((name) => {
+              const item = summary.benchmarks[name];
+              return (
+                <Card key={name}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground">
+                      {name} yayımlanan yıllık oran
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="font-mono-data text-3xl font-bold">
+                      {item?.published_annual_rate_pct == null
+                        ? "—"
+                        : `%${Number(item.published_annual_rate_pct).toLocaleString("tr-TR", { maximumFractionDigits: 4 })}`}
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {item ? formatDate(item.observation_date) : "Veri bekleniyor"}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            <Link href="/dashboard/bonds">
+              <Card className="h-full transition-colors hover:border-primary/40">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Aktif kıymet
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="font-mono-data text-3xl font-bold">
+                    {formatDecimal(summary.active_instruments, 0)}
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {summary.valuation_eligible} kayıt değerlemeye uygun
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
             <Card>
               <CardHeader className="pb-2">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-[15px]">{tr.dashboard.overview.lists.soonMaturing.title}</CardTitle>
-                </div>
-                <CardDescription>{tr.dashboard.overview.lists.soonMaturing.desc}</CardDescription>
+                <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Kaynak durumu
+                </CardTitle>
               </CardHeader>
-              <CardContent className="pt-2">
-                <div className="space-y-0">
-                  {soonMaturing.map((b) => (
-                    <Link
-                      key={b.isin_code}
-                      href={`/dashboard/bonds/${encodeURIComponent(b.isin_code)}`}
-                      className="flex items-center justify-between rounded-xl py-3 px-3 -mx-1 hover:bg-secondary/50 transition-colors group"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="font-mono-data text-[13px] font-medium text-foreground shrink-0">{b.isin_code}</span>
-                        <span className="text-[12px] text-muted-foreground truncate min-w-0">{b.issuer ?? "—"}</span>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="font-mono-data text-[13px] text-muted-foreground">
-                          {b.days_to_maturity != null ? `${b.days_to_maturity}g` : "—"}
-                        </span>
-                        <ArrowRight className="h-3 w-3 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                    </Link>
-                  ))}
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <Database className="h-5 w-5 text-primary" />
+                  <Badge variant={summary.source?.freshness_status === "CURRENT" ? "default" : "secondary"}>
+                    {summary.source?.freshness_status === "CURRENT" ? "Güncel" : "Önceki iş günü"}
+                  </Badge>
                 </div>
+                <p className="mt-3 truncate text-xs text-muted-foreground">
+                  {summary.source?.filename || "Kaynak bekleniyor"}
+                  {summary.source?.effective_date ? ` · ${formatDate(summary.source.effective_date)}` : ""}
+                </p>
               </CardContent>
             </Card>
-          )}
-          {highYield.length > 0 && (
+          </section>
+
+          <section className="grid gap-5 xl:grid-cols-2">
             <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-positive" />
-                  <CardTitle className="text-[15px]">{tr.dashboard.overview.lists.highYield.title}</CardTitle>
-                </div>
-                <CardDescription>{tr.dashboard.overview.lists.highYield.desc}</CardDescription>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <CalendarClock className="h-4 w-4" /> 90 gün içinde vadesi gelenler
+                </CardTitle>
               </CardHeader>
-              <CardContent className="pt-2">
-                <div className="space-y-0">
-                    {highYield.map((b) => (
-                      <Link
-                        key={b.isin_code}
-                        href={`/dashboard/bonds/${encodeURIComponent(b.isin_code)}`}
-                        className="flex flex-col rounded-xl py-3 px-3 -mx-1 hover:bg-secondary/50 transition-colors group"
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <span className="font-mono-data text-[13px] font-medium text-foreground shrink-0">{b.isin_code}</span>
-                            <span className="text-[12px] text-muted-foreground truncate min-w-0">{b.issuer ?? "—"}</span>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="font-mono-data text-[13px] text-positive font-medium">
-                              {b.last_issue_yield != null ? formatPercent(b.last_issue_yield) : "—"}
-                            </span>
-                            <ArrowRight className="h-3 w-3 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </div>
-                        </div>
-                        {b.remarks && (
-                          <div className="mt-1 text-[11px] text-muted-foreground/70 line-clamp-1 italic">
-                            {b.remarks}
-                          </div>
-                        )}
-                      </Link>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-
-        </div>
-      )}
-
-      {/* ═══ Favorites ═══ */}
-      {favoriteBonds.length > 0 && (
-        <Card className="animate-fade-up-delay-1">
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-2">
-              <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-              <CardTitle className="text-[15px]">{tr.dashboard.overview.lists.favorites}</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-2">
-            <div className="flex flex-wrap gap-2">
-              {favoriteBonds.map((b) => (
-                <Link
-                  key={b.isin_code}
-                  href={`/dashboard/bonds/${encodeURIComponent(b.isin_code)}`}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-secondary/40 px-4 py-2 text-[13px] text-foreground hover:bg-secondary/70 transition-colors"
-                >
-                  <span className="font-mono-data font-medium">{b.isin_code}</span>
-                  {b.issuer && <span className="text-muted-foreground text-[12px] truncate max-w-[180px]">{b.issuer}</span>}
-                </Link>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ═══ Usage Summary ═══ */}
-      {usageSummary && (
-        <Card className="animate-fade-up-delay-2">
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-[15px]">{tr.dashboard.overview.lists.usage.title}</CardTitle>
-            </div>
-            <CardDescription>
-              {tr.dashboard.overview.lists.usage.desc.replace("{count}", usageSummary.this_month_bonds_viewed.toString())}
-            </CardDescription>
-          </CardHeader>
-          {usageSummary.most_viewed_bonds.length > 0 && (
-            <CardContent className="pt-2">
-              <div className="flex flex-wrap gap-2">
-                {usageSummary.most_viewed_bonds.map((b) => (
+              <CardContent>
+                {summary.maturing_soon.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Bu aralıkta kıymet yok.</p>
+                ) : summary.maturing_soon.map((item) => (
                   <Link
-                    key={b.isin_code}
-                    href={`/dashboard/bonds/${encodeURIComponent(b.isin_code)}`}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-secondary/40 px-3 py-1.5 text-[13px] text-foreground hover:bg-secondary/70 transition-colors"
+                    key={item.isin}
+                    href={`/dashboard/bonds/${item.isin}`}
+                    className="flex items-center justify-between rounded-xl px-2 py-3 hover:bg-muted/50"
                   >
-                    <span className="font-mono-data">{b.isin_code}</span>
-                    <Badge variant="secondary" className="text-[10px]">{b.view_count}</Badge>
+                    <span>
+                      <span className="block font-mono-data text-sm font-semibold">{item.isin}</span>
+                      <span className="block max-w-sm truncate text-xs text-muted-foreground">{item.issuer || "—"}</span>
+                    </span>
+                    <span className="text-sm text-muted-foreground">{item.days_to_maturity} gün</span>
                   </Link>
                 ))}
-              </div>
-            </CardContent>
-          )}
-        </Card>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Star className="h-4 w-4 text-yellow-500" /> Favoriler
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {favorites.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Henüz favori kıymet eklemediniz.</p>
+                ) : favorites.slice(0, 8).map((item) => (
+                  <Link
+                    key={item.isin}
+                    href={`/dashboard/bonds/${item.isin}`}
+                    className="flex items-center justify-between rounded-xl px-2 py-3 hover:bg-muted/50"
+                  >
+                    <span>
+                      <span className="block font-mono-data text-sm font-semibold">{item.isin}</span>
+                      <span className="block max-w-sm truncate text-xs text-muted-foreground">{item.issuer || "—"}</span>
+                    </span>
+                    <ShieldCheck className={`h-4 w-4 ${item.quality.valuation_eligible ? "text-positive" : "text-muted-foreground"}`} />
+                  </Link>
+                ))}
+              </CardContent>
+            </Card>
+          </section>
+        </>
       )}
-
-      {/* ═══ TLREF Charts ═══ */}
-      <div id="tlref-charts" className="space-y-5 animate-fade-up-delay-2">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardDescription>{tr.dashboard.overview.charts.index.desc}</CardDescription>
-                <CardTitle className="mt-1">{tr.dashboard.overview.charts.index.title}</CardTitle>
-              </div>
-              <Badge variant="outline" className="rounded-xl">
-                {tr.dashboard.overview.charts.index.badge.replace("{count}", history.length.toString())}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <TlrefIndexChart data={indexData} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardDescription>Borsa İstanbul tarafından yayımlanan günlük gecelik faiz oranı</CardDescription>
-                <CardTitle className="mt-1">TLREF Oranı</CardTitle>
-              </div>
-              <Badge variant="outline" className="rounded-xl">
-                {annualRateData.length} kayıt
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="px-0 pb-0 overflow-hidden rounded-b-2xl">
-            <TlrefRateTVChart data={annualRateData} />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ═══ Historical Table ═══ */}
-      {history.length > 0 && (
-        <Card className="animate-fade-up-delay-3">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardDescription>{tr.dashboard.overview.table.desc}</CardDescription>
-                <CardTitle className="mt-1">{tr.dashboard.overview.table.title}</CardTitle>
-              </div>
-              <span className="text-[13px] font-medium text-muted-foreground">
-                {tr.dashboard.overview.table.count.replace("{count}", history.length.toString())}
-              </span>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto max-h-96">
-              <table className="w-full">
-                <thead className="sticky top-0 bg-card">
-                  <tr className="border-b border-border">
-                    <th scope="col" className="pb-3 text-left text-[13px] font-medium text-muted-foreground">{tr.dashboard.overview.table.cols.date}</th>
-                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">{tr.dashboard.overview.table.cols.index}</th>
-                    <th scope="col" className="pb-3 text-right text-[13px] font-medium text-muted-foreground">{tr.dashboard.overview.table.cols.rate}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...history]
-                    .reverse()
-                    .slice(0, 50)
-                    .map((r) => (
-                      <tr
-                        key={r.rate_date}
-                        className="border-b border-border/30 last:border-0 hover:bg-secondary/40 transition-colors"
-                      >
-                        <td className="py-3 font-mono-data text-[13px] text-foreground">{formatDate(r.rate_date)}</td>
-                        <td className="py-3 text-right font-mono-data text-[13px] text-primary">{formatDecimal(r.index_value, 5)}</td>
-                        <td className="py-3 text-right font-mono-data text-[13px]">
-                          {r.daily_rate != null ? (
-                            <span className={r.daily_rate >= 0 ? "text-positive" : "text-negative"}>
-                              {formatPercentFromDecimal(r.daily_rate, 5)}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+    </main>
   );
 }

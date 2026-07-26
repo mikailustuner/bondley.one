@@ -1,25 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
-import { InitialLoader } from "@/components/initial-loader";
 import { MaintenanceGuard } from "@/components/maintenance-guard";
 import { CookieConsentBanner } from "@/components/ui/cookie-consent";
-import { AboutPopup } from "@/components/about-popup";
-import { ServiceWorkerRegistrar } from "@/components/service-worker-registrar";
 import "./globals.css";
 import { tr } from "@/locales/tr";
-
-const inter = Inter({
-  subsets: ["latin", "latin-ext"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono-data",
-  display: "swap",
-});
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -62,18 +46,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="tr"
-      className={`${inter.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
       <body className="font-sans antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
-          <InitialLoader />
           <MaintenanceGuard>
             {children}
           </MaintenanceGuard>
           <CookieConsentBanner />
-          <AboutPopup />
-          <ServiceWorkerRegistrar />
         </ThemeProvider>
       </body>
     </html>

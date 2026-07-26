@@ -8,6 +8,7 @@ from app.core.database import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.services.metrics_service import MetricsService
+from app.core.time import turkey_today
 
 router = APIRouter()
 
@@ -32,7 +33,7 @@ async def get_my_summary(
     end_date: date | None = Query(None, description="Donem sonu (varsayilan: bu ayin sonu)"),
 ) -> dict[str, Any]:
     """Kullaniciya ozel kullanim ozeti: bu donemde kac tahvil incelendi, en cok bakilan tahviller."""
-    today = date.today()
+    today = turkey_today()
     if start_date is None or end_date is None:
         start_date, end_date = _month_start_end(today)
     return await MetricsService.get_personal_summary(

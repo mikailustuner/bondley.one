@@ -79,7 +79,7 @@ const webAppSchema = {
     "Fiyat/getiri geçmiş grafikleri",
     "Favori araç listesi",
     "Vade ve kupon uyarıları",
-    "KAP bildirim entegrasyonu",
+    "Doğrulanmış BIST kaynak izlenebilirliği",
   ],
   publisher: { "@type": "Organization", name: "Bondley", url: SITE_URL },
   audience: { "@type": "BusinessAudience", audienceType: "Kurumsal yatırımcılar, bireysel yatırımcılar, finansal analistler" },

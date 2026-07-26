@@ -65,7 +65,7 @@ export function TlrefRateChart({ data }: Props) {
             color: "hsl(var(--foreground))",
             boxShadow: "var(--shadow-md)",
           }}
-          formatter={(value: number) => [`%${value.toFixed(5)}`, tr.dashboard.overview.widgets.dailyRate]}
+          formatter={(value: number) => [`%${value.toFixed(4)}`, "Yayımlanan yıllık TLREF"]}
           labelStyle={{ color: MUTED, fontSize: "10px", marginBottom: "4px" }}
         />
         <Area

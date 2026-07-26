@@ -25,7 +25,6 @@ sure.md
 .env.local
 .env.*.local
 .env.production
-.env.example
 # IDE
 .vscode/
 .idea/
@@ -50,3 +49,6 @@ docker-data/
 # Logs
 *.log
 celerybeat-schedule
+
+# Local database backups
+backups/

@@ -11,22 +11,21 @@ from slowapi.errors import RateLimitExceeded
 import sentry_sdk
 
 from app.core.config import get_settings
-from app.core.database import async_session_factory, engine, Base
+from app.core.database import async_session_factory, engine
 from app.core.rate_limit import limiter
 from app.core.security import hash_password
 from app.models.user import User
-from app.models import Bond, MarketData, Calculation, TLREFRate, AuditLog, BondView, UserMetric  # noqa: F401
 from app.api.v1.router import api_router
 from app.api.v2.router import api_v2_router
 from app.middleware.audit_middleware import AuditMiddleware
+from app.services.bist_ingestion.bootstrap import readiness_payload
 
 import logging
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
-# Schema versioning: run `alembic upgrade head` before starting the app (e.g. in deploy).
-# Startup only ensures base tables exist (create_all) for dev/minimal installs.
+# Schema versioning is migration-only. The API never creates or mutates schema.
 
 
 async def ensure_admin_user():
@@ -104,12 +103,6 @@ async def lifespan(app: FastAPI):
         logger.exception("[startup] Database connection test failed: %s", e)
         raise
     try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        logger.info("[startup] Base tables ensured (for versioned schema run: alembic upgrade head).")
-    except Exception as e:
-        logger.exception("[startup] create_all hatasi: %s", e)
-    try:
         await ensure_admin_user()
     except Exception as e:
         logger.exception("[startup] Admin seed hatasi: %s", e)
@@ -166,5 +159,16 @@ app.include_router(api_v2_router, prefix="/api/v2", tags=["Verified v2"])
 
 
 @app.get("/health")
+@app.get("/health/live")
 async def health_check():
     return {"status": "healthy", "service": "bondley-api"}
+
+
+@app.get("/health/ready")
+async def readiness_check():
+    async with async_session_factory() as db:
+        ready, payload = await readiness_payload(
+            db,
+            require_bootstrap=settings.BIST_BOOTSTRAP_REQUIRED_FOR_READINESS,
+        )
+    return JSONResponse(status_code=200 if ready else 503, content=payload)
