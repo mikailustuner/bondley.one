@@ -93,6 +93,20 @@ services:
     networks: [backend]
     logging: *json-logging
 
+  bist-source-init:
+    image: alpine:3.20
+    container_name: bondley-bist-source-init
+    restart: "no"
+    user: "0:0"
+    network_mode: none
+    command:
+      - sh
+      - -c
+      - mkdir -p /data/bist-source-files && chown -R 1001:1001 /data/bist-source-files
+    volumes:
+      - bist_source_data:/data/bist-source-files
+    logging: *json-logging
+
   migrate:
     <<: *api-image
     container_name: bondley-migrate
@@ -114,9 +128,11 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      bist-source-init:
+        condition: service_completed_successfully
     volumes:
       - bist_source_data:/data/bist-source-files
-    networks: [backend]
+    networks: [backend, egress]
     logging: *json-logging
 
   api:
@@ -159,7 +175,7 @@ services:
         condition: service_healthy
     volumes:
       - bist_source_data:/data/bist-source-files
-    networks: [backend]
+    networks: [backend, egress]
     logging: *json-logging
 
   celery-beat:
@@ -230,3 +246,4 @@ networks:
   frontend:
   backend:
     internal: true
+  egress:

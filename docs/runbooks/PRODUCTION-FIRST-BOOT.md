@@ -29,8 +29,10 @@ Bu tarih `requested_business_date` olarak her kaynak kaydına yazılır.
 ## 3. İlk açılış sırası
 
 `migrate` tek-seferlik container’ı Alembic `001` şemasını kurar. Başarı olmadan
-bootstrap başlamaz. Bootstrap PostgreSQL advisory lock alır; aynı anda iki
-import çalışamaz.
+bootstrap başlamaz. `bist-source-init`, kalıcı ham-veri volume'unu API
+kullanıcısına yazılabilir hale getirir. Bootstrap PostgreSQL advisory lock alır;
+aynı anda iki import çalışamaz. Bootstrap ve veri çeken worker, veritabanının
+izole backend ağından ayrı bir egress ağıyla yalnız dış kaynaklara çıkar.
 
 Bootstrap sırası:
 

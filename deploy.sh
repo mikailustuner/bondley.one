@@ -23,7 +23,7 @@ docker compose -f "$COMPOSE_FILE" config --quiet
 echo "[deploy] Image'lar oluşturuluyor ve servisler başlatılıyor."
 docker compose -f "$COMPOSE_FILE" up -d --build
 
-for job in bondley-migrate bondley-bootstrap; do
+for job in bondley-bist-source-init bondley-migrate bondley-bootstrap; do
   for _attempt in $(seq 1 60); do
     status="$(docker inspect -f '{{.State.Status}}' "$job" 2>/dev/null || true)"
     [ "$status" = "exited" ] && break
