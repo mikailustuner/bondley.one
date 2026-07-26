@@ -693,8 +693,8 @@ export const tr = {
             types: {
                 ytm_above: "YTM şu değerin üzerinde",
                 ytm_below: "YTM şu değerin altında",
-                tlref_daily_above: "Yayımlanan yıllık TLREF şu değerin üzerinde (%)",
-                tlref_daily_below: "Yayımlanan yıllık TLREF şu değerin altında (%)",
+                tlref_annual_above: "Yayımlanan yıllık TLREF şu değerin üzerinde (%)",
+                tlref_annual_below: "Yayımlanan yıllık TLREF şu değerin altında (%)",
                 days_to_maturity: "Vadeye X gün kala",
             },
             triggered: {

@@ -15,8 +15,8 @@ import { tr } from "@/locales/tr";
 const ALERT_TYPES: { value: string; label: string }[] = [
   { value: "ytm_above", label: tr.dashboard.alerts.types.ytm_above },
   { value: "ytm_below", label: tr.dashboard.alerts.types.ytm_below },
-  { value: "tlref_annual_above", label: "Yayımlanan yıllık TLREF bu değerin üzerinde (%)" },
-  { value: "tlref_annual_below", label: "Yayımlanan yıllık TLREF bu değerin altında (%)" },
+  { value: "tlref_annual_above", label: tr.dashboard.alerts.types.tlref_annual_above },
+  { value: "tlref_annual_below", label: tr.dashboard.alerts.types.tlref_annual_below },
   { value: "days_to_maturity", label: tr.dashboard.alerts.types.days_to_maturity },
 ];
 
@@ -97,7 +97,7 @@ export default function AlertsPage() {
       parameters.days = formDays ? parseInt(formDays, 10) : 30;
     } else if (formType === "ytm_above" || formType === "ytm_below") {
       parameters.isin = formIsin;
-      parameters.threshold = formThreshold ? parseFloat(formThreshold) / 100 : 0;
+      parameters.threshold = formThreshold ? parseFloat(formThreshold) : 0;
     } else {
       parameters.threshold = formThreshold ? parseFloat(formThreshold) : 0;
     }
@@ -256,7 +256,7 @@ export default function AlertsPage() {
               {needThreshold && (
                 <div>
                   <label className="block text-[15px] font-medium text-foreground mb-1.5">
-                    {tr.dashboard.alerts.form.threshold.replace("{unit}", formType.includes("ytm") ? "(%)" : formType.includes("tlref") ? "(%, örn. 1)" : "")}
+                    {tr.dashboard.alerts.form.threshold.replace("{unit}", "(%)")}
                   </label>
                   <input
                     type="number"
@@ -264,7 +264,7 @@ export default function AlertsPage() {
                     value={formThreshold}
                     onChange={(e) => setFormThreshold(e.target.value)}
                     className="w-full h-11 rounded-[10px] border border-border bg-card px-4 py-2.5 font-mono text-[15px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-                    placeholder={formType.includes("tlref") ? "1" : "15"}
+                    placeholder={formType.includes("tlref") ? "42,50" : "15,00"}
                   />
                 </div>
               )}

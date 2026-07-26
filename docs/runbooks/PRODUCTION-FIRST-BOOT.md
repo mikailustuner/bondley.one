@@ -35,8 +35,8 @@ Bootstrap sırası:
 
 1. TLREF tarihsel oran + endeks.
 2. TLREFK tarihsel oran + endeks.
-3. TLREF günlük oran + endeks.
-4. TLREFK günlük oran + endeks.
+3. TLREF günlük dosyası: yayımlanmış yıllık oran + endeks.
+4. TLREFK günlük dosyası: yayımlanmış yıllık oran + endeks.
 5. `tbliste.zip`.
 
 Tarihsel benchmark endeksi yayımlanan oranlardan yeniden kurulur ve tolerans
