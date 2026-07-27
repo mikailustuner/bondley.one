@@ -68,6 +68,29 @@ class Settings(BaseSettings):
     BIST_BOOTSTRAP_ENABLED: bool = True
     BIST_BOOTSTRAP_IF_EMPTY: bool = True
     BIST_BOOTSTRAP_REQUIRED_FOR_READINESS: bool = True
+    # KAP is an asynchronous enrichment source and never gates readiness.
+    KAP_INGESTION_ENABLED: bool = False
+    KAP_PUBLIC_LIST_URL: str = "https://www.kap.org.tr/tr/api/disclosure/members/byCriteria"
+    KAP_PUBLIC_DETAIL_URL_TEMPLATE: str = "https://www.kap.org.tr/tr/Bildirim/{disclosure_id}"
+    KAP_RAW_ARCHIVE_DIR: str = "/data/bist-source-files/kap"
+    KAP_PROXY_URLS: str = ""
+    KAP_PROXY_AUTO_REFRESH_ENABLED: bool = False
+    KAP_PROXY_SOURCE_URL: str = (
+        "https://api.proxyscrape.com/v4/free-proxy-list/get"
+        "?request=displayproxies&protocol=http&timeout=5000&country=all"
+        "&ssl=yes&anonymity=elite&proxy_format=protocolipport&format=text&limit=100"
+    )
+    KAP_PROXY_REFRESH_HOURS: int = 24
+    KAP_PROXY_MAX_POOL_SIZE: int = 10
+    KAP_PROXY_REQUIRE_PROXY: bool = False
+    KAP_REQUEST_INTERVAL_SECONDS: float = 2.0
+    KAP_REQUEST_JITTER_MIN_MS: int = 250
+    KAP_REQUEST_JITTER_MAX_MS: int = 750
+    KAP_HTTP_TIMEOUT_SECONDS: float = 30.0
+    KAP_MAX_DETAILS_PER_RUN: int = 50
+    KAP_ACTIVE_POLL_MINUTES: int = 15
+    KAP_NIGHT_POLL_MINUTES: int = 60
+    KAP_USER_AGENT: str = "Bondley/1.0 (+https://bondley.one; KAP enrichment)"
     VALUATION_V2_READ_ENABLED: bool = True
     VALUATION_V2_WRITE_ENABLED: bool = True
 
@@ -97,6 +120,10 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+
+    @property
+    def kap_proxy_url_list(self) -> list[str]:
+        return [url.strip() for url in self.KAP_PROXY_URLS.split(",") if url.strip()]
 
     def validate_production_secrets(self) -> None:
         """In production, reject weak default secrets. Call at startup."""

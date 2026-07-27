@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
+import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -24,6 +26,12 @@ from app.models.bist_ingestion import (
     SourceFile,
 )
 from app.models.user import User
+from app.models.kap_ingestion import (
+    KapCouponEvent,
+    KapDerivedTerm,
+    KapDisclosure,
+    KapIngestionState,
+)
 from app.models.valuation import (
     InstrumentUserNote,
     PriceObservation,
@@ -65,6 +73,7 @@ from app.services.metrics_service import MetricsService
 
 router = APIRouter()
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 def _require_read_enabled() -> None:
@@ -158,6 +167,67 @@ def _spread(ast: dict[str, Any]) -> Decimal:
         if item.get("decimal") is not None
     ]
     return next((item for item in explicit if item is not None), Decimal("0"))
+
+
+async def _resolved_contract_spread(
+    db: AsyncSession,
+    *,
+    isin: str,
+    ast: dict[str, Any],
+) -> tuple[Decimal, str, int | None, str, tuple[str, ...]]:
+    """Resolve spread without hiding missing or conflicting source evidence."""
+
+    kap_term = await db.scalar(
+        select(KapDerivedTerm)
+        .where(
+            KapDerivedTerm.isin == isin,
+            KapDerivedTerm.term_type == "ANNUAL_SIMPLE_SPREAD",
+            KapDerivedTerm.is_active.is_(True),
+        )
+        .order_by(KapDerivedTerm.id.desc())
+        .limit(1)
+    )
+    if (
+        kap_term is not None
+        and kap_term.value_decimal is not None
+        and kap_term.confidence
+        in {
+            "KAP_EXPLICIT",
+            "KAP_MULTI_COUPON_VERIFIED",
+            "KAP_SINGLE_COUPON_DERIVED",
+        }
+    ):
+        assumptions = (
+            (kap_term.confidence,)
+            if kap_term.confidence == "KAP_SINGLE_COUPON_DERIVED"
+            else ()
+        )
+        return (
+            kap_term.value_decimal,
+            kap_term.annuality or "ANNUAL_SIMPLE",
+            kap_term.observation_lag_business_days,
+            kap_term.confidence,
+            assumptions,
+        )
+
+    explicit = _spread(ast)
+    if ast.get("spreads"):
+        return (
+            explicit,
+            str(ast.get("spread_annuality") or "UNKNOWN"),
+            None,
+            "BIST_EXPLICIT",
+            (),
+        )
+    if kap_term is not None and kap_term.confidence == "KAP_CONFLICT":
+        return Decimal("0"), "ANNUAL_SIMPLE", None, "KAP_CONFLICT", ("KAP_CONFLICT",)
+    return (
+        Decimal("0"),
+        "ANNUAL_SIMPLE",
+        None,
+        "SPREAD_UNKNOWN",
+        ("SPREAD_UNKNOWN_ZERO_SCENARIO",),
+    )
 
 
 def _coupon_period(
@@ -256,6 +326,7 @@ async def _index_observation(
 async def _resolve_coupon_rate_metrics(
     db: AsyncSession,
     *,
+    isin: str = "",
     fields: dict[str, Any],
     ast: dict[str, Any],
     rate_type: RateType,
@@ -265,7 +336,14 @@ async def _resolve_coupon_rate_metrics(
     settlement_date: date,
     explicit_coupon_dates: tuple[date, ...],
     benchmark_input: BenchmarkInput | None,
+    contractual_spread: Decimal | None = None,
+    contractual_spread_annuality: str | None = None,
+    contractual_observation_lag: int | None = None,
 ) -> CouponRateMetrics | None:
+    if contractual_spread is None:
+        contractual_spread = _spread(ast)
+    if contractual_spread_annuality is None:
+        contractual_spread_annuality = str(ast.get("spread_annuality") or "UNKNOWN")
     next_coupon_date = _date(fields.get("next_coupon_date"))
     # BIST/KAP yıllık basit ve bileşik kupon eşdeğerleri dönemsel oranı
     # gerçek dönem gün sayısı / 365 üzerinden yıllıklaştırır.
@@ -284,6 +362,35 @@ async def _resolve_coupon_rate_metrics(
         # Coupon-rate enrichment must not mask the engine's typed schedule
         # failure or prevent valuation records from being persisted.
         return None
+    kap_coupon = None
+    if isin:
+        kap_coupon = await db.scalar(
+            select(KapCouponEvent)
+            .join(KapDisclosure, KapDisclosure.id == KapCouponEvent.disclosure_id)
+            .where(
+                KapCouponEvent.isin == isin,
+                KapCouponEvent.payment_date == period_end,
+                KapCouponEvent.periodic_rate_decimal.is_not(None),
+            )
+            .order_by(KapDisclosure.published_at.desc(), KapDisclosure.id.desc())
+            .limit(1)
+        )
+    if kap_coupon is not None:
+        metrics = from_periodic_coupon(
+            periodic_coupon_rate=kap_coupon.periodic_rate_decimal,
+            period_start=period_start,
+            period_end=period_end,
+            coupon_frequency=coupon_frequency,
+            full_period_year_fraction=full_factor,
+            calculation_as_of=settlement_date,
+        )
+        return replace(
+            metrics,
+            status="PUBLISHED",
+            confidence="SOURCE_PUBLISHED",
+            is_final=True,
+            assumptions=("KAP_PUBLISHED_COUPON_RATE",),
+        )
     published_coupon_pct = _decimal(fields.get("next_coupon_rate_pct"))
     if published_coupon_pct is not None and (
         published_coupon_pct > 0 or rate_type == RateType.FIXED
@@ -305,7 +412,11 @@ async def _resolve_coupon_rate_metrics(
         RateType.TLREFK,
     }:
         benchmark_name = rate_type.value
-        lag = _observation_lag(ast)
+        lag = (
+            contractual_observation_lag
+            if contractual_observation_lag is not None
+            else _observation_lag(ast)
+        )
         start_target = _lagged_business_date(period_start, lag)
         required_end_target = _lagged_business_date(period_end, lag)
         start_observation = await _index_observation(db, benchmark_name, start_target)
@@ -336,7 +447,7 @@ async def _resolve_coupon_rate_metrics(
                 - _next_business_day(start_observation.observation_date)
             ).days
             if elapsed_projection_days > 0:
-                annuality = str(ast.get("spread_annuality") or "UNKNOWN")
+                annuality = contractual_spread_annuality
                 if annuality not in {"ANNUAL_SIMPLE", "PERIODIC"}:
                     annuality = "UNKNOWN"
                 return from_index_change(
@@ -350,15 +461,15 @@ async def _resolve_coupon_rate_metrics(
                     full_period_year_fraction=full_factor,
                     full_period_days=(period_end - period_start).days,
                     elapsed_projection_days=elapsed_projection_days,
-                    spread_decimal=_spread(ast),
+                    spread_decimal=contractual_spread,
                     spread_annuality=annuality,
                     calculation_as_of=end_observation.observation_date,
                     is_final=is_final,
                 )
 
     if rate_type in {RateType.TLREF, RateType.TLREFK} and benchmark_input is not None:
-        spread = _spread(ast)
-        annuality = str(ast.get("spread_annuality") or "UNKNOWN")
+        spread = contractual_spread
+        annuality = contractual_spread_annuality
         assumptions: tuple[str, ...] = ()
         if ast.get("benchmark_mode") == "INDEX_CHANGE":
             assumptions += ("INDEX_CHANGE_UNAVAILABLE_TLREF_RATE_PROXY",)
@@ -596,6 +707,57 @@ async def get_instrument(
             InstrumentUserNote.instrument_id == instrument.id,
         )
     )
+    kap_term = await db.scalar(
+        select(KapDerivedTerm)
+        .where(
+            KapDerivedTerm.isin == instrument.isin,
+            KapDerivedTerm.is_active.is_(True),
+        )
+        .order_by(KapDerivedTerm.id.desc())
+        .limit(1)
+    )
+    latest_kap = await db.scalar(
+        select(KapDisclosure)
+        .where(KapDisclosure.isin == instrument.isin)
+        .order_by(KapDisclosure.fetched_at.desc())
+        .limit(1)
+    )
+    payload["kap_enrichment"] = {
+        "status": (
+            kap_term.confidence
+            if kap_term is not None
+            else "PENDING" if settings.KAP_INGESTION_ENABLED else "DISABLED"
+        ),
+        "spread_decimal": str(kap_term.value_decimal) if kap_term and kap_term.value_decimal is not None else None,
+        "annuality": kap_term.annuality if kap_term else None,
+        "benchmark": kap_term.benchmark if kap_term else None,
+        "supporting_disclosure_ids": kap_term.supporting_disclosure_ids if kap_term else [],
+        "last_fetched_at": latest_kap.fetched_at if latest_kap else None,
+    }
+    if settings.KAP_INGESTION_ENABLED:
+        stale = latest_kap is None or utc_now() - latest_kap.fetched_at > timedelta(hours=24)
+        refresh_key = f"user_refresh:{instrument.isin}"
+        refresh_state = await db.get(KapIngestionState, refresh_key)
+        last_queued_raw = refresh_state.value_json.get("queued_at") if refresh_state else None
+        last_queued = None
+        if last_queued_raw:
+            try:
+                last_queued = type(utc_now()).fromisoformat(last_queued_raw)
+            except ValueError:
+                pass
+        queue_due = last_queued is None or utc_now() - last_queued > timedelta(hours=1)
+        if stale and queue_due:
+            value = {"queued_at": utc_now().isoformat(), "reason": "STALE_INSTRUMENT_VIEW"}
+            if refresh_state is None:
+                db.add(KapIngestionState(key=refresh_key, value_json=value))
+            else:
+                refresh_state.value_json = value
+            try:
+                from app.tasks.data_tasks import poll_kap_enrichment
+
+                poll_kap_enrichment.delay()
+            except Exception:
+                logger.warning("Could not queue non-blocking KAP refresh", exc_info=True)
     payload["is_favorite"] = favorite is not None
     payload["note_text"] = note
     await MetricsService.track_instrument_view(
@@ -821,8 +983,28 @@ async def create_valuation(
         effective_cpi_ratio = Decimal("1")
         valuation_assumptions = ("CPI_RATIO_1_REAL_TERMS_SCENARIO",)
 
+    if rate_type in {RateType.TLREF, RateType.TLREFK, RateType.FLOATING}:
+        (
+            contractual_spread,
+            contractual_spread_annuality,
+            contractual_observation_lag,
+            contractual_spread_confidence,
+            spread_assumptions,
+        ) = await _resolved_contract_spread(db, isin=instrument.isin, ast=ast)
+    else:
+        contractual_spread = Decimal("0")
+        contractual_spread_annuality = "ANNUAL_SIMPLE"
+        contractual_observation_lag = None
+        contractual_spread_confidence = "NOT_APPLICABLE"
+        spread_assumptions = ()
+    valuation_assumptions += spread_assumptions
+    if contractual_spread_confidence.startswith("KAP_") and not spread_assumptions:
+        valuation_assumptions += (
+            f"CONTRACTUAL_SPREAD_SOURCE_{contractual_spread_confidence}",
+        )
     coupon_rate_metrics = await _resolve_coupon_rate_metrics(
         db,
+        isin=instrument.isin,
         fields=fields,
         ast=ast,
         rate_type=rate_type,
@@ -832,6 +1014,9 @@ async def create_valuation(
         settlement_date=payload.settlement_date,
         explicit_coupon_dates=tuple(payload.explicit_coupon_dates),
         benchmark_input=benchmark_input,
+        contractual_spread=contractual_spread,
+        contractual_spread_annuality=contractual_spread_annuality,
+        contractual_observation_lag=contractual_observation_lag,
     )
     if coupon_rate_metrics is not None:
         annual_coupon_rate = coupon_rate_metrics.annual_simple_rate
@@ -895,7 +1080,7 @@ async def create_valuation(
         coupon_frequency=int(frequency),
         annual_coupon_rate=annual_coupon_rate,
         rate_type=rate_type,
-        benchmark_spread_decimal=_spread(ast),
+        benchmark_spread_decimal=contractual_spread,
         nominal=Decimal("100"),
         day_count=fields.get("day_count_convention") or "ACT/365F",
         next_coupon_date=_date(fields.get("next_coupon_date")),
@@ -1307,6 +1492,18 @@ async def get_quality(
     latest_bootstrap = await db.scalar(
         select(BootstrapRun).order_by(BootstrapRun.id.desc()).limit(1)
     )
+    kap_disclosures = await db.scalar(select(func.count(KapDisclosure.id)))
+    kap_coupon_events = await db.scalar(select(func.count(KapCouponEvent.id)))
+    kap_active_terms = await db.scalar(
+        select(func.count(KapDerivedTerm.id)).where(KapDerivedTerm.is_active.is_(True))
+    )
+    kap_conflicts = await db.scalar(
+        select(func.count(KapDerivedTerm.id)).where(
+            KapDerivedTerm.is_active.is_(True),
+            KapDerivedTerm.confidence == "KAP_CONFLICT",
+        )
+    )
+    kap_poll_state = await db.get(KapIngestionState, "incremental_poll")
     return {
         "published_versions": published or 0,
         "valuation_eligible_versions": eligible or 0,
@@ -1350,6 +1547,15 @@ async def get_quality(
             else None
         ),
         "price_policy": "SYSTEM_NOMINAL_100",
+        "kap_enrichment": {
+            "enabled": settings.KAP_INGESTION_ENABLED,
+            "readiness_blocking": False,
+            "disclosures": kap_disclosures or 0,
+            "coupon_events": kap_coupon_events or 0,
+            "active_terms": kap_active_terms or 0,
+            "conflicts": kap_conflicts or 0,
+            "last_poll": kap_poll_state.value_json if kap_poll_state else None,
+        },
     }
 
 
@@ -1436,6 +1642,34 @@ async def run_bootstrap(
         return result.to_dict()
     except BootstrapAlreadyRunning as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post("/operations/kap/poll", status_code=202)
+async def queue_kap_poll(
+    _admin: User = Depends(get_admin_user),
+):
+    from app.tasks.data_tasks import reconcile_kap_enrichment
+
+    task = reconcile_kap_enrichment.delay()
+    return {"status": "QUEUED", "task_id": task.id, "readiness_blocking": False}
+
+
+@router.post("/operations/kap/disclosures/{disclosure_id}", status_code=202)
+async def queue_kap_disclosure(
+    disclosure_id: str,
+    _admin: User = Depends(get_admin_user),
+):
+    if not disclosure_id.isdigit():
+        raise HTTPException(status_code=422, detail="KAP disclosure id must be numeric")
+    from app.tasks.data_tasks import fetch_kap_disclosure
+
+    task = fetch_kap_disclosure.delay(disclosure_id)
+    return {
+        "status": "QUEUED",
+        "task_id": task.id,
+        "disclosure_id": disclosure_id,
+        "readiness_blocking": False,
+    }
 
 
 @router.get("/imports/review")

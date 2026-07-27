@@ -48,6 +48,18 @@ async def _service_context():
     return engine, session_factory, VerifiedBistImportService
 
 
+async def _kap_context():
+    from app.services.kap_ingestion import KapEnrichmentService
+
+    engine = create_async_engine(settings.DATABASE_URL)
+    session_factory = async_sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+    return engine, session_factory, KapEnrichmentService
+
+
 @celery_app.task(
     name="app.tasks.data_tasks.fetch_verified_bist_snapshot",
     bind=True,
@@ -141,3 +153,119 @@ def fetch_verified_historical_benchmarks(self):
     except Exception as exc:
         logger.exception("Verified historical benchmark import failed")
         raise self.retry(exc=exc, countdown=60 * 10)
+
+
+@celery_app.task(
+    name="app.tasks.data_tasks.poll_kap_enrichment",
+    bind=True,
+    max_retries=0,
+)
+def poll_kap_enrichment(self):
+    async def _fetch():
+        engine, session_factory, service_type = await _kap_context()
+        try:
+            async with session_factory() as db:
+                return await service_type(db, settings).poll()
+        finally:
+            await engine.dispose()
+
+    try:
+        return _run_async(_fetch())
+    except Exception:
+        # KAP is enrichment: an outage must not create an aggressive retry
+        # storm or affect the verified BIST path.
+        logger.exception("KAP incremental enrichment failed")
+        return {"status": "FAILED_NON_BLOCKING"}
+
+
+@celery_app.task(
+    name="app.tasks.data_tasks.reconcile_kap_enrichment",
+    bind=True,
+    max_retries=0,
+)
+def reconcile_kap_enrichment(self):
+    async def _fetch():
+        engine, session_factory, service_type = await _kap_context()
+        try:
+            async with session_factory() as db:
+                return await service_type(db, settings).poll(force=True)
+        finally:
+            await engine.dispose()
+
+    try:
+        return _run_async(_fetch())
+    except Exception:
+        logger.exception("KAP reconciliation failed")
+        return {"status": "FAILED_NON_BLOCKING"}
+
+
+@celery_app.task(
+    name="app.tasks.data_tasks.derive_kap_terms",
+    bind=True,
+    max_retries=0,
+)
+def derive_kap_terms(self):
+    async def _derive():
+        engine, session_factory, service_type = await _kap_context()
+        try:
+            async with session_factory() as db:
+                if not settings.KAP_INGESTION_ENABLED:
+                    return {"status": "DISABLED"}
+                return await service_type(db, settings).derive_terms()
+        finally:
+            await engine.dispose()
+
+    try:
+        return _run_async(_derive())
+    except Exception:
+        logger.exception("KAP term derivation failed")
+        return {"status": "FAILED_NON_BLOCKING"}
+
+
+@celery_app.task(
+    name="app.tasks.data_tasks.fetch_kap_disclosure",
+    bind=True,
+    max_retries=0,
+)
+def fetch_kap_disclosure(self, disclosure_id: str):
+    if not str(disclosure_id).isdigit():
+        return {"status": "REJECTED", "reason": "INVALID_DISCLOSURE_ID"}
+
+    async def _fetch():
+        engine, session_factory, service_type = await _kap_context()
+        try:
+            async with session_factory() as db:
+                return await service_type(db, settings).fetch_disclosure(
+                    str(disclosure_id)
+                )
+        finally:
+            await engine.dispose()
+
+    try:
+        return _run_async(_fetch())
+    except Exception:
+        logger.exception("Controlled KAP disclosure fetch failed")
+        return {"status": "FAILED_NON_BLOCKING", "disclosure_id": disclosure_id}
+
+
+@celery_app.task(
+    name="app.tasks.data_tasks.refresh_kap_proxy_pool",
+    bind=True,
+    max_retries=0,
+)
+def refresh_kap_proxy_pool(self):
+    async def _refresh():
+        engine, session_factory, service_type = await _kap_context()
+        try:
+            async with session_factory() as db:
+                result = await service_type(db, settings).refresh_proxy_pool(force=True)
+                await db.commit()
+                return result
+        finally:
+            await engine.dispose()
+
+    try:
+        return _run_async(_refresh())
+    except Exception:
+        logger.exception("KAP public proxy pool refresh failed")
+        return {"status": "FAILED_NON_BLOCKING"}

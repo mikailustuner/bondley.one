@@ -82,6 +82,14 @@ export default function AdminPage() {
             <div className="flex items-center justify-between"><span>Beklenen iş günü</span><span>{formatDate(quality?.bootstrap?.requested_business_date)}</span></div>
             <div className="flex items-center justify-between"><span>Son kaynak</span><span className="max-w-64 truncate">{quality?.latest_source?.filename || "—"}</span></div>
             <div className="flex items-center justify-between"><span>Kaynak tazeliği</span><span>{quality?.latest_source?.freshness_status || "—"}</span></div>
+            <div className="flex items-center justify-between">
+              <span>KAP zenginleştirme</span>
+              <Badge variant={quality?.kap_enrichment?.enabled ? "default" : "secondary"}>
+                {quality?.kap_enrichment?.enabled ? "Etkin" : "Kapalı"}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between"><span>KAP bildirim / kupon</span><span className="font-mono-data">{quality?.kap_enrichment ? `${quality.kap_enrichment.disclosures} / ${quality.kap_enrichment.coupon_events}` : "—"}</span></div>
+            <div className="flex items-center justify-between"><span>KAP aktif terim / çelişki</span><span className="font-mono-data">{quality?.kap_enrichment ? `${quality.kap_enrichment.active_terms} / ${quality.kap_enrichment.conflicts}` : "—"}</span></div>
             <Button asChild className="w-full"><Link href="/admin/import"><RefreshCw className="mr-2 h-4 w-4" />Import operasyonlarını aç</Link></Button>
           </CardContent>
         </Card>

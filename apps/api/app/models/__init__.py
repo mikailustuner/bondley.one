@@ -30,6 +30,12 @@ from app.models.valuation import (
     ValuationRequestRecord,
     ValuationResultRecord,
 )
+from app.models.kap_ingestion import (
+    KapCouponEvent,
+    KapDerivedTerm,
+    KapDisclosure,
+    KapIngestionState,
+)
 
 __all__ = [
     "User", "AuditLog", "InstrumentView", "UserMetric", "RefreshToken", "UserAlert",
@@ -40,4 +46,5 @@ __all__ = [
     "BenchmarkObservation", "BenchmarkValidationResult", "BootstrapRun",
     "UserFavoriteInstrument", "InstrumentUserNote",
     "PriceObservation", "ValuationRequestRecord", "ValuationResultRecord",
+    "KapDisclosure", "KapCouponEvent", "KapDerivedTerm", "KapIngestionState",
 ]

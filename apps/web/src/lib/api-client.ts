@@ -350,6 +350,14 @@ export interface VerifiedInstrument {
   fields: Record<string, unknown>;
   is_favorite?: boolean;
   note_text?: string | null;
+  kap_enrichment?: {
+    status: string;
+    spread_decimal: string | null;
+    annuality: string | null;
+    benchmark: string | null;
+    supporting_disclosure_ids: string[];
+    last_fetched_at: string | null;
+  };
 }
 
 export interface VerifiedValuationResponse {
@@ -736,6 +744,20 @@ export const api = {
           started_at: string;
           completed_at: string | null;
         } | null;
+        kap_enrichment: {
+          enabled: boolean;
+          readiness_blocking: boolean;
+          disclosures: number;
+          coupon_events: number;
+          active_terms: number;
+          conflicts: number;
+          last_poll: {
+            last_poll_at?: string;
+            discovered?: number;
+            fetched?: number;
+            failures?: Array<{ disclosure_id: string; error: string }>;
+          } | null;
+        };
       }>(`${V2_MARKER}/quality`, { token }),
     importOperations: (token: string) =>
       apiFetch<{

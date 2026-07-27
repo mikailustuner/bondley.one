@@ -545,6 +545,36 @@ export default function VerifiedInstrumentDetail({
                   </p>
                 </div>
               )}
+              {valuationAssumptions.includes("SPREAD_UNKNOWN_ZERO_SCENARIO") && (
+                <div className="mt-3 flex items-start gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/[0.07] p-4 text-xs leading-5 text-foreground">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <p>
+                    Kaynak açıklama ek getiri uygulandığını belirtiyor ancak sayısal
+                    spread henüz doğrulanamadı. Sonuç gösterilmeye devam eder; teorik
+                    hesapta spread geçici olarak %0 senaryosudur.
+                  </p>
+                </div>
+              )}
+              {valuationAssumptions.includes("KAP_SINGLE_COUPON_DERIVED") && (
+                <div className="mt-3 flex items-start gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/[0.07] p-4 text-xs leading-5 text-foreground">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <p>
+                    Sözleşme spreadi tek bir KAP kuponu ve resmî referans endeksinden
+                    geriye doğru doğrulanmıştır. İkinci uyumlu kupon geldiğinde güven
+                    seviyesi otomatik yükselir.
+                  </p>
+                </div>
+              )}
+              {valuationAssumptions.includes("KAP_CONFLICT") && (
+                <div className="mt-3 flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-4 text-xs leading-5 text-foreground">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                  <p>
+                    KAP kuponu ile referans endeksinden doğrulanabilir tek bir spread
+                    üretilemedi. Sonuç çelişki uyarısıyla ve %0 spread senaryosuyla
+                    gösterilmiştir.
+                  </p>
+                </div>
+              )}
               {valuationAssumptions.includes(
                 "MISSING_COUPON_STRUCTURE_SINGLE_PAYMENT_SCENARIO",
               ) && (
@@ -801,6 +831,17 @@ export default function VerifiedInstrumentDetail({
               />
             )}
             <DetailRow label="Çözümleme" value={instrument.quality.parse_status} />
+            <DetailRow
+              label="KAP doğrulaması"
+              value={instrument.kap_enrichment?.status || "DISABLED"}
+            />
+            {instrument.kap_enrichment?.spread_decimal != null && (
+              <DetailRow
+                label="Doğrulanmış yıllık basit spread"
+                value={formatPercentFromDecimal(instrument.kap_enrichment.spread_decimal, 4)}
+                numeric
+              />
+            )}
             <DetailRow label="Formül" value={String(fields.formula_code || "BAP DCF")} />
           </dl>
           {instrument.remarks_raw && (
