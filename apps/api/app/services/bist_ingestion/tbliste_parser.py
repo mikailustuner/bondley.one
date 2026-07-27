@@ -141,7 +141,7 @@ def is_valid_isin(value: str) -> bool:
 
 
 class TblisteParser:
-    VERSION = "tbliste-v2-1"
+    VERSION = "tbliste-v2-3"
     REQUIRED_COLUMNS = 33
 
     def __init__(self, remarks_parser: RemarksParser | None = None):

@@ -95,17 +95,21 @@ def _validate_period(
 
 def annual_compound_equivalent(
     periodic_rate: Decimal,
-    coupon_frequency: int,
+    full_period_year_fraction: Decimal,
 ) -> Decimal:
     periodic = _decimal(periodic_rate, "periodic_coupon_rate")
-    if coupon_frequency <= 0 or Decimal("1") + periodic <= 0:
+    factor = _decimal(full_period_year_fraction, "full_period_year_fraction")
+    if factor <= 0 or Decimal("1") + periodic <= 0:
         raise ValuationError(
             ValuationFailureCode.NUMERIC_FAILURE,
-            "Bileşik oran için kupon sıklığı ve bileşik tabanı pozitif olmalıdır.",
+            "Bileşik oran için dönem kesri ve bileşik tabanı pozitif olmalıdır.",
         )
     with localcontext() as context:
         context.prec = 40
-        result = (Decimal("1") + periodic) ** coupon_frequency - Decimal("1")
+        result = context.power(
+            Decimal("1") + periodic,
+            Decimal("1") / factor,
+        ) - Decimal("1")
     return result.quantize(RATE_QUANTUM)
 
 
@@ -129,11 +133,11 @@ def from_periodic_coupon(
         full_period_year_fraction,
     )
     periodic = _decimal(periodic_coupon_rate, "periodic_coupon_rate")
-    annual_simple = periodic * Decimal(frequency)
+    annual_simple = periodic / factor
     return CouponRateMetrics(
         periodic_coupon_rate=periodic.quantize(RATE_QUANTUM),
         annual_simple_rate=annual_simple.quantize(RATE_QUANTUM),
-        annual_compound_rate=annual_compound_equivalent(periodic, frequency),
+        annual_compound_rate=annual_compound_equivalent(periodic, factor),
         status=status,
         confidence=confidence,
         is_final=is_final,
@@ -167,11 +171,11 @@ def from_annual_simple_coupon(
         full_period_year_fraction,
     )
     annual_simple = _decimal(annual_simple_rate, "annual_simple_rate")
-    periodic = annual_simple / Decimal(frequency)
+    periodic = annual_simple * factor
     return CouponRateMetrics(
         periodic_coupon_rate=periodic.quantize(RATE_QUANTUM),
         annual_simple_rate=annual_simple.quantize(RATE_QUANTUM),
-        annual_compound_rate=annual_compound_equivalent(periodic, frequency),
+        annual_compound_rate=annual_compound_equivalent(periodic, factor),
         status=status,
         confidence=confidence,
         is_final=is_final,
@@ -248,13 +252,13 @@ def from_index_change(
         else:
             periodic_spread = spread * full_factor
         periodic = projected_reference_return + periodic_spread
-        annual_simple = periodic * Decimal(frequency)
-        annualized_reference = projected_reference_return * Decimal(frequency)
+        annual_simple = periodic / full_factor
+        annualized_reference = projected_reference_return / full_factor
 
     return CouponRateMetrics(
         periodic_coupon_rate=periodic.quantize(RATE_QUANTUM),
         annual_simple_rate=annual_simple.quantize(RATE_QUANTUM),
-        annual_compound_rate=annual_compound_equivalent(periodic, frequency),
+        annual_compound_rate=annual_compound_equivalent(periodic, full_factor),
         status="CALCULATED_FINAL" if is_final else "INDICATIVE",
         confidence=confidence,
         is_final=is_final,

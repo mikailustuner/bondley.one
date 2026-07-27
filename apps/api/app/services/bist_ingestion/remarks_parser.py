@@ -45,13 +45,13 @@ class RemarksParser:
     because another scale appears economically more plausible.
     """
 
-    VERSION = "remarks-tr-v1"
+    VERSION = "remarks-tr-v2-1"
 
     _benchmark_patterns = (
-        ("BIST_TLREFK_INDEX", re.compile(r"\bbist\s*tlrefk\s*(?:endeks(?:i)?)?", re.I)),
-        ("TLREFK_RATE", re.compile(r"\btlrefk\b", re.I)),
-        ("BIST_TLREF_INDEX", re.compile(r"\bbist\s*tlref\s*(?:endeks(?:i)?)?", re.I)),
-        ("TLREF_RATE", re.compile(r"\btlref\b", re.I)),
+        ("BIST_TLREFK_INDEX", re.compile(r"\bbist\s*tl\s*refk\s*(?:endeks(?:i)?)?", re.I)),
+        ("TLREFK_RATE", re.compile(r"\btl\s*refk\b", re.I)),
+        ("BIST_TLREF_INDEX", re.compile(r"\bbist\s*tl\s*ref\s*(?:endeks(?:i)?)?", re.I)),
+        ("TLREF_RATE", re.compile(r"\btl\s*ref\b", re.I)),
         ("TRLIBOR_3M", re.compile(r"\b3\s*m(?:onth)?\s*trlibor\b|\b3\s*ay(?:lık)?\s*trlibor\b", re.I)),
         ("TRLIBOR", re.compile(r"\btrlibor\b", re.I)),
         ("UST", re.compile(r"\bust\b|abd\s+hazine", re.I)),
@@ -116,6 +116,18 @@ class RemarksParser:
                         raw_fragment=candidate["source_text"],
                     )
                 )
+            elif candidate["unit"] == "INFERRED_PERCENT":
+                diagnostics.append(
+                    Diagnostic(
+                        code="BARE_SPREAD_INFERRED_PERCENT",
+                        severity="INFO",
+                        message=(
+                            "TLREF/TLREFK yanındaki birimsiz piyasa spreadi "
+                            "yüzde puan olarak çıkarıldı."
+                        ),
+                        raw_fragment=candidate["source_text"],
+                    )
+                )
             canonical = candidate.get("decimal")
             if canonical is not None and abs(Decimal(canonical)) > Decimal("0.25"):
                 diagnostics.append(
@@ -167,7 +179,12 @@ class RemarksParser:
             status: ParseStatus = "CONFLICTING"
         elif any(item.code == "AMBIGUOUS_SPREAD_UNIT" for item in diagnostics):
             status = "AMBIGUOUS"
-        elif formula_like or regimes or rounding:
+        elif (
+            formula_like
+            or regimes
+            or rounding
+            or any(item["unit"] == "INFERRED_PERCENT" for item in spread_candidates)
+        ):
             status = "PARTIAL"
         else:
             status = "EXACT"
@@ -211,6 +228,14 @@ class RemarksParser:
             (
                 re.compile(
                     rf"(?:tlrefk?|trlibor|endeks(?:i|\s+değişimi)?|ek\s+getiri|ilave\s+getiri)"
+                    rf"[^.;]{{0,35}}?\+\s*(?P<n>{NUMBER})\s*%",
+                    re.I,
+                ),
+                "PERCENT",
+            ),
+            (
+                re.compile(
+                    rf"(?:tlrefk?|trlibor|endeks(?:i|\s+değişimi)?|ek\s+getiri|ilave\s+getiri)"
                     rf"[^.;]{{0,35}}?\+\s*(?P<n>{NUMBER})\s*(?:baz\s*puan|bps?|bbs?)",
                     re.I,
                 ),
@@ -222,7 +247,11 @@ class RemarksParser:
                 "PERCENT",
             ),
             (
-                re.compile(rf"(?:tlrefk?|trlibor)\s*\+\s*(?P<n>{NUMBER})(?!\s*[%a-zA-Z])", re.I),
+                re.compile(
+                    rf"(?:tlrefk?|trlibor)\s*\+\s*(?P<n>{NUMBER})"
+                    rf"(?![\d.,])(?!\s*[%a-zA-Z])",
+                    re.I,
+                ),
                 "UNKNOWN",
             ),
         )
@@ -256,13 +285,15 @@ class RemarksParser:
         source_text: str,
         source: str,
     ) -> None:
+        value = _decimal(number)
+        if value is None:
+            return
+        if unit == "UNKNOWN" and Decimal("0") <= value <= Decimal("25"):
+            unit = "INFERRED_PERCENT"
         key = (number.replace(",", "."), unit)
         if key in seen:
             return
         seen.add(key)
-        value = _decimal(number)
-        if value is None:
-            return
         canonical: Decimal | None
         if unit == "PERCENT":
             canonical = value / Decimal("100")
@@ -271,13 +302,22 @@ class RemarksParser:
         elif unit == "SOURCE_DECIMAL":
             canonical = value
         else:
-            canonical = None
+            canonical = (
+                value / Decimal("100")
+                if unit == "INFERRED_PERCENT"
+                else None
+            )
         candidates.append(
             {
                 "value_raw": number,
                 "unit": unit,
                 "decimal": _decimal_string(canonical) if canonical is not None else None,
                 "equivalent_bps": int(canonical * Decimal("10000")) if canonical is not None else None,
+                "confidence": (
+                    "INFERRED"
+                    if unit == "INFERRED_PERCENT"
+                    else "EXACT" if canonical is not None else "AMBIGUOUS"
+                ),
                 "source": source,
                 "source_text": source_text,
             }
@@ -288,6 +328,15 @@ class RemarksParser:
         if re.search(r"dönemsel\s+(?:ek|ilave)?\s*getiri|periyodik\s+(?:ek|ilave)?\s*getiri", text, re.I):
             return "PERIODIC"
         if re.search(r"yıllık\s+basit|yillik\s+basit|ek\s+getiri\s+yıllık|ek\s+getiri\s+yillik", text, re.I):
+            return "ANNUAL_SIMPLE"
+        if re.search(
+            r"(?:bist\s*)?tl\s*refk?\s+endeks(?:i)?\s+değişimi|"
+            r"(?:bist\s*)?tl\s*refk?\s+endeks(?:i)?\s+degisimi",
+            text,
+            re.I,
+        ):
+            # BIST-KYD rule set defines “Ek Getiri” in this formula as an
+            # annual rate; an explicit periodic qualifier above still wins.
             return "ANNUAL_SIMPLE"
         return "UNKNOWN"
 

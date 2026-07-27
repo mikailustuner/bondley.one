@@ -38,6 +38,30 @@ class QualityGateError(ValueError):
     pass
 
 
+def resolve_tbliste_effective_date(
+    filename_date: date | None,
+    requested_business_date: date | None,
+) -> tuple[date | None, str]:
+    """Resolve the publishable snapshot date without crossing the BIST cutoff.
+
+    BIST may expose an archive whose member filename contains the current
+    calendar date before that day's list is considered ready.  The business
+    calendar is authoritative in that interval: a filename date later than the
+    requested business date is retained only as source metadata and the
+    snapshot is published for the requested date.
+    """
+
+    if (
+        filename_date is not None
+        and requested_business_date is not None
+        and filename_date > requested_business_date
+    ):
+        return requested_business_date, "CUTOFF_CAPPED_SOURCE_FILENAME"
+    if filename_date is not None:
+        return filename_date, "SOURCE_FILENAME"
+    return requested_business_date, "INFERRED_BUSINESS_DATE"
+
+
 class VerifiedBistImportService:
     """Database coordinator for immutable BIST source imports."""
 
@@ -62,17 +86,14 @@ class VerifiedBistImportService:
         artifact = await self.downloader.fetch(url, expected_kind="tbliste_zip")
         xls_bytes, xls_name = self._extract_single(artifact.content, ".xls")
         filename_date = self._date_from_filename(xls_name)
-        effective_date = filename_date or requested_business_date
-        date_origin = "SOURCE_FILENAME" if filename_date else "INFERRED_BUSINESS_DATE"
+        effective_date, date_origin = resolve_tbliste_effective_date(
+            filename_date,
+            requested_business_date,
+        )
         freshness_status = self._freshness_status(
             effective_date,
             requested_business_date,
         )
-        if freshness_status == "FUTURE":
-            raise QualityGateError(
-                f"tbliste source date {effective_date} is after expected business date "
-                f"{requested_business_date}"
-            )
         source_file = await self._source_file(
             artifact,
             source_kind="TBLISTE",
@@ -97,6 +118,9 @@ class VerifiedBistImportService:
                     else None
                 ),
                 "date_origin": date_origin,
+                "source_filename_date": (
+                    filename_date.isoformat() if filename_date else None
+                ),
                 "freshness_status": freshness_status,
             }
 
@@ -143,6 +167,9 @@ class VerifiedBistImportService:
                     else None
                 ),
                 "date_origin": date_origin,
+                "source_filename_date": (
+                    filename_date.isoformat() if filename_date else None
+                ),
                 "freshness_status": freshness_status,
                 "quality": parsed.quality_summary,
             }

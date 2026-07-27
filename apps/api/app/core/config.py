@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     BIST_TLREFK_INDEX_HISTORICAL_URL: str = "https://www.borsaistanbul.com/datum/BISTTLREFKENDEKSI_D.zip"
     BIST_BOND_LIST_URL: str = "https://borsaistanbul.com/datum/tbliste.zip"
     BIST_RAW_ARCHIVE_DIR: str = "/data/bist-source-files"
-    BIST_EXPECTED_READY_TIME: str = "16:15"
+    BIST_EXPECTED_READY_TIME: str = "16:05"
     BIST_HOLIDAYS: str = ""
     BIST_BOOTSTRAP_ENABLED: bool = True
     BIST_BOOTSTRAP_IF_EMPTY: bool = True

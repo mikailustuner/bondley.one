@@ -325,6 +325,8 @@ export interface VerifiedInstrument {
   first_issue_date: string | null;
   next_coupon_date: string | null;
   next_coupon_rate_pct: string | null;
+  quotation_method: string | null;
+  default_quote_type: "CLEAN_PRICE" | "DIRTY_PRICE";
   remarks_raw: string | null;
   term_rule_ast: Record<string, unknown>;
   quality: {
@@ -375,6 +377,11 @@ export interface VerifiedValuationResponse {
       | "EXACT_CONTRACT"
       | "ASSUMPTION_REQUIRED";
     coupon_rate_is_final: boolean;
+    valuation_kind: "THEORETICAL_YTM";
+    cash_flow_rate_policy:
+      | "CONTRACTUAL_FIXED_RATE_BY_ACTUAL_PERIOD"
+      | "CURRENT_PERIOD_THEN_FLAT_ANNUAL_RATE_SCENARIO";
+    valuation_assumptions: string[];
     cash_flows: Array<Record<string, string>>;
     intermediates: Record<string, unknown>;
     provenance: Record<string, unknown>;

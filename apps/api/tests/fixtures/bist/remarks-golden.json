@@ -40,14 +40,15 @@
     "diagnostic": "TRD_EXPECTED_TLREFK_CONFLICT"
   },
   {
-    "name": "unknown_unit",
+    "name": "bare_market_spread_inferred_percent",
     "isin": "TRDTEST00029",
     "yield_type": "Değişken / Variable-TLREFK",
     "spread": "",
     "remarks": "TLREFK+4",
-    "status": "AMBIGUOUS",
+    "status": "PARTIAL",
     "benchmark": "TLREFK_RATE",
-    "diagnostic": "AMBIGUOUS_SPREAD_UNIT"
+    "spread_decimal": "0.04",
+    "diagnostic": "BARE_SPREAD_INFERRED_PERCENT"
   },
   {
     "name": "first_coupon_floor",

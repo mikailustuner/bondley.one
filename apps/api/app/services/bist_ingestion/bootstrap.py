@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from sqlalchemy import func, select, text
@@ -19,7 +19,9 @@ from app.core.time import (
 from app.models.bist_ingestion import (
     BenchmarkObservation,
     BootstrapRun,
+    ImportRun,
     InstrumentVersion,
+    SourceFile,
 )
 from app.services.bist_ingestion.benchmark_parser import BenchmarkParser
 from app.services.bist_ingestion.import_service import VerifiedBistImportService
@@ -32,6 +34,19 @@ BOOTSTRAP_LOCK_KEY = 8_650_171_009
 
 class BootstrapAlreadyRunning(RuntimeError):
     pass
+
+
+def tbliste_snapshot_is_current(
+    *,
+    parser_version: str | None,
+    effective_date: date | None,
+    requested_business_date: date,
+) -> bool:
+    return bool(
+        parser_version == TblisteParser.VERSION
+        and effective_date is not None
+        and effective_date >= requested_business_date
+    )
 
 
 @dataclass(frozen=True)
@@ -91,7 +106,7 @@ class VerifiedBistBootstrapService:
             if (
                 not force
                 and self.settings.BIST_BOOTSTRAP_IF_EMPTY
-                and await self._has_usable_data()
+                and await self._has_usable_data(requested_date)
             ):
                 return BootstrapResult(
                     run_id=None,
@@ -107,7 +122,7 @@ class VerifiedBistBootstrapService:
                 attempt=1,
                 requested_business_date=requested_date,
                 timezone_name=TURKEY_TIMEZONE_NAME,
-                app_version="verified-v2",
+                app_version="verified-v2.3",
                 parser_versions={
                     "tbliste": TblisteParser.VERSION,
                     "benchmark": BenchmarkParser.VERSION,
@@ -229,7 +244,7 @@ class VerifiedBistBootstrapService:
         await self.db.commit()
         return result
 
-    async def _has_usable_data(self) -> bool:
+    async def _has_usable_data(self, requested_date: date) -> bool:
         instrument_count = await self.db.scalar(
             select(func.count(InstrumentVersion.id)).where(
                 InstrumentVersion.is_published.is_(True)
@@ -251,11 +266,35 @@ class VerifiedBistBootstrapService:
             .order_by(BootstrapRun.id.desc())
             .limit(1)
         )
+        latest_tbliste = (
+            await self.db.execute(
+                select(ImportRun.parser_version, SourceFile.effective_date)
+                .join(SourceFile, SourceFile.id == ImportRun.source_file_id)
+                .where(
+                    ImportRun.parser_name == "TblisteParser",
+                    ImportRun.status == "PUBLISHED",
+                    SourceFile.source_kind == "TBLISTE",
+                )
+                .order_by(ImportRun.id.desc())
+                .limit(1)
+            )
+        ).one_or_none()
+        latest_tbliste_parser_version = (
+            latest_tbliste.parser_version if latest_tbliste else None
+        )
+        latest_tbliste_effective_date = (
+            latest_tbliste.effective_date if latest_tbliste else None
+        )
         return bool(
             instrument_count
             and tlref_count
             and tlrefk_count
             and successful_run_id
+            and tbliste_snapshot_is_current(
+                parser_version=latest_tbliste_parser_version,
+                effective_date=latest_tbliste_effective_date,
+                requested_business_date=requested_date,
+            )
         )
 
     @staticmethod

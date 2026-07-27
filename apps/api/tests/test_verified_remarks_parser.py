@@ -54,3 +54,39 @@ def test_source_decimal_spread_is_not_rescaled():
     candidate = next(item for item in result.ast["spreads"] if item["source"] == "SPREAD_COLUMN")
     assert candidate["decimal"] == "0.0425"
     assert candidate["equivalent_bps"] == 425
+
+
+def test_bp_suffix_does_not_create_a_truncated_unknown_spread():
+    result = RemarksParser().parse(
+        "BİST TLREF+550bp",
+        isin="TRSDVYS42714",
+        yield_type="Değişken TLREF",
+    )
+
+    assert result.status == "EXACT"
+    assert [item["decimal"] for item in result.ast["spreads"]] == ["0.055"]
+    assert not any(item.code == "AMBIGUOUS_SPREAD_UNIT" for item in result.diagnostics)
+
+
+def test_percent_suffix_is_an_explicit_percent_unit():
+    result = RemarksParser().parse(
+        "TLREF + 4,50%",
+        isin="TRFESCR72710",
+        yield_type="Değişken TLREF",
+    )
+
+    assert result.status == "EXACT"
+    assert [item["decimal"] for item in result.ast["spreads"]] == ["0.045"]
+
+
+def test_bist_tlref_index_change_spread_is_annual_by_official_formula():
+    result = RemarksParser().parse(
+        "BİST TLREF Endeksi Değişimi +%3,75 Ek Getiri",
+        isin="TRFDVYS42711",
+        yield_type="Değişken / Variable-TLREF e Dayalı/Indexed to TLREF",
+    )
+
+    assert result.status == "EXACT"
+    assert result.ast["benchmark_mode"] == "INDEX_CHANGE"
+    assert result.ast["spread_annuality"] == "ANNUAL_SIMPLE"
+    assert [item["decimal"] for item in result.ast["spreads"]] == ["0.0375"]

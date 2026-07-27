@@ -166,7 +166,7 @@ export default function VerifiedInstrumentDetail({
   const requiresCpi = benchmarkNames.includes("CPI_REFERENCE_INDEX");
 
   useEffect(() => {
-    if (!instrument?.quality.valuation_eligible) return;
+    if (!instrument) return;
     const token = getToken();
     if (!token) return;
 
@@ -179,7 +179,7 @@ export default function VerifiedInstrumentDetail({
       .value(token, {
         isin,
         settlement_date: settlementDate,
-        quote_type: "CLEAN_PRICE",
+        quote_type: instrument.default_quote_type,
         quote_value: DEFAULT_CLEAN_PRICE,
         quote_source: "SYSTEM_NOMINAL_100",
       })
@@ -200,7 +200,12 @@ export default function VerifiedInstrumentDetail({
     return () => {
       active = false;
     };
-  }, [instrument?.quality.valuation_eligible, instrument?.version_id, isin, settlementDate]);
+  }, [
+    instrument?.version_id,
+    instrument?.default_quote_type,
+    isin,
+    settlementDate,
+  ]);
 
   const toggleFavorite = async () => {
     const token = getToken();
@@ -263,6 +268,7 @@ export default function VerifiedInstrumentDetail({
   const fields = instrument.fields;
   const result = valuation?.result;
   const failure = valuation?.failure;
+  const valuationAssumptions = result?.valuation_assumptions ?? [];
   const couponDetails = result?.intermediates?.coupon_rates as
     | {
         calculation_as_of?: string;
@@ -282,6 +288,18 @@ export default function VerifiedInstrumentDetail({
       : result?.coupon_rate_status === "CALCULATED_FINAL"
         ? tr.dashboard.bondDetails.calculatedMetrics.calculatedFinalCouponStatus
         : tr.dashboard.bondDetails.calculatedMetrics.indicativeCouponStatus;
+  const scheduleMethod = String(result?.intermediates?.schedule_method || "");
+  const scheduleConfidence = String(result?.intermediates?.schedule_confidence || "");
+  const scheduleMethodLabel =
+    scheduleMethod === "EXPLICIT"
+      ? "Resmî açık takvim"
+      : scheduleMethod === "FIXED_DAY_ANCHORED"
+        ? "Gün bazlı türetilmiş takvim"
+        : scheduleMethod === "CALENDAR_MONTH_ANCHORED"
+          ? "Ay bazlı türetilmiş takvim"
+          : scheduleMethod === "SINGLE_PAYMENT"
+            ? "Tek ödeme"
+            : "Vadeden geriye türetilmiş takvim";
 
   return (
     <main className="space-y-6 lg:space-y-8">
@@ -329,12 +347,13 @@ export default function VerifiedInstrumentDetail({
       </header>
 
       {!instrument.quality.valuation_eligible && (
-        <Alert variant="destructive" className="rounded-2xl">
+        <Alert className="rounded-2xl border-amber-500/25 bg-amber-500/[0.07]">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Otomatik değerleme kullanılamıyor</AlertTitle>
+          <AlertTitle>Kaynak terimleri inceleme gerektiriyor</AlertTitle>
           <AlertDescription>
-            Kaynak terimleri “{instrument.quality.parse_status}” durumunda. Belirsiz bir sözleşme
-            varsayımı üretmemek için yalnız doğrulanmış kaynak bilgileri gösteriliyor.
+            Kaynak terimleri “{instrument.quality.parse_status}” durumunda. Hesaplanabilir alanlar
+            yeterliyse teorik sonuç aşağıda gösterilir; bu etiket sonuçtan kaldırılmaz ve kullanılan
+            varsayımlar nakit akışıyla birlikte açıklanır.
           </AlertDescription>
         </Alert>
       )}
@@ -447,7 +466,10 @@ export default function VerifiedInstrumentDetail({
                   <p className="metric-value mt-4 text-3xl">
                     {formatPercentFromDecimal(result.annual_yield, 4)}
                   </p>
-                  <p className="mt-3 text-[11px] text-muted-foreground">Temiz fiyat 100 üzerinden</p>
+                  <p className="mt-3 text-[11px] text-muted-foreground">
+                    Teorik YTM ·{" "}
+                    {result.quote_type === "DIRTY_PRICE" ? "kirli" : "temiz"} fiyat 100 üzerinden
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-border bg-card p-5">
                   <p className="eyebrow">
@@ -488,6 +510,73 @@ export default function VerifiedInstrumentDetail({
                 <div className="mt-3 flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-4 text-xs leading-5 text-foreground">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
                   <p>{tr.dashboard.bondDetails.calculatedMetrics.spreadAnnualityAssumption}</p>
+                </div>
+              )}
+              {valuationAssumptions.includes("CPI_RATIO_1_REAL_TERMS_SCENARIO") && (
+                <div className="mt-3 flex items-start gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/[0.07] p-4 text-xs leading-5 text-foreground">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <p>
+                    TÜFE referans endeks oranı sağlanmadığı için teorik YTM reel
+                    terimlerde, endeks oranı 1 varsayımıyla hesaplanmıştır.
+                  </p>
+                </div>
+              )}
+              {valuationAssumptions.includes(
+                "ISSUE_YIELD_USED_AS_FLAT_COUPON_SCENARIO",
+              ) && (
+                <div className="mt-3 flex items-start gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/[0.07] p-4 text-xs leading-5 text-foreground">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <p>
+                    Cari değişken kupon henüz yayımlanmadığı için gelecekteki nakit
+                    akışlarında son ihraç yıllık getirisi düz kupon senaryosu olarak
+                    kullanılmıştır.
+                  </p>
+                </div>
+              )}
+              {valuationAssumptions.includes(
+                "UNPUBLISHED_VARIABLE_COUPON_ZERO_SCENARIO",
+              ) && (
+                <div className="mt-3 flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-4 text-xs leading-5 text-foreground">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                  <p>
+                    Kupon tutarı tahsilat veya gelecekte açıklanacak veriye bağlı ve
+                    kullanılabilir bir oran bulunmuyor. Teorik YTM sıfır kupon
+                    senaryosudur; beklenen getiri olarak yorumlanmamalıdır.
+                  </p>
+                </div>
+              )}
+              {valuationAssumptions.includes(
+                "MISSING_COUPON_STRUCTURE_SINGLE_PAYMENT_SCENARIO",
+              ) && (
+                <div className="mt-3 flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-4 text-xs leading-5 text-foreground">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                  <p>
+                    Kaynak satırında kupon sıklığı ve sonraki kupon tarihi bulunmadığı
+                    için teorik YTM yalnız vade sonu tek ödeme senaryosuyla
+                    hesaplanmıştır.
+                  </p>
+                </div>
+              )}
+              {valuationAssumptions.includes("SOURCE_TERMS_AMBIGUOUS") && (
+                <div className="mt-3 flex items-start gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/[0.07] p-4 text-xs leading-5 text-foreground">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <p>
+                    Kaynak sözleşme açıklaması ambiguous durumundadır. Teorik sonuç
+                    gösterilmiştir; sonuç kullanılan açık alanlar ve görüntülenen
+                    varsayımlarla birlikte değerlendirilmelidir.
+                  </p>
+                </div>
+              )}
+              {valuationAssumptions.includes(
+                "INDEX_CHANGE_UNAVAILABLE_TLREF_RATE_PROXY",
+              ) && (
+                <div className="mt-3 flex items-start gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/[0.07] p-4 text-xs leading-5 text-foreground">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <p>
+                    Cari kupon döneminde henüz ölçülebilir endeks değişimi
+                    oluşmadığı için teorik kupon, son yayımlanan yıllık TLREF oranı
+                    ve sözleşme spreadiyle projekte edilmiştir.
+                  </p>
                 </div>
               )}
             </>
@@ -539,14 +628,27 @@ export default function VerifiedInstrumentDetail({
               <div>
                 <p className="eyebrow">Projeksiyon</p>
                 <h2 className="mt-1.5 text-lg font-semibold tracking-tight">Nakit akışları</h2>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  {scheduleMethodLabel} · Gelecek değişken kuponlar teorik senaryodur
+                </p>
               </div>
-              <Badge variant="outline">{result.cash_flows.length} ödeme</Badge>
+              <div className="flex flex-wrap justify-end gap-2">
+                <Badge variant="secondary">Teorik YTM</Badge>
+                <Badge variant="outline">{result.cash_flows.length} ödeme</Badge>
+              </div>
             </div>
+            {scheduleConfidence === "INFERRED" && (
+              <div className="border-t border-amber-500/15 bg-amber-500/[0.06] px-6 py-3 text-[11px] leading-5 text-foreground">
+                Açık ödeme takvimi bulunmadığı için tarihler ihraç, vade, kupon sıklığı
+                ve sonraki kupon tarihinden deterministik olarak türetilmiştir.
+              </div>
+            )}
             <div className="overflow-x-auto border-t border-border/60">
-              <table className="w-full min-w-[620px] text-left">
+              <table className="w-full min-w-[720px] text-left">
                 <thead>
                   <tr className="text-[10px] font-bold uppercase tracking-[0.11em] text-muted-foreground">
                     <th className="px-6 py-3.5">Ödeme tarihi</th>
+                    <th className="px-4 py-3.5">Nitelik</th>
                     <th className="px-4 py-3.5 text-right">Kupon</th>
                     <th className="px-4 py-3.5 text-right">Anapara</th>
                     <th className="px-4 py-3.5 text-right">Toplam</th>
@@ -558,6 +660,17 @@ export default function VerifiedInstrumentDetail({
                     <tr key={`${flow.payment_date}-${index}`} className="hover:bg-muted/25">
                       <td className="font-mono-data px-6 py-3.5 text-xs">
                         {formatDate(flow.payment_date)}
+                      </td>
+                      <td className="px-4 py-3.5 text-[11px] font-semibold text-muted-foreground">
+                        {flow.rate_status === "PUBLISHED"
+                          ? "Yayımlanmış"
+                          : flow.rate_status === "CALCULATED_FINAL"
+                            ? "Kesin hesap"
+                            : flow.rate_status === "CONTRACTUAL"
+                              ? "Sözleşmesel"
+                              : flow.rate_status === "INDICATIVE"
+                                ? "Cari projeksiyon"
+                                : "Senaryo"}
                       </td>
                       <td className="font-mono-data px-4 py-3.5 text-right text-xs">
                         {displayNumber(flow.coupon_amount)}

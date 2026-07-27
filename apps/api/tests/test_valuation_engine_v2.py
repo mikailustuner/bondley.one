@@ -3,7 +3,12 @@ from decimal import Decimal
 
 import pytest
 
-from app.services.valuation.calendar import coupon_schedule, current_coupon_period
+from app.services.valuation.calendar import (
+    ScheduleMethod,
+    coupon_schedule,
+    current_coupon_period,
+    infer_coupon_schedule,
+)
 from app.services.valuation.day_count import year_fraction
 from app.services.valuation.engine import (
     BenchmarkInput,
@@ -71,6 +76,42 @@ def test_current_period_backward_derivation_preserves_month_end():
     ) == (date(2026, 2, 28), date(2026, 8, 31))
 
 
+def test_trfturk42710_schedule_is_inferred_as_four_91_day_payments():
+    schedule = infer_coupon_schedule(
+        issue_date=date(2026, 4, 17),
+        maturity_date=date(2027, 4, 16),
+        frequency=4,
+        next_coupon_date=date(2026, 10, 16),
+    )
+
+    assert schedule.dates == (
+        date(2026, 7, 17),
+        date(2026, 10, 16),
+        date(2027, 1, 15),
+        date(2027, 4, 16),
+    )
+    assert schedule.method == ScheduleMethod.FIXED_DAY_ANCHORED
+    assert schedule.confidence == "EXACT_DERIVATION"
+    assert schedule.expected_payment_count == 4
+
+
+def test_trsvestk2610_schedule_uses_maturity_as_final_stub():
+    schedule = infer_coupon_schedule(
+        issue_date=date(2025, 10, 27),
+        maturity_date=date(2026, 11, 5),
+        frequency=4,
+        next_coupon_date=date(2026, 7, 28),
+    )
+
+    assert schedule.dates == (
+        date(2026, 1, 27),
+        date(2026, 4, 28),
+        date(2026, 7, 28),
+        date(2026, 11, 5),
+    )
+    assert schedule.method == ScheduleMethod.FIXED_DAY_ANCHORED
+
+
 def test_irregular_frequency_requires_explicit_dates():
     with pytest.raises(ValuationError) as captured:
         coupon_schedule(
@@ -108,10 +149,10 @@ def test_price_yield_round_trip_and_risk_metrics():
     assert from_clean.modified_duration > 0
     assert from_clean.convexity > 0
     assert abs(from_clean.dirty_price - from_yield.dirty_price) <= Decimal("0.00000001")
-    assert from_yield.periodic_coupon_rate == Decimal("0.0500000000")
+    assert from_yield.periodic_coupon_rate == Decimal("0.0495890411")
     assert from_yield.annual_simple_coupon_rate == Decimal("0.1000000000")
-    assert from_yield.annual_compound_coupon_rate == Decimal("0.1025000000")
-    assert from_yield.cash_flows[0].coupon_amount == Decimal("5.00")
+    assert from_yield.annual_compound_coupon_rate == Decimal("0.1025212302")
+    assert from_yield.cash_flows[0].coupon_amount == Decimal("4.9589041100")
 
 
 def test_next_coupon_anchor_does_not_accrue_from_original_issue_date():
@@ -127,8 +168,8 @@ def test_next_coupon_anchor_does_not_accrue_from_original_issue_date():
     )
 
     assert result.cash_flows[0].accrual_start == date(2026, 7, 8)
-    assert result.cash_flows[0].coupon_amount == Decimal("2.500")
-    assert result.periodic_coupon_rate == Decimal("0.0250000000")
+    assert result.cash_flows[0].coupon_amount == Decimal("2.5205479500")
+    assert result.periodic_coupon_rate == Decimal("0.0252054795")
 
 
 def test_missing_price_is_typed_failure_not_zero():
@@ -141,10 +182,44 @@ def test_missing_price_is_typed_failure_not_zero():
     assert captured.value.code == ValuationFailureCode.PRICE_REQUIRED
 
 
-def test_ambiguous_terms_cannot_be_valued():
+def test_discounted_single_payment_instrument_has_only_redemption_cash_flow():
+    result = ValuationEngine().value(
+        InstrumentTerms(
+            isin="TRB170327T15",
+            issue_date=date(2026, 4, 8),
+            maturity_date=date(2027, 3, 17),
+            coupon_frequency=1,
+            annual_coupon_rate=Decimal("0"),
+            rate_type=RateType.FIXED,
+            formula_code="BAP_FIXED_RATE",
+        ),
+        settlement_date=date(2026, 7, 27),
+        price_input=PriceInput(QuoteType.DIRTY_PRICE, Decimal("95")),
+    )
+
+    assert len(result.cash_flows) == 1
+    assert result.cash_flows[0].coupon_amount == Decimal("0")
+    assert result.cash_flows[0].principal_amount == Decimal("100")
+    assert result.cash_flows[0].payment_date == date(2027, 3, 17)
+    assert result.annual_yield > 0
+
+
+def test_ambiguous_terms_produce_theoretical_result_with_explicit_warning():
+    result = ValuationEngine().value(
+        _fixed_terms(parse_status="AMBIGUOUS"),
+        settlement_date=date(2025, 2, 3),
+        price_input=PriceInput(QuoteType.CLEAN_PRICE, Decimal("100")),
+    )
+
+    assert result.valuation_kind == "THEORETICAL_YTM"
+    assert "SOURCE_TERMS_AMBIGUOUS" in result.valuation_assumptions
+    assert result.provenance["source_parse_status"] == "AMBIGUOUS"
+
+
+def test_conflicting_terms_remain_blocked():
     with pytest.raises(ValuationError) as captured:
         ValuationEngine().value(
-            _fixed_terms(parse_status="AMBIGUOUS"),
+            _fixed_terms(parse_status="CONFLICTING"),
             settlement_date=date(2025, 2, 3),
             price_input=PriceInput(QuoteType.CLEAN_PRICE, Decimal("100")),
         )

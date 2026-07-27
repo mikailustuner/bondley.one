@@ -32,7 +32,7 @@ FORMULA_CATALOG = {
         FormulaDefinition(
             "BAP_FLOATING_RATE",
             "Değişken oranlı borçlanma aracı",
-            frozenset({"TLREF", "TLREFK"}),
+            frozenset({"FLOATING", "TLREF", "TLREFK"}),
             "DIRTY",
             "PERIODIC",
         ),

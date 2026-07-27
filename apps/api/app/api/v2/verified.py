@@ -90,7 +90,13 @@ def _date(value: Any) -> date | None:
         return None
 
 
-def _rate_type(isin: str, ast: dict[str, Any]) -> RateType:
+def _rate_type(
+    isin: str,
+    ast: dict[str, Any],
+    fields: dict[str, Any] | None = None,
+) -> RateType:
+    if _is_single_payment_instrument(fields or {}):
+        return RateType.FIXED
     names = {item.get("name") for item in ast.get("benchmarks", [])}
     if isin.startswith("TRD") or names & {"TLREFK_RATE", "BIST_TLREFK_INDEX"}:
         return RateType.TLREFK
@@ -98,16 +104,51 @@ def _rate_type(isin: str, ast: dict[str, Any]) -> RateType:
         return RateType.TLREF
     if "CPI_REFERENCE_INDEX" in names:
         return RateType.CPI
+    yield_type = str((fields or {}).get("yield_type_raw") or "").casefold()
+    if "değişken" in yield_type or "variable" in yield_type:
+        return RateType.FLOATING
     return RateType.FIXED
+
+
+def _is_single_payment_instrument(fields: dict[str, Any]) -> bool:
+    if fields.get("related_security_raw"):
+        return True
+    yield_type = str(fields.get("yield_type_raw") or "").casefold()
+    if "iskontolu" in yield_type or "discounted" in yield_type:
+        return True
+    return (
+        not fields.get("coupon_frequency_per_year")
+        and not fields.get("next_coupon_date")
+    )
+
+
+def _coupon_frequency(fields: dict[str, Any]) -> int | None:
+    raw = fields.get("coupon_frequency_per_year")
+    if raw:
+        return int(raw)
+    if _is_single_payment_instrument(fields):
+        return 1
+    return None
 
 
 def _formula_code(rate_type: RateType) -> str:
     return {
         RateType.FIXED: "BAP_FIXED_RATE",
+        RateType.FLOATING: "BAP_FLOATING_RATE",
         RateType.TLREF: "BAP_TLREF",
         RateType.TLREFK: "BAP_TLREFK",
         RateType.CPI: "BAP_CPI_LINKED",
     }[rate_type]
+
+
+def _default_quote_type(fields: dict[str, Any]) -> QuoteType:
+    quotation_method = str(fields.get("quotation_method") or "")
+    if (
+        "kirli" in quotation_method.casefold()
+        or "dirty" in quotation_method.casefold()
+    ):
+        return QuoteType.DIRTY_PRICE
+    return QuoteType.CLEAN_PRICE
 
 
 def _spread(ast: dict[str, Any]) -> Decimal:
@@ -153,7 +194,14 @@ def _observation_lag(ast: dict[str, Any]) -> int:
         for item in ast.get("observation_lags", [])
         if item.get("lag_business_days") is not None
     }
-    return next(iter(lags)) if len(lags) == 1 else 0
+    if len(lags) == 1:
+        return next(iter(lags))
+    # BIST TLREF/TLREFK endeks-değişimi kuponlarında sınır endeksleri
+    # kupon başlangıç/bitiş tarihinin bir önceki iş günüdür (T-1).
+    # Açık metin farklı bir lag verirse yukarıdaki dal her zaman önceliklidir.
+    if ast.get("benchmark_mode") == "INDEX_CHANGE":
+        return 1
+    return 0
 
 
 def _lagged_business_date(boundary: date, lag: int) -> date:
@@ -218,15 +266,10 @@ async def _resolve_coupon_rate_metrics(
     explicit_coupon_dates: tuple[date, ...],
     benchmark_input: BenchmarkInput | None,
 ) -> CouponRateMetrics | None:
-    if rate_type == RateType.CPI:
-        return None
-
     next_coupon_date = _date(fields.get("next_coupon_date"))
-    coupon_day_count = (
-        "ACT/365F"
-        if rate_type in {RateType.TLREF, RateType.TLREFK}
-        else fields.get("day_count_convention")
-    )
+    # BIST/KAP yıllık basit ve bileşik kupon eşdeğerleri dönemsel oranı
+    # gerçek dönem gün sayısı / 365 üzerinden yıllıklaştırır.
+    coupon_day_count = "ACT/365F"
     try:
         period_start, period_end, full_factor = _coupon_period(
             issue_date=issue_date,
@@ -254,6 +297,9 @@ async def _resolve_coupon_rate_metrics(
             calculation_as_of=settlement_date,
         )
 
+    if rate_type == RateType.CPI:
+        return None
+
     if ast.get("benchmark_mode") == "INDEX_CHANGE" and rate_type in {
         RateType.TLREF,
         RateType.TLREFK,
@@ -273,51 +319,57 @@ async def _resolve_coupon_rate_metrics(
             or end_observation.index_value is None
             or end_observation.observation_date <= start_observation.observation_date
         ):
-            return None
-        if (
-            is_final
-            and end_observation.observation_date
-            != _on_or_previous_business_day(required_end_target)
-        ):
-            is_final = False
-        elapsed_projection_days = (
-            _next_business_day(end_observation.observation_date)
-            - _next_business_day(start_observation.observation_date)
-        ).days
-        if elapsed_projection_days <= 0:
-            # There is no elapsed index return on the first day of a coupon
-            # period, so an annualized indicative coupon cannot be calculated.
-            return None
-        annuality = str(ast.get("spread_annuality") or "UNKNOWN")
-        if annuality not in {"ANNUAL_SIMPLE", "PERIODIC"}:
-            annuality = "UNKNOWN"
-        return from_index_change(
-            start_index_value=start_observation.index_value,
-            end_index_value=end_observation.index_value,
-            start_index_date=start_observation.observation_date,
-            end_index_date=end_observation.observation_date,
-            period_start=period_start,
-            period_end=period_end,
-            coupon_frequency=coupon_frequency,
-            full_period_year_fraction=full_factor,
-            full_period_days=(period_end - period_start).days,
-            elapsed_projection_days=elapsed_projection_days,
-            spread_decimal=_spread(ast),
-            spread_annuality=annuality,
-            calculation_as_of=end_observation.observation_date,
-            is_final=is_final,
-        )
+            # At the start of a coupon period the T-1 boundary observation and
+            # the latest available observation can be identical.  No index
+            # return exists yet; continue to the explicit TLREF-rate proxy
+            # below instead of suppressing theoretical valuation.
+            pass
+        else:
+            if (
+                is_final
+                and end_observation.observation_date
+                != _on_or_previous_business_day(required_end_target)
+            ):
+                is_final = False
+            elapsed_projection_days = (
+                _next_business_day(end_observation.observation_date)
+                - _next_business_day(start_observation.observation_date)
+            ).days
+            if elapsed_projection_days > 0:
+                annuality = str(ast.get("spread_annuality") or "UNKNOWN")
+                if annuality not in {"ANNUAL_SIMPLE", "PERIODIC"}:
+                    annuality = "UNKNOWN"
+                return from_index_change(
+                    start_index_value=start_observation.index_value,
+                    end_index_value=end_observation.index_value,
+                    start_index_date=start_observation.observation_date,
+                    end_index_date=end_observation.observation_date,
+                    period_start=period_start,
+                    period_end=period_end,
+                    coupon_frequency=coupon_frequency,
+                    full_period_year_fraction=full_factor,
+                    full_period_days=(period_end - period_start).days,
+                    elapsed_projection_days=elapsed_projection_days,
+                    spread_decimal=_spread(ast),
+                    spread_annuality=annuality,
+                    calculation_as_of=end_observation.observation_date,
+                    is_final=is_final,
+                )
 
     if rate_type in {RateType.TLREF, RateType.TLREFK} and benchmark_input is not None:
         spread = _spread(ast)
         annuality = str(ast.get("spread_annuality") or "UNKNOWN")
         assumptions: tuple[str, ...] = ()
+        if ast.get("benchmark_mode") == "INDEX_CHANGE":
+            assumptions += ("INDEX_CHANGE_UNAVAILABLE_TLREF_RATE_PROXY",)
         if annuality == "PERIODIC":
             annual_spread = spread / full_factor
         else:
             annual_spread = spread
             if annuality == "UNKNOWN" and spread:
-                assumptions = ("UNQUALIFIED_SPREAD_TREATED_AS_ANNUAL_SIMPLE",)
+                assumptions += (
+                    "UNQUALIFIED_SPREAD_TREATED_AS_ANNUAL_SIMPLE",
+                )
         return from_annual_simple_coupon(
             annual_simple_rate=benchmark_input.annual_rate_decimal + annual_spread,
             period_start=period_start,
@@ -343,6 +395,7 @@ def _instrument_payload(
     maturity = version.maturity_date
     today = turkey_today()
     days_to_maturity = (maturity - today).days if maturity else None
+    default_quote_type = _default_quote_type(fields)
     return {
         "id": instrument.id,
         "version_id": version.id,
@@ -356,7 +409,7 @@ def _instrument_payload(
         "currency": fields.get("currency_or_unit") or "TRY",
         "security_type": version.security_type_raw,
         "yield_type": version.yield_type_raw,
-        "coupon_frequency": fields.get("coupon_frequency_per_year"),
+        "coupon_frequency": _coupon_frequency(fields),
         "first_issue_date": fields.get("first_issue_date"),
         "next_coupon_date": fields.get("next_coupon_date"),
         "next_coupon_rate_pct": fields.get("next_coupon_rate_pct"),
@@ -366,6 +419,7 @@ def _instrument_payload(
         "remarks": fields.get("remarks_raw"),
         "issuance_type": fields.get("issuance_type_raw"),
         "quotation_method": fields.get("quotation_method"),
+        "default_quote_type": default_quote_type.value,
         "day_count_convention": fields.get("day_count_convention"),
         "total_issue_amount": fields.get("total_issue_amount_thousands"),
         "last_issue_price": None,
@@ -714,20 +768,35 @@ async def create_valuation(
     ast = rule.ast_json if rule else {}
     issue_date = _date(fields.get("first_issue_date"))
     maturity_date = version.maturity_date
-    frequency = fields.get("coupon_frequency_per_year")
+    frequency = _coupon_frequency(fields)
     if issue_date is None or maturity_date is None or not frequency:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Instrument schedule fields are incomplete",
         )
-    rate_type = _rate_type(instrument.isin, ast)
+    rate_type = _rate_type(instrument.isin, ast, fields)
     published_coupon_pct = _decimal(fields.get("next_coupon_rate_pct"))
     annual_coupon_rate = (
         published_coupon_pct / Decimal("100")
         if published_coupon_pct is not None
-        else None
+        and (
+            published_coupon_pct > 0
+            or rate_type == RateType.FIXED
+        )
+        else Decimal("0") if _is_single_payment_instrument(fields) else None
     )
     benchmark_input = None
+    valuation_assumptions: tuple[str, ...] = ()
+    if (
+        not fields.get("coupon_frequency_per_year")
+        and not fields.get("next_coupon_date")
+        and not fields.get("related_security_raw")
+        and "iskontolu" not in str(fields.get("yield_type_raw") or "").casefold()
+        and "discounted" not in str(fields.get("yield_type_raw") or "").casefold()
+    ):
+        valuation_assumptions = (
+            "MISSING_COUPON_STRUCTURE_SINGLE_PAYMENT_SCENARIO",
+        )
     if rate_type in {RateType.TLREF, RateType.TLREFK}:
         benchmark_row = await db.scalar(
             select(BenchmarkObservation)
@@ -747,6 +816,10 @@ async def create_valuation(
                 source_file_id=benchmark_row.rate_source_file_id,
                 source_row=benchmark_row.rate_source_row,
             )
+    effective_cpi_ratio = payload.cpi_ratio
+    if rate_type == RateType.CPI and effective_cpi_ratio is None:
+        effective_cpi_ratio = Decimal("1")
+        valuation_assumptions = ("CPI_RATIO_1_REAL_TERMS_SCENARIO",)
 
     coupon_rate_metrics = await _resolve_coupon_rate_metrics(
         db,
@@ -762,6 +835,22 @@ async def create_valuation(
     )
     if coupon_rate_metrics is not None:
         annual_coupon_rate = coupon_rate_metrics.annual_simple_rate
+        valuation_assumptions += coupon_rate_metrics.assumptions
+    if rate_type == RateType.FLOATING and annual_coupon_rate is None:
+        issue_scenario_pct = (
+            _decimal(fields.get("last_issue_yield_annual_simple_pct"))
+            or _decimal(fields.get("first_issue_yield_annual_simple_pct"))
+        )
+        if issue_scenario_pct is not None and issue_scenario_pct > 0:
+            annual_coupon_rate = issue_scenario_pct / Decimal("100")
+            valuation_assumptions += (
+                "ISSUE_YIELD_USED_AS_FLAT_COUPON_SCENARIO",
+            )
+        else:
+            annual_coupon_rate = Decimal("0")
+            valuation_assumptions += (
+                "UNPUBLISHED_VARIABLE_COUPON_ZERO_SCENARIO",
+            )
 
     price = PriceObservation(
         instrument_id=instrument.id,
@@ -817,6 +906,7 @@ async def create_valuation(
         source_row=version.source_row_number,
         parser_version=rule.parser_version if rule else None,
         coupon_rate_metrics=coupon_rate_metrics,
+        valuation_assumptions=valuation_assumptions,
     )
     try:
         result = ValuationEngine().value(
@@ -828,7 +918,7 @@ async def create_valuation(
                 source=payload.quote_source,
             ),
             benchmark=benchmark_input,
-            cpi_ratio=payload.cpi_ratio,
+            cpi_ratio=effective_cpi_ratio,
         )
         result_payload = result.to_dict()
         request_record.status = "COMPLETED"

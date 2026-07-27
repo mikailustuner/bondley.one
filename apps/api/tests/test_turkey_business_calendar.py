@@ -15,16 +15,24 @@ def test_sunday_resolves_to_friday():
 
 
 def test_monday_before_publication_resolves_to_friday():
-    calendar = BistBusinessCalendar(publication_ready_time=time(16, 15))
-    result = calendar.resolve_expected_source_date(local(2026, 7, 27, 10))
+    calendar = BistBusinessCalendar(publication_ready_time=time(16, 5))
+    result = calendar.resolve_expected_source_date(local(2026, 7, 27, 14))
+    assert result.requested_business_date == date(2026, 7, 24)
+    assert result.reason == "BEFORE_PUBLICATION_CUTOFF"
+
+
+def test_one_minute_before_cutoff_resolves_to_previous_business_day():
+    calendar = BistBusinessCalendar()
+    result = calendar.resolve_expected_source_date(local(2026, 7, 27, 16, 4))
     assert result.requested_business_date == date(2026, 7, 24)
     assert result.reason == "BEFORE_PUBLICATION_CUTOFF"
 
 
 def test_business_day_after_publication_resolves_to_today():
-    calendar = BistBusinessCalendar(publication_ready_time=time(16, 15))
-    result = calendar.resolve_expected_source_date(local(2026, 7, 27, 16, 16))
+    calendar = BistBusinessCalendar()
+    result = calendar.resolve_expected_source_date(local(2026, 7, 27, 16, 5))
     assert result.requested_business_date == date(2026, 7, 27)
+    assert result.reason == "CURRENT_BUSINESS_DAY_AFTER_CUTOFF"
 
 
 def test_configured_exchange_holiday_is_skipped():

@@ -9,8 +9,8 @@ from typing import Any
 from app.services.valuation.calendar import (
     BusinessCalendar,
     BusinessDayConvention,
-    coupon_schedule,
     current_coupon_period,
+    infer_coupon_schedule,
 )
 from app.services.valuation.coupon_rates import CouponRateMetrics, from_annual_simple_coupon
 from app.services.valuation.day_count import DayCountConvention, parse_day_count, year_fraction
@@ -20,6 +20,7 @@ from app.services.valuation.formula_catalog import FORMULA_CATALOG
 
 class RateType(StrEnum):
     FIXED = "FIXED"
+    FLOATING = "FLOATING"
     TLREF = "TLREF"
     TLREFK = "TLREFK"
     CPI = "CPI"
@@ -67,6 +68,7 @@ class InstrumentTerms:
     source_row: int | None = None
     parser_version: str | None = None
     coupon_rate_metrics: CouponRateMetrics | None = None
+    valuation_assumptions: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -78,6 +80,7 @@ class CashFlow:
     accrual_start: date
     accrual_end: date
     year_fraction: Decimal
+    rate_status: str
     discount_time: Decimal | None = None
     present_value: Decimal | None = None
 
@@ -109,6 +112,9 @@ class ValuationResult:
     coupon_rate_status: str
     coupon_rate_confidence: str
     coupon_rate_is_final: bool
+    valuation_kind: str
+    cash_flow_rate_policy: str
+    valuation_assumptions: tuple[str, ...]
     cash_flows: list[CashFlow]
     intermediates: dict[str, Any] = field(default_factory=dict)
     provenance: dict[str, Any] = field(default_factory=dict)
@@ -133,6 +139,9 @@ class ValuationResult:
             "coupon_rate_status": self.coupon_rate_status,
             "coupon_rate_confidence": self.coupon_rate_confidence,
             "coupon_rate_is_final": self.coupon_rate_is_final,
+            "valuation_kind": self.valuation_kind,
+            "cash_flow_rate_policy": self.cash_flow_rate_policy,
+            "valuation_assumptions": list(self.valuation_assumptions),
             "cash_flows": [item.to_dict() for item in self.cash_flows],
             "intermediates": self.intermediates,
             "provenance": self.provenance,
@@ -140,7 +149,7 @@ class ValuationResult:
 
 
 class ValuationEngine:
-    VERSION = "valuation-engine-v2.2.0"
+    VERSION = "valuation-engine-v2.3.0"
     SUPPORTED_FORMULAS = frozenset(FORMULA_CATALOG)
     PRICE_QUANTUM = Decimal("0.00000001")
     RATE_QUANTUM = Decimal("0.0000000001")
@@ -164,7 +173,7 @@ class ValuationEngine:
             benchmark,
             cpi_ratio,
         )
-        dates = coupon_schedule(
+        schedule = infer_coupon_schedule(
             issue_date=terms.issue_date,
             maturity_date=terms.maturity_date,
             frequency=terms.coupon_frequency,
@@ -173,6 +182,7 @@ class ValuationEngine:
             business_calendar=self.business_calendar,
             business_day_convention=terms.business_day_convention,
         )
+        dates = list(schedule.dates)
         coupon_metrics = terms.coupon_rate_metrics
         if coupon_metrics is None:
             period_start, period_end = current_coupon_period(
@@ -291,6 +301,10 @@ class ValuationEngine:
             annual_yield,
             terms.coupon_frequency,
         )
+        valuation_assumptions = terms.valuation_assumptions
+        if terms.parse_status == "AMBIGUOUS":
+            valuation_assumptions += ("SOURCE_TERMS_AMBIGUOUS",)
+        valuation_assumptions = tuple(dict.fromkeys(valuation_assumptions))
         return ValuationResult(
             engine_version=self.VERSION,
             settlement_date=settlement_date,
@@ -310,10 +324,22 @@ class ValuationEngine:
             coupon_rate_status=coupon_metrics.status,
             coupon_rate_confidence=coupon_metrics.confidence,
             coupon_rate_is_final=coupon_metrics.is_final,
+            valuation_kind="THEORETICAL_YTM",
+            cash_flow_rate_policy=(
+                "CONTRACTUAL_FIXED_RATE_BY_ACTUAL_PERIOD"
+                if terms.rate_type == RateType.FIXED
+                else "CURRENT_PERIOD_THEN_FLAT_ANNUAL_RATE_SCENARIO"
+            ),
+            valuation_assumptions=valuation_assumptions,
             cash_flows=discounted,
             intermediates={
                 "day_count": convention.value,
                 "coupon_schedule": [item.isoformat() for item in dates],
+                "schedule_method": schedule.method.value,
+                "schedule_confidence": schedule.confidence,
+                "schedule_expected_payment_count": schedule.expected_payment_count,
+                "schedule_assumptions": list(schedule.assumptions),
+                "valuation_assumptions": list(valuation_assumptions),
                 "frequency": terms.coupon_frequency,
                 "indexed_nominal": str(indexed_nominal),
                 "round_trip_tolerance": "0.000001",
@@ -322,6 +348,7 @@ class ValuationEngine:
             provenance={
                 "instrument_source_file_id": terms.source_file_id,
                 "instrument_source_row": terms.source_row,
+                "source_parse_status": terms.parse_status,
                 "parser_version": terms.parser_version,
                 "formula_code": terms.formula_code,
                 "calendar_version": self.business_calendar.version,
@@ -346,7 +373,7 @@ class ValuationEngine:
         settlement_date: date,
         price_input: PriceInput | None,
     ) -> None:
-        if terms.parse_status in {"AMBIGUOUS", "CONFLICTING", "REJECTED"}:
+        if terms.parse_status in {"CONFLICTING", "REJECTED"}:
             raise ValuationError(
                 ValuationFailureCode.AMBIGUOUS_TERMS,
                 f"Enstrüman terimleri otomatik değerlemeye uygun değil: {terms.parse_status}",
@@ -397,11 +424,15 @@ class ValuationEngine:
                 ),
                 nominal,
             )
-        if terms.rate_type == RateType.FIXED:
+        if terms.rate_type in {RateType.FIXED, RateType.FLOATING}:
             if terms.annual_coupon_rate is None:
                 raise ValuationError(
                     ValuationFailureCode.MISSING_COUPON_RATE,
-                    "Sabit kıymet için yıllık kupon oranı gerekli.",
+                    (
+                        "Sabit kıymet için yıllık kupon oranı gerekli."
+                        if terms.rate_type == RateType.FIXED
+                        else "Değişken kıymet için yayımlanmış veya senaryo kupon oranı gerekli."
+                    ),
                 )
             return self._decimal(terms.annual_coupon_rate, "annual_coupon_rate"), nominal
         if terms.rate_type in {RateType.TLREF, RateType.TLREFK}:
@@ -447,21 +478,18 @@ class ValuationEngine:
     ) -> list[CashFlow]:
         flows: list[CashFlow] = []
         accrual_start = terms.issue_date
-        if terms.next_coupon_date is not None and dates:
-            accrual_start, _ = current_coupon_period(
-                issue_date=terms.issue_date,
-                settlement_date=settlement_date,
-                payment_dates=dates,
-                frequency=terms.coupon_frequency,
-                next_coupon_date=terms.next_coupon_date,
-            )
         for payment_date in dates:
             fraction = year_fraction(accrual_start, payment_date, convention)
-            coupon = (
-                nominal * coupon_metrics.periodic_coupon_rate
-                if not terms.explicit_coupon_dates
-                else nominal * annual_rate * fraction
-            )
+            if payment_date == coupon_metrics.period_end:
+                coupon = nominal * coupon_metrics.periodic_coupon_rate
+                rate_status = coupon_metrics.status
+            else:
+                coupon = nominal * annual_rate * fraction
+                rate_status = (
+                    "CONTRACTUAL"
+                    if terms.rate_type == RateType.FIXED
+                    else "SCENARIO"
+                )
             principal = nominal if payment_date == dates[-1] else Decimal("0")
             flows.append(
                 CashFlow(
@@ -472,6 +500,7 @@ class ValuationEngine:
                     accrual_start=accrual_start,
                     accrual_end=payment_date,
                     year_fraction=fraction,
+                    rate_status=rate_status,
                 )
             )
             accrual_start = payment_date

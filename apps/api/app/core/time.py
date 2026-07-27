@@ -70,7 +70,7 @@ class BistBusinessCalendar:
         self,
         *,
         extra_holidays: frozenset[date] | set[date] | None = None,
-        publication_ready_time: time = time(16, 15),
+        publication_ready_time: time = time(16, 5),
     ) -> None:
         self.extra_holidays = frozenset(extra_holidays or ())
         self.publication_ready_time = publication_ready_time
@@ -114,4 +114,3 @@ class BistBusinessCalendar:
             reason="CURRENT_BUSINESS_DAY_AFTER_CUTOFF",
             publication_ready_time=self.publication_ready_time,
         )
-

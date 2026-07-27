@@ -2,11 +2,14 @@
 
 Bondley, Borsa İstanbul’un resmî `tbliste`, TLREF ve TLREFK dosyalarını değişmez
 ham kaynak olarak arşivleyen; terimleri açıklamalardan ayrıştıran ve yalnız açık
-kullanıcı fiyat/getiri girdisiyle değerleme yapan bir borçlanma araçları
-uygulamasıdır.
+BIST fiyat bazına göre 100 temiz/kirli fiyat senaryosuyla otomatik teorik
+değerleme yapan bir borçlanma araçları uygulamasıdır.
 
 KAP bu sürümün veri hattında yoktur. Son ihraç fiyatı piyasa fiyatı sayılmaz.
-`TRD` ile başlayan katılım kıymetleri TLREFK kullanır.
+`TRD` ile başlayan katılım kıymetleri TLREFK kullanır. Yayımlanmış değer,
+cari projeksiyon ve gelecek kupon senaryosu birbirinden ayrılır; ayrıntılı
+sözleşme [değerleme doğruluk matrisinde](docs/VALUATION-ACCURACY-MATRIX.md)
+tanımlanır.
 
 ## Üretim ilk açılışı
 
@@ -34,10 +37,12 @@ PostgreSQL hazır
 ```
 
 Bootstrap `Europe/Istanbul` saatini kullanır. Hafta sonu, resmî tatil ve iş günü
-16:15’ten önceki ilk açılışta önceki BIST iş günü beklenir. Örneğin pazar günü
-ilk açılışta veri tarihi cuma olarak çözülür. Kaynak içeriği beklenen tarihten
-eskiyse `STALE`, gelecekteyse kalite hatasıdır. Eski snapshot yeni verinin
-üzerine yayımlanmaz.
+16:05’ten önceki ilk açılışta önceki BIST iş günü beklenir. Örneğin pazartesi
+14:00’te veri tarihi son cuma olarak çözülür. Arşiv üyesinin adı pazartesi
+tarihini taşısa bile snapshot kesim saatinden önce pazartesiye yazılmaz; dosya
+tarihi kaynak metadatasında, etkin tarih cuma olarak saklanır. Kaynak içeriği
+beklenen tarihten eskiyse `STALE`; eski snapshot yeni verinin üzerine
+yayımlanmaz.
 
 Kullanıma açılma koşulu `/health/ready` yanıtının 200 dönmesidir. Bu uç, şema
 migration’ı ile bootstrap’ın `READY` veya `DEGRADED` sonucunu ve kullanılabilir

@@ -19,12 +19,15 @@ Tüm takvim kararları `Europe/Istanbul` ile alınır:
 
 - Cumartesi/pazar: önceki iş günü.
 - Sabit resmî tatil veya `BIST_HOLIDAYS`: önceki iş günü.
-- İş günü 16:15’ten önce: önceki iş günü.
-- İş günü 16:15 ve sonrası: o gün.
+- İş günü 16:05’ten önce: önceki iş günü.
+- İş günü 16:05 ve sonrası: o gün.
 
 Bu tarih `requested_business_date` olarak her kaynak kaydına yazılır.
 `effective_date` mümkün olduğunda dosya adı veya içerikten gelir. Böylece tarih
-“bugün indirildi” bilgisinden tahmin edilmez.
+“bugün indirildi” bilgisinden tahmin edilmez. Kesim saatinden önce arşiv içindeki
+dosya adı takvim gününü gösteriyorsa bu tarih doğrudan yayımlanmaz:
+`date_origin=CUTOFF_CAPPED_SOURCE_FILENAME` ile kaynak metadatası korunur ve
+`effective_date`, çözümlenen önceki BIST iş gününe sabitlenir.
 
 ## 3. İlk açılış sırası
 
@@ -52,7 +55,7 @@ sayfası ve sonda yer alan açıklamalar ham satır olarak saklanır.
 - `CURRENT`: içerik beklenen iş gününe ait.
 - `STALE`: içerik daha eski; veri korunur, bootstrap `DEGRADED` olabilir.
 - `HISTORICAL`: tarihsel arşiv.
-- `FUTURE`: reddedilir.
+- `FUTURE`: kesim-saati kuralıyla açıklanamayan ileri tarih reddedilir.
 
 Yeni import parse/kalite kapısını geçmeden yayımlanan snapshot değişmez. Daha
 eski tarih mevcut yeni snapshot’ın üzerine yazılamaz. Aynı hash + parser sürümü
