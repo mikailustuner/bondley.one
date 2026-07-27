@@ -5,11 +5,13 @@ ham kaynak olarak arşivleyen; terimleri açıklamalardan ayrıştıran ve yaln�
 BIST fiyat bazına göre 100 temiz/kirli fiyat senaryosuyla otomatik teorik
 değerleme yapan bir borçlanma araçları uygulamasıdır.
 
-KAP bu sürümün veri hattında yoktur. Son ihraç fiyatı piyasa fiyatı sayılmaz.
-`TRD` ile başlayan katılım kıymetleri TLREFK kullanır. Yayımlanmış değer,
-cari projeksiyon ve gelecek kupon senaryosu birbirinden ayrılır; ayrıntılı
-sözleşme [değerleme doğruluk matrisinde](docs/VALUATION-ACCURACY-MATRIX.md)
-tanımlanır.
+KAP, temel BIST bootstrap/readiness hattını engellemeyen asenkron bir doğrulama
+katmanıdır. Eksik değişken-kupon spreadleri resmî geçmiş kuponlardan ve
+TLREF/TLREFK endekslerinden doğrulanır; doğrulama sürerken sıfır-spread sonucu
+nihai değerleme gibi gösterilmez. Son ihraç fiyatı piyasa fiyatı sayılmaz.
+`TRD` ile başlayan katılım kıymetleri TLREFK kullanır. Yayımlanmış değer, cari
+projeksiyon ve gelecek kupon senaryosu birbirinden ayrılır; ayrıntılı sözleşme
+[değerleme doğruluk matrisinde](docs/VALUATION-ACCURACY-MATRIX.md) tanımlanır.
 
 ## Üretim ilk açılışı
 

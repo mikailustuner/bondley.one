@@ -31,6 +31,7 @@ from app.models.valuation import (
     ValuationResultRecord,
 )
 from app.models.kap_ingestion import (
+    KapBackfillRequest,
     KapCouponEvent,
     KapDerivedTerm,
     KapDisclosure,
@@ -47,4 +48,5 @@ __all__ = [
     "UserFavoriteInstrument", "InstrumentUserNote",
     "PriceObservation", "ValuationRequestRecord", "ValuationResultRecord",
     "KapDisclosure", "KapCouponEvent", "KapDerivedTerm", "KapIngestionState",
+    "KapBackfillRequest",
 ]

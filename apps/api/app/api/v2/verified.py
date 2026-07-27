@@ -27,6 +27,7 @@ from app.models.bist_ingestion import (
 )
 from app.models.user import User
 from app.models.kap_ingestion import (
+    KapBackfillRequest,
     KapCouponEvent,
     KapDerivedTerm,
     KapDisclosure,
@@ -722,42 +723,99 @@ async def get_instrument(
         .order_by(KapDisclosure.fetched_at.desc())
         .limit(1)
     )
+    fields = version.canonical_fields_json
+    ast = rule.ast_json if rule else {}
+    rate_type = _rate_type(instrument.isin, ast, fields)
+    has_bist_spread = any(
+        item.get("decimal") is not None for item in ast.get("spreads", [])
+    )
+    has_verified_kap_spread = (
+        kap_term is not None
+        and kap_term.value_decimal is not None
+        and kap_term.confidence
+        in {
+            "KAP_EXPLICIT",
+            "KAP_MULTI_COUPON_VERIFIED",
+            "KAP_SINGLE_COUPON_DERIVED",
+        }
+    )
+    backfill_request = await db.scalar(
+        select(KapBackfillRequest).where(
+            KapBackfillRequest.isin == instrument.isin
+        )
+    )
+    should_backfill = (
+        settings.KAP_INGESTION_ENABLED
+        and rate_type in {RateType.TLREF, RateType.TLREFK}
+        and not has_bist_spread
+        and not has_verified_kap_spread
+    )
+    backfill_queued = False
+    if should_backfill:
+        from app.services.kap_ingestion import KapEnrichmentService
+
+        should_dispatch = (
+            backfill_request is None
+            or backfill_request.status not in {"QUEUED", "RUNNING", "RETRY"}
+        )
+        queued_request = await KapEnrichmentService(db, settings).enqueue_backfill(
+            instrument.isin,
+            reason="USER_INSTRUMENT_VIEW",
+            priority=0,
+        )
+        if queued_request is not None:
+            backfill_request = queued_request
+            backfill_queued = should_dispatch and queued_request.status == "QUEUED"
+            # The worker must see the queue row before the task is published.
+            await db.commit()
+
+    active_backfill_status = (
+        backfill_request.status
+        if backfill_request is not None
+        and backfill_request.status in {"QUEUED", "RUNNING", "RETRY"}
+        else None
+    )
+    if has_verified_kap_spread:
+        kap_status = kap_term.confidence
+    elif has_bist_spread:
+        kap_status = "BIST_EXPLICIT"
+    elif active_backfill_status:
+        kap_status = active_backfill_status
+    elif kap_term is not None:
+        kap_status = kap_term.confidence
+    elif backfill_request is not None:
+        kap_status = backfill_request.status
+    elif settings.KAP_INGESTION_ENABLED:
+        kap_status = "PENDING"
+    else:
+        kap_status = "DISABLED"
     payload["kap_enrichment"] = {
-        "status": (
-            kap_term.confidence
-            if kap_term is not None
-            else "PENDING" if settings.KAP_INGESTION_ENABLED else "DISABLED"
-        ),
+        "status": kap_status,
         "spread_decimal": str(kap_term.value_decimal) if kap_term and kap_term.value_decimal is not None else None,
         "annuality": kap_term.annuality if kap_term else None,
         "benchmark": kap_term.benchmark if kap_term else None,
         "supporting_disclosure_ids": kap_term.supporting_disclosure_ids if kap_term else [],
         "last_fetched_at": latest_kap.fetched_at if latest_kap else None,
+        "backfill": (
+            {
+                "status": backfill_request.status,
+                "attempt_count": backfill_request.attempt_count,
+                "requested_at": backfill_request.requested_at,
+                "started_at": backfill_request.started_at,
+                "completed_at": backfill_request.completed_at,
+                "last_error": backfill_request.last_error,
+            }
+            if backfill_request is not None
+            else None
+        ),
     }
-    if settings.KAP_INGESTION_ENABLED:
-        stale = latest_kap is None or utc_now() - latest_kap.fetched_at > timedelta(hours=24)
-        refresh_key = f"user_refresh:{instrument.isin}"
-        refresh_state = await db.get(KapIngestionState, refresh_key)
-        last_queued_raw = refresh_state.value_json.get("queued_at") if refresh_state else None
-        last_queued = None
-        if last_queued_raw:
-            try:
-                last_queued = type(utc_now()).fromisoformat(last_queued_raw)
-            except ValueError:
-                pass
-        queue_due = last_queued is None or utc_now() - last_queued > timedelta(hours=1)
-        if stale and queue_due:
-            value = {"queued_at": utc_now().isoformat(), "reason": "STALE_INSTRUMENT_VIEW"}
-            if refresh_state is None:
-                db.add(KapIngestionState(key=refresh_key, value_json=value))
-            else:
-                refresh_state.value_json = value
-            try:
-                from app.tasks.data_tasks import poll_kap_enrichment
+    if backfill_queued:
+        try:
+            from app.tasks.data_tasks import process_kap_backfill_queue
 
-                poll_kap_enrichment.delay()
-            except Exception:
-                logger.warning("Could not queue non-blocking KAP refresh", exc_info=True)
+            process_kap_backfill_queue.delay()
+        except Exception:
+            logger.warning("Could not queue targeted KAP backfill", exc_info=True)
     payload["is_favorite"] = favorite is not None
     payload["note_text"] = note
     await MetricsService.track_instrument_view(
@@ -1503,6 +1561,16 @@ async def get_quality(
             KapDerivedTerm.confidence == "KAP_CONFLICT",
         )
     )
+    kap_backfills_pending = await db.scalar(
+        select(func.count(KapBackfillRequest.id)).where(
+            KapBackfillRequest.status.in_(["QUEUED", "RUNNING", "RETRY"])
+        )
+    )
+    kap_backfills_failed = await db.scalar(
+        select(func.count(KapBackfillRequest.id)).where(
+            KapBackfillRequest.status.in_(["NOT_FOUND", "FAILED"])
+        )
+    )
     kap_poll_state = await db.get(KapIngestionState, "incremental_poll")
     return {
         "published_versions": published or 0,
@@ -1554,6 +1622,8 @@ async def get_quality(
             "coupon_events": kap_coupon_events or 0,
             "active_terms": kap_active_terms or 0,
             "conflicts": kap_conflicts or 0,
+            "backfills_pending": kap_backfills_pending or 0,
+            "backfills_failed": kap_backfills_failed or 0,
             "last_poll": kap_poll_state.value_json if kap_poll_state else None,
         },
     }

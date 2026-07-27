@@ -59,10 +59,12 @@ def parse_retry_after(value: str | None, now: datetime | None = None) -> float:
 
 
 class KapHttpClient:
-    """Globally rate-limited KAP HTTP client with conservative proxy failover.
+    """Rate-limited KAP HTTP client with conservative proxy failover.
 
-    Every route shares one limiter. A proxy is changed only after a transport
-    failure; HTTP 429 pauses the complete pool and HTTP 403 opens the circuit.
+    Every route in this client shares one limiter. PostgreSQL advisory locking
+    serializes KAP workflows across worker processes. A proxy is changed only
+    after a transport failure; HTTP 429 pauses the complete pool and HTTP 403
+    opens the circuit.
     """
 
     def __init__(

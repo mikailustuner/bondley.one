@@ -11,6 +11,7 @@ from app.api.v2.verified import (
 )
 from app.services.bist_ingestion.remarks_parser import RemarksParser
 from app.services.valuation.calendar import ScheduleMethod, infer_coupon_schedule
+from app.services.valuation.coupon_rates import from_index_change
 from app.services.valuation.engine import QuoteType, RateType
 from app.services.valuation.engine import (
     BenchmarkInput,
@@ -255,4 +256,54 @@ def test_trfdvys42711_theoretical_dirty_100_scenario():
         date(2027, 1, 25),
         date(2027, 4, 2),
     ]
+    assert "SOURCE_TERMS_AMBIGUOUS" in result.valuation_assumptions
+
+
+def test_trdqnbv82713_verified_spread_theoretical_dirty_100_scenario():
+    coupon_metrics = from_index_change(
+        start_index_value=Decimal("3641.86408"),
+        end_index_value=Decimal("3951.11584"),
+        start_index_date=date(2026, 5, 12),
+        end_index_date=date(2026, 7, 24),
+        period_start=date(2026, 5, 13),
+        period_end=date(2026, 8, 12),
+        coupon_frequency=4,
+        full_period_year_fraction=Decimal(91) / Decimal(365),
+        full_period_days=91,
+        elapsed_projection_days=75,
+        spread_decimal=Decimal("0.0115"),
+        spread_annuality="ANNUAL_SIMPLE",
+        calculation_as_of=date(2026, 7, 24),
+        is_final=False,
+    )
+    result = ValuationEngine().value(
+        InstrumentTerms(
+            isin="TRDQNBV82713",
+            issue_date=date(2025, 8, 13),
+            maturity_date=date(2027, 8, 11),
+            coupon_frequency=4,
+            annual_coupon_rate=coupon_metrics.annual_simple_rate,
+            rate_type=RateType.TLREFK,
+            benchmark_spread_decimal=Decimal("0.0115"),
+            day_count="ACTACT",
+            next_coupon_date=date(2026, 8, 12),
+            parse_status="AMBIGUOUS",
+            formula_code="BAP_TLREFK",
+            coupon_rate_metrics=coupon_metrics,
+        ),
+        settlement_date=date(2026, 7, 27),
+        price_input=PriceInput(
+            QuoteType.DIRTY_PRICE,
+            Decimal("100"),
+            source="SYSTEM_NOMINAL_100",
+        ),
+    )
+
+    assert coupon_metrics.projected_reference_period_return == Decimal("0.1039443532")
+    assert result.periodic_coupon_rate == Decimal("0.1068114765")
+    assert result.annual_simple_coupon_rate == Decimal("0.4284196586")
+    assert result.annual_compound_coupon_rate == Decimal("0.5023770495")
+    assert result.accrued_amount == Decimal("8.80314367")
+    assert result.clean_price == Decimal("91.19685633")
+    assert result.annual_yield == Decimal("0.5433806412")
     assert "SOURCE_TERMS_AMBIGUOUS" in result.valuation_assumptions

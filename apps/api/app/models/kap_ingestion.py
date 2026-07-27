@@ -128,3 +128,31 @@ class KapIngestionState(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+
+
+class KapBackfillRequest(Base):
+    __tablename__ = "kap_backfill_requests"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    isin: Mapped[str] = mapped_column(String(12), nullable=False, unique=True, index=True)
+    status: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="QUEUED", index=True
+    )
+    priority: Mapped[int] = mapped_column(Integer, nullable=False, default=100, index=True)
+    reason: Mapped[str] = mapped_column(String(80), nullable=False)
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    requested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), index=True
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    disclosure_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    result_json: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    last_error: Mapped[str | None] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )

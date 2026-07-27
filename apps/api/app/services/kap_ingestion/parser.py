@@ -133,6 +133,7 @@ def _published_at(text: str) -> datetime | None:
 
 def _events_from_rows(rows: list[list[str]], fallback_isin: str | None) -> list[ParsedCouponEvent]:
     events: list[ParsedCouponEvent] = []
+    seen: set[tuple[str, int, date]] = set()
     for cells in rows:
         compact = [cell.strip() for cell in cells]
         if not compact:
@@ -153,6 +154,10 @@ def _events_from_rows(rows: list[list[str]], fallback_isin: str | None) -> list[
         row_isin = next(iter(ISIN_RE.findall(row_text)), fallback_isin)
         if row_isin is None:
             continue
+        identity = (row_isin, sequence, payment_date)
+        if identity in seen:
+            continue
+        seen.add(identity)
         paid_text = _fold(values[8])
         paid = True if paid_text in {"evet", "yes"} else False if paid_text in {"hayir", "no"} else None
         events.append(

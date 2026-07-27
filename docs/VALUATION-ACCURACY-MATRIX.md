@@ -91,6 +91,37 @@ dönemsel kupon = %11,40372745 → KAP hassasiyetinde %11,4037
 KAP ödeme tutarı, ilan edilmiş dört ondalıklı dönemsel oran kullanılarak
 `512.300.000 × 0,114037 = 58.421.155,10 TL` şeklinde yeniden üretilir.
 
+## TRDQNBV82713 hedefli KAP backfill doğrulaması
+
+KAP bildirimleri `1606368` ve `1606740` içindeki ilk üç dönemsel kira oranı,
+resmî TLREFK endeks sınırlarıyla birbirinden bağımsız olarak aynı yıllık basit
+spreadi üretir:
+
+| Kupon dönemi | KAP dönemsel oran | Başlangıç/bitiş TLREFK | Türetilen spread |
+| --- | ---: | ---: | ---: |
+| 13.08.2025–12.11.2025 | %10,9045 | 2.718,52401 / 3.007,17194 | %1,15 |
+| 12.11.2025–11.02.2026 | %10,1506 | 3.007,17194 / 3.303,79554 | %1,15 |
+| 11.02.2026–13.05.2026 | %10,5194 | 3.303,79554 / 3.641,86408 | %1,15 |
+
+27.07.2026 valöründe, 24.07.2026 resmî TLREFK endeksi `3.951,11584`,
+başlangıç endeksi `3.641,86408`, 91 günlük tam dönem ve 75 günlük gerçekleşen
+projeksiyon aralığı kullanılır. Kirli fiyat 100 teorik senaryosunun kilitli
+çıktıları:
+
+| Alan | Sonuç |
+| --- | ---: |
+| Projeksiyonlu referans dönem getirisi | %10,39443532 |
+| Dönemsel kupon | %10,68114765 |
+| Yıllık basit kupon | %42,84196586 |
+| Yıllık bileşik kupon | %50,23770495 |
+| İşlemiş tutar | 8,80314367 |
+| Temiz fiyat | 91,19685633 |
+| Teorik YTM | %54,33806412 |
+
+Kaynak parse durumu `AMBIGUOUS` kalabilir; bu etiket gizlenmez. Ancak spread
+`KAP_MULTI_COUPON_VERIFIED` kanıtıyla hesapta kullanılır ve eski
+`SPREAD_UNKNOWN_ZERO_SCENARIO` sonucu artık nihai değer diye gösterilmez.
+
 ## Takvim çıkarımı
 
 Öncelik sırası:

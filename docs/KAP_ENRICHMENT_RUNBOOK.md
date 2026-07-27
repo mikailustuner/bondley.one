@@ -10,9 +10,14 @@ işidir. KAP erişilemezse API readiness ve ilk bootstrap başarısız olmaz.
 - 00:30 görevi son üç takvim gününü (bugün ve önceki iki gün) uzlaştırır.
 - 16:45 görevi, 16:30 BIST benchmark güncellemesinden sonra türetilmiş terimleri
   yeniden doğrular.
-- Kullanıcı 24 saatten eski KAP verisi olan bir ISIN sayfasını açarsa en fazla
-  saatte bir kez genel artımlı yenileme kuyruğa alınır. HTTP isteği kullanıcı
-  yanıtını bekletmez.
+- 17:00 görevi, aktif TLREF/TLREFK kıymetlerinde BIST açıklamasında sayısal
+  spread bulunmayanları öncelikli tarihsel backfill kuyruğuna alır.
+- Backfill kuyruğu her dakika tek bir ISIN işler. Kullanıcı eksik spreadli bir
+  kıymeti açarsa aynı benzersiz kuyruk kaydı öncelik `0` ile öne alınır ve
+  worker hemen dürtülür; aynı ISIN için paralel istek üretilmez.
+- Arayüz kuyruk durumunu iki saniyede bir izler. `QUEUED`, `RUNNING` veya
+  `RETRY` sürerken doğrulanmamış `%0` spread hesabını göstermez. Doğrulama
+  bulunamazsa mevcut açık senaryo ve zorunlu uyarı politikası uygulanır.
 
 Liste çağrısı KAP web arayüzünün kullandığı tarih aralıklı public sorgudur.
 Yalnız borçlanma aracı, kupon/getiri ve kira sertifikasıyla ilgili sonuçların
@@ -62,6 +67,9 @@ altyapı sayılmaz ve yalnız halka açık KAP içeriği için kullanılır.
   denenir.
 - Aynı anda iki Celery görevinin KAP'a çıkmasını PostgreSQL advisory lock
   engeller.
+- Artımlı tarama, kontrollü tek bildirim çekimi ve hedefli tarihsel tarama aynı
+  advisory locku kullanır; böylece farklı worker süreçleri de KAP alan adına
+  paralel çıkamaz. Hedefli kuyruğun kendisi tek tüketicili ve önceliklidir.
 - Bildirim gövdesi SHA-256 ile immutable arşivlenir; bildirim kimliği tekrar
   işlenmez.
 
@@ -74,6 +82,12 @@ altyapı sayılmaz ve yalnız halka açık KAP içeriği için kullanılır.
 5. BIST `tbliste` açıklamasındaki açık spread.
 6. Spread bulunamazsa `%0` senaryosu; sonuç gösterilir fakat
    `SPREAD_UNKNOWN_ZERO_SCENARIO` uyarısı zorunludur.
+
+Hedefli backfill, `tbliste` içindeki ihraç/vade/kupon sıklığı/sonraki kupon
+tarihinden geçmiş ödeme tarihlerini deterministik çıkarır. Her ödeme için
+`T-2 … T+1` KAP liste penceresi sorgulanır; yalnız metadata içinde tam ISIN
+bulunan kupon/oran bildirimleri indirilir. En fazla iki ilgili detay alınır ve
+türetim yalnız istenen ISIN üzerinde çalışır.
 
 `TRD` ile başlayan kıymetler yalnız `TLREFK`; diğer referanslı kıymetler AST
 benchmark tanımına göre `TLREF` veya `TLREFK` kullanır. Türetim T+0/T-1/T-2
@@ -91,7 +105,8 @@ docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs --tail=200 celery-worker celery-beat
 ```
 
-Migration `002_kap_enrichment` dört KAP tablosunu ekler. İlk deployda
+Migration `002_kap_enrichment` dört KAP kanıt tablosunu,
+`003_kap_backfill_queue` ise benzersiz ISIN backfill kuyruğunu ekler. İlk deployda
 `KAP_INGESTION_ENABLED=false` ile migration ve servis sağlığı doğrulanabilir;
 sonra `.env` değeri `true` yapılarak yalnız worker ve beat yeniden
 oluşturulabilir:
@@ -115,4 +130,13 @@ Genel son üç gün uzlaştırması için:
 
 ```text
 POST /api/v2/operations/kap/poll
+```
+
+Kuyruk ve worker denetimi:
+
+```bash
+docker compose -f docker-compose.prod.yml exec postgres \
+  psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+  -c "select isin,status,priority,attempt_count,requested_at,completed_at from kap_backfill_requests order by priority,requested_at;"
+docker compose -f docker-compose.prod.yml logs --tail=200 celery-worker celery-beat
 ```

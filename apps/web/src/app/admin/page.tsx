@@ -90,6 +90,7 @@ export default function AdminPage() {
             </div>
             <div className="flex items-center justify-between"><span>KAP bildirim / kupon</span><span className="font-mono-data">{quality?.kap_enrichment ? `${quality.kap_enrichment.disclosures} / ${quality.kap_enrichment.coupon_events}` : "—"}</span></div>
             <div className="flex items-center justify-between"><span>KAP aktif terim / çelişki</span><span className="font-mono-data">{quality?.kap_enrichment ? `${quality.kap_enrichment.active_terms} / ${quality.kap_enrichment.conflicts}` : "—"}</span></div>
+            <div className="flex items-center justify-between"><span>KAP backfill bekleyen / sonuçsuz</span><span className="font-mono-data">{quality?.kap_enrichment ? `${quality.kap_enrichment.backfills_pending} / ${quality.kap_enrichment.backfills_failed}` : "—"}</span></div>
             <Button asChild className="w-full"><Link href="/admin/import"><RefreshCw className="mr-2 h-4 w-4" />Import operasyonlarını aç</Link></Button>
           </CardContent>
         </Card>

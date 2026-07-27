@@ -55,6 +55,16 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(hour=16, minute=45, day_of_week="1-5"),
         "options": {"queue": "default"},
     },
+    "enqueue-active-kap-spread-backfills": {
+        "task": "app.tasks.data_tasks.enqueue_kap_missing_spreads",
+        "schedule": crontab(hour=17, minute=0, day_of_week="1-5"),
+        "options": {"queue": "default"},
+    },
+    "process-kap-backfill-queue": {
+        "task": "app.tasks.data_tasks.process_kap_backfill_queue",
+        "schedule": crontab(minute="*"),
+        "options": {"queue": "default"},
+    },
     "check-user-alerts": {
         "task": "app.tasks.alerts_tasks.check_user_alerts",
         "schedule": crontab(minute="*/15"),

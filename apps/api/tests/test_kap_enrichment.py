@@ -64,6 +64,23 @@ def test_kap_redemption_plan_parser_preserves_rates_and_amounts():
     assert parsed.events[1].periodic_rate_decimal is None
 
 
+def test_kap_redemption_plan_parser_deduplicates_bilingual_rows():
+    html = """
+    <div>ISIN Kodu TRDQNBV82713</div>
+    <table>
+      <tr><td>3</td><td>13.05.2026</td><td>12.05.2026</td><td>13.05.2026</td>
+      <td>10,5194</td><td>42,1921</td><td>49,3460</td><td></td><td></td><td>Evet</td></tr>
+      <tr><td>3</td><td>13.05.2026</td><td>12.05.2026</td><td>13.05.2026</td>
+      <td>10,5194</td><td>42,1921</td><td>49,3460</td><td></td><td></td><td>Yes</td></tr>
+    </table>
+    """
+    parsed = KapDisclosureParser().parse(html.encode(), "text/html")
+
+    assert len(parsed.events) == 1
+    assert parsed.events[0].coupon_sequence == 3
+    assert parsed.events[0].periodic_rate_decimal == Decimal("0.105194")
+
+
 def test_spread_derivation_reconstructs_trd_qnb_coupon_to_source_rounding():
     evidence = derive_annual_simple_spread(
         published_periodic_rate=Decimal("0.105194"),
@@ -81,6 +98,81 @@ def test_spread_derivation_reconstructs_trd_qnb_coupon_to_source_rounding():
     assert evidence.spread_decimal == Decimal("0.0115")
     assert evidence.lag_business_days == 1
     assert evidence.error_decimal <= Decimal("0.0000005")
+
+
+@pytest.mark.parametrize(
+    ("published_rate", "period_start", "period_end", "start_date", "end_date", "start_index", "end_index"),
+    [
+        (
+            "0.109045",
+            date(2025, 8, 13),
+            date(2025, 11, 12),
+            date(2025, 8, 12),
+            date(2025, 11, 11),
+            "2718.52401",
+            "3007.17194",
+        ),
+        (
+            "0.101506",
+            date(2025, 11, 12),
+            date(2026, 2, 11),
+            date(2025, 11, 11),
+            date(2026, 2, 10),
+            "3007.17194",
+            "3303.79554",
+        ),
+        (
+            "0.105194",
+            date(2026, 2, 11),
+            date(2026, 5, 13),
+            date(2026, 2, 10),
+            date(2026, 5, 12),
+            "3303.79554",
+            "3641.86408",
+        ),
+    ],
+)
+def test_trd_qnb_three_official_coupons_independently_verify_same_spread(
+    published_rate,
+    period_start,
+    period_end,
+    start_date,
+    end_date,
+    start_index,
+    end_index,
+):
+    evidence = derive_annual_simple_spread(
+        published_periodic_rate=Decimal(published_rate),
+        period_start=period_start,
+        period_end=period_end,
+        index_observations={
+            start_date: Decimal(start_index),
+            end_date: Decimal(end_index),
+        },
+        candidate_lags=(1,),
+        source_rounding_decimal_places=6,
+    )
+
+    assert evidence is not None
+    assert evidence.spread_decimal == Decimal("0.0115")
+    assert evidence.lag_business_days == 1
+    assert evidence.error_decimal <= Decimal("0.0000005")
+
+
+def test_targeted_backfill_uses_recent_historical_coupon_windows():
+    windows = KapEnrichmentService._historical_coupon_windows(
+        fields={
+            "first_issue_date": "2025-08-13",
+            "next_coupon_date": "2026-08-12",
+            "coupon_frequency_per_year": 4,
+        },
+        maturity_date=date(2027, 8, 11),
+        as_of=date(2026, 7, 27),
+    )
+
+    assert windows[0] == (date(2026, 5, 11), date(2026, 5, 14))
+    assert (date(2026, 2, 9), date(2026, 2, 12)) in windows
+    assert all(to_date <= date(2026, 7, 27) for _, to_date in windows)
 
 
 def test_proxy_credentials_are_never_exposed_and_429_date_is_respected():

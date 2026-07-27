@@ -118,6 +118,7 @@ export default function VerifiedInstrumentDetail({
   const [calculationError, setCalculationError] = useState<string | null>(null);
   const [valuation, setValuation] = useState<VerifiedValuationResponse | null>(null);
   const [calculating, setCalculating] = useState(false);
+  const [kapBackfillTimedOut, setKapBackfillTimedOut] = useState(false);
   const [assumptionOpen, setAssumptionOpen] = useState(false);
   const [note, setNote] = useState("");
   const [savingNote, setSavingNote] = useState(false);
@@ -164,6 +165,44 @@ export default function VerifiedInstrumentDetail({
           ? "TLREF"
           : null;
   const requiresCpi = benchmarkNames.includes("CPI_REFERENCE_INDEX");
+  const kapStatus = instrument?.kap_enrichment?.status || "DISABLED";
+  const kapBackfillBlocking =
+    Boolean(requiredBenchmark) &&
+    instrument?.kap_enrichment?.spread_decimal == null &&
+    ["PENDING", "QUEUED", "RUNNING", "RETRY"].includes(kapStatus);
+
+  useEffect(() => {
+    if (!kapBackfillBlocking) {
+      setKapBackfillTimedOut(false);
+      return;
+    }
+    const token = getToken();
+    if (!token) return;
+
+    let active = true;
+    let attempts = 0;
+    const poll = async () => {
+      attempts += 1;
+      try {
+        const detail = await api.verified.get(token, isin);
+        if (active) setInstrument(detail);
+      } catch {
+        // A transient detail refresh must not replace the original page data.
+      }
+      if (!active) return;
+      if (attempts >= 45) {
+        setKapBackfillTimedOut(true);
+        return;
+      }
+      window.setTimeout(() => void poll(), 2000);
+    };
+    const timer = window.setTimeout(() => void poll(), 1500);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [isin, kapBackfillBlocking]);
 
   useEffect(() => {
     if (!instrument) return;
@@ -171,9 +210,13 @@ export default function VerifiedInstrumentDetail({
     if (!token) return;
 
     let active = true;
-    setCalculating(true);
     setValuation(null);
     setCalculationError(null);
+    if (kapBackfillBlocking) {
+      setCalculating(false);
+      return;
+    }
+    setCalculating(true);
 
     api.verified
       .value(token, {
@@ -203,6 +246,9 @@ export default function VerifiedInstrumentDetail({
   }, [
     instrument?.version_id,
     instrument?.default_quote_type,
+    instrument?.kap_enrichment?.status,
+    instrument?.kap_enrichment?.spread_decimal,
+    kapBackfillBlocking,
     isin,
     settlementDate,
   ]);
@@ -406,13 +452,49 @@ export default function VerifiedInstrumentDetail({
             <span>
               Referans: <strong className="text-foreground">{requiredBenchmark || (requiresCpi ? "TÜFE" : "Sabit oran")}</strong>
             </span>
-            {calculating && (
+            {(calculating || (kapBackfillBlocking && !kapBackfillTimedOut)) && (
               <span className="inline-flex items-center gap-2 text-primary">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Hesaplanıyor
+                {kapBackfillBlocking ? "KAP koşulları doğrulanıyor" : "Hesaplanıyor"}
               </span>
             )}
           </div>
+
+          {kapBackfillBlocking && !kapBackfillTimedOut && (
+            <div className="rounded-2xl border border-primary/20 bg-primary/[0.055] p-5">
+              <div className="flex items-start gap-3">
+                <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-primary" />
+                <div>
+                  <p className="text-sm font-semibold">
+                    Sözleşme spreadi resmî KAP geçmişinden doğrulanıyor
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {instrument.isin} için geçmiş kupon bildirimleri ve resmî{" "}
+                    {requiredBenchmark} endeks değerleri eşleştiriliyor. Doğrulama
+                    bitmeden eksik spreadi sıfır kabul eden yanıltıcı bir sonuç
+                    gösterilmeyecek.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {kapBackfillBlocking && kapBackfillTimedOut && (
+            <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-5">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+                <div>
+                  <p className="text-sm font-semibold text-destructive">
+                    KAP doğrulaması beklenenden uzun sürdü
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    Doğrulanmamış spread ile değerleme üretilmedi. Arka plan kuyruğu
+                    çalışmaya devam eder; sayfayı kısa süre sonra yenileyebilirsiniz.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {calculating && (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

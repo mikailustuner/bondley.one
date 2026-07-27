@@ -223,6 +223,57 @@ def derive_kap_terms(self):
 
 
 @celery_app.task(
+    name="app.tasks.data_tasks.process_kap_backfill_queue",
+    bind=True,
+    max_retries=0,
+)
+def process_kap_backfill_queue(self):
+    """Process one serialized, ISIN-targeted historical KAP request."""
+
+    async def _process():
+        engine, session_factory, service_type = await _kap_context()
+        try:
+            async with session_factory() as db:
+                return await service_type(db, settings).process_backfill_queue()
+        finally:
+            await engine.dispose()
+
+    try:
+        return _run_async(_process())
+    except Exception:
+        logger.exception("KAP targeted backfill failed")
+        return {"status": "FAILED_NON_BLOCKING"}
+
+
+@celery_app.task(
+    name="app.tasks.data_tasks.enqueue_kap_missing_spreads",
+    bind=True,
+    max_retries=0,
+)
+def enqueue_kap_missing_spreads(self):
+    """Prefill active floating-rate instruments before a user opens them."""
+
+    async def _enqueue():
+        engine, session_factory, service_type = await _kap_context()
+        try:
+            async with session_factory() as db:
+                if not settings.KAP_INGESTION_ENABLED:
+                    return {"status": "DISABLED"}
+                return await service_type(db, settings).enqueue_missing_spreads()
+        finally:
+            await engine.dispose()
+
+    try:
+        result = _run_async(_enqueue())
+        if result.get("queued", 0):
+            process_kap_backfill_queue.delay()
+        return result
+    except Exception:
+        logger.exception("KAP missing-spread prefill failed")
+        return {"status": "FAILED_NON_BLOCKING"}
+
+
+@celery_app.task(
     name="app.tasks.data_tasks.fetch_kap_disclosure",
     bind=True,
     max_retries=0,
@@ -235,9 +286,11 @@ def fetch_kap_disclosure(self, disclosure_id: str):
         engine, session_factory, service_type = await _kap_context()
         try:
             async with session_factory() as db:
-                return await service_type(db, settings).fetch_disclosure(
-                    str(disclosure_id)
-                )
+                service = service_type(db, settings)
+                result = await service.fetch_disclosure(str(disclosure_id))
+                if result.get("status") != "DISABLED":
+                    result["derived"] = await service.derive_terms()
+                return result
         finally:
             await engine.dispose()
 

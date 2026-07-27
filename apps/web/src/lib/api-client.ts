@@ -357,6 +357,14 @@ export interface VerifiedInstrument {
     benchmark: string | null;
     supporting_disclosure_ids: string[];
     last_fetched_at: string | null;
+    backfill: {
+      status: string;
+      attempt_count: number;
+      requested_at: string;
+      started_at: string | null;
+      completed_at: string | null;
+      last_error: string | null;
+    } | null;
   };
 }
 
@@ -751,6 +759,8 @@ export const api = {
           coupon_events: number;
           active_terms: number;
           conflicts: number;
+          backfills_pending: number;
+          backfills_failed: number;
           last_poll: {
             last_poll_at?: string;
             discovered?: number;

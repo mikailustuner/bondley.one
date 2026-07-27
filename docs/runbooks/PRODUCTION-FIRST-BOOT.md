@@ -31,8 +31,9 @@ dosya adı takvim gününü gösteriyorsa bu tarih doğrudan yayımlanmaz:
 
 ## 3. İlk açılış sırası
 
-`migrate` tek-seferlik container’ı Alembic `001` şemasını kurar. Başarı olmadan
-bootstrap başlamaz. `bist-source-init`, kalıcı ham-veri volume'unu API
+`migrate` tek-seferlik container’ı Alembic zincirini (`001` temel şema, `002`
+KAP kanıtları, `003` hedefli backfill kuyruğu) kurar. Başarı olmadan bootstrap
+başlamaz. `bist-source-init`, kalıcı ham-veri volume'unu API
 kullanıcısına yazılabilir hale getirir. Bootstrap PostgreSQL advisory lock alır;
 aynı anda iki import çalışamaz. Bootstrap ve veri çeken worker, veritabanının
 izole backend ağından ayrı bir egress ağıyla yalnız dış kaynaklara çıkar.
@@ -79,6 +80,16 @@ curl -fsS http://127.0.0.1:3050/health/ready
 Readiness cevabında `bootstrap_status`, `published_instruments`,
 `benchmark_observations`, `requested_business_date` ve `completed_at`
 görülmelidir.
+
+KAP etkinse ilk kullanıcı trafiğinden önce worker/beat ve backfill tablosu da
+doğrulanmalıdır:
+
+```bash
+docker compose -f docker-compose.prod.yml logs --tail=100 celery-worker celery-beat
+docker compose -f docker-compose.prod.yml exec postgres \
+  psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+  -c "\d kap_backfill_requests"
+```
 
 ## 6. Hata yönetimi
 

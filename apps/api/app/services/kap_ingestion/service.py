@@ -7,7 +7,7 @@ import unicodedata
 from typing import Any
 
 import httpx
-from sqlalchemy import select, text
+from sqlalchemy import or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -19,6 +19,7 @@ from app.models.bist_ingestion import (
     InstrumentVersion,
 )
 from app.models.kap_ingestion import (
+    KapBackfillRequest,
     KapCouponEvent,
     KapDerivedTerm,
     KapDisclosure,
@@ -29,6 +30,8 @@ from .client import KapHttpClient, disclosure_links
 from .parser import KapDisclosureParser
 from .proxy_pool import parse_public_proxy_list
 from .spread_derivation import derive_annual_simple_spread
+from app.services.valuation.calendar import coupon_schedule
+from app.services.valuation.errors import ValuationError
 
 
 class KapEnrichmentService:
@@ -51,13 +54,8 @@ class KapEnrichmentService:
     async def poll(self, *, force: bool = False) -> dict[str, Any]:
         if not self.settings.KAP_INGESTION_ENABLED:
             return {"status": "DISABLED", "fetched": 0}
-        bind = self.db.get_bind()
-        if bind is not None and bind.dialect.name == "postgresql":
-            acquired = await self.db.scalar(
-                text("SELECT pg_try_advisory_xact_lock(726539021)")
-            )
-            if not acquired:
-                return {"status": "ALREADY_RUNNING", "fetched": 0}
+        if not await self._acquire_kap_network_lock():
+            return {"status": "ALREADY_RUNNING", "fetched": 0}
         if not force and not await self._poll_due():
             return {"status": "NOT_DUE", "fetched": 0}
         await self.refresh_proxy_pool()
@@ -121,6 +119,8 @@ class KapEnrichmentService:
     async def fetch_disclosure(self, disclosure_id: str) -> dict[str, Any]:
         if not self.settings.KAP_INGESTION_ENABLED:
             return {"status": "DISABLED"}
+        if not await self._acquire_kap_network_lock():
+            return {"status": "ALREADY_RUNNING", "disclosure_id": disclosure_id}
         existing = await self.db.scalar(
             select(KapDisclosure).where(KapDisclosure.disclosure_id == disclosure_id)
         )
@@ -347,14 +347,27 @@ class KapEnrichmentService:
             metadata[disclosure_id] = raw
         return links, metadata
 
-    async def derive_terms(self) -> dict[str, int]:
+    async def derive_terms(
+        self,
+        *,
+        commit: bool = True,
+        isin: str | None = None,
+    ) -> dict[str, int]:
         """Build verified active terms from parsed KAP coupon evidence."""
 
+        event_query = select(KapCouponEvent).where(
+            KapCouponEvent.periodic_rate_decimal.is_not(None)
+        )
+        if isin:
+            event_query = event_query.where(
+                KapCouponEvent.isin == isin.strip().upper()
+            )
         events = (
             await self.db.execute(
-                select(KapCouponEvent)
-                .where(KapCouponEvent.periodic_rate_decimal.is_not(None))
-                .order_by(KapCouponEvent.isin, KapCouponEvent.payment_date)
+                event_query.order_by(
+                    KapCouponEvent.isin,
+                    KapCouponEvent.payment_date,
+                )
             )
         ).scalars().all()
         created = 0
@@ -452,8 +465,365 @@ class KapEnrichmentService:
                 },
             )
             created += 1
-        await self.db.commit()
+        if commit:
+            await self.db.commit()
+        else:
+            await self.db.flush()
         return {"created_or_updated": created, "conflicts": conflicts}
+
+    async def enqueue_backfill(
+        self,
+        isin: str,
+        *,
+        reason: str,
+        priority: int = 100,
+    ) -> KapBackfillRequest | None:
+        normalized_isin = isin.strip().upper()
+        active_term = await self.db.scalar(
+            select(KapDerivedTerm)
+            .where(
+                KapDerivedTerm.isin == normalized_isin,
+                KapDerivedTerm.term_type == "ANNUAL_SIMPLE_SPREAD",
+                KapDerivedTerm.is_active.is_(True),
+                KapDerivedTerm.value_decimal.is_not(None),
+                KapDerivedTerm.confidence.in_(
+                    [
+                        "KAP_EXPLICIT",
+                        "KAP_MULTI_COUPON_VERIFIED",
+                        "KAP_SINGLE_COUPON_DERIVED",
+                    ]
+                ),
+            )
+            .limit(1)
+        )
+        if active_term is not None:
+            return None
+        request = await self.db.scalar(
+            select(KapBackfillRequest).where(KapBackfillRequest.isin == normalized_isin)
+        )
+        now = datetime.now(timezone.utc)
+        if request is None:
+            request = KapBackfillRequest(
+                isin=normalized_isin,
+                status="QUEUED",
+                priority=priority,
+                reason=reason,
+                requested_at=now,
+            )
+            self.db.add(request)
+        elif request.status != "RUNNING":
+            retryable_after = request.completed_at or request.updated_at
+            should_requeue = request.status not in {"QUEUED", "RETRY"} and (
+                retryable_after is None or now - retryable_after >= timedelta(hours=6)
+            )
+            if should_requeue:
+                request.status = "QUEUED"
+                request.requested_at = now
+                request.completed_at = None
+                request.retry_at = None
+                request.last_error = None
+            request.priority = min(request.priority, priority)
+            request.reason = reason
+        await self.db.flush()
+        return request
+
+    async def backfill_isin(self, isin: str) -> dict[str, Any]:
+        if not self.settings.KAP_INGESTION_ENABLED:
+            return {"status": "DISABLED", "isin": isin}
+        normalized_isin = isin.strip().upper()
+        await self.refresh_proxy_pool()
+        row = (
+            await self.db.execute(
+                select(Instrument, InstrumentVersion, InstrumentTermRule)
+                .join(InstrumentVersion, InstrumentVersion.instrument_id == Instrument.id)
+                .outerjoin(
+                    InstrumentTermRule,
+                    InstrumentTermRule.instrument_version_id == InstrumentVersion.id,
+                )
+                .where(
+                    Instrument.isin == normalized_isin,
+                    InstrumentVersion.is_published.is_(True),
+                )
+                .order_by(InstrumentVersion.id.desc())
+                .limit(1)
+            )
+        ).first()
+        if row is None:
+            return {"status": "INSTRUMENT_NOT_FOUND", "isin": normalized_isin}
+        instrument, version, rule = row
+        fields = version.canonical_fields_json
+        ast = rule.ast_json if rule else {}
+        benchmark = self._benchmark(instrument.isin, ast)
+        if benchmark is None:
+            return {"status": "NOT_APPLICABLE", "isin": normalized_isin}
+        windows = self._historical_coupon_windows(
+            fields=fields,
+            maturity_date=version.maturity_date,
+            as_of=turkey_now().date(),
+        )
+        if not windows:
+            return {"status": "SCHEDULE_UNAVAILABLE", "isin": normalized_isin}
+
+        discovered_ids: list[str] = []
+        fetched_ids: list[str] = []
+        for from_date, to_date in windows:
+            artifact = await self.client.post_json(
+                self.settings.KAP_PUBLIC_LIST_URL,
+                self._list_payload(from_date, to_date),
+            )
+            links, metadata = self._list_entries(
+                artifact.body,
+                self.settings.KAP_PUBLIC_LIST_URL,
+            )
+            matching = [
+                (disclosure_id, url)
+                for disclosure_id, url in links
+                if normalized_isin
+                in " ".join(str(value or "") for value in metadata.get(disclosure_id, {}).values()).upper()
+            ]
+            matching.sort(
+                key=lambda item: (
+                    0
+                    if any(
+                        token
+                        in " ".join(
+                            str(value or "")
+                            for value in metadata.get(item[0], {}).values()
+                        ).casefold()
+                        for token in ("oranının belirlenmesi", "oran belirlenmesi", "kupon")
+                    )
+                    else 1,
+                    -int(item[0]),
+                )
+            )
+            for disclosure_id, url in matching[:2]:
+                if disclosure_id not in discovered_ids:
+                    discovered_ids.append(disclosure_id)
+                existing = await self.db.scalar(
+                    select(KapDisclosure).where(
+                        KapDisclosure.disclosure_id == disclosure_id
+                    )
+                )
+                if existing is None:
+                    await self._fetch_detail(
+                        disclosure_id,
+                        self.settings.KAP_PUBLIC_DETAIL_URL_TEMPLATE.format(
+                            disclosure_id=disclosure_id
+                        )
+                        or url,
+                        discovery_metadata=metadata.get(disclosure_id),
+                    )
+                    fetched_ids.append(disclosure_id)
+                    await self.db.flush()
+                derived = await self.derive_terms(
+                    commit=False,
+                    isin=normalized_isin,
+                )
+                term = await self.db.scalar(
+                    select(KapDerivedTerm)
+                    .where(
+                        KapDerivedTerm.isin == normalized_isin,
+                        KapDerivedTerm.term_type == "ANNUAL_SIMPLE_SPREAD",
+                        KapDerivedTerm.is_active.is_(True),
+                        KapDerivedTerm.value_decimal.is_not(None),
+                    )
+                    .order_by(KapDerivedTerm.id.desc())
+                    .limit(1)
+                )
+                if term is not None:
+                    return {
+                        "status": "RESOLVED",
+                        "isin": normalized_isin,
+                        "spread_decimal": str(term.value_decimal),
+                        "confidence": term.confidence,
+                        "benchmark": term.benchmark,
+                        "disclosure_ids": discovered_ids,
+                        "fetched_ids": fetched_ids,
+                        "derived": derived,
+                    }
+        return {
+            "status": "NOT_FOUND",
+            "isin": normalized_isin,
+            "disclosure_ids": discovered_ids,
+            "fetched_ids": fetched_ids,
+        }
+
+    async def process_backfill_queue(self) -> dict[str, Any]:
+        if not self.settings.KAP_INGESTION_ENABLED:
+            return {"status": "DISABLED"}
+        if not await self._acquire_kap_network_lock():
+            return {"status": "ALREADY_RUNNING"}
+        now = datetime.now(timezone.utc)
+        request = await self.db.scalar(
+            select(KapBackfillRequest)
+            .where(
+                or_(
+                    KapBackfillRequest.status == "QUEUED",
+                    (
+                        (KapBackfillRequest.status == "RETRY")
+                        & (
+                            (KapBackfillRequest.retry_at.is_(None))
+                            | (KapBackfillRequest.retry_at <= now)
+                        )
+                    ),
+                )
+            )
+            .order_by(
+                KapBackfillRequest.priority.asc(),
+                KapBackfillRequest.requested_at.asc(),
+            )
+            .with_for_update(skip_locked=True)
+            .limit(1)
+        )
+        if request is None:
+            return {"status": "EMPTY"}
+        request.status = "RUNNING"
+        request.started_at = now
+        request.attempt_count += 1
+        await self.db.flush()
+        try:
+            result = await self.backfill_isin(request.isin)
+            request.result_json = result
+            request.disclosure_ids = result.get("disclosure_ids", [])
+            request.completed_at = datetime.now(timezone.utc)
+            request.last_error = None
+            request.status = (
+                "COMPLETED" if result.get("status") == "RESOLVED" else "NOT_FOUND"
+            )
+        except Exception as exc:
+            request.status = "RETRY" if request.attempt_count < 4 else "FAILED"
+            request.retry_at = datetime.now(timezone.utc) + timedelta(
+                minutes=5 * request.attempt_count
+            )
+            request.last_error = type(exc).__name__
+            request.result_json = {"status": "ERROR", "error": type(exc).__name__}
+        await self.db.commit()
+        return {
+            "status": request.status,
+            "isin": request.isin,
+            "result": request.result_json,
+        }
+
+    async def enqueue_missing_spreads(self, *, limit: int = 100) -> dict[str, int]:
+        rows = (
+            await self.db.execute(
+                select(Instrument, InstrumentVersion, InstrumentTermRule)
+                .join(InstrumentVersion, InstrumentVersion.instrument_id == Instrument.id)
+                .outerjoin(
+                    InstrumentTermRule,
+                    InstrumentTermRule.instrument_version_id == InstrumentVersion.id,
+                )
+                .where(
+                    InstrumentVersion.is_published.is_(True),
+                    InstrumentVersion.maturity_date >= turkey_now().date(),
+                )
+                .order_by(InstrumentVersion.id.desc())
+            )
+        ).all()
+        seen: set[str] = set()
+        queued = 0
+        for instrument, version, rule in rows:
+            if instrument.isin in seen or queued >= limit:
+                continue
+            seen.add(instrument.isin)
+            ast = rule.ast_json if rule else {}
+            if self._benchmark(instrument.isin, ast) is None:
+                continue
+            explicit_spreads = [
+                item for item in ast.get("spreads", []) if item.get("decimal") is not None
+            ]
+            if explicit_spreads:
+                continue
+            fields = version.canonical_fields_json
+            next_coupon = self._parse_date(fields.get("next_coupon_date"))
+            priority = 50
+            if version.parse_status in {"PARTIAL", "AMBIGUOUS"}:
+                priority -= 20
+            if next_coupon and 0 <= (next_coupon - turkey_now().date()).days <= 10:
+                priority -= 20
+            previous_request = await self.db.scalar(
+                select(KapBackfillRequest).where(
+                    KapBackfillRequest.isin == instrument.isin
+                )
+            )
+            previous_status = (
+                previous_request.status if previous_request is not None else None
+            )
+            request = await self.enqueue_backfill(
+                instrument.isin,
+                reason="ACTIVE_MISSING_SPREAD",
+                priority=priority,
+            )
+            if (
+                request is not None
+                and request.status in {"QUEUED", "RETRY"}
+                and previous_status not in {"QUEUED", "RETRY"}
+            ):
+                queued += 1
+        await self.db.commit()
+        return {"queued": queued, "scanned": len(seen)}
+
+    @classmethod
+    def _historical_coupon_windows(
+        cls,
+        *,
+        fields: dict[str, Any],
+        maturity_date: date | None,
+        as_of: date,
+    ) -> list[tuple[date, date]]:
+        issue_date = cls._parse_date(fields.get("first_issue_date"))
+        next_coupon = cls._parse_date(fields.get("next_coupon_date"))
+        raw_frequency = fields.get("coupon_frequency_per_year")
+        if issue_date is None or maturity_date is None or not raw_frequency:
+            return []
+        try:
+            dates = coupon_schedule(
+                issue_date=issue_date,
+                maturity_date=maturity_date,
+                frequency=int(raw_frequency),
+                next_coupon_date=next_coupon,
+            )
+        except (TypeError, ValueError, ValuationError):
+            return []
+        past_dates = [payment for payment in dates if payment <= as_of]
+        windows: list[tuple[date, date]] = []
+        if next_coupon and 0 <= (next_coupon - as_of).days <= 14:
+            # A rate-determination disclosure may be published shortly before
+            # the upcoming payment rather than on a historical payment date.
+            windows.append((as_of - timedelta(days=3), as_of))
+        windows.extend(
+            (payment - timedelta(days=2), min(as_of, payment + timedelta(days=1)))
+            for payment in reversed(past_dates[-8:])
+        )
+        # Newly issued securities may have no past coupon. The issuance window
+        # can still contain an explicit annual-simple extra-yield term.
+        if issue_date <= as_of:
+            windows.append(
+                (
+                    issue_date - timedelta(days=2),
+                    min(as_of, issue_date + timedelta(days=2)),
+                )
+            )
+        return list(dict.fromkeys(windows))
+
+    @staticmethod
+    def _parse_date(value: Any) -> date | None:
+        try:
+            return date.fromisoformat(str(value)) if value else None
+        except ValueError:
+            return None
+
+    async def _acquire_kap_network_lock(self) -> bool:
+        """Serialize every KAP-domain network workflow across worker processes."""
+
+        bind = self.db.get_bind()
+        if bind is None or bind.dialect.name != "postgresql":
+            return True
+        return bool(
+            await self.db.scalar(
+                text("SELECT pg_try_advisory_xact_lock(726539021)")
+            )
+        )
 
     async def _period_start(
         self,
