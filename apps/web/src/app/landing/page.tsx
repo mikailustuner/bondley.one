@@ -248,7 +248,11 @@ export default function LandingPage() {
                   ? [
                     {
                       label: tr.landing.ticker.labels.comparedToYesterday,
-                      value: `${summary!.tlref_index_change_pct >= 0 ? "+" : ""}${summary!.tlref_index_change_pct}%`,
+                      value: `${summary!.tlref_index_change_pct >= 0 ? "+" : ""}${formatDecimal(
+                        summary!.tlref_index_change_pct,
+                        4,
+                        4
+                      )}%`,
                       positive: summary!.tlref_index_change_pct >= 0,
                     },
                   ]
