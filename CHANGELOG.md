@@ -6,6 +6,27 @@ Tüm önemli değişiklikler bu dosyada belgelenir. Format [Keep a Changelog](ht
 
 ---
 
+## [Unreleased]
+
+### Değerleme doğruluğu
+
+- Değerleme motoru `valuation-engine-v3.0.0` sürümüne yükseltildi.
+- TLREF/TLREFK endeks değişimi kıymetlerinde işlemiş faiz/kira, projeksiyonlu
+  tam dönem kuponunun doğrusal oranlanması yerine BIST BAP 4.4 ile hesaplanıyor.
+- Cari ve tamamlanmış dönem endeks gözlemleri sözleşmesel T-1 iş gününe
+  sabitlendi; T günü verisinin sonradan yüklenmesi aynı valörlü sonucu
+  değiştirmiyor.
+- KAP spread türetimi `(T,T-1,T-2)` aday seçimi yerine sürümlü ve kesin T-1
+  kanıtı kullanıyor. Eski türetimler otomatik backfill kuyruğuna alınıyor.
+- Eksik hedef endeks veya doğrulanmamış spread için sessiz eski-tarih/%0
+  fallback kaldırıldı.
+- API ve arayüz, nominal 100 fiyat girdisini hesaplanmış kirli/temiz fiyattan
+  ayrı gösteriyor; fiyat kökeni ve işlemiş tutar yöntemi denetim izine eklendi.
+- TRDQNBV82713 için 27.07.2026 doğruluk sonucu işlemiş kira `8,72788022`,
+  temiz fiyat `91,27211978` olarak kilitlendi.
+
+---
+
 ## [1.2.5] — 2026-04-26
 
 ### 🏗️ Altyapı

@@ -14,7 +14,9 @@ from app.services.kap_ingestion.client import (
 )
 from app.services.kap_ingestion.parser import KapDisclosureParser
 from app.services.kap_ingestion.spread_derivation import (
+    SPREAD_DERIVATION_VERSION,
     derive_annual_simple_spread,
+    is_current_spread_derivation,
 )
 from app.services.kap_ingestion.service import KapEnrichmentService
 from app.services.kap_ingestion.proxy_pool import parse_public_proxy_list
@@ -98,6 +100,62 @@ def test_spread_derivation_reconstructs_trd_qnb_coupon_to_source_rounding():
     assert evidence.spread_decimal == Decimal("0.0115")
     assert evidence.lag_business_days == 1
     assert evidence.error_decimal <= Decimal("0.0000005")
+
+
+def test_spread_derivation_defaults_to_contractual_t_minus_one_only():
+    evidence = derive_annual_simple_spread(
+        published_periodic_rate=Decimal("0.105194"),
+        period_start=date(2026, 2, 11),
+        period_end=date(2026, 5, 13),
+        index_observations={
+            date(2026, 2, 10): Decimal("3303.79554"),
+            date(2026, 5, 12): Decimal("3641.86408"),
+            date(2026, 2, 11): Decimal("3310"),
+            date(2026, 5, 13): Decimal("3650"),
+        },
+        source_rounding_decimal_places=6,
+    )
+
+    assert SPREAD_DERIVATION_VERSION == "kap-spread-t1-v2"
+    assert evidence is not None
+    assert evidence.lag_business_days == 1
+    assert evidence.start_observation_date == date(2026, 2, 10)
+    assert evidence.end_observation_date == date(2026, 5, 12)
+
+
+def test_only_current_t_minus_one_spread_terms_pass_the_version_gate():
+    assert is_current_spread_derivation(
+        confidence="KAP_MULTI_COUPON_VERIFIED",
+        observation_lag_business_days=1,
+        evidence={"derivation_version": SPREAD_DERIVATION_VERSION},
+        expected_lag=1,
+    )
+    assert not is_current_spread_derivation(
+        confidence="KAP_MULTI_COUPON_VERIFIED",
+        observation_lag_business_days=0,
+        evidence={"derivation_version": SPREAD_DERIVATION_VERSION},
+        expected_lag=1,
+    )
+    assert not is_current_spread_derivation(
+        confidence="KAP_MULTI_COUPON_VERIFIED",
+        observation_lag_business_days=1,
+        evidence={},
+        expected_lag=1,
+    )
+
+
+def test_spread_derivation_does_not_silently_use_a_stale_observation():
+    evidence = derive_annual_simple_spread(
+        published_periodic_rate=Decimal("0.105194"),
+        period_start=date(2026, 2, 11),
+        period_end=date(2026, 5, 13),
+        index_observations={
+            date(2026, 2, 9): Decimal("3303.79554"),
+            date(2026, 5, 11): Decimal("3641.86408"),
+        },
+    )
+
+    assert evidence is None
 
 
 @pytest.mark.parametrize(

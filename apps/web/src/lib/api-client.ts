@@ -376,9 +376,21 @@ export interface VerifiedValuationResponse {
     settlement_date: string;
     quote_type: string;
     quote_value: string;
+    quote_source: "USER_INPUT" | "SYSTEM_NOMINAL_100";
     clean_price: string;
     dirty_price: string;
+    clean_price_origin:
+      | "INPUT_QUOTE"
+      | "DERIVED_DIRTY_MINUS_ACCRUED";
+    dirty_price_origin:
+      | "INPUT_QUOTE"
+      | "DERIVED_CLEAN_PLUS_ACCRUED"
+      | "CALCULATED_FROM_YIELD";
     accrued_amount: string;
+    accrued_method:
+      | "BIST_BAP_COUPON_BOUNDARY_ZERO"
+      | "BIST_BAP_4_1_PERIODIC_PRORATION"
+      | "BIST_BAP_4_4_INDEX_CHANGE";
     annual_yield: string;
     macaulay_duration: string;
     modified_duration: string;

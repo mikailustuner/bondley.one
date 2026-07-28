@@ -6,6 +6,7 @@ from decimal import Decimal, InvalidOperation, localcontext
 from enum import StrEnum
 from typing import Any
 
+from app.services.valuation.accrual import calculate_accrual
 from app.services.valuation.calendar import (
     BusinessCalendar,
     BusinessDayConvention,
@@ -98,9 +99,13 @@ class ValuationResult:
     settlement_date: date
     quote_type: QuoteType
     quote_value: Decimal
+    quote_source: str
     clean_price: Decimal
     dirty_price: Decimal
+    clean_price_origin: str
+    dirty_price_origin: str
     accrued_amount: Decimal
+    accrued_method: str
     annual_yield: Decimal
     macaulay_duration: Decimal
     modified_duration: Decimal
@@ -125,9 +130,13 @@ class ValuationResult:
             "settlement_date": self.settlement_date.isoformat(),
             "quote_type": self.quote_type.value,
             "quote_value": str(self.quote_value),
+            "quote_source": self.quote_source,
             "clean_price": str(self.clean_price),
             "dirty_price": str(self.dirty_price),
+            "clean_price_origin": self.clean_price_origin,
+            "dirty_price_origin": self.dirty_price_origin,
             "accrued_amount": str(self.accrued_amount),
+            "accrued_method": self.accrued_method,
             "annual_yield": str(self.annual_yield),
             "macaulay_duration": str(self.macaulay_duration),
             "modified_duration": str(self.modified_duration),
@@ -149,7 +158,7 @@ class ValuationResult:
 
 
 class ValuationEngine:
-    VERSION = "valuation-engine-v2.3.0"
+    VERSION = "valuation-engine-v3.0.0"
     SUPPORTED_FORMULAS = frozenset(FORMULA_CATALOG)
     PRICE_QUANTUM = Decimal("0.00000001")
     RATE_QUANTUM = Decimal("0.0000000001")
@@ -222,20 +231,21 @@ class ValuationEngine:
                 ValuationFailureCode.INVALID_SETTLEMENT_DATE,
                 "Valör tarihinde gelecekte nakit akışı bulunmuyor.",
             )
-        accrued = self._accrued(
-            terms,
-            dates,
-            convention,
-            effective_rate,
-            indexed_nominal,
-            settlement_date,
-            coupon_metrics,
+        accrual = calculate_accrual(
+            nominal=indexed_nominal,
+            settlement_date=settlement_date,
+            convention=convention,
+            rate_type=terms.rate_type.value,
+            coupon_metrics=coupon_metrics,
         )
+        accrued = accrual.amount
         assert price_input is not None
         quote_value = self._decimal(price_input.value, "quote_value")
         if price_input.quote_type == QuoteType.CLEAN_PRICE:
             clean_price = quote_value
             dirty_price = clean_price + accrued
+            clean_price_origin = "INPUT_QUOTE"
+            dirty_price_origin = "DERIVED_CLEAN_PLUS_ACCRUED"
             annual_yield = self._solve_yield(
                 future_flows,
                 settlement_date,
@@ -246,6 +256,8 @@ class ValuationEngine:
         elif price_input.quote_type == QuoteType.DIRTY_PRICE:
             dirty_price = quote_value
             clean_price = dirty_price - accrued
+            dirty_price_origin = "INPUT_QUOTE"
+            clean_price_origin = "DERIVED_DIRTY_MINUS_ACCRUED"
             if clean_price <= 0:
                 raise ValuationError(
                     ValuationFailureCode.INVALID_PRICE,
@@ -268,6 +280,8 @@ class ValuationEngine:
                 convention,
             )
             clean_price = dirty_price - accrued
+            dirty_price_origin = "CALCULATED_FROM_YIELD"
+            clean_price_origin = "DERIVED_DIRTY_MINUS_ACCRUED"
             future_flows = discounted
 
         dirty_price, discounted = self._price_from_yield(
@@ -310,9 +324,13 @@ class ValuationEngine:
             settlement_date=settlement_date,
             quote_type=price_input.quote_type,
             quote_value=quote_value,
+            quote_source=price_input.source,
             clean_price=clean_price.quantize(self.PRICE_QUANTUM),
             dirty_price=dirty_price.quantize(self.PRICE_QUANTUM),
+            clean_price_origin=clean_price_origin,
+            dirty_price_origin=dirty_price_origin,
             accrued_amount=accrued.quantize(self.PRICE_QUANTUM),
+            accrued_method=accrual.method,
             annual_yield=annual_yield.quantize(self.RATE_QUANTUM),
             macaulay_duration=macaulay.quantize(self.RATE_QUANTUM),
             modified_duration=modified.quantize(self.RATE_QUANTUM),
@@ -344,6 +362,17 @@ class ValuationEngine:
                 "indexed_nominal": str(indexed_nominal),
                 "round_trip_tolerance": "0.000001",
                 "coupon_rates": coupon_metrics.to_dict(),
+                "accrual": {
+                    "method": accrual.method,
+                    "rate_decimal": str(accrual.rate_decimal),
+                    "inputs": accrual.inputs,
+                },
+                "price_semantics": {
+                    "quote_type": price_input.quote_type.value,
+                    "quote_source": price_input.source,
+                    "clean_price_origin": clean_price_origin,
+                    "dirty_price_origin": dirty_price_origin,
+                },
             },
             provenance={
                 "instrument_source_file_id": terms.source_file_id,
@@ -505,36 +534,6 @@ class ValuationEngine:
             )
             accrual_start = payment_date
         return flows
-
-    @staticmethod
-    def _accrued(
-        terms: InstrumentTerms,
-        dates: list[date],
-        convention: DayCountConvention,
-        annual_rate: Decimal,
-        nominal: Decimal,
-        settlement_date: date,
-        coupon_metrics: CouponRateMetrics,
-    ) -> Decimal:
-        del annual_rate
-        del dates
-        elapsed = year_fraction(
-            coupon_metrics.period_start,
-            settlement_date,
-            convention,
-        )
-        full_period = year_fraction(
-            coupon_metrics.period_start,
-            coupon_metrics.period_end,
-            convention,
-        )
-        if elapsed <= 0 or full_period <= 0:
-            return Decimal("0")
-        fraction = elapsed / full_period
-        return nominal * coupon_metrics.periodic_coupon_rate * min(
-            fraction,
-            Decimal("1"),
-        )
 
     def _price_from_yield(
         self,

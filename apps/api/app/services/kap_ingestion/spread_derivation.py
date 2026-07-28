@@ -3,7 +3,26 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
-from typing import Mapping
+from typing import Any, Mapping
+
+from app.core.time import BistBusinessCalendar
+
+SPREAD_DERIVATION_VERSION = "kap-spread-t1-v2"
+
+
+def is_current_spread_derivation(
+    *,
+    confidence: str,
+    observation_lag_business_days: int | None,
+    evidence: Mapping[str, Any],
+    expected_lag: int,
+) -> bool:
+    if confidence == "KAP_EXPLICIT":
+        return True
+    return (
+        observation_lag_business_days == expected_lag
+        and evidence.get("derivation_version") == SPREAD_DERIVATION_VERSION
+    )
 
 
 @dataclass(frozen=True)
@@ -19,23 +38,24 @@ class SpreadEvidence:
     end_index: Decimal
 
 
-def _on_or_before(
+def _exact_observation(
     observations: Mapping[date, Decimal],
     target: date,
 ) -> tuple[date, Decimal] | None:
-    candidates = sorted(day for day in observations if day <= target)
-    if not candidates:
+    value = observations.get(target)
+    if value is None:
         return None
-    selected = candidates[-1]
-    return selected, observations[selected]
+    return target, value
 
 
-def _lagged_weekday(boundary: date, lag: int) -> date:
+def _lagged_business_day(
+    boundary: date,
+    lag: int,
+    calendar: BistBusinessCalendar,
+) -> date:
     selected = boundary
     for _ in range(lag):
-        selected = selected.fromordinal(selected.toordinal() - 1)
-        while selected.weekday() >= 5:
-            selected = selected.fromordinal(selected.toordinal() - 1)
+        selected = calendar.previous_business_day(selected)
     return selected
 
 
@@ -45,8 +65,9 @@ def derive_annual_simple_spread(
     period_start: date,
     period_end: date,
     index_observations: Mapping[date, Decimal],
-    candidate_lags: tuple[int, ...] = (0, 1, 2),
+    candidate_lags: tuple[int, ...] = (1,),
     source_rounding_decimal_places: int = 6,
+    business_calendar: BistBusinessCalendar | None = None,
 ) -> SpreadEvidence | None:
     """Derive and verify the annual simple spread reported by a KAP coupon.
 
@@ -61,9 +82,16 @@ def derive_annual_simple_spread(
         return None
     tolerance = Decimal(1).scaleb(-source_rounding_decimal_places) / Decimal("2")
     best: SpreadEvidence | None = None
+    calendar = business_calendar or BistBusinessCalendar()
     for lag in candidate_lags:
-        start = _on_or_before(index_observations, _lagged_weekday(period_start, lag))
-        end = _on_or_before(index_observations, _lagged_weekday(period_end, lag))
+        start = _exact_observation(
+            index_observations,
+            _lagged_business_day(period_start, lag, calendar),
+        )
+        end = _exact_observation(
+            index_observations,
+            _lagged_business_day(period_end, lag, calendar),
+        )
         if start is None or end is None or end[0] <= start[0] or start[1] <= 0:
             continue
         index_return = end[1] / start[1] - Decimal("1")

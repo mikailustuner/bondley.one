@@ -46,6 +46,7 @@ class CouponRateMetrics:
     end_index_value: Decimal | None = None
     start_index_date: date | None = None
     end_index_date: date | None = None
+    observation_lag_business_days: int | None = None
     assumptions: tuple[str, ...] = field(default_factory=tuple)
 
     def to_dict(self) -> dict[str, Any]:
@@ -205,6 +206,7 @@ def from_index_change(
     spread_annuality: SpreadAnnuality,
     calculation_as_of: date,
     is_final: bool,
+    observation_lag_business_days: int = 1,
 ) -> CouponRateMetrics:
     frequency, full_factor = _validate_period(
         period_start,
@@ -281,5 +283,6 @@ def from_index_change(
         end_index_value=end_index,
         start_index_date=start_index_date,
         end_index_date=end_index_date,
+        observation_lag_business_days=observation_lag_business_days,
         assumptions=assumptions,
     )

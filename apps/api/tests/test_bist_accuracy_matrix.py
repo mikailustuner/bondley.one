@@ -303,7 +303,12 @@ def test_trdqnbv82713_verified_spread_theoretical_dirty_100_scenario():
     assert result.periodic_coupon_rate == Decimal("0.1068114765")
     assert result.annual_simple_coupon_rate == Decimal("0.4284196586")
     assert result.annual_compound_coupon_rate == Decimal("0.5023770495")
-    assert result.accrued_amount == Decimal("8.80314367")
-    assert result.clean_price == Decimal("91.19685633")
+    assert result.accrued_amount == Decimal("8.72788022")
+    assert result.clean_price == Decimal("91.27211978")
+    assert result.accrued_method == "BIST_BAP_4_4_INDEX_CHANGE"
+    assert result.dirty_price_origin == "INPUT_QUOTE"
+    assert result.clean_price_origin == "DERIVED_DIRTY_MINUS_ACCRUED"
+    assert result.intermediates["accrual"]["inputs"]["end_index_date"] == "2026-07-24"
+    assert result.intermediates["accrual"]["inputs"]["observation_lag_business_days"] == 1
     assert result.annual_yield == Decimal("0.5433806412")
     assert "SOURCE_TERMS_AMBIGUOUS" in result.valuation_assumptions

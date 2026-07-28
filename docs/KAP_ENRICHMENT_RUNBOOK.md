@@ -16,8 +16,9 @@ işidir. KAP erişilemezse API readiness ve ilk bootstrap başarısız olmaz.
   kıymeti açarsa aynı benzersiz kuyruk kaydı öncelik `0` ile öne alınır ve
   worker hemen dürtülür; aynı ISIN için paralel istek üretilmez.
 - Arayüz kuyruk durumunu iki saniyede bir izler. `QUEUED`, `RUNNING` veya
-  `RETRY` sürerken doğrulanmamış `%0` spread hesabını göstermez. Doğrulama
-  bulunamazsa mevcut açık senaryo ve zorunlu uyarı politikası uygulanır.
+  `RETRY` sürerken doğrulanmamış `%0` spread hesabını göstermez. Sözleşmesel
+  spread doğrulanamazsa değerleme `CONTRACTUAL_SPREAD_NOT_VERIFIED` ile
+  durdurulur; `%0` spread sonucu üretilmez.
 
 Liste çağrısı KAP web arayüzünün kullandığı tarih aralıklı public sorgudur.
 Yalnız borçlanma aracı, kupon/getiri ve kira sertifikasıyla ilgili sonuçların
@@ -80,8 +81,7 @@ altyapı sayılmaz ve yalnız halka açık KAP içeriği için kullanılır.
 3. En az iki KAP kuponundan aynı çıkan spread (`KAP_MULTI_COUPON_VERIFIED`).
 4. Tek KAP kuponundan doğrulanan spread (`KAP_SINGLE_COUPON_DERIVED`).
 5. BIST `tbliste` açıklamasındaki açık spread.
-6. Spread bulunamazsa `%0` senaryosu; sonuç gösterilir fakat
-   `SPREAD_UNKNOWN_ZERO_SCENARIO` uyarısı zorunludur.
+6. Spread bulunamazsa değerleme durur; bilinmeyen spread sıfır kabul edilmez.
 
 Hedefli backfill, `tbliste` içindeki ihraç/vade/kupon sıklığı/sonraki kupon
 tarihinden geçmiş ödeme tarihlerini deterministik çıkarır. Her ödeme için
@@ -90,9 +90,27 @@ bulunan kupon/oran bildirimleri indirilir. En fazla iki ilgili detay alınır ve
 türetim yalnız istenen ISIN üzerinde çalışır.
 
 `TRD` ile başlayan kıymetler yalnız `TLREFK`; diğer referanslı kıymetler AST
-benchmark tanımına göre `TLREF` veya `TLREFK` kullanır. Türetim T+0/T-1/T-2
-sınır gözlemlerini test eder, bir baz puana yuvarlanan adayı KAP'ın gösterim
-hassasiyeti içinde yeniden üretmeden yayımlamaz.
+benchmark tanımına göre `TLREF` veya `TLREFK` kullanır. `kap-spread-t1-v2`
+türetimi, doğrulanmış mevcut kıymetlerde yalnız sözleşmesel T-1 sınır
+gözlemlerini kullanır. Hedef gözlem yoksa daha eski tarihe düşmez; bir baz
+puana yuvarlanan spread KAP'ın gösterim hassasiyeti içinde kuponu yeniden
+üretmeden yayımlanmaz.
+
+Eski `(T,T-1,T-2)` aday seçimiyle yayımlanmış aktif terimler sürüm dışı kabul
+edilir. 17:00 eksik/stale spread taraması veya kullanıcının kıymeti açması bu
+ISIN'i yeniden kuyruğa alır. Yeni terim başarılı yayımlanana kadar eski spread
+API'de kullanılmaz.
+
+## Değerleme v3 üretim geçişi
+
+- Yeni istekler `valuation-engine-v3.0.0` ile immutable sonuç kaydı oluşturur.
+- Eski değerleme kayıtları silinmez veya yerinde değiştirilmez; motor sürümüyle
+  denetim izi olarak korunur.
+- Deploy sonrası worker loglarında `kap-spread-t1-v2` backfill kuyruğu ve API
+  sonuçlarında `accrued_method=BIST_BAP_4_4_INDEX_CHANGE` kontrol edilir.
+- Geri dönüş gerekirse önceki uygulama imajına dönülür. Şema değişikliği
+  olmadığı ve eski sonuçlar değiştirilmediği için veri geri alma işlemi
+  gerekmez.
 
 ## İlk devreye alma
 

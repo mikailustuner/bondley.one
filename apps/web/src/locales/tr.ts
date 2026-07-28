@@ -495,7 +495,7 @@ export const tr = {
             },
             calculatedMetrics: {
                 title: "Hesaplanan Metrikler",
-                subtitle: "Kirli Fiyat, Getiri ve Risk — {date}",
+                subtitle: "Kupon, gösterge YTM ve fiyat ayrıştırması — {date}",
                 dirtyPrice: "Kirli Fiyat",
                 accruedInterest: "Birikimiş Faiz",
                 rateChange: "Oran Değişimi (Günlük %)",
@@ -515,8 +515,8 @@ export const tr = {
                 fallbackNotice: "Veri bulunamadığı için 100 olarak kabul edilmiştir.",
                 automaticTitle: "Otomatik Teorik Değerleme",
                 automaticSubtitle: "Kullanıcı işlemi gerektirmeden hazırlanır",
-                cleanPriceAssumption: "Temiz Fiyat Varsayımı · 100",
-                cleanPriceAssumptionDescription: "100, kıymetin nominal temiz fiyat varsayımıdır; BIST piyasa fiyatı veya yatırım tavsiyesi değildir. Getiri, risk ve nakit akışı metrikleri bu ortak karşılaştırma bazı üzerinden hesaplanır.",
+                cleanPriceAssumption: "Fiyat Varsayımı · 100",
+                cleanPriceAssumptionDescription: "100, kıymetin BIST kotasyon türüne uygun nominal fiyat varsayımıdır; piyasa kotasyonu veya hesaplanmış fiyat değildir. Getiri, risk ve nakit akışı metrikleri bu ortak karşılaştırma bazı üzerinden hesaplanır.",
                 modelAnnualRate: "Hesaplamada Kullanılan Yıllık Oran",
                 modelAnnualRateDesc: "Değerleme motorunun nakit akışı projeksiyonunda kullandığı orandır.",
                 annualSimpleInterest: "Yıllık Basit Faiz",
@@ -528,7 +528,7 @@ export const tr = {
                 spreadAnnualityAssumption: "Kaynak açıklamada spread'in yıllıklığı belirtilmediği için ek getiri yıllık basit kabul edilmiştir.",
                 unfinishedCouponPeriod: "Kupon dönemi tamamlanmadığı için oran, mevcut endeks verileriyle hesaplanan gösterge değerdir; kesinleşmiş kupon değildir.",
                 indexChangeNotice: "Kaynak kupon formülü BIST TLREF Endeksi değişimine bağlıdır. Gösterilen yıllık oran, teorik değerleme modelinin girdisidir; kesinleşmiş kupon oranı değildir.",
-                theoreticalNotice: "Bu sonuçlar piyasa kotasyonu değil, temiz fiyat 100 varsayımıyla hesaplanan teorik göstergelerdir.",
+                theoreticalNotice: "Bu sonuçlar piyasa kotasyonu değildir. Kıymetin BIST kotasyon türüne uygun fiyat 100 varsayımıyla hesaplanan gösterge değerlerdir.",
             },
             scenario: {
                 title: "Senaryo Analizi",

@@ -11,7 +11,7 @@ from sqlalchemy import or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
-from app.core.time import turkey_now
+from app.core.time import BistBusinessCalendar, parse_holiday_list, turkey_now
 from app.models.bist_ingestion import (
     BenchmarkObservation,
     Instrument,
@@ -29,7 +29,11 @@ from app.models.kap_ingestion import (
 from .client import KapHttpClient, disclosure_links
 from .parser import KapDisclosureParser
 from .proxy_pool import parse_public_proxy_list
-from .spread_derivation import derive_annual_simple_spread
+from .spread_derivation import (
+    SPREAD_DERIVATION_VERSION,
+    derive_annual_simple_spread,
+    is_current_spread_derivation,
+)
 from app.services.valuation.calendar import coupon_schedule
 from app.services.valuation.errors import ValuationError
 
@@ -419,6 +423,9 @@ class KapEnrichmentService:
                     item.observation_date: item.index_value for item in observations
                 },
                 source_rounding_decimal_places=self._rate_precision(event),
+                business_calendar=BistBusinessCalendar(
+                    extra_holidays=parse_holiday_list(self.settings.BIST_HOLIDAYS)
+                ),
             )
             if evidence is None:
                 conflicts += 1
@@ -451,6 +458,7 @@ class KapEnrichmentService:
                 confidence=confidence,
                 disclosure_ids=await self._disclosure_ids(event.isin),
                 evidence={
+                    "derivation_version": SPREAD_DERIVATION_VERSION,
                     "coupon_event_id": event.id,
                     "published_periodic_rate": str(event.periodic_rate_decimal),
                     "reconstructed_periodic_rate": str(evidence.reconstructed_periodic_rate),
@@ -496,8 +504,15 @@ class KapEnrichmentService:
             )
             .limit(1)
         )
-        if active_term is not None:
+        active_term_is_current = active_term is not None and is_current_spread_derivation(
+            confidence=active_term.confidence,
+            observation_lag_business_days=active_term.observation_lag_business_days,
+            evidence=active_term.evidence,
+            expected_lag=1,
+        )
+        if active_term_is_current:
             return None
+        requires_version_refresh = active_term is not None
         request = await self.db.scalar(
             select(KapBackfillRequest).where(KapBackfillRequest.isin == normalized_isin)
         )
@@ -514,7 +529,9 @@ class KapEnrichmentService:
         elif request.status != "RUNNING":
             retryable_after = request.completed_at or request.updated_at
             should_requeue = request.status not in {"QUEUED", "RETRY"} and (
-                retryable_after is None or now - retryable_after >= timedelta(hours=6)
+                requires_version_refresh
+                or retryable_after is None
+                or now - retryable_after >= timedelta(hours=6)
             )
             if should_requeue:
                 request.status = "QUEUED"
@@ -935,6 +952,8 @@ class KapEnrichmentService:
             and current.confidence in derived_confidences
             and confidence in derived_confidences
             and current.value_decimal != value
+            and current.evidence.get("derivation_version")
+            == evidence.get("derivation_version")
         )
         if derived_conflict:
             evidence = {
@@ -948,12 +967,21 @@ class KapEnrichmentService:
             lag = None
             confidence = "KAP_CONFLICT"
         identity = (value, benchmark, lag, confidence)
-        if current is not None and (
-            current.value_decimal,
-            current.benchmark,
-            current.observation_lag_business_days,
-            current.confidence,
-        ) == identity:
+        if (
+            current is not None
+            and (
+                current.value_decimal,
+                current.benchmark,
+                current.observation_lag_business_days,
+                current.confidence,
+            )
+            == identity
+            and (
+                confidence == "KAP_EXPLICIT"
+                or current.evidence.get("derivation_version")
+                == evidence.get("derivation_version")
+            )
+        ):
             return
         rank = {
             "KAP_CONFLICT": 0,
@@ -966,6 +994,11 @@ class KapEnrichmentService:
             current is not None
             and not derived_conflict
             and rank.get(current.confidence, 0) > rank.get(confidence, 0)
+            and (
+                current.confidence == "KAP_EXPLICIT"
+                or current.evidence.get("derivation_version")
+                == evidence.get("derivation_version")
+            )
         ):
             return
         if current is not None:

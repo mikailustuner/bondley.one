@@ -29,7 +29,7 @@ import { getToken } from "@/lib/auth";
 import { formatDate, formatDecimal, formatPercentFromDecimal } from "@/lib/utils";
 import { tr } from "@/locales/tr";
 
-const DEFAULT_CLEAN_PRICE = "100";
+const DEFAULT_QUOTE_VALUE = "100";
 
 function turkeyBusinessDateISO(): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -223,7 +223,7 @@ export default function VerifiedInstrumentDetail({
         isin,
         settlement_date: settlementDate,
         quote_type: instrument.default_quote_type,
-        quote_value: DEFAULT_CLEAN_PRICE,
+        quote_value: DEFAULT_QUOTE_VALUE,
         quote_source: "SYSTEM_NOMINAL_100",
       })
       .then((result) => {
@@ -321,8 +321,28 @@ export default function VerifiedInstrumentDetail({
         assumptions?: string[];
         period_start?: string;
         period_end?: string;
+        start_index_date?: string;
+        end_index_date?: string;
+        observation_lag_business_days?: number;
       }
     | undefined;
+  const accrualDetails = result?.intermediates?.accrual as
+    | {
+        method?: string;
+        inputs?: {
+          start_index_date?: string;
+          end_index_date?: string;
+          observation_lag_business_days?: number;
+        };
+      }
+    | undefined;
+  const quoteBasis =
+    instrument.default_quote_type === "DIRTY_PRICE" ? "Kirli" : "Temiz";
+  const quoteAssumptionLabel = `${quoteBasis} Fiyat Varsayımı · 100`;
+  const quoteAssumptionDescription =
+    `100, kıymetin nominal ${quoteBasis.toLocaleLowerCase("tr-TR")} fiyat ` +
+    "varsayımıdır; piyasa kotasyonu veya hesaplanmış fiyat değildir. YTM ve risk " +
+    "metrikleri bu ortak karşılaştırma girdisi üzerinden hesaplanır.";
   const publishedCouponRate =
     instrument.next_coupon_rate_pct != null &&
     Number(instrument.next_coupon_rate_pct) > 0
@@ -431,14 +451,14 @@ export default function VerifiedInstrumentDetail({
               className="assumption-chip inline-flex h-10 items-center justify-center gap-2 self-start rounded-full px-4 text-xs font-semibold hover:bg-primary/10 sm:self-auto"
             >
               <Check className="h-3.5 w-3.5" strokeWidth={3} />
-              {tr.dashboard.bondDetails.calculatedMetrics.cleanPriceAssumption}
+              {quoteAssumptionLabel}
               <Info className="h-3.5 w-3.5 opacity-70" />
             </button>
           </div>
 
           {assumptionOpen && (
             <div className="mt-4 rounded-2xl border border-border bg-muted/45 p-4 text-xs leading-5 text-muted-foreground">
-              {tr.dashboard.bondDetails.calculatedMetrics.cleanPriceAssumptionDescription}
+              {quoteAssumptionDescription}
             </div>
           )}
         </div>
@@ -549,18 +569,39 @@ export default function VerifiedInstrumentDetail({
                     {formatPercentFromDecimal(result.annual_yield, 4)}
                   </p>
                   <p className="mt-3 text-[11px] text-muted-foreground">
-                    Teorik YTM ·{" "}
-                    {result.quote_type === "DIRTY_PRICE" ? "kirli" : "temiz"} fiyat 100 üzerinden
+                    Gösterge YTM ·{" "}
+                    {result.quote_type === "DIRTY_PRICE" ? "kirli" : "temiz"} fiyat 100 varsayımı
                   </p>
                 </div>
                 <div className="rounded-2xl border border-border bg-card p-5">
                   <p className="eyebrow">
-                    {tr.dashboard.bondDetails.calculatedMetrics.dirtyPrice}
+                    {result.dirty_price_origin === "INPUT_QUOTE"
+                      ? "Kirli Fiyat Varsayımı"
+                      : tr.dashboard.bondDetails.calculatedMetrics.dirtyPrice}
                   </p>
                   <p className="metric-value mt-4 text-3xl">
                     {displayNumber(result.dirty_price)}
                   </p>
-                  <p className="mt-3 text-[11px] text-muted-foreground">İşlemiş tutar dahil</p>
+                  <p className="mt-3 text-[11px] text-muted-foreground">
+                    {result.dirty_price_origin === "INPUT_QUOTE"
+                      ? "Hesaplama girdisi · piyasa fiyatı değildir"
+                      : "YTM ve nakit akışlarından hesaplandı"}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-border bg-card p-5">
+                  <p className="eyebrow">
+                    {result.clean_price_origin === "INPUT_QUOTE"
+                      ? "Temiz Fiyat Varsayımı"
+                      : tr.dashboard.bondDetails.calculatedMetrics.cleanPrice}
+                  </p>
+                  <p className="metric-value mt-4 text-3xl">
+                    {displayNumber(result.clean_price)}
+                  </p>
+                  <p className="mt-3 text-[11px] text-muted-foreground">
+                    {result.clean_price_origin === "INPUT_QUOTE"
+                      ? "Hesaplama girdisi · piyasa fiyatı değildir"
+                      : "Kirli fiyat eksi işlemiş tutar"}
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-border bg-card p-5">
                   <p className="eyebrow">
@@ -569,9 +610,35 @@ export default function VerifiedInstrumentDetail({
                   <p className="metric-value mt-4 text-3xl">
                     {displayNumber(result.accrued_amount)}
                   </p>
-                  <p className="mt-3 text-[11px] text-muted-foreground">Valör tarihindeki birikim</p>
+                  <p className="mt-3 text-[11px] text-muted-foreground">
+                    {result.accrued_method === "BIST_BAP_4_4_INDEX_CHANGE"
+                      ? "Gerçekleşmiş T‑1 endeks getirisi + birikmiş spread"
+                      : "BIST GGS / DGS yöntemi"}
+                  </p>
                 </div>
               </div>
+              {accrualDetails?.inputs?.end_index_date && (
+                <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl border border-border bg-muted/35 px-4 py-3 text-xs text-muted-foreground">
+                  <span>
+                    Endeks başlangıcı:{" "}
+                    <strong className="font-mono-data text-foreground">
+                      {formatDate(accrualDetails.inputs.start_index_date || "")}
+                    </strong>
+                  </span>
+                  <span>
+                    Kullanılan son gözlem:{" "}
+                    <strong className="font-mono-data text-foreground">
+                      {formatDate(accrualDetails.inputs.end_index_date)}
+                    </strong>
+                  </span>
+                  <span>
+                    Gecikme:{" "}
+                    <strong className="text-foreground">
+                      T‑{accrualDetails.inputs.observation_lag_business_days ?? 1}
+                    </strong>
+                  </span>
+                </div>
+              )}
               {result.coupon_rate_status === "INDICATIVE" && (
                 <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/[0.07] p-4 text-xs leading-5 text-foreground">
                   <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
@@ -624,16 +691,6 @@ export default function VerifiedInstrumentDetail({
                     Kupon tutarı tahsilat veya gelecekte açıklanacak veriye bağlı ve
                     kullanılabilir bir oran bulunmuyor. Teorik YTM sıfır kupon
                     senaryosudur; beklenen getiri olarak yorumlanmamalıdır.
-                  </p>
-                </div>
-              )}
-              {valuationAssumptions.includes("SPREAD_UNKNOWN_ZERO_SCENARIO") && (
-                <div className="mt-3 flex items-start gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/[0.07] p-4 text-xs leading-5 text-foreground">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                  <p>
-                    Kaynak açıklama ek getiri uygulandığını belirtiyor ancak sayısal
-                    spread henüz doğrulanamadı. Sonuç gösterilmeye devam eder; teorik
-                    hesapta spread geçici olarak %0 senaryosudur.
                   </p>
                 </div>
               )}

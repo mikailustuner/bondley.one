@@ -89,3 +89,49 @@ def year_fraction(
         result += Decimal((boundary - cursor).days) / denominator
         cursor = boundary
     return result
+
+
+def day_count_days(
+    start: date,
+    end: date,
+    convention: str | DayCountConvention | None,
+) -> int:
+    """Return the convention day numerator used by BIST GGS/DGS formulas."""
+
+    if end < start:
+        return -day_count_days(end, start, convention)
+    parsed = parse_day_count(convention)
+    if parsed == DayCountConvention.THIRTY_E_360:
+        d1 = min(start.day, 30)
+        d2 = min(end.day, 30)
+        return (
+            (end.year - start.year) * 360
+            + (end.month - start.month) * 30
+            + d2
+            - d1
+        )
+    if parsed == DayCountConvention.THIRTY_360_US:
+        d1 = 30 if start.day == 31 else start.day
+        d2 = 30 if end.day == 31 and d1 == 30 else end.day
+        return (
+            (end.year - start.year) * 360
+            + (end.month - start.month) * 30
+            + d2
+            - d1
+        )
+    return (end - start).days
+
+
+def annual_day_basis(
+    convention: str | DayCountConvention | None,
+) -> int:
+    """Return BIST's YGS basis for the supported day-count convention."""
+
+    parsed = parse_day_count(convention)
+    if parsed in {
+        DayCountConvention.ACT_360,
+        DayCountConvention.THIRTY_E_360,
+        DayCountConvention.THIRTY_360_US,
+    }:
+        return 360
+    return 365

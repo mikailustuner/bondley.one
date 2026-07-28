@@ -153,6 +153,34 @@ def test_price_yield_round_trip_and_risk_metrics():
     assert from_yield.annual_simple_coupon_rate == Decimal("0.1000000000")
     assert from_yield.annual_compound_coupon_rate == Decimal("0.1025212302")
     assert from_yield.cash_flows[0].coupon_amount == Decimal("4.9589041100")
+    assert from_yield.dirty_price_origin == "CALCULATED_FROM_YIELD"
+    assert from_yield.clean_price_origin == "DERIVED_DIRTY_MINUS_ACCRUED"
+    assert from_clean.clean_price_origin == "INPUT_QUOTE"
+    assert from_clean.dirty_price_origin == "DERIVED_CLEAN_PLUS_ACCRUED"
+    assert from_clean.accrued_method == "BIST_BAP_4_1_PERIODIC_PRORATION"
+
+
+def test_fixed_coupon_accrual_uses_bist_ggs_over_dgs_not_year_fraction_ratio():
+    result = ValuationEngine().value(
+        _fixed_terms(
+            issue_date=date(2024, 7, 31),
+            maturity_date=date(2025, 7, 31),
+            next_coupon_date=date(2025, 1, 31),
+            day_count="ACTACT",
+        ),
+        settlement_date=date(2024, 12, 31),
+        price_input=PriceInput(QuoteType.DIRTY_PRICE, Decimal("100")),
+    )
+
+    expected_accrued = (
+        Decimal("100")
+        * result.periodic_coupon_rate
+        * Decimal(153)
+        / Decimal(184)
+    )
+    assert result.accrued_amount == expected_accrued.quantize(Decimal("0.00000001"))
+    assert result.intermediates["accrual"]["inputs"]["ggs"] == 153
+    assert result.intermediates["accrual"]["inputs"]["dgs"] == 184
 
 
 def test_next_coupon_anchor_does_not_accrue_from_original_issue_date():

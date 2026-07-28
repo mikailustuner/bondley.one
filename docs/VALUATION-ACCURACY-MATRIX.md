@@ -1,6 +1,6 @@
 # Bondley değerleme doğruluk sözleşmesi
 
-Bu belge `valuation-engine-v2.3.0`, `tbliste-v2-3` ve `remarks-tr-v2-1`
+Bu belge `valuation-engine-v3.0.0`, `tbliste-v2-3` ve `remarks-tr-v2-1`
 sürümlerinin hangi veriyi kesin, hangi veriyi türetilmiş ve hangi veriyi
 senaryo olarak kullandığını tanımlar.
 
@@ -12,6 +12,9 @@ senaryo olarak kullandığını tanımlar.
   sözleşme formülüyle hesaplanan değerdir.
 - **Cari projeksiyon:** Kupon dönemi tamamlanmadığında, gerçekleşen endeks
   değişiminin tam döneme taşınmasıdır.
+- **İşlemiş tutar:** Cari projeksiyondan bağımsızdır. Endeks değişimine bağlı
+  kıymetlerde valörün T-1 iş gününe kadar gerçekleşen endeks getirisi ve
+  valöre kadar biriken spread ile BAP 4.4'e göre hesaplanır.
 - **Gelecek kupon senaryosu:** Henüz gözlemlenemeyen dönemler için cari yıllık
   kupon oranının her dönemin gerçek gün sayısına uygulanmasıdır.
 - **Teorik YTM:** Kaynak fiyat bulunmadığında BIST kotasyon bazına göre 100
@@ -114,13 +117,23 @@ projeksiyon aralığı kullanılır. Kirli fiyat 100 teorik senaryosunun kilitli
 | Dönemsel kupon | %10,68114765 |
 | Yıllık basit kupon | %42,84196586 |
 | Yıllık bileşik kupon | %50,23770495 |
-| İşlemiş tutar | 8,80314367 |
-| Temiz fiyat | 91,19685633 |
+| İşlemiş tutar | 8,72788022 |
+| Temiz fiyat | 91,27211978 |
 | Teorik YTM | %54,33806412 |
 
+İşlemiş tutar, projeksiyonlu `%10,68114765` tam dönem kuponunun 75/91 ile
+çarpımı değildir. BAP 4.4 ayrıştırması:
+
+```text
+gerçekleşmiş TLREFK getirisi = 3951,11584 / 3641,86408 - 1
+birikmiş spread = 0,0115 × 75 / 365
+işlemiş kira = (gerçekleşmiş getiri + birikmiş spread) × 100
+             = 8,72788022
+```
+
 Kaynak parse durumu `AMBIGUOUS` kalabilir; bu etiket gizlenmez. Ancak spread
-`KAP_MULTI_COUPON_VERIFIED` kanıtıyla hesapta kullanılır ve eski
-`SPREAD_UNKNOWN_ZERO_SCENARIO` sonucu artık nihai değer diye gösterilmez.
+`KAP_MULTI_COUPON_VERIFIED` kanıtıyla hesapta kullanılır. Spread
+doğrulanamazsa `%0` senaryosu üretilmez ve değerleme durur.
 
 ## Takvim çıkarımı
 
@@ -155,7 +168,22 @@ vade final stub olarak kullanılır:
 
 - `Kirli Fiyat/Dirty Price` satırlarında otomatik 100 değeri **kirli fiyat**tır.
 - Diğer satırlarda otomatik 100 değeri **temiz fiyat**tır.
+- Otomatik 100 bir hesap sonucu veya piyasa kotasyonu değil, değerleme
+  girdisidir. API bunu `quote_source`, `clean_price_origin` ve
+  `dirty_price_origin` alanlarıyla açıkça ayırır.
 - Sonuç her zaman `THEORETICAL_YTM` olarak etiketlenir.
+
+## T-1 gözlem sözleşmesi
+
+- Doğrulanmış endeks değişimi kıymetlerinde başlangıç, bitiş ve cari valör
+  gözlemleri aynı sözleşmesel gecikme ile seçilir.
+- `m=1` için cari gözlem valörün bir önceki BIST iş günüdür. T günü verisinin
+  gün içinde sonradan yüklenmesi aynı valörlü sonucu değiştirmez.
+- Hedef tarihte gözlem yoksa daha eski bir kayıt sessizce kullanılmaz;
+  `MISSING_BENCHMARK` üretilir.
+- KAP spread türetimi T/T-1/T-2 arasında yuvarlama yakınlığı seçmez. Mevcut
+  doğruluk evreninde yalnız T-1 ile türetir; açıkça farklı `m` yayımlanan
+  gelecekteki kıymetler sözleşmesel parametre olarak ayrıştırılır.
 
 ## Değişken kupon senaryosu
 

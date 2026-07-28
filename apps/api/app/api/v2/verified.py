@@ -52,6 +52,9 @@ from app.services.bist_ingestion.bootstrap import (
     BootstrapAlreadyRunning,
     VerifiedBistBootstrapService,
 )
+from app.services.kap_ingestion.spread_derivation import (
+    is_current_spread_derivation,
+)
 from app.services.valuation.engine import (
     BenchmarkInput,
     InstrumentTerms,
@@ -68,7 +71,7 @@ from app.services.valuation.coupon_rates import (
     from_periodic_coupon,
 )
 from app.services.valuation.day_count import parse_day_count, year_fraction
-from app.services.valuation.errors import ValuationError
+from app.services.valuation.errors import ValuationError, ValuationFailureCode
 from app.services.metrics_service import MetricsService
 
 
@@ -178,6 +181,7 @@ async def _resolved_contract_spread(
 ) -> tuple[Decimal, str, int | None, str, tuple[str, ...]]:
     """Resolve spread without hiding missing or conflicting source evidence."""
 
+    expected_lag = _observation_lag(ast)
     kap_term = await db.scalar(
         select(KapDerivedTerm)
         .where(
@@ -197,6 +201,12 @@ async def _resolved_contract_spread(
             "KAP_MULTI_COUPON_VERIFIED",
             "KAP_SINGLE_COUPON_DERIVED",
         }
+        and is_current_spread_derivation(
+            confidence=kap_term.confidence,
+            observation_lag_business_days=kap_term.observation_lag_business_days,
+            evidence=kap_term.evidence,
+            expected_lag=expected_lag,
+        )
     ):
         assumptions = (
             (kap_term.confidence,)
@@ -206,7 +216,11 @@ async def _resolved_contract_spread(
         return (
             kap_term.value_decimal,
             kap_term.annuality or "ANNUAL_SIMPLE",
-            kap_term.observation_lag_business_days,
+            (
+                expected_lag
+                if kap_term.confidence == "KAP_EXPLICIT"
+                else kap_term.observation_lag_business_days
+            ),
             kap_term.confidence,
             assumptions,
         )
@@ -216,18 +230,24 @@ async def _resolved_contract_spread(
         return (
             explicit,
             str(ast.get("spread_annuality") or "UNKNOWN"),
-            None,
+            expected_lag,
             "BIST_EXPLICIT",
             (),
         )
-    if kap_term is not None and kap_term.confidence == "KAP_CONFLICT":
+    if kap_term is not None and (
+        kap_term.confidence == "KAP_CONFLICT"
+        or (
+            kap_term.value_decimal is not None
+            and kap_term.confidence != "KAP_EXPLICIT"
+        )
+    ):
         return Decimal("0"), "ANNUAL_SIMPLE", None, "KAP_CONFLICT", ("KAP_CONFLICT",)
     return (
         Decimal("0"),
         "ANNUAL_SIMPLE",
         None,
         "SPREAD_UNKNOWN",
-        ("SPREAD_UNKNOWN_ZERO_SCENARIO",),
+        ("CONTRACTUAL_SPREAD_NOT_VERIFIED",),
     )
 
 
@@ -316,10 +336,9 @@ async def _index_observation(
         select(BenchmarkObservation)
         .where(
             BenchmarkObservation.benchmark == benchmark,
-            BenchmarkObservation.observation_date <= target_date,
+            BenchmarkObservation.observation_date == target_date,
             BenchmarkObservation.index_value.is_not(None),
         )
-        .order_by(BenchmarkObservation.observation_date.desc())
         .limit(1)
     )
 
@@ -422,20 +441,51 @@ async def _resolve_coupon_rate_metrics(
         required_end_target = _lagged_business_date(period_end, lag)
         start_observation = await _index_observation(db, benchmark_name, start_target)
         is_final = required_end_target <= settlement_date
-        end_target = required_end_target if is_final else min(settlement_date, period_end)
+        end_target = (
+            required_end_target
+            if is_final
+            else _lagged_business_date(min(settlement_date, period_end), lag)
+        )
         end_observation = await _index_observation(db, benchmark_name, end_target)
+        if start_observation is None or end_observation is None:
+            raise ValuationError(
+                ValuationFailureCode.MISSING_BENCHMARK,
+                "Sözleşmesel T-1 endeks gözlemi bulunamadı.",
+                context={
+                    "benchmark": benchmark_name,
+                    "start_target": start_target.isoformat(),
+                    "end_target": end_target.isoformat(),
+                    "observation_lag_business_days": lag,
+                },
+            )
         if (
-            start_observation is None
-            or end_observation is None
-            or start_observation.index_value is None
+            start_observation.index_value is None
             or end_observation.index_value is None
-            or end_observation.observation_date <= start_observation.observation_date
         ):
+            raise ValuationError(
+                ValuationFailureCode.MISSING_BENCHMARK,
+                "Sözleşmesel T-1 endeks gözleminin değeri eksik.",
+                context={
+                    "benchmark": benchmark_name,
+                    "start_target": start_target.isoformat(),
+                    "end_target": end_target.isoformat(),
+                },
+            )
+        if end_observation.observation_date <= start_observation.observation_date:
             # At the start of a coupon period the T-1 boundary observation and
             # the latest available observation can be identical.  No index
             # return exists yet; continue to the explicit TLREF-rate proxy
             # below instead of suppressing theoretical valuation.
-            pass
+            if end_target != start_target:
+                raise ValuationError(
+                    ValuationFailureCode.MISSING_BENCHMARK,
+                    "Endeks gözlem aralığı pozitif değil.",
+                    context={
+                        "benchmark": benchmark_name,
+                        "start_target": start_target.isoformat(),
+                        "end_target": end_target.isoformat(),
+                    },
+                )
         else:
             if (
                 is_final
@@ -466,6 +516,7 @@ async def _resolve_coupon_rate_metrics(
                     spread_annuality=annuality,
                     calculation_as_of=end_observation.observation_date,
                     is_final=is_final,
+                    observation_lag_business_days=lag,
                 )
 
     if rate_type in {RateType.TLREF, RateType.TLREFK} and benchmark_input is not None:
@@ -729,9 +780,17 @@ async def get_instrument(
     has_bist_spread = any(
         item.get("decimal") is not None for item in ast.get("spreads", [])
     )
+    expected_observation_lag = _observation_lag(ast)
+    kap_lag_is_current = kap_term is not None and is_current_spread_derivation(
+        confidence=kap_term.confidence,
+        observation_lag_business_days=kap_term.observation_lag_business_days,
+        evidence=kap_term.evidence,
+        expected_lag=expected_observation_lag,
+    )
     has_verified_kap_spread = (
         kap_term is not None
         and kap_term.value_decimal is not None
+        and kap_lag_is_current
         and kap_term.confidence
         in {
             "KAP_EXPLICIT",
@@ -791,7 +850,11 @@ async def get_instrument(
         kap_status = "DISABLED"
     payload["kap_enrichment"] = {
         "status": kap_status,
-        "spread_decimal": str(kap_term.value_decimal) if kap_term and kap_term.value_decimal is not None else None,
+        "spread_decimal": (
+            str(kap_term.value_decimal)
+            if has_verified_kap_spread and kap_term.value_decimal is not None
+            else None
+        ),
         "annuality": kap_term.annuality if kap_term else None,
         "benchmark": kap_term.benchmark if kap_term else None,
         "supporting_disclosure_ids": kap_term.supporting_disclosure_ids if kap_term else [],
@@ -1018,14 +1081,17 @@ async def create_valuation(
             "MISSING_COUPON_STRUCTURE_SINGLE_PAYMENT_SCENARIO",
         )
     if rate_type in {RateType.TLREF, RateType.TLREFK}:
+        benchmark_target = _lagged_business_date(
+            payload.settlement_date,
+            _observation_lag(ast),
+        )
         benchmark_row = await db.scalar(
             select(BenchmarkObservation)
             .where(
                 BenchmarkObservation.benchmark == rate_type.value,
-                BenchmarkObservation.observation_date <= payload.settlement_date,
+                BenchmarkObservation.observation_date == benchmark_target,
                 BenchmarkObservation.annual_rate_decimal.is_not(None),
             )
-            .order_by(BenchmarkObservation.observation_date.desc())
             .limit(1)
         )
         if benchmark_row is not None:
@@ -1056,6 +1122,18 @@ async def create_valuation(
         contractual_spread_confidence = "NOT_APPLICABLE"
         spread_assumptions = ()
     valuation_assumptions += spread_assumptions
+    if contractual_spread_confidence in {"KAP_CONFLICT", "SPREAD_UNKNOWN"}:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "CONTRACTUAL_SPREAD_NOT_VERIFIED",
+                "message": (
+                    "Sözleşmesel spread T-1 geçmişiyle doğrulanmadan "
+                    "değerleme üretilemez."
+                ),
+                "confidence": contractual_spread_confidence,
+            },
+        )
     if contractual_spread_confidence.startswith("KAP_") and not spread_assumptions:
         valuation_assumptions += (
             f"CONTRACTUAL_SPREAD_SOURCE_{contractual_spread_confidence}",
