@@ -106,10 +106,13 @@ class ValuationResult:
     dirty_price_origin: str
     accrued_amount: Decimal
     accrued_method: str
-    annual_yield: Decimal
-    macaulay_duration: Decimal
-    modified_duration: Decimal
-    convexity: Decimal
+    annual_yield: Decimal | None
+    ytm_status: str
+    ytm_failure_code: str | None
+    ytm_message: str | None
+    macaulay_duration: Decimal | None
+    modified_duration: Decimal | None
+    convexity: Decimal | None
     effective_coupon_rate: Decimal
     periodic_coupon_rate: Decimal
     annual_simple_coupon_rate: Decimal
@@ -125,6 +128,9 @@ class ValuationResult:
     provenance: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
+        def decimal_or_none(value: Decimal | None) -> str | None:
+            return str(value) if value is not None else None
+
         return {
             "engine_version": self.engine_version,
             "settlement_date": self.settlement_date.isoformat(),
@@ -137,10 +143,13 @@ class ValuationResult:
             "dirty_price_origin": self.dirty_price_origin,
             "accrued_amount": str(self.accrued_amount),
             "accrued_method": self.accrued_method,
-            "annual_yield": str(self.annual_yield),
-            "macaulay_duration": str(self.macaulay_duration),
-            "modified_duration": str(self.modified_duration),
-            "convexity": str(self.convexity),
+            "annual_yield": decimal_or_none(self.annual_yield),
+            "ytm_status": self.ytm_status,
+            "ytm_failure_code": self.ytm_failure_code,
+            "ytm_message": self.ytm_message,
+            "macaulay_duration": decimal_or_none(self.macaulay_duration),
+            "modified_duration": decimal_or_none(self.modified_duration),
+            "convexity": decimal_or_none(self.convexity),
             "effective_coupon_rate": str(self.effective_coupon_rate),
             "periodic_coupon_rate": str(self.periodic_coupon_rate),
             "annual_simple_coupon_rate": str(self.annual_simple_coupon_rate),
@@ -158,7 +167,7 @@ class ValuationResult:
 
 
 class ValuationEngine:
-    VERSION = "valuation-engine-v3.0.0"
+    VERSION = "valuation-engine-v3.1.0"
     SUPPORTED_FORMULAS = frozenset(FORMULA_CATALOG)
     PRICE_QUANTUM = Decimal("0.00000001")
     RATE_QUANTUM = Decimal("0.0000000001")
@@ -241,18 +250,15 @@ class ValuationEngine:
         accrued = accrual.amount
         assert price_input is not None
         quote_value = self._decimal(price_input.value, "quote_value")
+        annual_yield: Decimal | None
+        ytm_status = "CALCULATED"
+        ytm_failure_code: str | None = None
+        ytm_message: str | None = None
         if price_input.quote_type == QuoteType.CLEAN_PRICE:
             clean_price = quote_value
             dirty_price = clean_price + accrued
             clean_price_origin = "INPUT_QUOTE"
             dirty_price_origin = "DERIVED_CLEAN_PLUS_ACCRUED"
-            annual_yield = self._solve_yield(
-                future_flows,
-                settlement_date,
-                dirty_price,
-                terms.coupon_frequency,
-                convention,
-            )
         elif price_input.quote_type == QuoteType.DIRTY_PRICE:
             dirty_price = quote_value
             clean_price = dirty_price - accrued
@@ -263,13 +269,6 @@ class ValuationEngine:
                     ValuationFailureCode.INVALID_PRICE,
                     "Kirli fiyat, işlemiş tutardan büyük olmalıdır.",
                 )
-            annual_yield = self._solve_yield(
-                future_flows,
-                settlement_date,
-                dirty_price,
-                terms.coupon_frequency,
-                convention,
-            )
         else:
             annual_yield = quote_value
             dirty_price, discounted = self._price_from_yield(
@@ -284,40 +283,73 @@ class ValuationEngine:
             clean_price_origin = "DERIVED_DIRTY_MINUS_ACCRUED"
             future_flows = discounted
 
-        dirty_price, discounted = self._price_from_yield(
-            future_flows,
-            settlement_date,
-            annual_yield,
-            terms.coupon_frequency,
-            convention,
-        )
         if price_input.quote_type != QuoteType.ANNUAL_YIELD:
+            try:
+                annual_yield = self._solve_yield(
+                    future_flows,
+                    settlement_date,
+                    dirty_price,
+                    terms.coupon_frequency,
+                    convention,
+                )
+            except ValuationError as exc:
+                if exc.code != ValuationFailureCode.NO_ROOT:
+                    raise
+                annual_yield = None
+                ytm_status = "UNAVAILABLE_OUT_OF_RANGE"
+                ytm_failure_code = exc.code.value
+                ytm_message = (
+                    "Bu fiyat ve nakit akışı için güvenli getiri aralığında "
+                    "YTM kökü bulunamadı."
+                )
+
+        if annual_yield is not None:
+            reconstructed_dirty, discounted = self._price_from_yield(
+                future_flows,
+                settlement_date,
+                annual_yield,
+                terms.coupon_frequency,
+                convention,
+            )
+        else:
+            reconstructed_dirty = dirty_price
+            discounted = future_flows
+
+        if (
+            price_input.quote_type != QuoteType.ANNUAL_YIELD
+            and annual_yield is not None
+        ):
             supplied_dirty = (
                 quote_value
                 if price_input.quote_type == QuoteType.DIRTY_PRICE
                 else quote_value + accrued
             )
-            if abs(dirty_price - supplied_dirty) > Decimal("0.000001"):
+            if abs(reconstructed_dirty - supplied_dirty) > Decimal("0.000001"):
                 raise ValuationError(
                     ValuationFailureCode.NUMERIC_FAILURE,
                     "Fiyat-getiri round-trip toleransı aşıldı.",
                     context={
                         "supplied_dirty": str(supplied_dirty),
-                        "reconstructed_dirty": str(dirty_price),
+                        "reconstructed_dirty": str(reconstructed_dirty),
                     },
                 )
             dirty_price = supplied_dirty
             clean_price = dirty_price - accrued
 
-        macaulay, modified, convexity = self._risk_metrics(
-            discounted,
-            dirty_price,
-            annual_yield,
-            terms.coupon_frequency,
-        )
+        if annual_yield is not None:
+            macaulay, modified, convexity = self._risk_metrics(
+                discounted,
+                dirty_price,
+                annual_yield,
+                terms.coupon_frequency,
+            )
+        else:
+            macaulay = modified = convexity = None
         valuation_assumptions = terms.valuation_assumptions
         if terms.parse_status == "AMBIGUOUS":
             valuation_assumptions += ("SOURCE_TERMS_AMBIGUOUS",)
+        if annual_yield is None:
+            valuation_assumptions += ("YTM_UNAVAILABLE_OUT_OF_SAFE_RANGE",)
         valuation_assumptions = tuple(dict.fromkeys(valuation_assumptions))
         return ValuationResult(
             engine_version=self.VERSION,
@@ -331,10 +363,29 @@ class ValuationEngine:
             dirty_price_origin=dirty_price_origin,
             accrued_amount=accrued.quantize(self.PRICE_QUANTUM),
             accrued_method=accrual.method,
-            annual_yield=annual_yield.quantize(self.RATE_QUANTUM),
-            macaulay_duration=macaulay.quantize(self.RATE_QUANTUM),
-            modified_duration=modified.quantize(self.RATE_QUANTUM),
-            convexity=convexity.quantize(self.RATE_QUANTUM),
+            annual_yield=(
+                annual_yield.quantize(self.RATE_QUANTUM)
+                if annual_yield is not None
+                else None
+            ),
+            ytm_status=ytm_status,
+            ytm_failure_code=ytm_failure_code,
+            ytm_message=ytm_message,
+            macaulay_duration=(
+                macaulay.quantize(self.RATE_QUANTUM)
+                if macaulay is not None
+                else None
+            ),
+            modified_duration=(
+                modified.quantize(self.RATE_QUANTUM)
+                if modified is not None
+                else None
+            ),
+            convexity=(
+                convexity.quantize(self.RATE_QUANTUM)
+                if convexity is not None
+                else None
+            ),
             effective_coupon_rate=effective_rate.quantize(self.RATE_QUANTUM),
             periodic_coupon_rate=coupon_metrics.periodic_coupon_rate,
             annual_simple_coupon_rate=coupon_metrics.annual_simple_rate,
@@ -372,6 +423,15 @@ class ValuationEngine:
                     "quote_source": price_input.source,
                     "clean_price_origin": clean_price_origin,
                     "dirty_price_origin": dirty_price_origin,
+                },
+                "ytm": {
+                    "status": ytm_status,
+                    "failure_code": ytm_failure_code,
+                    "message": ytm_message,
+                    "safe_search_range": {
+                        "lower": "-0.99",
+                        "upper": "10",
+                    },
                 },
             },
             provenance={

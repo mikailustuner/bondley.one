@@ -6,16 +6,16 @@ from pydantic import ValidationError
 from app.schemas.valuation_v2 import ValuationCreate
 
 
-@pytest.mark.parametrize("quote_type", ["CLEAN_PRICE", "DIRTY_PRICE"])
-def test_system_nominal_100_accepts_bist_price_basis_at_100(quote_type):
+def test_system_nominal_100_accepts_only_clean_price_at_100():
     payload = ValuationCreate(
         isin="TRD030227F16",
         settlement_date="2026-07-24",
-        quote_type=quote_type,
+        quote_type="CLEAN_PRICE",
         quote_value="100",
         quote_source="SYSTEM_NOMINAL_100",
     )
 
+    assert payload.quote_type == "CLEAN_PRICE"
     assert payload.quote_value == Decimal("100")
     assert payload.quote_source == "SYSTEM_NOMINAL_100"
 
@@ -24,6 +24,7 @@ def test_system_nominal_100_accepts_bist_price_basis_at_100(quote_type):
     ("quote_type", "quote_value"),
     [
         ("ANNUAL_YIELD", "100"),
+        ("DIRTY_PRICE", "100"),
         ("CLEAN_PRICE", "99.99"),
         ("DIRTY_PRICE", "99.99"),
     ],

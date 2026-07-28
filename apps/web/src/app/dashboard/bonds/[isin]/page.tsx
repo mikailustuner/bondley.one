@@ -222,7 +222,7 @@ export default function VerifiedInstrumentDetail({
       .value(token, {
         isin,
         settlement_date: settlementDate,
-        quote_type: instrument.default_quote_type,
+        quote_type: "CLEAN_PRICE",
         quote_value: DEFAULT_QUOTE_VALUE,
         quote_source: "SYSTEM_NOMINAL_100",
       })
@@ -245,7 +245,6 @@ export default function VerifiedInstrumentDetail({
     };
   }, [
     instrument?.version_id,
-    instrument?.default_quote_type,
     instrument?.kap_enrichment?.status,
     instrument?.kap_enrichment?.spread_decimal,
     kapBackfillBlocking,
@@ -336,13 +335,11 @@ export default function VerifiedInstrumentDetail({
         };
       }
     | undefined;
-  const quoteBasis =
-    instrument.default_quote_type === "DIRTY_PRICE" ? "Kirli" : "Temiz";
-  const quoteAssumptionLabel = `${quoteBasis} Fiyat Varsayımı · 100`;
+  const quoteAssumptionLabel = "Temiz Fiyat Varsayımı · 100";
   const quoteAssumptionDescription =
-    `100, kıymetin nominal ${quoteBasis.toLocaleLowerCase("tr-TR")} fiyat ` +
-    "varsayımıdır; piyasa kotasyonu veya hesaplanmış fiyat değildir. YTM ve risk " +
-    "metrikleri bu ortak karşılaştırma girdisi üzerinden hesaplanır.";
+    "100, kıymetin nominal temiz fiyat varsayımıdır; piyasa kotasyonu veya " +
+    "hesaplanmış fiyat değildir. Kirli fiyat, temiz fiyata işlemiş tutar eklenerek " +
+    "hesaplanır. YTM ve risk metrikleri bu ortak karşılaştırma girdisi üzerinden üretilir.";
   const publishedCouponRate =
     instrument.next_coupon_rate_pct != null &&
     Number(instrument.next_coupon_rate_pct) > 0
@@ -566,11 +563,14 @@ export default function VerifiedInstrumentDetail({
                     {tr.dashboard.bondDetails.calculatedMetrics.ytm}
                   </p>
                   <p className="metric-value mt-4 text-3xl">
-                    {formatPercentFromDecimal(result.annual_yield, 4)}
+                    {result.ytm_status === "CALCULATED"
+                      ? formatPercentFromDecimal(result.annual_yield, 4)
+                      : "—"}
                   </p>
                   <p className="mt-3 text-[11px] text-muted-foreground">
-                    Gösterge YTM ·{" "}
-                    {result.quote_type === "DIRTY_PRICE" ? "kirli" : "temiz"} fiyat 100 varsayımı
+                    {result.ytm_status === "CALCULATED"
+                      ? "Gösterge YTM · temiz fiyat 100 varsayımı"
+                      : "Bu fiyat için güvenli aralıkta YTM kökü yok"}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-border bg-card p-5">
@@ -652,6 +652,20 @@ export default function VerifiedInstrumentDetail({
                         )}
                       </p>
                     )}
+                  </div>
+                </div>
+              )}
+              {result.ytm_status === "UNAVAILABLE_OUT_OF_RANGE" && (
+                <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/[0.07] p-4 text-xs leading-5 text-foreground">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <div>
+                    <p className="font-semibold">YTM güvenli biçimde üretilemedi</p>
+                    <p className="mt-1 text-muted-foreground">
+                      {result.ytm_message ||
+                        "Fiyat-getiri denklemi güvenli çözüm aralığında kök vermedi."}{" "}
+                      Kupon oranları, işlemiş tutar, temiz/kirli fiyat ayrımı ve nakit
+                      akışları bundan bağımsız olarak gösterilmeye devam eder.
+                    </p>
                   </div>
                 </div>
               )}
@@ -788,7 +802,9 @@ export default function VerifiedInstrumentDetail({
               <ResultMetric label="Temiz fiyat" value={displayNumber(result.clean_price)} />
             </div>
             <p className="mt-5 rounded-2xl bg-muted/55 p-4 text-xs leading-5 text-muted-foreground">
-              {tr.dashboard.bondDetails.calculatedMetrics.theoreticalNotice}
+              {result.ytm_status === "CALCULATED"
+                ? tr.dashboard.bondDetails.calculatedMetrics.theoreticalNotice
+                : "Duration ve konveksite YTM gerektirdiği için bu senaryoda gösterilmez; fiyat ve işlemiş tutar sonuçları geçerliliğini korur."}
             </p>
           </article>
 
@@ -802,7 +818,11 @@ export default function VerifiedInstrumentDetail({
                 </p>
               </div>
               <div className="flex flex-wrap justify-end gap-2">
-                <Badge variant="secondary">Teorik YTM</Badge>
+                <Badge variant="secondary">
+                  {result.ytm_status === "CALCULATED"
+                    ? "Teorik YTM"
+                    : "YTM kullanılamıyor"}
+                </Badge>
                 <Badge variant="outline">{result.cash_flows.length} ödeme</Badge>
               </div>
             </div>

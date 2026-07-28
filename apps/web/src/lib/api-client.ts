@@ -391,10 +391,13 @@ export interface VerifiedValuationResponse {
       | "BIST_BAP_COUPON_BOUNDARY_ZERO"
       | "BIST_BAP_4_1_PERIODIC_PRORATION"
       | "BIST_BAP_4_4_INDEX_CHANGE";
-    annual_yield: string;
-    macaulay_duration: string;
-    modified_duration: string;
-    convexity: string;
+    annual_yield: string | null;
+    ytm_status: "CALCULATED" | "UNAVAILABLE_OUT_OF_RANGE";
+    ytm_failure_code: "NO_ROOT" | null;
+    ytm_message: string | null;
+    macaulay_duration: string | null;
+    modified_duration: string | null;
+    convexity: string | null;
     effective_coupon_rate: string;
     periodic_coupon_rate: string;
     annual_simple_coupon_rate: string;

@@ -10,7 +10,7 @@ Tüm önemli değişiklikler bu dosyada belgelenir. Format [Keep a Changelog](ht
 
 ### Değerleme doğruluğu
 
-- Değerleme motoru `valuation-engine-v3.0.0` sürümüne yükseltildi.
+- Değerleme motoru `valuation-engine-v3.1.0` sürümüne yükseltildi.
 - TLREF/TLREFK endeks değişimi kıymetlerinde işlemiş faiz/kira, projeksiyonlu
   tam dönem kuponunun doğrusal oranlanması yerine BIST BAP 4.4 ile hesaplanıyor.
 - Cari ve tamamlanmış dönem endeks gözlemleri sözleşmesel T-1 iş gününe
@@ -22,8 +22,17 @@ Tüm önemli değişiklikler bu dosyada belgelenir. Format [Keep a Changelog](ht
   fallback kaldırıldı.
 - API ve arayüz, nominal 100 fiyat girdisini hesaplanmış kirli/temiz fiyattan
   ayrı gösteriyor; fiyat kökeni ve işlemiş tutar yöntemi denetim izine eklendi.
+- Otomatik nominal 100 karşılaştırma girdisi tüm kıymetlerde açık biçimde
+  `CLEAN_PRICE=100` olarak sabitlendi; işlemiş tutarı yüksek kıymetlerin yanlışlıkla
+  kirli fiyat 100 üzerinden aşırı YTM üretmesi engellendi.
+- Güvenli çözüm aralığında YTM kökü bulunamazsa kupon, işlemiş tutar, fiyat ayrımı
+  ve nakit akışları artık kaybolmuyor. Yalnız YTM, duration ve konveksite
+  `UNAVAILABLE_OUT_OF_RANGE / NO_ROOT` durumuyla boş dönüyor.
 - TRDQNBV82713 için 27.07.2026 doğruluk sonucu işlemiş kira `8,72788022`,
   temiz fiyat `91,27211978` olarak kilitlendi.
+- TRFMNGF72629 için 28.07.2026 resmî T-1 endeks girdileriyle temiz fiyat 100
+  senaryosu; dönemsel kupon `%11,40326251`, işlemiş tutar `11,27219657`,
+  kirli fiyat `111,27219657` ve YTM `%45,36019198` olarak golden teste kilitlendi.
 
 ---
 

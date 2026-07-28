@@ -312,3 +312,79 @@ def test_trdqnbv82713_verified_spread_theoretical_dirty_100_scenario():
     assert result.intermediates["accrual"]["inputs"]["observation_lag_business_days"] == 1
     assert result.annual_yield == Decimal("0.5433806412")
     assert "SOURCE_TERMS_AMBIGUOUS" in result.valuation_assumptions
+
+
+def _trfmngf72629_terms() -> InstrumentTerms:
+    coupon_metrics = from_index_change(
+        start_index_value=Decimal("5795.74891"),
+        end_index_value=Decimal("6402.46709"),
+        start_index_date=date(2026, 4, 28),
+        end_index_date=date(2026, 7, 28),
+        period_start=date(2026, 4, 29),
+        period_end=date(2026, 7, 29),
+        coupon_frequency=4,
+        full_period_year_fraction=Decimal(91) / Decimal(365),
+        full_period_days=91,
+        elapsed_projection_days=91,
+        spread_decimal=Decimal("0.0375"),
+        spread_annuality="ANNUAL_SIMPLE",
+        calculation_as_of=date(2026, 7, 28),
+        is_final=True,
+    )
+    return InstrumentTerms(
+        isin="TRFMNGF72629",
+        issue_date=date(2026, 1, 28),
+        maturity_date=date(2026, 7, 29),
+        coupon_frequency=4,
+        annual_coupon_rate=coupon_metrics.annual_simple_rate,
+        rate_type=RateType.TLREF,
+        benchmark_spread_decimal=Decimal("0.0375"),
+        day_count="ACTACT",
+        next_coupon_date=date(2026, 7, 29),
+        formula_code="BAP_TLREF",
+        coupon_rate_metrics=coupon_metrics,
+    )
+
+
+def test_trfmngf72629_clean_100_one_day_to_maturity_golden_result():
+    result = ValuationEngine().value(
+        _trfmngf72629_terms(),
+        settlement_date=date(2026, 7, 28),
+        price_input=PriceInput(
+            QuoteType.CLEAN_PRICE,
+            Decimal("100"),
+            source="SYSTEM_NOMINAL_100",
+        ),
+    )
+
+    assert result.periodic_coupon_rate == Decimal("0.1140326251")
+    assert result.annual_simple_coupon_rate == Decimal("0.4573836062")
+    assert result.annual_compound_coupon_rate == Decimal("0.5420803387")
+    assert result.accrued_amount == Decimal("11.27219657")
+    assert result.clean_price == Decimal("100.00000000")
+    assert result.dirty_price == Decimal("111.27219657")
+    assert result.annual_yield == Decimal("0.4536019198")
+    assert result.ytm_status == "CALCULATED"
+    assert result.ytm_failure_code is None
+
+
+def test_trfmngf72629_extreme_dirty_quote_keeps_partial_result_without_ytm():
+    result = ValuationEngine().value(
+        _trfmngf72629_terms(),
+        settlement_date=date(2026, 7, 28),
+        price_input=PriceInput(QuoteType.DIRTY_PRICE, Decimal("100")),
+    )
+
+    assert result.periodic_coupon_rate == Decimal("0.1140326251")
+    assert result.accrued_amount == Decimal("11.27219657")
+    assert result.clean_price == Decimal("88.72780343")
+    assert result.dirty_price == Decimal("100.00000000")
+    assert result.annual_yield is None
+    assert result.macaulay_duration is None
+    assert result.modified_duration is None
+    assert result.convexity is None
+    assert result.ytm_status == "UNAVAILABLE_OUT_OF_RANGE"
+    assert result.ytm_failure_code == "NO_ROOT"
+    assert "YTM_UNAVAILABLE_OUT_OF_SAFE_RANGE" in result.valuation_assumptions
+    assert result.to_dict()["annual_yield"] is None
+    assert result.to_dict()["cash_flows"][0].get("present_value") is None

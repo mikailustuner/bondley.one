@@ -20,11 +20,11 @@ class ValuationCreate(BaseModel):
     @model_validator(mode="after")
     def validate_system_nominal_quote(self) -> "ValuationCreate":
         if self.quote_source == "SYSTEM_NOMINAL_100" and (
-            self.quote_type not in {"CLEAN_PRICE", "DIRTY_PRICE"}
+            self.quote_type != "CLEAN_PRICE"
             or self.quote_value != Decimal("100")
         ):
             raise ValueError(
-                "SYSTEM_NOMINAL_100 yalnız CLEAN_PRICE/DIRTY_PRICE ve 100 değeriyle kullanılabilir."
+                "SYSTEM_NOMINAL_100 yalnız CLEAN_PRICE ve 100 değeriyle kullanılabilir."
             )
         return self
 
