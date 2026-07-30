@@ -8,6 +8,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.instrument_status import (
+    InstrumentStatus,
+    is_instrument_active,
+    matches_instrument_status,
+)
 from app.core.time import turkey_today
 from app.models.bist_ingestion import (
     BenchmarkObservation,
@@ -34,6 +39,10 @@ def _public_payload(
     source: SourceFile,
 ) -> dict[str, object]:
     fields = version.canonical_fields_json
+    is_active = is_instrument_active(
+        version.maturity_date,
+        current_date=turkey_today(),
+    )
     return {
         "isin_code": instrument.isin,
         "issuer": version.issuer_name,
@@ -43,6 +52,7 @@ def _public_payload(
         "maturity_date": (
             version.maturity_date.isoformat() if version.maturity_date else None
         ),
+        "is_active": is_active,
         "coupon_frequency": fields.get("coupon_frequency_per_year"),
         "first_issue_date": fields.get("first_issue_date"),
         "total_issue_amount": fields.get("total_issue_amount_thousands"),
@@ -157,14 +167,32 @@ async def get_public_summary(db: AsyncSession = Depends(get_db)):
 async def get_public_bonds(
     db: AsyncSession = Depends(get_db),
     limit: int = Query(default=1000, ge=1, le=3000),
+    instrument_status: InstrumentStatus = Query(default="active", alias="status"),
+    search: str | None = Query(default=None, min_length=1, max_length=100),
 ):
     today = turkey_today()
     rows = await _published_rows(db)
-    payloads = [
-        _public_payload(*row)
+    search_term = search.strip().casefold() if search else None
+    selected_rows = [
+        row
         for row in rows
-        if row[1].maturity_date is None or row[1].maturity_date >= today
+        if matches_instrument_status(
+            row[1].maturity_date,
+            current_date=today,
+            status=instrument_status,
+        )
+        and (
+            search_term is None
+            or search_term in row[0].isin.casefold()
+            or search_term in (row[1].issuer_name or "").casefold()
+        )
     ]
+    if instrument_status == "matured":
+        selected_rows.sort(
+            key=lambda row: row[1].maturity_date or date.min,
+            reverse=True,
+        )
+    payloads = [_public_payload(*row) for row in selected_rows]
     return payloads[:limit]
 
 
@@ -186,10 +214,7 @@ async def get_public_bond(isin: str, db: AsyncSession = Depends(get_db)):
             .limit(1)
         )
     ).one_or_none()
-    if row is None or (
-        row[1].maturity_date is not None
-        and row[1].maturity_date < turkey_today()
-    ):
+    if row is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Instrument not found",

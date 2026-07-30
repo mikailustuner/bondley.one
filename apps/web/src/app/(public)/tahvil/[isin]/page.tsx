@@ -13,6 +13,7 @@ interface PublicBondDetail {
   yield_type: string | null;
   currency: string;
   maturity_date: string | null;
+  is_active: boolean;
   coupon_frequency: string | null;
   first_issue_date: string | null;
   total_issue_amount: number | null;
@@ -198,9 +199,16 @@ export default async function TahvilDetailPage({
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold font-mono text-foreground mb-1 tracking-tight">
-            {bond.isin_code}
-          </h1>
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <h1 className="text-3xl font-bold font-mono text-foreground tracking-tight">
+              {bond.isin_code}
+            </h1>
+            {!bond.is_active && (
+              <span className="inline-flex rounded-full border border-border bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
+                Vadesi Doldu · {formatDate(bond.maturity_date)}
+              </span>
+            )}
+          </div>
           <p className="text-lg text-muted-foreground">
             {bond.issuer}
             {bond.security_type && (
@@ -208,6 +216,13 @@ export default async function TahvilDetailPage({
             )}
           </p>
         </div>
+
+        {!bond.is_active && (
+          <div className="mb-6 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] px-4 py-3 text-sm text-foreground">
+            Bu kıymet vadesini doldurmuştur. Sayfa, ihraç ve geçmiş kıymet bilgilerine
+            erişim için arşiv kaydı olarak gösterilmektedir.
+          </div>
+        )}
 
         {/* Info card */}
         <section aria-labelledby="temel-bilgiler">

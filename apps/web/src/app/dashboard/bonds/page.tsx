@@ -42,11 +42,23 @@ const STATUS_VARIANT: Record<
   REJECTED: "destructive",
 };
 
+type InstrumentStatus = "active" | "matured" | "all";
+
+const INSTRUMENT_STATUS_OPTIONS: Array<{
+  value: InstrumentStatus;
+  label: string;
+}> = [
+  { value: "active", label: "Aktif" },
+  { value: "matured", label: "Vadesi Dolmuş" },
+  { value: "all", label: "Tümü" },
+];
+
 export default function BondsListPage() {
   const [items, setItems] = useState<VerifiedInstrument[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [instrumentStatus, setInstrumentStatus] = useState<InstrumentStatus>("active");
   const [eligibleOnly, setEligibleOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -77,8 +89,9 @@ export default function BondsListPage() {
           search: search.trim() || undefined,
           parse_status: statusFilter || undefined,
           valuation_eligible: eligibleOnly ? true : undefined,
-          active_only: true,
+          status: instrumentStatus,
           order_by: "maturity",
+          order_direction: instrumentStatus === "matured" ? "desc" : "asc",
         }),
         api.verified.favorites(token),
         api.verified.quality(token),
@@ -96,7 +109,7 @@ export default function BondsListPage() {
         .finally(() => setLoading(false));
     }, 220);
     return () => window.clearTimeout(timer);
-  }, [eligibleOnly, page, search, statusFilter]);
+  }, [eligibleOnly, instrumentStatus, page, search, statusFilter]);
 
   const toggleFavorite = async (instrument: VerifiedInstrument) => {
     const token = getToken();
@@ -180,6 +193,29 @@ export default function BondsListPage() {
       </header>
 
       <section className="data-surface rounded-2xl p-3 sm:p-4" aria-label="Kıymet filtreleri">
+        <div
+          className="mb-3 flex flex-wrap gap-1 rounded-xl bg-muted/50 p-1"
+          aria-label="Kıymet vade durumu"
+        >
+          {INSTRUMENT_STATUS_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={instrumentStatus === option.value}
+              onClick={() => {
+                setInstrumentStatus(option.value);
+                setPage(0);
+              }}
+              className={`rounded-lg px-4 py-2 text-xs font-semibold transition-colors ${
+                instrumentStatus === option.value
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
         <div className="grid gap-3 lg:grid-cols-[1fr_190px_auto]">
           <label className="relative">
             <span className="sr-only">ISIN veya ihraççı ara</span>
@@ -274,7 +310,11 @@ export default function BondsListPage() {
                   <td className="px-5 py-4">
                     <div className="font-mono-data text-[13px]">{formatDate(item.maturity_date)}</div>
                     <div className="mt-1 text-[11px] text-muted-foreground">
-                      {item.days_to_maturity == null ? "—" : `${item.days_to_maturity} gün`}
+                      {item.days_to_maturity == null
+                        ? "—"
+                        : item.is_active
+                          ? `${item.days_to_maturity} gün`
+                          : `${Math.abs(item.days_to_maturity)} gün önce`}
                     </div>
                   </td>
                   <td className="px-5 py-4">
@@ -286,9 +326,14 @@ export default function BondsListPage() {
                     </div>
                   </td>
                   <td className="px-5 py-4">
-                    <Badge variant={STATUS_VARIANT[item.quality.parse_status]}>
-                      {STATUS_LABEL[item.quality.parse_status]}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Badge variant={item.is_active ? "positive" : "secondary"}>
+                        {item.is_active ? "Aktif" : "Vadesi doldu"}
+                      </Badge>
+                      <Badge variant={STATUS_VARIANT[item.quality.parse_status]}>
+                        {STATUS_LABEL[item.quality.parse_status]}
+                      </Badge>
+                    </div>
                   </td>
                   <td className="px-5 py-4">
                     {item.quality.valuation_eligible ? (
@@ -367,7 +412,7 @@ export default function BondsListPage() {
                 <div>
                   <span className="eyebrow block">Durum</span>
                   <span className="mt-1.5 block text-xs font-semibold">
-                    {STATUS_LABEL[item.quality.parse_status]}
+                    {item.is_active ? STATUS_LABEL[item.quality.parse_status] : "Vadesi doldu"}
                   </span>
                 </div>
               </div>
@@ -388,6 +433,18 @@ export default function BondsListPage() {
               <Database className="h-5 w-5" aria-hidden />
             </span>
             <p className="text-sm">Filtrelerle eşleşen kıymet bulunamadı.</p>
+            {instrumentStatus === "active" && search.trim() && (
+              <button
+                type="button"
+                onClick={() => {
+                  setInstrumentStatus("all");
+                  setPage(0);
+                }}
+                className="text-sm font-semibold text-primary hover:underline"
+              >
+                Tüm kıymetlerde ara
+              </button>
+            )}
           </div>
         )}
       </section>

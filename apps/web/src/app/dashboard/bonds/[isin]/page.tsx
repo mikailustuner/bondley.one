@@ -167,6 +167,7 @@ export default function VerifiedInstrumentDetail({
   const requiresCpi = benchmarkNames.includes("CPI_REFERENCE_INDEX");
   const kapStatus = instrument?.kap_enrichment?.status || "DISABLED";
   const kapBackfillBlocking =
+    Boolean(instrument?.is_active) &&
     Boolean(requiredBenchmark) &&
     instrument?.kap_enrichment?.spread_decimal == null &&
     ["PENDING", "QUEUED", "RUNNING", "RETRY"].includes(kapStatus);
@@ -212,6 +213,10 @@ export default function VerifiedInstrumentDetail({
     let active = true;
     setValuation(null);
     setCalculationError(null);
+    if (!instrument.is_active) {
+      setCalculating(false);
+      return;
+    }
     if (kapBackfillBlocking) {
       setCalculating(false);
       return;
@@ -378,6 +383,9 @@ export default function VerifiedInstrumentDetail({
         <div className="mt-5 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
+              {!instrument.is_active && (
+                <Badge variant="secondary">Vadesi doldu · {formatDate(instrument.maturity_date)}</Badge>
+              )}
               <Badge variant={instrument.quality.valuation_eligible ? "positive" : "destructive"}>
                 <ShieldCheck className="mr-1 h-3 w-3" />
                 {instrument.quality.valuation_eligible ? "Değerlemeye hazır" : "İnceleme gerekli"}
@@ -421,10 +429,11 @@ export default function VerifiedInstrumentDetail({
         </Alert>
       )}
 
-      <section
-        className="data-surface overflow-hidden rounded-3xl"
-        aria-label="Otomatik değerleme"
-      >
+      {instrument.is_active ? (
+        <section
+          className="data-surface overflow-hidden rounded-3xl"
+          aria-label="Otomatik değerleme"
+        >
         <div className="border-b border-border/60 px-5 py-5 sm:px-7 lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
@@ -781,7 +790,18 @@ export default function VerifiedInstrumentDetail({
             </div>
           )}
         </div>
-      </section>
+        </section>
+      ) : (
+        <Alert className="rounded-2xl border-border bg-muted/35">
+          <CalendarDays className="h-4 w-4" />
+          <AlertTitle>Vadesi dolmuş kıymet kaydı</AlertTitle>
+          <AlertDescription>
+            Bu kıymet için bugünkü valörle yeni değerleme üretilmez. İhraç koşulları,
+            kaynak bilgileri ve kullanıcı notları arşiv incelemesi için erişilebilir
+            durumda tutulur.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {result && (
         <section className="grid gap-5 lg:grid-cols-[0.72fr_1.28fr]" aria-label="Risk ve nakit akışları">

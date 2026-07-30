@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_admin_user, get_current_user
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.core.instrument_status import InstrumentStatus
 from app.core.time import turkey_today, utc_now
 from app.core.time import BistBusinessCalendar, parse_holiday_list
 from app.models.bist_ingestion import (
@@ -643,6 +644,7 @@ async def list_instruments(
     yield_type: str | None = None,
     currency: str | None = None,
     active_only: bool = True,
+    instrument_status: InstrumentStatus | None = Query(default=None, alias="status"),
     maturity_within_days: int | None = Query(None, ge=1, le=36500),
     order_by: str = Query("isin", pattern="^(isin|issuer|maturity)$"),
     order_direction: str = Query("asc", pattern="^(asc|desc)$"),
@@ -680,10 +682,20 @@ async def list_instruments(
             == currency
         )
     today = turkey_today()
-    if active_only:
+    effective_status: InstrumentStatus = (
+        instrument_status
+        if instrument_status is not None
+        else ("active" if active_only else "all")
+    )
+    if effective_status == "active":
         query = query.where(
             (InstrumentVersion.maturity_date.is_(None))
             | (InstrumentVersion.maturity_date >= today)
+        )
+    elif effective_status == "matured":
+        query = query.where(
+            InstrumentVersion.maturity_date.is_not(None),
+            InstrumentVersion.maturity_date < today,
         )
     if maturity_within_days is not None:
         query = query.where(

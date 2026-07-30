@@ -318,6 +318,7 @@ export interface VerifiedInstrument {
   issuer: string | null;
   maturity_date: string | null;
   days_to_maturity: number | null;
+  is_active: boolean;
   currency: string;
   security_type: string | null;
   yield_type: string | null;
@@ -685,6 +686,7 @@ export const api = {
         yield_type?: string;
         currency?: string;
         active_only?: boolean;
+        status?: "active" | "matured" | "all";
         maturity_within_days?: number;
         order_by?: "isin" | "issuer" | "maturity";
         order_direction?: "asc" | "desc";
@@ -702,6 +704,7 @@ export const api = {
       if (params?.yield_type) query.set("yield_type", params.yield_type);
       if (params?.currency) query.set("currency", params.currency);
       if (params?.active_only !== undefined) query.set("active_only", String(params.active_only));
+      if (params?.status) query.set("status", params.status);
       if (params?.maturity_within_days) query.set("maturity_within_days", String(params.maturity_within_days));
       if (params?.order_by) query.set("order_by", params.order_by);
       if (params?.order_direction) query.set("order_direction", params.order_direction);

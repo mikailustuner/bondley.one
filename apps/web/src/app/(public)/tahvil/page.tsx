@@ -35,12 +35,26 @@ interface PublicBond {
   yield_type: string | null;
   currency: string;
   maturity_date: string | null;
+  is_active: boolean;
   coupon_frequency: string | null;
 }
 
-async function fetchBonds(): Promise<PublicBond[]> {
+type PublicBondStatus = "active" | "matured" | "all";
+
+const STATUS_OPTIONS: Array<{ value: PublicBondStatus; label: string }> = [
+  { value: "active", label: "Aktif" },
+  { value: "matured", label: "Vadesi Dolmuş" },
+  { value: "all", label: "Tümü" },
+];
+
+async function fetchBonds(
+  status: PublicBondStatus,
+  search: string,
+): Promise<PublicBond[]> {
   try {
-    const res = await fetch(`${API_BASE}/system/public-bonds?limit=2000`, {
+    const query = new URLSearchParams({ limit: "3000", status });
+    if (search) query.set("search", search);
+    const res = await fetch(`${API_BASE}/system/public-bonds?${query}`, {
       next: { revalidate: 3600 },
     });
     if (!res.ok) return [];
@@ -59,8 +73,30 @@ function formatDate(dateStr: string | null): string {
   });
 }
 
-export default async function TahvilListPage() {
-  const bonds = await fetchBonds();
+export default async function TahvilListPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string; q?: string }>;
+}) {
+  const query = await searchParams;
+  const status: PublicBondStatus =
+    query.status === "matured" || query.status === "all" ? query.status : "active";
+  const search = query.q?.trim().slice(0, 100) || "";
+  const bonds = await fetchBonds(status, search);
+  const listDescription =
+    status === "active"
+      ? "aktif tahvil, bono, kira sertifikası ve VDMK"
+      : status === "matured"
+        ? "vadesi dolmuş borçlanma aracı"
+        : "aktif ve vadesi dolmuş borçlanma aracı";
+
+  function statusHref(value: PublicBondStatus): string {
+    const params = new URLSearchParams();
+    if (value !== "active") params.set("status", value);
+    if (search) params.set("q", search);
+    const suffix = params.toString();
+    return suffix ? `/tahvil?${suffix}` : "/tahvil";
+  }
 
   const listSchema = {
     "@context": "https://schema.org",
@@ -97,15 +133,57 @@ export default async function TahvilListPage() {
             Türkiye Borçlanma Araçları
           </h1>
           <p className="text-muted-foreground text-base max-w-2xl leading-relaxed">
-            BIST'te işlem gören{" "}
-            <strong className="text-foreground font-medium">{bonds.length}</strong> aktif tahvil, bono,
-            kira sertifikası ve VDMK. Detaylı YTM, kirli fiyat ve spread hesaplaması için{" "}
+            BIST evrenindeki{" "}
+            <strong className="text-foreground font-medium">{bonds.length}</strong>{" "}
+            {listDescription}. Detaylı YTM, kirli fiyat ve spread analizi için{" "}
             <Link href="/signup" className="text-primary hover:underline">
               ücretsiz kayıt olun
             </Link>
             .
           </p>
         </div>
+
+        <section className="mb-6 rounded-xl border border-border bg-muted/20 p-3" aria-label="Tahvil filtreleri">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <nav className="flex flex-wrap gap-1 rounded-lg bg-muted/50 p-1" aria-label="Vade durumu">
+              {STATUS_OPTIONS.map((option) => (
+                <Link
+                  key={option.value}
+                  href={statusHref(option.value)}
+                  aria-current={status === option.value ? "page" : undefined}
+                  className={`rounded-md px-3.5 py-2 text-xs font-semibold transition-colors ${
+                    status === option.value
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {option.label}
+                </Link>
+              ))}
+            </nav>
+            <form method="get" action="/tahvil" className="flex min-w-0 gap-2 sm:w-[360px]">
+              {status !== "active" && <input type="hidden" name="status" value={status} />}
+              <label htmlFor="bond-search" className="sr-only">
+                ISIN veya ihraççı ara
+              </label>
+              <input
+                id="bond-search"
+                name="q"
+                type="search"
+                defaultValue={search}
+                maxLength={100}
+                placeholder="ISIN veya ihraççı ara"
+                className="h-10 min-w-0 flex-1 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary"
+              />
+              <button
+                type="submit"
+                className="h-10 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                Ara
+              </button>
+            </form>
+          </div>
+        </section>
 
         {/* Bond table */}
         {bonds.length > 0 ? (
@@ -141,6 +219,11 @@ export default async function TahvilListPage() {
                       >
                         {bond.isin_code}
                       </Link>
+                      {!bond.is_active && (
+                        <span className="ml-2 inline-flex rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                          Vadesi doldu
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-foreground text-xs leading-snug max-w-[180px] truncate">
                       {bond.issuer || "—"}
@@ -164,7 +247,19 @@ export default async function TahvilListPage() {
           </div>
         ) : (
           <div className="text-center py-20 text-muted-foreground">
-            <p>Tahvil verileri yüklenemedi. Lütfen daha sonra tekrar deneyin.</p>
+            <p>
+              {search
+                ? `"${search}" aramasıyla eşleşen kıymet bulunamadı.`
+                : "Bu görünümde listelenecek kıymet bulunamadı."}
+            </p>
+            {status === "active" && search && (
+              <Link
+                href={`/tahvil?status=all&q=${encodeURIComponent(search)}`}
+                className="mt-3 inline-flex text-sm font-semibold text-primary hover:underline"
+              >
+                Vadesi dolmuş kıymetlerde de ara
+              </Link>
+            )}
           </div>
         )}
 

@@ -8,6 +8,15 @@ Tüm önemli değişiklikler bu dosyada belgelenir. Format [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Kıymet arşivi
+
+- Dashboard ve public tahvil listelerine `Aktif / Vadesi Dolmuş / Tümü`
+  görünümleri ile ISIN/ihraççı araması eklendi.
+- Vadesi dolmuş kıymetlerin public ve girişli detay sayfaları arşiv kaydı olarak
+  erişilebilir bırakıldı; güncel valörle otomatik değerleme çalıştırılmıyor.
+- Aktif liste davranışı korunurken API'ye geriye uyumlu
+  `status=active|matured|all` filtresi eklendi.
+
 ### Değerleme doğruluğu
 
 - Değerleme motoru `valuation-engine-v3.1.0` sürümüne yükseltildi.
