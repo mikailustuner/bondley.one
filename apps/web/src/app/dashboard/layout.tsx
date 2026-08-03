@@ -120,16 +120,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <>
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2.5 px-5 py-5 transition-opacity hover:opacity-80">
-        <Image
-          src="/logo.png"
-          alt="Bondley"
-          width={26}
-          height={26}
-          className="h-[26px] w-[26px] object-contain"
-          priority
-        />
-        <span className="text-[16px] font-semibold tracking-tight text-foreground">
-          {tr.common.brand}
+        <span className="bondley-app-logo-tile">
+          <Image src="/logo-mark.svg" alt="" width={34} height={34} priority />
+        </span>
+        <span className="flex flex-col gap-1">
+          <span className="font-mono-data text-[15px] font-semibold tracking-[-0.07em] text-foreground">{tr.common.brand}</span>
+          <span className="font-mono-data text-[7px] uppercase tracking-[.16em] text-primary">by Aurict</span>
         </span>
       </Link>
 
@@ -229,13 +225,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
           <Link href="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
             <Image
-              src="/logo.png"
+              src="/logo-mark.svg"
               alt="Bondley"
               width={22}
               height={22}
               className="h-[22px] w-[22px] object-contain"
             />
-            <span className="text-[15px] font-semibold text-foreground">{tr.common.brand}</span>
+            <span className="font-mono-data text-[14px] font-semibold tracking-[-.06em] text-foreground">{tr.common.brand}</span>
           </Link>
           <div className="flex items-center gap-1">
             <NotificationBell />

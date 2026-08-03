@@ -22,8 +22,8 @@ export const metadata: Metadata = {
   description: tr.meta.description,
   manifest: "/manifest.json",
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: "/logo-mark.svg",
+    apple: "/logo-mark.svg",
   },
   openGraph: {
     title: tr.meta.title,
@@ -48,8 +48,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="tr"
       suppressHydrationWarning
     >
-      <body className="font-sans antialiased">
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* eslint-disable-next-line @next/next/no-page-custom-font -- Runtime loading keeps production builds independent from Google Fonts. */}
+        <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,500;0,600;0,700;1,500;1,600&display=swap" rel="stylesheet" />
+      </head>
+      <body className="antialiased">
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <MaintenanceGuard>
             {children}
           </MaintenanceGuard>

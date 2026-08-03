@@ -372,6 +372,7 @@ export interface VerifiedInstrument {
 export interface VerifiedValuationResponse {
   request_id: number;
   success: boolean;
+  calculated_at: string;
   result: {
     engine_version: string;
     settlement_date: string;

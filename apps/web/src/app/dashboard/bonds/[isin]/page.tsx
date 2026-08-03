@@ -8,6 +8,7 @@ import {
   CalendarDays,
   Check,
   ChevronDown,
+  Clock3,
   Database,
   FileJson,
   Info,
@@ -54,6 +55,21 @@ function displayNumber(value: string | null | undefined, digits = 4): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: digits,
   });
+}
+
+function formatCalculationTimestamp(value: string): string {
+  const timestamp = new Date(value);
+  if (Number.isNaN(timestamp.getTime())) return value;
+  return new Intl.DateTimeFormat("tr-TR", {
+    timeZone: "Europe/Istanbul",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(timestamp);
 }
 
 function DetailRow({
@@ -478,6 +494,21 @@ export default function VerifiedInstrumentDetail({
             <span>
               Referans: <strong className="text-foreground">{requiredBenchmark || (requiresCpi ? "TÜFE" : "Sabit oran")}</strong>
             </span>
+            {valuation?.calculated_at && (
+              <span
+                className="inline-flex items-center gap-2 border-l border-border pl-5"
+                title={`Sunucu zamanı: ${valuation.calculated_at} · Hesaplama #${valuation.request_id}`}
+              >
+                <Clock3 className="h-3.5 w-3.5 text-primary" />
+                Hesaplandı:
+                <time
+                  dateTime={valuation.calculated_at}
+                  className="font-mono-data font-semibold text-foreground"
+                >
+                  {formatCalculationTimestamp(valuation.calculated_at)} TSİ
+                </time>
+              </span>
+            )}
             {(calculating || (kapBackfillBlocking && !kapBackfillTimedOut)) && (
               <span className="inline-flex items-center gap-2 text-primary">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />

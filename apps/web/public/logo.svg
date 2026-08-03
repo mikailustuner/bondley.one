@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="200" viewBox="0 0 760 200" role="img" aria-labelledby="title desc">
+  <title id="title">Bondley</title>
+  <desc id="desc">Bondley Curve Ledger logo; a B monogram formed by a ledger spine and yield curves.</desc>
+  <rect width="760" height="200" fill="#020303"/>
+  <g transform="translate(42 34)" fill="none" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M18 10V122" stroke="#E9E8DF" stroke-width="6"/>
+    <path d="M18 13H66C94 13 108 24 108 43C108 62 92 72 61 72H18" stroke="#46F0C0" stroke-width="6"/>
+    <path d="M18 72H72C103 72 118 83 118 102C118 120 103 128 72 128H18" stroke="#46F0C0" stroke-width="6"/>
+    <path d="M6 109C28 91 47 87 65 94C84 102 96 101 112 82" stroke="#020303" stroke-width="15"/>
+    <path d="M6 109C28 91 47 87 65 94C84 102 96 101 112 82" stroke="#E9E8DF" stroke-width="3"/>
+    <circle cx="112" cy="82" r="5" fill="#46F0C0" stroke="none"/>
+  </g>
+  <g transform="translate(206 49)">
+    <text x="0" y="69" fill="#E9E8DF" font-family="Source Serif 4, Georgia, serif" font-size="79" font-weight="500" letter-spacing="-5">bondley</text>
+    <line x1="2" y1="91" x2="454" y2="91" stroke="#E9E8DF" stroke-opacity=".16"/>
+    <text x="4" y="113" fill="#46F0C0" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="600" letter-spacing="2.4">BORÇLANMA ARAÇLARI / AURICT</text>
+    <text x="451" y="113" text-anchor="end" fill="#E9E8DF" fill-opacity=".36" font-family="IBM Plex Mono, monospace" font-size="8" letter-spacing="1.6">01</text>
+  </g>
+</svg>

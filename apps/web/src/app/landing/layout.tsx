@@ -90,7 +90,7 @@ const organizationSchema = {
   "@type": "Organization",
   name: "Bondley",
   url: SITE_URL,
-  logo: `${SITE_URL}/logo.png`,
+  logo: `${SITE_URL}/logo.svg`,
   description: "Türkiye borçlanma araçları değerleme ve analiz platformu",
   foundingDate: "2025",
   inLanguage: "tr-TR",

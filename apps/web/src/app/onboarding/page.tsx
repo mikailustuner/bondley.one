@@ -101,11 +101,12 @@ export default function OnboardingPage() {
 
                 {/* Logo */}
                 <div className="absolute top-12 left-8 sm:left-16 md:left-24 lg:left-32 flex items-center gap-3">
-                    <div className="h-10 w-10 relative">
-                        <Image src="/logo.png" alt="Bondley" fill className="object-contain" />
-                    </div>
-                    <span className="font-display font-semibold text-xl tracking-tight">
-                        Bondley
+                    <span className="bondley-app-logo-tile">
+                        <Image src="/logo-mark.svg" alt="" width={34} height={34} />
+                    </span>
+                    <span className="flex flex-col gap-1">
+                        <span className="font-mono-data font-semibold text-base tracking-[-.07em]">Bondley</span>
+                        <span className="font-mono-data text-[7px] uppercase tracking-[.16em] text-primary">by Aurict</span>
                     </span>
                 </div>
 

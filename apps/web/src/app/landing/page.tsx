@@ -1,40 +1,53 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { UserMenu } from "@/components/user-menu";
-import {
-  UserPlus,
-  Search,
-  BarChart3,
-  List,
-  LineChart,
-  Star,
-  Bell,
-  Calculator,
-  TrendingUp,
-  Shield,
-  RefreshCw,
-  Lock,
-  ArrowRight,
-  ChevronRight,
-  Zap,
-} from "lucide-react";
+import Link from "next/link";
+import { api, type PublicSummary } from "@/lib/api-client";
 import { getUser } from "@/lib/auth";
-import { api, PublicSummary } from "@/lib/api-client";
-import { cn, formatDecimal, formatPercentFromDecimal, formatPercent, formatDate } from "@/lib/utils";
-import { tr } from "@/locales/tr";
 import { APP_VERSION } from "@/lib/constants";
+import { formatDate, formatDecimal, formatPercent } from "@/lib/utils";
+import styles from "./LandingPage.module.css";
+
+const productLayers = [
+  {
+    code: "01",
+    label: "Piyasa evreni",
+    title: "Aradığınız aracı saniyeler içinde daraltın.",
+    detail: "Tahvil, bono, kira sertifikası ve VDMK'ları ISIN, ihraççı, vade, para birimi ve getiri türüne göre tarayın.",
+    metric: "2.100+",
+    metricLabel: "izlenebilir araç",
+  },
+  {
+    code: "02",
+    label: "Değerleme motoru",
+    title: "Sonucu değil, hesabın tamamını görün.",
+    detail: "Temiz ve kirli fiyat, YTM, birikmiş faiz, spread, durasyon ve konveksiteyi açık girdilerle yeniden üretin.",
+    metric: "8",
+    metricLabel: "temel risk ölçüsü",
+  },
+  {
+    code: "03",
+    label: "Operasyon takibi",
+    title: "Yarının işini bugünden hazırlayın.",
+    detail: "Kupon açıklamalarını, yaklaşan vadeleri ve oran hareketlerini favoriler ve koşullu uyarılarla takip edin.",
+    metric: "T+1",
+    metricLabel: "ileri görüş",
+  },
+] as const;
+
+const methods = [
+  ["Kaynak", "Borsa İstanbul", "Piyasa ve TLREF verileri resmî yayın akışından alınır."],
+  ["Zaman", "Günlük güncelleme", "Veri tarihi sonuçla birlikte gösterilir; eski veri sessizce kullanılmaz."],
+  ["Hesap", "Açık varsayımlar", "Girdi, gün sayımı ve formül bağlamı sonuçtan ayrılmaz."],
+  ["Erişim", "Güvenli çalışma", "Hesap, oturum ve yetkiler çok katmanlı kontrollerle korunur."],
+] as const;
 
 export default function LandingPage() {
   const [summary, setSummary] = useState<PublicSummary | null>(null);
+  const [user, setUser] = useState<ReturnType<typeof getUser>>(null);
   const [mounted, setMounted] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [filterDays, setFilterDays] = useState(1); // Default: Yarın (1 gün kalanlar)
-
+  const [filterDays, setFilterDays] = useState(1);
 
   useEffect(() => {
     setMounted(true);
@@ -42,485 +55,241 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
-    api.admin
-      .publicSummary()
-      .then(setSummary)
-      .catch(() => { });
+    api.admin.publicSummary().then(setSummary).catch(() => undefined);
   }, []);
 
+  const filteredBonds = useMemo(
+    () => summary?.upcoming_bonds?.filter((bond) => bond.days_to_coupon === filterDays) ?? [],
+    [filterDays, summary],
+  );
+
+  const primaryHref = mounted && user ? "/dashboard" : "/signup";
+  const primaryLabel = mounted && user ? "Çalışma alanını aç" : "Ücretsiz başlayın";
+  const change = summary?.tlref_index_change_pct;
+  const agendaTitle = filterDays === 0
+    ? "Bugün veri açıklayacaklar"
+    : filterDays === 1
+      ? "Yarın veri açıklayacaklar"
+      : "2 gün sonra açıklayacaklar";
+
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
-      {/* ═══════ Navbar ═══════ */}
-      <nav className="apple-navbar sticky top-0 z-50">
-        <div className="container mx-auto flex h-14 items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <Image
-              src="/logo.png"
-              alt="Bondley Logo"
-              width={28}
-              height={28}
-              className="h-7 w-7 object-contain"
-              priority
-            />
-            <span className="hidden sm:inline font-semibold text-[16px] tracking-tight text-foreground">
-              {tr.common.brand}
-            </span>
+    <div className={styles.site}>
+      <div className={styles.ambient} aria-hidden="true" />
+
+      <header className={styles.header}>
+        <div className={styles.headerInner}>
+          <Link className={styles.logoLockup} href="/landing" aria-label="Bondley ana sayfa">
+            <span className={styles.logoFrame}><Image src="/logo-mark.svg" alt="" width={38} height={38} priority /></span>
+            <span className={styles.wordmark}>bondley</span>
+            <span className={styles.maker}>crafted by <b>Aurict</b></span>
           </Link>
-          <div className="flex items-center gap-2 sm:gap-3">
-            {mounted && user ? (
-              <>
-                <Link
-                  href="/dashboard"
-                  className="text-[14px] text-muted-foreground hover:text-primary transition-colors font-medium"
-                >
-                  {tr.landing.nav.dashboard}
-                </Link>
-                <ThemeToggle />
-                <UserMenu />
-              </>
-            ) : (
-              <>
-                <ThemeToggle />
-                <Link href="/login">
-                  <Button variant="ghost" size="sm" className="text-[14px]">
-                    {tr.landing.nav.login}
-                  </Button>
-                </Link>
-                <Link href="/signup">
-                  <Button size="sm" className="text-[14px]">
-                    {tr.landing.nav.signup}
-                  </Button>
-                </Link>
-              </>
-            )}
+
+          <nav className={styles.nav} aria-label="Ana menü">
+            <a href="#platform">Platform</a>
+            <a href="#calendar">Piyasa takvimi</a>
+            <a href="#method">Metodoloji</a>
+            <Link href="/hakkimizda">Hakkımızda</Link>
+          </nav>
+
+          <div className={styles.headerActions}>
+            {!user && <Link className={styles.signIn} href="/login">Giriş yap</Link>}
+            <Link className={styles.headerCta} href={primaryHref}>{mounted && user ? "Panele git" : "Ücretsiz başla"}<span>↗</span></Link>
           </div>
         </div>
-      </nav>
+      </header>
 
-      {/* ═══════ Hero — full-width, Apple keynote style ═══════ */}
-      <section className="relative pt-[clamp(4rem,12vh,7rem)] pb-[clamp(3rem,8vh,5rem)] overflow-hidden">
-        {/* Subtle background gradient */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] rounded-full bg-primary/[0.04] blur-[120px]" />
-        </div>
+      <main>
+        <section className={styles.hero}>
+          <svg className={styles.heroCurve} viewBox="0 0 1380 1120" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M-80 870 C180 830 225 520 475 610 S760 940 930 555 S1190 180 1460 250" />
+          </svg>
+          <div className={styles.heroCoordinate}>41.0082° N · 28.9784° E</div>
 
-        <div className="container mx-auto text-center relative z-10">
-          <div className="animate-fade-up">
-            <div className="inline-flex items-center gap-2.5 rounded-full border border-primary/15 bg-primary/5 px-5 py-2 mb-10">
-              <span className="h-1.5 w-1.5 rounded-full bg-positive live-indicator" />
-              <span className="text-[13px] font-medium text-primary">
-                {tr.landing.hero.badge}
-              </span>
-              <ChevronRight className="h-3.5 w-3.5 text-primary/50" />
+          <div className={styles.heroCopy}>
+            <div className={styles.eyebrow}><i /> Türkiye sabit getirili menkul kıymetler platformu</div>
+            <h1>
+              <span>Piyasanın</span>
+              <span className={styles.heroIndent}>gürültüsünü değil,</span>
+              <span className={styles.heroEditorial}>tahvilin gerçeğini</span>
+              <span className={styles.heroOutline}>görün.</span>
+            </h1>
+            <p className={styles.heroLead}>Veriyi bulun, değerlemeyi kontrol edin ve bir sonraki piyasa hareketine hazırlanırken hiçbir varsayımı karanlıkta bırakmayın.</p>
+            <div className={styles.heroActions}>
+              <Link className={styles.primaryButton} href={primaryHref}>{primaryLabel}<span>→</span></Link>
+              <a className={styles.textButton} href="#platform">Platformu keşfedin <span>↓</span></a>
+            </div>
+            <div className={styles.heroProof}>
+              <div><strong>BIST</strong><span>doğrulanmış kaynak</span></div>
+              <div><strong>2019—26</strong><span>TLREF tarihçesi</span></div>
+              <div><strong>7/24</strong><span>erişilebilir analiz</span></div>
             </div>
           </div>
 
-          <h1 className="text-[clamp(2.5rem,8vw,5.5rem)] font-extrabold leading-[1.1] md:leading-[1.02] text-foreground tracking-tight max-w-6xl mx-auto animate-fade-up">
-            {tr.landing.hero.titleLine1}
-            <br />
-            <span className="text-primary">{tr.landing.hero.titleLine2}</span>
-          </h1>
+          <aside className={styles.heroAgenda} id="calendar">
+            <span className={styles.agendaIndex}>01</span>
+            <div className={styles.heroAgendaHead}>
+              <div><span>YAKLAŞAN VERİ AKIŞI</span><i /></div>
+              <small>{filteredBonds.length} araç</small>
+            </div>
+            <h2>{agendaTitle}</h2>
+            <p>Kupon oranı ve ödeme verisi yaklaşan araçları piyasa açılmadan önce görün.</p>
 
-          <p className="text-[clamp(1rem,2vw,1.25rem)] leading-relaxed text-muted-foreground max-w-4xl mx-auto mt-8 animate-fade-up-delay-1">
-            {tr.landing.hero.description}
-          </p>
+            <div className={styles.filterGroup} role="group" aria-label="Gün filtresi">
+              {[[0, "Bugün"], [1, "Yarın"], [2, "2 gün sonra"]].map(([day, label]) => (
+                <button key={day} type="button" aria-pressed={filterDays === day} onClick={() => setFilterDays(Number(day))}>
+                  <span>0{Number(day) + 1}</span>{label}
+                </button>
+              ))}
+            </div>
 
-          <div className="flex items-center justify-center gap-4 mt-10 animate-fade-up-delay-2">
-            <Link href={user ? "/dashboard" : "/signup"}>
-              <Button size="lg" className="px-8 text-[17px] h-14 rounded-2xl shadow-md hover:shadow-lg">
-                {user ? tr.landing.nav.dashboard : tr.landing.hero.ctaStart}
-                <ArrowRight className="h-5 w-5 ml-1" />
-              </Button>
-            </Link>
-            {!user && (
-              <Link href="/login">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="px-8 text-[17px] h-14 rounded-2xl"
-                >
-                  {tr.landing.hero.ctaLogin}
-                </Button>
-              </Link>
-            )}
+            <div className={styles.calendarRows}>
+              {filteredBonds.length > 0 ? filteredBonds.slice(0, 3).map((bond, index) => (
+                <Link href={user ? `/dashboard/bonds/${bond.isin_code}` : "/signup"} key={bond.isin_code}>
+                  <span className={styles.rowIndex}>{String(index + 1).padStart(2, "0")}</span>
+                  <div><strong>{bond.isin_code}</strong><small>{bond.issuer || "İhraççı bilgisi bekleniyor"}</small></div>
+                  <time><small>KUPON TARİHİ</small>{formatDate(bond.next_coupon_date)}</time>
+                  <i>↗</i>
+                </Link>
+              )) : (
+                <div className={styles.emptyCalendar}><i /><strong>Bu aralık sakin görünüyor.</strong><span>Açıklanacak araç bulunamadı.</span></div>
+              )}
+            </div>
+            <div className={styles.calendarFoot}><span>BIST kaynaklı</span><span>{formatDate(summary?.tlref_date)}</span></div>
+          </aside>
+
+          <div className={styles.marketConsole} aria-label="Bondley piyasa görünümü">
+            <span className={styles.consoleIndex}>02 / LIVE MARKET</span>
+            <div className={styles.consoleTopbar}>
+              <div><i /><span>BONDLEY MARKET PULSE</span></div>
+              <time>{formatDate(summary?.tlref_date)}</time>
+            </div>
+
+            <div className={styles.consoleHeroMetric}>
+              <div>
+                <span>TLREF ENDEKS</span>
+                <strong>{formatDecimal(summary?.tlref_index, 2)}</strong>
+                <small data-negative={change != null && change < 0}>
+                  {change == null ? "veri bekleniyor" : `${change >= 0 ? "▲" : "▼"} ${formatDecimal(Math.abs(change), 4, 4)}% günlük`}
+                </small>
+              </div>
+              <div className={styles.rateMetric}>
+                <span>YILLIK ORAN</span>
+                <strong>{formatPercent(summary?.tlref_published_annual_rate_pct)}</strong>
+              </div>
+            </div>
+
+            <div className={styles.curveChart}>
+              <div className={styles.chartHeader}><span>PİYASA VADE EĞRİSİ</span><small>ürün görünümü</small></div>
+              <svg viewBox="0 0 680 210" role="img" aria-label="Temsilî piyasa vade eğrisi">
+                <defs>
+                  <linearGradient id="bondleyArea" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stopColor="#28e0c3" stopOpacity=".32" />
+                    <stop offset="1" stopColor="#28e0c3" stopOpacity="0" />
+                  </linearGradient>
+                  <linearGradient id="bondleyLine" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0" stopColor="#22c7d9" />
+                    <stop offset="1" stopColor="#3af0bd" />
+                  </linearGradient>
+                </defs>
+                <g className={styles.chartGrid}>
+                  <path d="M20 35H660M20 85H660M20 135H660M20 185H660" />
+                  <path d="M95 20V190M230 20V190M365 20V190M500 20V190M635 20V190" />
+                </g>
+                <path className={styles.chartArea} d="M20 159 C80 151,112 115,170 122 S260 158,320 125 S400 65,470 79 S565 111,660 45 L660 190 L20 190 Z" />
+                <path className={styles.chartLine} d="M20 159 C80 151,112 115,170 122 S260 158,320 125 S400 65,470 79 S565 111,660 45" />
+                <g className={styles.chartDots}><circle cx="170" cy="122" r="5" /><circle cx="320" cy="125" r="5" /><circle cx="470" cy="79" r="5" /><circle cx="660" cy="45" r="5" /></g>
+              </svg>
+              <div className={styles.chartLabels}><span>1A</span><span>3A</span><span>1Y</span><span>3Y</span><span>5Y+</span></div>
+            </div>
+
+            <div className={styles.consoleFooter}>
+              <div><span>AKTİF ARAÇ</span><strong>{formatDecimal(summary?.total_bonds, 0)}</strong></div>
+              <div><span>TLREF KAYIT</span><strong>{formatDecimal(summary?.total_tlref_records, 0)}</strong></div>
+              <div><span>VERİ DURUMU</span><strong className={styles.online}><i /> GÜNCEL</strong></div>
+            </div>
+          </div>
+        </section>
+
+        <div className={styles.ticker} aria-label="Piyasa kapsamı">
+          <div className={styles.tickerInner}>
+            <span className={styles.tickerLabel}>BONDLEY EVRENİ</span>
+            {["DİBS", "Özel sektör tahvilleri", "Finansman bonoları", "Kira sertifikaları", "VDMK", "TLREF"].map((item) => <span key={item}>{item}<i /></span>)}
+          </div>
+        </div>
+
+        <section className={styles.platform} id="platform">
+          <div className={styles.platformCurve} aria-hidden="true" />
+          <div className={styles.sectionHeading}>
+            <div><span>01 / PLATFORM</span><i /></div>
+            <div><h2>Finansal kararın üç katmanı.<br /><em>Tek bir çalışma alanı.</em></h2><p>Bondley, piyasa verisini bir dashboard süsü olarak değil; keşif, hesap ve operasyon arasında çalışan bir karar altyapısı olarak ele alır.</p></div>
           </div>
 
-          {/* ═══════ Veri Açıklanması Yaklaşanlar (Filtreleme Sistemi) ═══════ */}
-          {summary?.upcoming_bonds && summary.upcoming_bonds.length > 0 && (
-            <div className="mt-16 md:mt-20 animate-fade-up-delay-3 max-w-5xl mx-auto px-4 md:px-0">
-              <div className="flex items-center justify-center gap-3 mb-8">
-                <div className="h-px w-12 bg-primary/20" />
-                <span className="text-[13px] font-semibold text-primary uppercase tracking-[0.2em]">
-                  {filterDays === 0
-                    ? tr.landing.upcoming.titleToday
-                    : filterDays === 1
-                      ? tr.landing.upcoming.titleTomorrow
-                      : tr.landing.upcoming.titleDayAfter}
-                </span>
-                <div className="h-px w-12 bg-primary/20" />
-              </div>
+          <div className={styles.layerGrid}>
+            {productLayers.map((layer, index) => (
+              <article key={layer.code} className={styles.layerCard} data-layer={index}>
+                <div className={styles.layerTop}><span>{layer.code}</span><small>{layer.label}</small></div>
+                <h3>{layer.title}</h3>
+                <p>{layer.detail}</p>
+                <div className={styles.layerMetric}><strong>{layer.metric}</strong><span>{layer.metricLabel}</span></div>
+              </article>
+            ))}
+          </div>
 
-              {/* Day Filter Segmented Control */}
-              <div className="flex items-center justify-center mb-10">
-                <div className="inline-flex items-center gap-1 p-1 rounded-2xl bg-secondary/50 border border-border/50 backdrop-blur-sm">
-                  {[
-                    { val: 0, label: tr.landing.upcoming.filterToday },
-                    { val: 1, label: tr.landing.upcoming.filterTomorrow },
-                    { val: 2, label: tr.landing.upcoming.filterDayAfter },
-                  ].map((d) => (
-                    <button
-                      key={d.val}
-                      onClick={() => setFilterDays(d.val)}
-                      className={cn(
-                        "px-6 py-2 rounded-xl text-[14px] font-medium transition-all duration-300",
-                        filterDays === d.val
-                          ? "bg-background text-primary shadow-sm border border-border/40"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {d.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-wrap justify-center gap-3">
-                {summary.upcoming_bonds
-                  .filter(b => b.days_to_coupon === filterDays)
-                  .map((b) => (
-                    <Link
-                      key={b.isin_code}
-                      href={user ? `/dashboard/bonds/${b.isin_code}` : "/signup"}
-                      className="group relative flex flex-col items-start p-5 rounded-2xl bg-card border border-border/50 hover:border-primary/40 hover:shadow-md transition-all duration-300 w-full sm:w-[240px] text-left"
-                    >
-                      <div className="absolute top-4 right-4 h-2 w-2 rounded-full bg-positive animate-pulse" />
-                      <span className="font-mono-data font-bold text-[16px] text-foreground mb-1">
-                        {b.isin_code}
-                      </span>
-                      <span className="text-[13px] text-muted-foreground line-clamp-1 mb-3">
-                        {b.issuer || "—"}
-                      </span>
-                      <div className="flex items-center text-[12px] font-medium text-primary group-hover:translate-x-1 transition-transform">
-                        {tr.landing.upcoming.seeMore} <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
-                      </div>
-                    </Link>
-                  ))}
-
-                {summary.upcoming_bonds.filter(b => b.days_to_coupon === filterDays).length === 0 && (
-                  <div className="py-12 text-center w-full">
-                    <p className="text-muted-foreground text-[15px]">
-                      Bu gün için beklenen veri açıklaması bulunmuyor.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-
-
-      {/* ═══════ Live Data Ticker — Apple product spec style ═══════ */}
-      <section className="container mx-auto pb-24">
-        <div className="animate-fade-up-delay-3">
-          <div className="rounded-3xl border border-border bg-card shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
-            <div className="px-8 py-5 border-b border-border/50 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="h-2 w-2 rounded-full bg-positive live-indicator" />
-                <span className="text-[15px] font-semibold text-foreground">
-                  {tr.landing.ticker.title}
-                </span>
-              </div>
-              <span className="text-[13px] text-muted-foreground">
-                {summary?.tlref_date ? formatDate(summary.tlref_date) : "—"}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
-              {[
-                {
-                  label: tr.landing.ticker.labels.tlrefIndex,
-                  value: formatDecimal(summary?.tlref_index, 2),
-                  highlight: true,
-                  large: true,
-                },
-                ...(summary?.tlref_index_change_pct != null
-                  ? [
-                    {
-                      label: tr.landing.ticker.labels.comparedToYesterday,
-                      value: `${summary!.tlref_index_change_pct >= 0 ? "+" : ""}${formatDecimal(
-                        summary!.tlref_index_change_pct,
-                        4,
-                        4
-                      )}%`,
-                      positive: summary!.tlref_index_change_pct >= 0,
-                    },
-                  ]
-                  : [{ label: tr.landing.ticker.labels.comparedToYesterday, value: "—" }]),
-                {
-                  label: tr.landing.ticker.labels.dailyRate,
-                  value: formatPercent(summary?.tlref_published_annual_rate_pct),
-                  positive: true,
-                },
-                {
-                  label: tr.landing.ticker.labels.annualizedRate,
-                  value:
-                    summary?.tlref_published_annual_rate_pct != null
-                      ? "BIST yayımlanan yıllık oran"
-                      : "—",
-                },
-                {
-                  label: tr.landing.ticker.labels.totalBonds,
-                  value: formatDecimal(summary?.total_bonds, 0),
-                },
-                {
-                  label: tr.landing.ticker.labels.totalRecords,
-                  value: formatDecimal(summary?.total_tlref_records, 0),
-                },
-                { label: tr.landing.ticker.labels.lastDate, value: formatDate(summary?.tlref_date) },
-              ].map((item, i) => (
-                <div
-                  key={i}
-                  className="flex flex-col justify-center px-6 py-6 border-b md:border-b-0 md:border-r border-border/30 last:border-0"
-                >
-                  <span className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider mb-1.5">
-                    {item.label}
-                  </span>
-                  <span
-                    className={`font-mono-data ${(item as any).large
-                      ? "text-[clamp(1.5rem,4vw,1.75rem)] font-bold leading-none"
-                      : "text-[clamp(0.9375rem,2vw,1.125rem)] font-semibold leading-tight"
-                      } ${(item as any).highlight
-                        ? "text-primary"
-                        : (item as any).positive
-                          ? "text-positive"
-                          : "text-foreground"
-                      }`}
-                  >
-                    {item.value}
-                  </span>
-                </div>
+          <div className={styles.analysisStrip}>
+            <div className={styles.analysisLead}><span>ANALİZ SETİ</span><h3>Bir tahvil ekranından beklediğiniz her şey, aynı hesap bağlamında.</h3></div>
+            <div className={styles.analysisItems}>
+              {["YTM", "Kirli fiyat", "Birikmiş faiz", "Spread", "Macaulay", "Mod. durasyon", "Konveksite", "Senaryo"].map((item, index) => (
+                <div key={item}><span>{String(index + 1).padStart(2, "0")}</span><strong>{item}</strong></div>
               ))}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ═══════ How it Works — 3 steps, expansive ═══════ */}
-      <section className="py-[clamp(4rem,12vh,7rem)] bg-secondary/30">
-        <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <span className="text-[13px] font-medium text-primary uppercase tracking-wider">
-              {tr.landing.howItWorks.badge}
-            </span>
-            <h2 className="text-display-lg text-foreground mt-3 tracking-tight">
-              {tr.landing.howItWorks.title}
-            </h2>
+        <section className={styles.methodSection} id="method">
+          <div className={styles.sectionHeading}>
+            <div><span>02 / GÜVEN</span><i /></div>
+            <div><h2>Güven bir rozet değil.<br /><em>Ürünün çalışma biçimi.</em></h2><p>Bondley’de her veri noktası ve her hesap, karar verirken ihtiyaç duyduğunuz izlenebilir bağlamla birlikte yaşar.</p></div>
           </div>
-          <div className="grid md:grid-cols-3 gap-8 lg:gap-14">
-            {[
-              { step: "01", icon: UserPlus },
-              { step: "02", icon: Search },
-              { step: "03", icon: BarChart3 },
-            ].map((item, i) => (
-              <div
-                key={item.step}
-                className="group relative bg-card rounded-3xl border border-border p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all duration-300"
-              >
-                <span className="text-[4rem] font-bold text-border/70 leading-none absolute top-6 right-8 select-none pointer-events-none">
-                  {item.step}
-                </span>
-                <div className="relative z-10">
-                  <div className="rounded-2xl bg-primary/8 w-14 h-14 flex items-center justify-center mb-6">
-                    <item.icon className="h-6 w-6 text-primary" />
-                  </div>
-                  <h3 className="font-semibold text-[20px] text-foreground mb-3 tracking-tight">
-                    {tr.landing.howItWorks.steps[i].title}
-                  </h3>
-                  <p className="text-[15px] text-muted-foreground leading-relaxed">
-                    {tr.landing.howItWorks.steps[i].desc}
-                  </p>
-                </div>
-              </div>
+
+          <div className={styles.methodGrid}>
+            {methods.map(([label, title, detail], index) => (
+              <article key={label}>
+                <div><span>{String(index + 1).padStart(2, "0")}</span><small>{label}</small></div>
+                <h3>{title}</h3><p>{detail}</p>
+              </article>
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* ═══════ Stats Callout — Apple number band ═══════ */}
-      <section className="py-[clamp(4rem,12vh,7rem)]">
-        <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <span className="text-[13px] font-medium text-primary uppercase tracking-wider">
-              {tr.landing.stats.badge}
-            </span>
-            <h2 className="text-display-lg text-foreground mt-3 tracking-tight">
-              {tr.landing.stats.title}
-            </h2>
+          <div className={styles.methodSignature}>
+            <div><span className={styles.logoFrame}><Image src="/logo-mark.svg" alt="" width={48} height={48} /></span><span><b>Bondley standardı</b>Kaynağı görünür, hesabı tekrar üretilebilir.</span></div>
+            <code>source → normalize → calculate → verify → monitor</code>
           </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              { label: "bonds", number: "2.100+", icon: TrendingUp },
-              { label: "tlref", number: "1.700+", icon: LineChart },
-              { label: "update", number: "Her Gün", icon: RefreshCw },
-            ].map((item, i) => (
-              <div
-                key={item.label}
-                className="bg-card rounded-3xl border border-border p-10 shadow-[0_1px_3px_rgba(0,0,0,0.04)] text-center hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-shadow"
-              >
-                <div className="rounded-2xl bg-primary/8 w-14 h-14 flex items-center justify-center mx-auto mb-6">
-                  <item.icon className="h-6 w-6 text-primary" />
-                </div>
-                <div className="font-mono-data text-[2.5rem] font-bold text-primary leading-none mb-3 tracking-tight">
-                  {item.number}
-                </div>
-                <div className="text-[15px] font-semibold text-foreground mb-3">
-                  {tr.landing.stats.items[i].label}
-                </div>
-                <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs mx-auto">
-                  {tr.landing.stats.items[i].desc}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ═══════ Features Grid — Apple icon grid ═══════ */}
-      <section className="py-[clamp(4rem,12vh,7rem)] bg-secondary/30">
-        <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <span className="text-[13px] font-medium text-primary uppercase tracking-wider">
-              {tr.landing.features.badge}
-            </span>
-            <h2 className="text-display-lg text-foreground mt-3 tracking-tight">
-              {tr.landing.features.title}
-            </h2>
-            <p className="text-[17px] text-muted-foreground mt-4 max-w-xl mx-auto">
-              {tr.landing.features.description}
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { title: "bonds", icon: List },
-              { title: "tlref", icon: LineChart },
-              { title: "favorites", icon: Star },
-              { title: "alerts", icon: Bell },
-              { title: "yield", icon: Calculator },
-              { title: "market", icon: Shield },
-            ].map((item, i) => (
-              <div
-                key={item.title}
-                className="group rounded-3xl border border-border bg-card p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_88px_24px_rgba(0,0,0,0.08)] transition-all duration-300"
-              >
-                <div className="rounded-2xl bg-primary/8 w-12 h-12 flex items-center justify-center mb-5 group-hover:bg-primary/12 transition-colors">
-                  <item.icon className="h-5 w-5 text-primary" />
-                </div>
-                <h3 className="font-semibold text-[17px] text-foreground mb-2 tracking-tight">
-                  {tr.landing.features.items[i].title}
-                </h3>
-                <p className="text-[15px] text-muted-foreground leading-relaxed">
-                  {tr.landing.features.items[i].desc}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+        <section className={styles.ctaSection}>
+          <div className={styles.ctaGlow} />
+          <span>BONDLEY İLE BAŞLAYIN</span>
+          <h2>Piyasa hareket etmeden<br /><em>siz hazır olun.</em></h2>
+          <p>Türkiye borçlanma araçları piyasasını tek, doğrulanabilir çalışma alanından takip edin.</p>
+          <div><Link href={primaryHref}>{primaryLabel}<span>→</span></Link><Link href="/hakkimizda">Bondley'i tanıyın</Link></div>
+        </section>
+      </main>
 
-      {/* ═══════ CTA Banner ═══════ */}
-      <section className="py-[clamp(4rem,12vh,7rem)]">
-        <div className="container mx-auto">
-          <div className="rounded-3xl bg-primary/[0.04] border border-primary/10 p-16 text-center relative overflow-hidden">
-            {/* Subtle glow */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full bg-primary/[0.06] blur-[100px] pointer-events-none" />
-            <div className="relative z-10">
-              <Zap className="h-10 w-10 text-primary mx-auto mb-6" />
-              <h2 className="text-display-lg md:text-[2.75rem] text-foreground tracking-tight mb-4">
-                {tr.landing.cta.title}
-              </h2>
-              <p className="text-[17px] text-muted-foreground max-w-lg mx-auto mb-10">
-                {tr.landing.cta.description}
-              </p>
-              <div className="flex items-center justify-center gap-4">
-                <Link href={user ? "/dashboard" : "/signup"}>
-                  <Button size="lg" className="px-8 text-[17px] h-14 rounded-2xl shadow-md">
-                    {user ? tr.landing.nav.dashboard : tr.landing.cta.button}
-                    <ArrowRight className="h-5 w-5 ml-1" />
-                  </Button>
-                </Link>
-              </div>
-            </div>
+      <footer className={styles.footer}>
+        <div className={styles.footerMain}>
+          <div className={styles.footerBrand}>
+            <div><span className={styles.logoFrame}><Image src="/logo-mark.svg" alt="" width={36} height={36} /></span><strong>bondley</strong></div>
+            <p>Türkiye sabit getirili menkul kıymetler piyasası için veri, değerleme ve takip platformu.</p>
+            <span>an Aurict product</span>
+          </div>
+          <div className={styles.footerLinks}>
+            <div><h3>Platform</h3><Link href="/dashboard/bonds">Araçlar</Link><Link href="/dashboard/analytics">Analiz</Link><Link href="/dashboard/alerts">Uyarılar</Link></div>
+            <div><h3>Bilgi</h3><Link href="/tahvil">Tahvil rehberi</Link><Link href="/sozluk">Sözlük</Link><Link href="/sss">SSS</Link></div>
+            <div><h3>Bondley</h3><Link href="/hakkimizda">Hakkımızda</Link><Link href="/iletisim">İletişim</Link></div>
+            <div><h3>Yasal</h3><Link href="/gizlilik">Gizlilik</Link><Link href="/kullanim-sartlari">Kullanım şartları</Link></div>
           </div>
         </div>
-      </section>
-
-      {/* ═══════ Trust Bar ═══════ */}
-      <section className="container mx-auto pb-20">
-        <div className="flex flex-wrap justify-center gap-x-16 gap-y-6">
-          {[
-            { icon: Shield, text: tr.landing.trust[0] },
-            { icon: RefreshCw, text: tr.landing.trust[1] },
-            { icon: Lock, text: tr.landing.trust[2] },
-          ].map((item) => (
-            <div key={item.text} className="flex items-center gap-3">
-              <item.icon className="h-5 w-5 text-primary/70 shrink-0" />
-              <span className="text-[15px] text-muted-foreground">
-                {item.text}
-              </span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ═══════ Footer ═══════ */}
-      <footer className="border-t border-border/50">
-        <div className="container mx-auto py-10">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-2.5">
-              <Image
-                src="/logo.png"
-                alt="Bondley"
-                width={20}
-                height={20}
-                className="h-5 w-5 object-contain opacity-60"
-              />
-              <span className="text-[13px] text-muted-foreground">
-                &copy; 2026 Bondley
-              </span>
-              <span className="text-[11px] text-muted-foreground/30 font-mono-data">v{APP_VERSION}</span>
-            </div>
-            <div className="flex items-center gap-8 text-[13px] text-muted-foreground">
-              <Link
-                href="/hakkimizda"
-                className="hover:text-primary transition-colors"
-              >
-                {tr.landing.footer.about}
-              </Link>
-              <Link
-                href="/gizlilik"
-                className="hover:text-primary transition-colors"
-              >
-                {tr.landing.footer.privacy}
-              </Link>
-              <Link
-                href="/kullanim-sartlari"
-                className="hover:text-primary transition-colors"
-              >
-                {tr.landing.footer.terms}
-              </Link>
-              <Link
-                href="/iletisim"
-                className="hover:text-primary transition-colors"
-              >
-                {tr.landing.footer.contact}
-              </Link>
-            </div>
-            <span className="text-[13px] text-muted-foreground/50">
-              {tr.landing.footer.location}
-            </span>
-          </div>
-        </div>
+        <div className={styles.footerBottom}><span>© 2026 Bondley · v{APP_VERSION}</span><span>İstanbul, Türkiye</span></div>
       </footer>
     </div>
   );

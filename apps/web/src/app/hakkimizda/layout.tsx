@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PublicShell } from "@/components/public/PublicShell";
 
 export const metadata: Metadata = {
   title: "Hakkımızda",
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function HakkimizdaLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return <PublicShell>{children}</PublicShell>;
 }

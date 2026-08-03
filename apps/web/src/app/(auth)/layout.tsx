@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Giriş Yap",
@@ -8,5 +9,11 @@ export const metadata: Metadata = {
 };
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return (
+    <div className="bondley-auth-shell">
+      <Link href="/landing" className="bondley-auth-brand">BONDLEY <span>× AURICT</span></Link>
+      <span className="bondley-auth-index">SECURE ACCESS / 01</span>
+      {children}
+    </div>
+  );
 }

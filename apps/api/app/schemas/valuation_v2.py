@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Literal
 
@@ -32,6 +32,7 @@ class ValuationCreate(BaseModel):
 class ValuationResponse(BaseModel):
     request_id: int
     success: bool
+    calculated_at: datetime
     result: dict[str, Any] | None = None
     failure: dict[str, Any] | None = None
 

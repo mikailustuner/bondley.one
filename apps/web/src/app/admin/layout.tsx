@@ -16,15 +16,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="container mx-auto flex h-12 items-center justify-between">
             <div className="flex items-center gap-6">
               <Link href="/admin" className="flex items-center gap-2.5">
-                <Image
-                  src="/logo.png"
-                  alt={`${tr.common.brand} Logo`}
-                  width={24}
-                  height={24}
-                  className="h-6 w-6 object-contain"
-                  priority
-                />
-                <span className="font-semibold text-[14px] tracking-tight">{tr.common.brand}</span>
+                <span className="bondley-app-logo-tile">
+                  <Image src="/logo-mark.svg" alt="" width={34} height={34} priority />
+                </span>
+                <span className="font-mono-data font-semibold text-[14px] tracking-[-.06em]">{tr.common.brand}</span>
+                <span className="hidden font-mono-data text-[7px] uppercase tracking-[.16em] text-primary sm:inline">by Aurict</span>
                 <Badge className="ml-1">ADMIN</Badge>
               </Link>
 

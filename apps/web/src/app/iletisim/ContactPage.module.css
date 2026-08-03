@@ -1,0 +1,20 @@
+.page { width: min(100% - 40px, 1380px); margin: 0 auto; }
+.hero { position: relative; min-height: 650px; padding: 100px 0; border-bottom: 1px solid rgba(233,232,223,.16); }
+.code, .kicker, .side, .meta span, .note > span { font: 600 9px/1.6 "IBM Plex Mono", monospace; letter-spacing: .18em; color: rgba(233,232,223,.36); }
+.code { position: absolute; right: 0; top: 38px; text-align: right; }
+.kicker { margin-left: 11%; color: #46f0c0; }
+.hero h1 { position: relative; z-index: 1; margin: 55px 0 0 4%; font: 500 clamp(5rem,12vw,12rem)/.76 "Source Serif 4",serif; letter-spacing: -.08em; }
+.hero h1 em { margin-left: 13%; color: #46f0c0; font-weight: 500; white-space: nowrap; }
+.lead { position: absolute; right: 7%; bottom: 70px; width: 270px; color: rgba(233,232,223,.55); font: 400 15px/1.6 "IBM Plex Mono",monospace; }
+.line { position: absolute; left: 46%; top: 0; bottom: -80px; border-left: 1px solid rgba(70,240,192,.18); transform: rotate(19deg); }
+.channels { display: grid; grid-template-columns: .55fr 2fr .8fr; gap: 6vw; align-items: start; padding: 140px 0; }
+.mail { color: #e9e8df; font: 500 clamp(3.2rem,7vw,7.4rem)/.85 "Source Serif 4",serif; letter-spacing: -.065em; }
+.mail span { color: #46f0c0; }
+.mail b { display: inline-block; font: 400 2rem/1 "IBM Plex Mono",monospace; }
+.meta { display: grid; gap: 12px; padding-top: 14px; border-top: 1px solid #46f0c0; }
+.meta strong { margin-bottom: 20px; color: rgba(233,232,223,.72); font: 500 12px/1.5 "IBM Plex Mono",monospace; }
+.note { width: 62%; margin: 20px 0 120px 25%; padding: 38px; border: 1px solid rgba(233,232,223,.16); border-left: 5px solid #46f0c0; }
+.note p { margin: 25px 0 34px; font: 400 clamp(1.4rem,3vw,2.4rem)/1.15 "Source Serif 4",serif; }
+.note a { color: #46f0c0; font: 600 10px/1 "IBM Plex Mono",monospace; text-transform: uppercase; letter-spacing: .12em; }
+@media (max-width: 800px) { .hero h1 { margin-left:0; } .hero h1 em { margin-left:0; white-space:normal; } .channels { grid-template-columns:1fr; } .note { width:90%; margin-left:10%; } }
+@media (max-width: 580px) { .page { width:min(100% - 28px,1380px); } .hero { min-height:560px; } .hero h1 { font-size:20vw; } .lead { right:0; width:75%; } .channels { padding:90px 0; } .mail { font-size:13vw; } .note { width:100%; margin:0 0 80px; } }

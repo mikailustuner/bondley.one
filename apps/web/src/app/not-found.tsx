@@ -11,7 +11,7 @@ export default function NotFound() {
         <CardContent className="pt-12 pb-8">
           <div className="inline-flex h-16 w-16 items-center justify-center mb-6">
             <Image
-              src="/logo.png"
+              src="/logo-mark.svg"
               alt="Bondley Logo"
               width={64}
               height={64}

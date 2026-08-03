@@ -1,0 +1,83 @@
+.page { width: min(100% - 40px, 1380px); margin: 0 auto; }
+.hero { position: relative; padding: 118px 0 0; border-bottom: 1px solid rgba(233,232,223,.16); }
+.index, .kicker, .coordinate, .sectionNo, .principles article > span, .aurictEyebrow, .cta > span, .introLabel { font: 600 9px/1.55 "IBM Plex Mono", monospace; letter-spacing: .18em; color: rgba(233,232,223,.38); }
+.index { position: absolute; top: 40px; right: 0; text-align: right; }
+.kicker { margin-left: 24%; color: #46f0c0; }
+.hero h1 { position: relative; z-index: 2; width: 92%; margin: 55px 0 0 3%; font: 500 clamp(4.5rem, 9.3vw, 9.2rem)/.8 "Source Serif 4", serif; letter-spacing: -.075em; }
+.hero h1 em { display: inline-block; margin-left: 18%; color: #46f0c0; font-weight: 500; white-space: nowrap; }
+.coordinate { position: absolute; left: 0; top: 58%; }
+.orbit { position: absolute; left: 55%; top: 245px; width: 250px; height: 250px; border: 1px solid rgba(70,240,192,.26); border-radius: 50%; }
+.orbit::after { content: ""; position: absolute; left: 50%; top: -100px; height: 450px; border-left: 1px solid rgba(233,232,223,.09); transform: rotate(28deg); }
+.orbit span { position: absolute; inset: 50% auto auto 50%; color: rgba(70,240,192,.12); font: 500 11rem/1 "IBM Plex Mono", monospace; transform: translate(-50%,-50%); }
+.orbit i { position: absolute; right: 20px; top: 39px; width: 8px; height: 8px; border-radius: 50%; background: #46f0c0; box-shadow: 0 0 22px #46f0c0; }
+.heroIntro { position: relative; z-index: 3; display: grid; grid-template-columns: .65fr 1.7fr 1fr; gap: 5vw; align-items: start; margin: 115px 0 0 14%; padding: 32px 0 42px; border-top: 1px solid rgba(233,232,223,.16); background: #020303; }
+.introLabel { color: #46f0c0; }
+.lead { max-width: 690px; font: 400 clamp(1.35rem,2.35vw,2.25rem)/1.25 "Source Serif 4", serif; letter-spacing: -.025em; color: rgba(233,232,223,.76); }
+.audiences { display: grid; gap: 9px; color: rgba(233,232,223,.43); font: 500 9px/1.5 "IBM Plex Mono",monospace; letter-spacing: .08em; text-transform: uppercase; }
+.audiences span { padding-bottom: 8px; border-bottom: 1px solid rgba(233,232,223,.1); }
+
+.workflow { display: grid; grid-template-columns: .6fr 2.4fr; gap: 7vw; padding: 145px 0 155px; align-items: start; }
+.workflowMain h2 { font: 500 clamp(3rem,6.6vw,7rem)/.88 "Source Serif 4",serif; letter-spacing: -.065em; }
+.workflowMain h2 em { color:#46f0c0; font-weight:500; }
+.workflowMain > p { width: 58%; margin: 45px 0 0 31%; color:rgba(233,232,223,.58); font:400 13px/1.75 "IBM Plex Mono",monospace; }
+.workflowSteps { grid-column: 2; display:grid; grid-template-columns:repeat(3,1fr); gap:1px; margin-top:65px; background:rgba(233,232,223,.16); }
+.workflowSteps article { min-height:245px; padding:24px; background:#020303; }
+.workflowSteps article:nth-child(2) { transform:translateY(35px); background:#07110e; }
+.workflowSteps span { color:#46f0c0; font:600 8px/1 "IBM Plex Mono",monospace; letter-spacing:.15em; }
+.workflowSteps h3 { margin-top:68px; font:500 24px/1.05 "Source Serif 4",serif; letter-spacing:-.035em; }
+.workflowSteps p { margin-top:15px; color:rgba(233,232,223,.44); font:400 11px/1.65 "IBM Plex Mono",monospace; }
+
+.principles { position: relative; padding: 110px 0 150px; }
+.rule { position: absolute; top: 0; left: -20vw; right: 27%; border-top: 1px solid rgba(233,232,223,.15); }
+.principleGrid { margin: 65px 0 0 18%; display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: rgba(233,232,223,.15); }
+.principles article { min-height: 280px; padding: 25px; background: #020303; }
+.principles article:nth-child(2) { transform: translateY(44px); background: #07110e; }
+.principles article > span { color: #46f0c0; }
+.principles h2 { margin-top: 80px; font: 500 28px/1 "Source Serif 4", serif; letter-spacing: -.04em; }
+.principles article p { margin-top: 16px; color: rgba(233,232,223,.47); font: 400 12px/1.65 "IBM Plex Mono", monospace; }
+
+.aurictBlock { display: grid; grid-template-columns: .6fr 2fr .8fr; gap: 7vw; align-items: end; padding: 160px 0 120px; border-top: 1px solid rgba(233,232,223,.15); }
+.aurictEyebrow { margin-bottom: 26px; color: #46f0c0; }
+.aurictBlock h2 { font: 500 clamp(2.8rem,6vw,6rem)/.92 "Source Serif 4", serif; letter-spacing: -.06em; }
+.aurictBlock h2 em { color: #46f0c0; font-weight: 500; }
+.aurictCopy { color: rgba(233,232,223,.52); font: 400 13px/1.7 "IBM Plex Mono", monospace; }
+
+.cta { position: relative; width: 72%; margin: 80px 0 130px 13%; padding: 70px 8%; background: #46f0c0; color: #00130e; transform: rotate(-1.2deg); }
+.cta > * { transform: rotate(1.2deg); }
+.cta > span { display: block; color: rgba(0,19,14,.55); }
+.cta h2 { margin: 34px 0 45px; font: 500 clamp(2.8rem,6vw,6.4rem)/.86 "Source Serif 4", serif; letter-spacing: -.065em; }
+.cta a { display: flex; justify-content: space-between; border-top: 1px solid rgba(0,19,14,.4); padding-top: 16px; font: 600 10px/1 "IBM Plex Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }
+
+@media (max-width: 900px) {
+  .hero h1 { width: 100%; margin-left: 0; }
+  .hero h1 em { margin-left: 8%; }
+  .heroIntro { margin-left:8%; grid-template-columns:.6fr 1.6fr; }
+  .audiences { grid-column:2; grid-template-columns:repeat(2,1fr); }
+  .workflow, .aurictBlock { grid-template-columns: 1fr; }
+  .workflowMain, .workflowSteps { grid-column:1; }
+  .principleGrid { margin-left: 0; }
+  .cta { width: 90%; margin-left: 5%; }
+}
+
+@media (max-width: 620px) {
+  .page { width: min(100% - 28px, 1380px); }
+  .hero { padding-top: 92px; }
+  .hero h1 { font-size: clamp(3.8rem, 20vw, 6rem); }
+  .hero h1 em { margin: 8px 0 0; white-space: normal; }
+  .orbit { width: 180px; height: 180px; left: 43%; top: 260px; }
+  .orbit span { font-size: 7rem; }
+  .coordinate { display:none; }
+  .heroIntro { margin:90px 0 0; padding:28px 0 34px; grid-template-columns:1fr; gap:24px; }
+  .lead { max-width:none; }
+  .audiences { grid-column:1; grid-template-columns:1fr 1fr; }
+  .workflow { padding: 100px 0 120px; gap:45px; }
+  .workflowMain > p { width:85%; margin:35px 0 0 15%; }
+  .workflowSteps { grid-template-columns:1fr; margin-top:15px; }
+  .workflowSteps article:nth-child(2) { transform:none; }
+  .principles { padding: 90px 0 120px; }
+  .principleGrid { grid-template-columns: 1fr; }
+  .principles article:nth-child(2) { transform: none; }
+  .aurictBlock { padding: 110px 0 70px; }
+  .cta { width: 100%; margin: 60px 0 90px; padding: 50px 24px; transform: none; }
+  .cta > * { transform: none; }
+}

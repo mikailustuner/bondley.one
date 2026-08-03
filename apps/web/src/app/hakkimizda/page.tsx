@@ -1,98 +1,79 @@
-"use client";
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { tr } from "@/locales/tr";
-import { Shield, Users, Rocket, Target } from "lucide-react";
+import styles from "./AboutPage.module.css";
 
 export default function HakkimizdaPage() {
   const content = tr.landing.hakkimizda;
 
   return (
-    <div className="min-h-screen bg-background selection:bg-primary/10">
-      <div className="container mx-auto py-[clamp(3rem,8vh,6rem)] px-4 max-w-4xl animate-fade-in">
-        <div className="mb-10">
-          <Link
-            href="/landing"
-            className="group flex items-center gap-2 text-[14px] text-muted-foreground hover:text-primary transition-all duration-300"
-          >
-            <span className="group-hover:-translate-x-1 transition-transform">←</span>
-            {tr.common.backToHome}
-          </Link>
-        </div>
-
-        <div className="space-y-12">
-          {/* Hero Section */}
-          <header className="text-center space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-[12px] font-semibold tracking-wider uppercase">
-              <Shield className="w-3.5 h-3.5" />
-              Bondley
-            </div>
-            <h1 className="text-[clamp(2.5rem,8vw,3.5rem)] font-bold tracking-tight text-foreground leading-[1.1]">
-              {content.title}
-            </h1>
-            <p className="text-[clamp(1.125rem,2vw,1.25rem)] text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              {content.description}
-            </p>
-          </header>
-
-          {/* Main Content */}
-          <div className="grid gap-8">
-            <Card className="border-none bg-secondary/30 shadow-none overflow-hidden">
-              <CardContent className="p-8 md:p-10 space-y-8">
-                <div className="space-y-6">
-                  <div className="flex items-start gap-5">
-                    <div className="w-12 h-12 rounded-2xl bg-background flex items-center justify-center shrink-0 shadow-sm border border-border/50">
-                      <Target className="w-6 h-6 text-primary" />
-                    </div>
-                    <p className="text-[17px] leading-relaxed text-foreground/90">
-                      {content.content1}
-                    </p>
-                  </div>
-
-                  <div className="h-px bg-border/50 w-full" />
-
-                  <div className="flex items-start gap-5 p-6 rounded-2xl bg-primary/[0.03] border border-primary/10">
-                    <div className="w-12 h-12 rounded-2xl bg-background flex items-center justify-center shrink-0 shadow-sm border border-border/50">
-                      <Users className="w-6 h-6 text-primary" />
-                    </div>
-                    <p className="text-[17px] leading-relaxed text-foreground/90 font-medium">
-                      {content.content2}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Vision Footer */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-8 p-8 rounded-3xl border border-border bg-card shadow-sm">
-              <div className="space-y-2 text-center md:text-left">
-                <h3 className="font-semibold text-lg flex items-center gap-2 justify-center md:justify-start">
-                  <Rocket className="w-5 h-5 text-primary" />
-                  Gelecek Vizyonumuz
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Faz 2 ve Faz 3 ile platformumuzu daha da güçlendirmeye devam ediyoruz.
-                </p>
-              </div>
-              <Link href="/signup">
-                <button className="px-8 py-3 rounded-2xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-all shadow-md hover:shadow-lg active:scale-[0.98]">
-                  Hemen Katılın
-                </button>
-              </Link>
-            </div>
+    <main className={styles.page}>
+      <section className={styles.hero}>
+        <div className={styles.index}>BND / 05<br />AURICT PRODUCT</div>
+        <p className={styles.kicker}>HAKKIMIZDA · İSTANBUL</p>
+        <h1>Borçlanma araçlarına<br /><em>başka bir açıdan.</em></h1>
+        <div className={styles.orbit} aria-hidden="true"><span>100</span><i /></div>
+        <p className={styles.coordinate}>41.0082° N<br />28.9784° E</p>
+        <div className={styles.heroIntro}>
+          <p className={styles.introLabel}>KİMLER İÇİN / 01</p>
+          <p className={styles.lead}>{content.description}</p>
+          <div className={styles.audiences} aria-label="Bondley kullanıcıları">
+            <span>Hazine</span>
+            <span>Fon &amp; portföy</span>
+            <span>Operasyon</span>
+            <span>Profesyonel yatırımcı</span>
           </div>
         </div>
-      </div>
+      </section>
 
-      <style jsx>{`
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-      `}</style>
-    </div>
+      <section className={styles.workflow}>
+        <p className={styles.sectionNo}>01 / NEDEN</p>
+        <div className={styles.workflowMain}>
+          <h2>Kontrol süresi kısalır.<br /><em>Karar alanı genişler.</em></h2>
+          <p>{content.content1}</p>
+        </div>
+        <div className={styles.workflowSteps}>
+          <article><span>01 / TAKİP</span><h3>Güncel değeri görün.</h3><p>Kıymet detayları ve fiyatlama bileşenleri aynı çalışma alanında kalır.</p></article>
+          <article><span>02 / KONTROL</span><h3>Hesabı doğrulayın.</h3><p>Manuel işlem yükünü azaltın, farklı kaynaklar arasındaki sapmaları hızla belirleyin.</p></article>
+          <article><span>03 / MUTABAKAT</span><h3>Günü güvenle kapatın.</h3><p>Operasyon ekipleri kontrole daha az, istisnalara ve kararlara daha fazla zaman ayırır.</p></article>
+        </div>
+      </section>
+
+      <section className={styles.principles}>
+        <div className={styles.rule} aria-hidden="true" />
+        <p className={styles.sectionNo}>02 / YAKLAŞIM</p>
+        <div className={styles.principleGrid}>
+          <article>
+            <span>01</span>
+            <h2>Doğru veri.</h2>
+            <p>Her sayı kaynağı, zamanı ve bağlamıyla birlikte anlam kazanır.</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h2>Şeffaf model.</h2>
+            <p>Hesaplamanın nasıl oluştuğu, sonuç kadar görünür olmalı.</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h2>Sessiz arayüz.</h2>
+            <p>Dikkat dekorasyona değil, karar anındaki kritik veriye gider.</p>
+          </article>
+        </div>
+      </section>
+
+      <section className={styles.aurictBlock}>
+        <p className={styles.sectionNo}>03 / KÖKEN</p>
+        <div>
+          <p className={styles.aurictEyebrow}>BONDLEY × AURICT</p>
+          <h2>Finans için tasarlanmış.<br /><em>Aurict tarafından üretilmiş.</em></h2>
+        </div>
+        <p className={styles.aurictCopy}>{content.content2}</p>
+      </section>
+
+      <section className={styles.cta}>
+        <span>PIYASAYI OKUMAYA BAŞLA</span>
+        <h2>Bir ISIN kodu.<br />Daha net bir karar.</h2>
+        <Link href="/signup">Ücretsiz hesap oluştur <b>↗</b></Link>
+      </section>
+    </main>
   );
 }

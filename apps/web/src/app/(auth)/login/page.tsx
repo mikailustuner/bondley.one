@@ -65,7 +65,7 @@ export default function LoginPage() {
         <div className="text-center mb-10">
           <div className="inline-flex h-12 w-12 items-center justify-center mb-5">
             <Image
-              src="/logo.png"
+              src="/logo-mark.svg"
               alt="Bondley Logo"
               width={48}
               height={48}

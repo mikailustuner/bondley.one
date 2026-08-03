@@ -5,14 +5,14 @@
   "start_url": "/dashboard/bonds",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#ffffff",
-  "theme_color": "#007bff",
+  "background_color": "#020303",
+  "theme_color": "#46f0c0",
   "lang": "tr",
   "icons": [
     {
-      "src": "/logo.png",
+      "src": "/logo-mark.svg",
       "sizes": "any",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ],

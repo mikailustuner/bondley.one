@@ -4,39 +4,39 @@
 
 @layer base {
   :root {
-    --font-inter: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    --font-mono-data: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-    --background: 0 0% 98%;
-    --foreground: 0 0% 11%;
+    --font-inter: "Source Serif 4", Georgia, serif;
+    --font-mono-data: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+    --background: 180 20% 1%;
+    --foreground: 55 18% 91%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 11%;
+    --card: 170 10% 5%;
+    --card-foreground: 55 18% 91%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 11%;
+    --popover: 170 10% 5%;
+    --popover-foreground: 55 18% 91%;
 
-    --primary: 211 100% 50%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 163 84% 61%;
+    --primary-foreground: 165 100% 4%;
 
-    --secondary: 0 0% 95.3%;
-    --secondary-foreground: 0 0% 22%;
+    --secondary: 168 9% 10%;
+    --secondary-foreground: 55 14% 82%;
 
-    --muted: 0 0% 95.3%;
-    --muted-foreground: 0 0% 44%;
+    --muted: 168 8% 10%;
+    --muted-foreground: 55 7% 58%;
 
-    --accent: 211 100% 50%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 163 84% 61%;
+    --accent-foreground: 165 100% 4%;
 
     --destructive: 0 65% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --positive: 142 71% 45%;
-    --negative: 0 65% 51%;
+    --positive: 163 84% 61%;
+    --negative: 7 82% 64%;
 
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 211 100% 50%;
-    --radius: 0.75rem;
+    --border: 170 8% 17%;
+    --input: 170 8% 14%;
+    --ring: 163 84% 61%;
+    --radius: 0.2rem;
 
     --sidebar-width: 260px;
 
@@ -48,36 +48,36 @@
   }
 
   .dark {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 92%;
+    --background: 180 20% 1%;
+    --foreground: 55 18% 91%;
 
-    --card: 0 0% 7%;
-    --card-foreground: 0 0% 92%;
+    --card: 170 10% 5%;
+    --card-foreground: 55 18% 91%;
 
-    --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 92%;
+    --popover: 170 10% 5%;
+    --popover-foreground: 55 18% 91%;
 
-    --primary: 211 100% 50%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 163 84% 61%;
+    --primary-foreground: 165 100% 4%;
 
-    --secondary: 0 0% 14%;
-    --secondary-foreground: 0 0% 85%;
+    --secondary: 168 9% 10%;
+    --secondary-foreground: 55 14% 82%;
 
-    --muted: 0 0% 14%;
-    --muted-foreground: 0 0% 60%;
+    --muted: 168 8% 10%;
+    --muted-foreground: 55 7% 58%;
 
-    --accent: 211 100% 50%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 163 84% 61%;
+    --accent-foreground: 165 100% 4%;
 
     --destructive: 0 65% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --positive: 142 71% 45%;
-    --negative: 0 65% 51%;
+    --positive: 163 84% 61%;
+    --negative: 7 82% 64%;
 
-    --border: 0 0% 18%;
-    --input: 0 0% 14%;
-    --ring: 211 100% 50%;
+    --border: 170 8% 17%;
+    --input: 170 8% 14%;
+    --ring: 163 84% 61%;
 
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.15);
@@ -85,6 +85,234 @@
     --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.15);
     --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.2);
   }
+}
+
+/* ═══ Bondley system language ═══ */
+button,
+input,
+textarea,
+select {
+  font-family: var(--font-mono-data);
+}
+
+.bondley-public-content {
+  --public-width: min(100% - 40px, 1180px);
+}
+
+.bondley-public-content main {
+  position: relative;
+  width: var(--public-width);
+  max-width: none;
+  margin-inline: auto;
+  padding-top: 92px;
+  padding-bottom: 110px;
+}
+
+.bondley-public-content main::before {
+  content: "BND / PUBLIC DATA";
+  position: absolute;
+  top: 35px;
+  right: 0;
+  color: hsl(var(--muted-foreground) / .55);
+  font: 600 8px/1 var(--font-mono-data);
+  letter-spacing: .18em;
+}
+
+.bondley-public-content nav[aria-label="Breadcrumb"] {
+  margin-left: 8%;
+  font-family: var(--font-mono-data);
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.bondley-public-content h1 {
+  max-width: 840px;
+  font: 500 clamp(3.3rem, 7vw, 7rem)/.88 var(--font-inter);
+  letter-spacing: -.06em;
+}
+
+.bondley-public-content main > div:nth-of-type(1) {
+  margin-left: 16%;
+  margin-bottom: 72px;
+}
+
+.bondley-public-content main > div:nth-of-type(1) > p {
+  max-width: 580px;
+  margin-top: 22px;
+  font-family: var(--font-mono-data);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.bondley-public-content table,
+.bondley-public-content form,
+.bondley-public-content main article p,
+.bondley-public-content main article dd {
+  font-family: var(--font-mono-data);
+}
+
+.bondley-public-content main > section,
+.bondley-public-content main > div.rounded-xl,
+.bondley-public-content main > div.border {
+  border-radius: 0;
+}
+
+.bondley-public-content table th {
+  color: hsl(var(--primary));
+  font-family: var(--font-mono-data);
+  font-size: 9px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.bondley-public-content table tr:hover {
+  background: hsl(var(--primary) / .045);
+}
+
+.bondley-public-content article h2,
+.bondley-public-content article dt {
+  font-family: var(--font-inter);
+  font-weight: 500;
+}
+
+.bondley-editorial main {
+  background: transparent;
+}
+
+.bondley-editorial main > section:first-child {
+  border-bottom-color: hsl(var(--border));
+  background: linear-gradient(118deg, hsl(var(--primary) / .055), transparent 45%);
+}
+
+.bondley-editorial main > section:first-child > div {
+  max-width: 1180px;
+  padding-block: 110px 95px;
+  text-align: left;
+}
+
+.bondley-editorial main > section:first-child h1 {
+  max-width: 920px;
+  font: 500 clamp(3.5rem, 8vw, 8.5rem)/.84 var(--font-inter);
+  letter-spacing: -.065em;
+}
+
+.bondley-editorial main > section:first-child p {
+  max-width: 600px;
+  margin-left: 31%;
+  font-family: var(--font-mono-data);
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+.bondley-editorial main > section:nth-child(2) {
+  max-width: 1040px;
+  padding-top: 100px;
+}
+
+.bondley-editorial article {
+  margin-left: 14%;
+  padding: 28px 0 38px;
+  border-top: 1px solid hsl(var(--border));
+}
+
+.bondley-editorial article:nth-of-type(2n) {
+  margin-right: 14%;
+  margin-left: 0;
+}
+
+.bondley-editorial article h2 {
+  color: hsl(var(--foreground));
+  font-family: var(--font-inter);
+  font-size: clamp(1.5rem, 3vw, 2.4rem);
+  font-weight: 500;
+  letter-spacing: -.035em;
+}
+
+.bondley-editorial article p,
+.bondley-editorial article li {
+  font-family: var(--font-mono-data);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.bondley-auth-shell {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  background:
+    linear-gradient(110deg, transparent 0 63%, hsl(var(--primary) / .05) 63% 64%, transparent 64%),
+    radial-gradient(circle at 85% 70%, hsl(var(--primary) / .08), transparent 25rem),
+    hsl(var(--background));
+}
+
+.bondley-auth-shell::after {
+  content: "B";
+  position: fixed;
+  right: -6rem;
+  bottom: -11rem;
+  color: hsl(var(--primary) / .045);
+  font: 600 34rem/.8 var(--font-inter);
+  pointer-events: none;
+}
+
+.bondley-auth-brand,
+.bondley-auth-index {
+  position: absolute;
+  z-index: 5;
+  top: 34px;
+  font: 600 10px/1 var(--font-mono-data);
+  letter-spacing: .14em;
+}
+
+.bondley-auth-brand { left: 38px; color: hsl(var(--foreground)); }
+.bondley-auth-brand span { color: hsl(var(--primary)); }
+.bondley-auth-index { right: 38px; color: hsl(var(--muted-foreground)); }
+.bondley-auth-shell [class*="rounded-2xl"],
+.bondley-auth-shell [class*="rounded-xl"] { border-radius: 2px; }
+.bondley-auth-shell form { font-family: var(--font-mono-data); }
+
+.bondley-app-logo-tile {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid hsl(var(--primary) / .34);
+  background: hsl(var(--background));
+}
+
+.bondley-app-logo-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.bondley-status-page {
+  position: relative;
+  overflow: hidden;
+  background-image: radial-gradient(circle at 70% 40%, hsl(var(--primary) / .09), transparent 25rem);
+}
+
+.bondley-status-page::after {
+  content: "00";
+  position: absolute;
+  right: -3rem;
+  bottom: -8rem;
+  color: hsl(var(--primary) / .05);
+  font: 600 27rem/.8 var(--font-mono-data);
+}
+
+@media (max-width: 700px) {
+  .bondley-public-content { --public-width: min(100% - 28px, 1180px); }
+  .bondley-public-content main > div:nth-of-type(1) { margin-left: 0; }
+  .bondley-editorial main > section:first-child > div { padding-inline: 20px; }
+  .bondley-editorial main > section:first-child p { margin-left: 0; }
+  .bondley-editorial article,
+  .bondley-editorial article:nth-of-type(2n) { margin-inline: 0; }
+  .bondley-auth-index { display: none; }
+  .bondley-auth-brand { left: 20px; top: 22px; }
 }
 
 @layer base {
@@ -104,6 +332,7 @@
     line-height: 1.6;
     overflow-x: hidden;
     overscroll-behavior-y: contain;
+    font-family: var(--font-inter);
   }
 
   ::selection {
@@ -124,7 +353,7 @@
 
   .font-mono-data,
   .font-bond-nums {
-    font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+    font-family: var(--font-mono-data);
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.01em;
     font-feature-settings: "tnum" 1;
@@ -141,7 +370,7 @@
 
   /* ═══ Apple-style navbar blur ═══ */
   .apple-navbar {
-    background: hsl(var(--card) / 0.8);
+    background: hsl(var(--background) / 0.88);
     backdrop-filter: saturate(180%) blur(20px);
     -webkit-backdrop-filter: saturate(180%) blur(20px);
     border-bottom: 1px solid hsl(var(--border) / 0.6);
@@ -153,7 +382,7 @@
 
   /* ═══ Sidebar ═══ */
   .sidebar {
-    background: hsl(var(--secondary) / 0.4);
+    background: hsl(var(--card) / 0.76);
     border-right: 1px solid hsl(var(--border) / 0.5);
   }
 
@@ -162,7 +391,8 @@
   }
 
   .sidebar-item {
-    @apply flex items-center gap-3 px-3 py-2 rounded-xl text-[14px] transition-all duration-150 cursor-pointer;
+    @apply flex items-center gap-3 px-3 py-2 rounded-sm text-[12px] transition-all duration-150 cursor-pointer;
+    font-family: var(--font-mono-data);
     color: hsl(var(--muted-foreground));
   }
 
@@ -189,11 +419,11 @@
   .data-surface {
     border: 1px solid hsl(var(--border));
     background: hsl(var(--card));
-    box-shadow: var(--shadow-sm);
+    box-shadow: none;
   }
 
   .metric-value {
-    font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+    font-family: var(--font-mono-data);
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1;
     letter-spacing: -0.025em;
@@ -208,6 +438,7 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: hsl(var(--muted-foreground));
+    font-family: var(--font-mono-data);
   }
 
   .hairline-list > * + * {
@@ -333,7 +564,7 @@
 
   /* ═══ Widget gradient tints ═══ */
   .widget-blue {
-    background: linear-gradient(135deg, hsl(211 100% 50% / 0.06), hsl(211 100% 50% / 0.02));
+    background: linear-gradient(135deg, hsl(163 84% 61% / 0.08), hsl(163 84% 61% / 0.02));
   }
 
   .widget-green {

@@ -74,7 +74,7 @@ export function CookieConsentBanner() {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-[9998] bg-black/20 backdrop-blur-[2px] transition-opacity duration-500"
+        className="fixed inset-0 z-[9998] bg-[#021015]/70 backdrop-blur-[3px] transition-opacity duration-500"
         style={{ opacity: visible ? 1 : 0 }}
       />
 
@@ -84,14 +84,14 @@ export function CookieConsentBanner() {
         role="dialog"
         aria-label={tr.dashboard.components.cookieConsent.title}
       >
-        <div className="mx-auto max-w-4xl px-4 pb-6">
+        <div className="mx-auto max-w-3xl px-4 pb-5">
           <div
-            className="rounded-2xl border border-border/60 bg-background/95 backdrop-blur-xl shadow-2xl shadow-black/10 overflow-hidden"
+            className="overflow-hidden rounded-[14px] border border-[#28dfc1]/25 bg-[#071b21]/95 font-mono backdrop-blur-xl shadow-2xl shadow-black/40"
           >
             {/* Header */}
             <div className="px-6 pt-6 pb-4">
               <div className="flex items-start gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-[#28dfc1]/20 bg-[#28dfc1]/10">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="20"
@@ -102,7 +102,7 @@ export function CookieConsentBanner() {
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="text-primary"
+                    className="text-[#28dfc1]"
                   >
                     <path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5" />
                     <path d="M8.5 8.5v.01" />
@@ -113,15 +113,15 @@ export function CookieConsentBanner() {
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-[15px] font-semibold text-foreground">
+                  <h3 className="text-[13px] font-semibold text-[#edfafa]">
                     {tr.dashboard.components.cookieConsent.title}
                   </h3>
-                  <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+                  <p className="mt-1.5 text-[11px] leading-relaxed text-[#8eafb2]">
                     {tr.dashboard.components.cookieConsent.description}
                     {" "}
                     <Link
                       href="/privacy"
-                      className="text-primary hover:text-primary/80 underline underline-offset-2 transition-colors"
+                      className="text-[#28dfc1] underline underline-offset-2 transition-colors hover:text-[#66f0d8]"
                     >
                       {tr.dashboard.components.cookieConsent.privacyPolicy}
                     </Link>
@@ -132,14 +132,14 @@ export function CookieConsentBanner() {
 
             {/* Details Panel */}
             {showDetails && (
-              <div className="mx-6 mb-4 rounded-xl border border-border/40 bg-muted/30 p-4 space-y-3">
+              <div className="mx-6 mb-4 space-y-3 rounded-[10px] border border-[#9bd5d9]/10 bg-[#0b252c] p-4">
                 {/* Essential */}
                 <label className="flex items-center justify-between gap-3">
                   <div>
-                    <span className="text-[13px] font-medium text-foreground">
+                    <span className="text-[11px] font-medium text-[#edfafa]">
                       {tr.dashboard.components.cookieConsent.essential.title}
                     </span>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                    <p className="mt-0.5 text-[9px] text-[#67888c]">
                       {tr.dashboard.components.cookieConsent.essential.description}
                     </p>
                   </div>
@@ -150,7 +150,7 @@ export function CookieConsentBanner() {
                       disabled
                       className="sr-only peer"
                     />
-                    <div className="h-5 w-9 rounded-full bg-primary/80 peer-focus:ring-2 cursor-not-allowed opacity-70">
+                    <div className="h-5 w-9 cursor-not-allowed rounded-full bg-[#28dfc1]/80 opacity-70 peer-focus:ring-2">
                       <div className="absolute top-0.5 left-[18px] h-4 w-4 rounded-full bg-white shadow transition-all" />
                     </div>
                   </div>
@@ -159,10 +159,10 @@ export function CookieConsentBanner() {
                 {/* Analytics */}
                 <label className="flex items-center justify-between gap-3 cursor-pointer">
                   <div>
-                    <span className="text-[13px] font-medium text-foreground">
+                    <span className="text-[11px] font-medium text-[#edfafa]">
                       {tr.dashboard.components.cookieConsent.analytics.title}
                     </span>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                    <p className="mt-0.5 text-[9px] text-[#67888c]">
                       {tr.dashboard.components.cookieConsent.analytics.description}
                     </p>
                   </div>
@@ -178,8 +178,8 @@ export function CookieConsentBanner() {
                     }
                     className={`relative h-5 w-9 rounded-full transition-colors ${
                       preferences.analytics
-                        ? "bg-primary"
-                        : "bg-muted-foreground/30"
+                        ? "bg-[#28dfc1]"
+                        : "bg-[#67888c]/30"
                     }`}
                   >
                     <span
@@ -193,10 +193,10 @@ export function CookieConsentBanner() {
                 {/* Marketing */}
                 <label className="flex items-center justify-between gap-3 cursor-pointer">
                   <div>
-                    <span className="text-[13px] font-medium text-foreground">
+                    <span className="text-[11px] font-medium text-[#edfafa]">
                       {tr.dashboard.components.cookieConsent.marketing.title}
                     </span>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                    <p className="mt-0.5 text-[9px] text-[#67888c]">
                       {tr.dashboard.components.cookieConsent.marketing.description}
                     </p>
                   </div>
@@ -212,8 +212,8 @@ export function CookieConsentBanner() {
                     }
                     className={`relative h-5 w-9 rounded-full transition-colors ${
                       preferences.marketing
-                        ? "bg-primary"
-                        : "bg-muted-foreground/30"
+                        ? "bg-[#28dfc1]"
+                        : "bg-[#67888c]/30"
                     }`}
                   >
                     <span
@@ -230,7 +230,7 @@ export function CookieConsentBanner() {
             <div className="px-6 pb-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
               <button
                 onClick={() => setShowDetails(!showDetails)}
-                className="order-3 sm:order-1 text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2"
+                className="order-3 px-3 py-2 text-[10px] font-medium text-[#78999d] transition-colors hover:text-[#edfafa] sm:order-1"
               >
                 {showDetails ? tr.dashboard.components.cookieConsent.hide : tr.dashboard.components.cookieConsent.manage}
               </button>
@@ -238,7 +238,7 @@ export function CookieConsentBanner() {
               {showDetails ? (
                 <button
                   onClick={handleSavePreferences}
-                  className="order-2 rounded-xl bg-primary px-5 py-2.5 text-[13px] font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+                  className="order-2 rounded-[8px] bg-[#28dfc1] px-5 py-2.5 text-[10px] font-semibold text-[#042a2a] shadow-sm transition-colors hover:bg-[#66f0d8]"
                 >
                   {tr.common.save}
                 </button>
@@ -246,13 +246,13 @@ export function CookieConsentBanner() {
                 <>
                   <button
                     onClick={handleAcceptEssential}
-                    className="order-2 sm:order-2 rounded-xl border border-border px-5 py-2.5 text-[13px] font-semibold text-foreground hover:bg-muted/50 transition-colors"
+                    className="order-2 rounded-[8px] border border-[#9bd5d9]/20 px-5 py-2.5 text-[10px] font-semibold text-[#b7d1d3] transition-colors hover:bg-[#9bd5d9]/5 sm:order-2"
                   >
                     {tr.dashboard.components.cookieConsent.onlyEssential}
                   </button>
                   <button
                     onClick={handleAcceptAll}
-                    className="order-1 sm:order-3 rounded-xl bg-primary px-5 py-2.5 text-[13px] font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+                    className="order-1 rounded-[8px] bg-[#28dfc1] px-5 py-2.5 text-[10px] font-semibold text-[#042a2a] shadow-sm transition-colors hover:bg-[#66f0d8] sm:order-3"
                   >
                     {tr.dashboard.components.cookieConsent.acceptAll}
                   </button>

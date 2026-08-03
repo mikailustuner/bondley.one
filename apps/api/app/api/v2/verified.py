@@ -1255,7 +1255,8 @@ async def create_valuation(
         )
         result_payload = result.to_dict()
         request_record.status = "COMPLETED"
-        request_record.completed_at = utc_now()
+        calculated_at = utc_now()
+        request_record.completed_at = calculated_at
         db.add(
             ValuationResultRecord(
                 request_id=request_record.id,
@@ -1269,11 +1270,13 @@ async def create_valuation(
         return ValuationResponse(
             request_id=request_record.id,
             success=True,
+            calculated_at=calculated_at,
             result=result_payload,
         )
     except ValuationError as exc:
         request_record.status = "FAILED"
-        request_record.completed_at = utc_now()
+        calculated_at = utc_now()
+        request_record.completed_at = calculated_at
         failure = exc.to_dict()
         db.add(
             ValuationResultRecord(
@@ -1293,6 +1296,7 @@ async def create_valuation(
         return ValuationResponse(
             request_id=request_record.id,
             success=False,
+            calculated_at=calculated_at,
             failure=failure,
         )
 
@@ -1323,6 +1327,7 @@ async def get_valuation(
     return ValuationResponse(
         request_id=request_record.id,
         success=result.success,
+        calculated_at=request_record.completed_at or result.created_at,
         result=result.result_payload,
         failure=(
             {

@@ -272,8 +272,8 @@ export const tr = {
         },
         hakkimizda: {
             title: "Hakkımızda",
-            description: "Bondley, ihraççılar, aracı kurumlar, hazine, hazine operasyon, fon ve portföy yönetimi, fon hizmet, fon operasyon ve tüm profesyonel yatırımcılar için BİST’teki borçlanma araçlarını (tahvil, bono, kira sertifikası vb.) tek ekranda topluyor.",
-            content1: "Yatırımlarınızın kupon oranlarını, kirli ve teorik fiyatlarını en hızlı ve güncel haliyle takip edin. Manuel hesaplamalardan doğan beşeri hataları ve üçüncü parti yazılımların yarattığı fiyat tutarsızlıklarını hayatınızdan çıkarıyoruz. Bondley ile enstrüman detaylarını ilk siz öğrenin, hesaplamalarınızı hızla kontrol edip mutabakatları zahmetsizce bitirin. Böylece gün sonu işlemleriniz uzamaz, operasyonel verimsizlik biter; enerjiniz size kalır ve ertesi iş gününüzü bugünden planlarsınız.",
+            description: "Bondley; ihraççıları, aracı kurumları, hazine ve operasyon ekiplerini, fon hizmet birimlerini, portföy yöneticilerini ve profesyonel yatırımcıları BİST’te işlem gören borçlanma araçları için ortak bir çalışma alanında buluşturur.",
+            content1: "Kupon oranı, kirli fiyat ve teorik fiyat gibi kritik değerleri güncel verilerle tek yerde izlenebilir hale getirir. Dağınık dosyalar ve farklı sistemler arasında yapılan manuel kontrolleri azaltır; hesaplamaların hızla doğrulanmasını ve mutabakatların güvenle tamamlanmasını sağlar. Böylece ekipler zamanını tekrar eden işlemlere değil, piyasa ve portföy kararlarına ayırır.",
             content2: "Projemiz; ÖZGÜR Selahaddin Bilal, Mikail ÜSTÜNER, Melih DAĞYUTAN, Hıdır Celil DOĞAN ve Hamza KAHRAMAN tarafından her gün geliştirilmeye devam ediyor ve şimdiden Faz 2 ile Faz 3'ün hazırlıkları tam gaz sürüyor.",
             popup: {
                 title: "Bondley ile Tanışın",
