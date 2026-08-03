@@ -106,7 +106,7 @@ export default function OnboardingPage() {
                     </span>
                     <span className="flex flex-col gap-1">
                         <span className="font-mono-data font-semibold text-base tracking-[-.07em]">Bondley</span>
-                        <span className="font-mono-data text-[7px] uppercase tracking-[.16em] text-primary">by Aurict</span>
+                        <a href="https://aurict.com" target="_blank" rel="noreferrer" className="font-mono-data text-[7px] uppercase tracking-[.16em] text-primary hover:text-foreground">by Aurict ↗</a>
                     </span>
                 </div>
 

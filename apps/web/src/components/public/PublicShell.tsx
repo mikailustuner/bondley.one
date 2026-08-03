@@ -14,13 +14,17 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
     <div className={styles.shell}>
       <header className={styles.header}>
         <div className={styles.headerInner}>
-          <Link href="/landing" className={styles.brand} aria-label="Bondley ana sayfa">
-            <span className={styles.logoTile}>
-              <Image src="/logo-mark.svg" alt="" width={44} height={44} priority />
-            </span>
-            <span className={styles.brandText}>bondley</span>
-            <span className={styles.aurict}>an Aurict product</span>
-          </Link>
+          <div className={styles.brandGroup}>
+            <Link href="/landing" className={styles.brand} aria-label="Bondley ana sayfa">
+              <span className={styles.logoTile}>
+                <Image src="/logo-mark.svg" alt="" width={44} height={44} priority />
+              </span>
+              <span className={styles.brandText}>bondley</span>
+            </Link>
+            <a href="https://aurict.com" target="_blank" rel="noreferrer" className={styles.aurict}>
+              an Aurict product ↗
+            </a>
+          </div>
 
           <nav className={styles.nav} aria-label="Ana menü">
             {navItems.map(([label, href]) => (
@@ -54,7 +58,9 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
         </div>
         <div className={styles.footerBottom}>
           <span>© {new Date().getFullYear()} BONDLEY</span>
-          <span>DESIGNED &amp; ENGINEERED BY AURICT</span>
+          <a href="https://aurict.com" target="_blank" rel="noreferrer">
+            DESIGNED &amp; ENGINEERED BY AURICT ↗
+          </a>
           <span>İSTANBUL · TR</span>
         </div>
       </footer>

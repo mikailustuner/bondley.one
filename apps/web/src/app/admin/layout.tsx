@@ -15,14 +15,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <nav className="apple-navbar sticky top-0 z-50">
           <div className="container mx-auto flex h-12 items-center justify-between">
             <div className="flex items-center gap-6">
-              <Link href="/admin" className="flex items-center gap-2.5">
-                <span className="bondley-app-logo-tile">
-                  <Image src="/logo-mark.svg" alt="" width={34} height={34} priority />
-                </span>
-                <span className="font-mono-data font-semibold text-[14px] tracking-[-.06em]">{tr.common.brand}</span>
-                <span className="hidden font-mono-data text-[7px] uppercase tracking-[.16em] text-primary sm:inline">by Aurict</span>
+              <div className="flex items-center gap-2.5">
+                <Link href="/admin" className="flex items-center gap-2.5">
+                  <span className="bondley-app-logo-tile">
+                    <Image src="/logo-mark.svg" alt="" width={34} height={34} priority />
+                  </span>
+                  <span className="font-mono-data font-semibold text-[14px] tracking-[-.06em]">{tr.common.brand}</span>
+                </Link>
+                <a href="https://aurict.com" target="_blank" rel="noreferrer" className="hidden font-mono-data text-[7px] uppercase tracking-[.16em] text-primary hover:text-foreground sm:inline">by Aurict ↗</a>
                 <Badge className="ml-1">ADMIN</Badge>
-              </Link>
+              </div>
 
               <div className="h-4 w-px bg-border" />
 

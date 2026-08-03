@@ -265,8 +265,9 @@ select {
   letter-spacing: .14em;
 }
 
-.bondley-auth-brand { left: 38px; color: hsl(var(--foreground)); }
-.bondley-auth-brand span { color: hsl(var(--primary)); }
+.bondley-auth-brand { left: 38px; display: flex; gap: 8px; color: hsl(var(--foreground)); }
+.bondley-auth-brand a:last-child { color: hsl(var(--primary)); }
+.bondley-auth-brand a:hover { color: hsl(var(--primary)); }
 .bondley-auth-index { right: 38px; color: hsl(var(--muted-foreground)); }
 .bondley-auth-shell [class*="rounded-2xl"],
 .bondley-auth-shell [class*="rounded-xl"] { border-radius: 2px; }

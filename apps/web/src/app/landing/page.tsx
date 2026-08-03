@@ -78,11 +78,13 @@ export default function LandingPage() {
 
       <header className={styles.header}>
         <div className={styles.headerInner}>
-          <Link className={styles.logoLockup} href="/landing" aria-label="Bondley ana sayfa">
-            <span className={styles.logoFrame}><Image src="/logo-mark.svg" alt="" width={38} height={38} priority /></span>
-            <span className={styles.wordmark}>bondley</span>
-            <span className={styles.maker}>crafted by <b>Aurict</b></span>
-          </Link>
+          <div className={styles.logoLockup}>
+            <Link className={styles.brandHome} href="/landing" aria-label="Bondley ana sayfa">
+              <span className={styles.logoFrame}><Image src="/logo-mark.svg" alt="" width={38} height={38} priority /></span>
+              <span className={styles.wordmark}>bondley</span>
+            </Link>
+            <a href="https://aurict.com" target="_blank" rel="noreferrer" className={styles.maker}>crafted by <b>Aurict ↗</b></a>
+          </div>
 
           <nav className={styles.nav} aria-label="Ana menü">
             <a href="#platform">Platform</a>
@@ -108,20 +110,20 @@ export default function LandingPage() {
           <div className={styles.heroCopy}>
             <div className={styles.eyebrow}><i /> Türkiye sabit getirili menkul kıymetler platformu</div>
             <h1>
-              <span>Piyasanın</span>
-              <span className={styles.heroIndent}>gürültüsünü değil,</span>
-              <span className={styles.heroEditorial}>tahvilin gerçeğini</span>
-              <span className={styles.heroOutline}>görün.</span>
+              <span>Bondley ile</span>
+              <span className={styles.heroIndent}>takip edin.</span>
+              <span className={styles.heroEditorial}>Hesaplamaları</span>
+              <span className={styles.heroOutline}>kontrol edin.</span>
             </h1>
-            <p className={styles.heroLead}>Veriyi bulun, değerlemeyi kontrol edin ve bir sonraki piyasa hareketine hazırlanırken hiçbir varsayımı karanlıkta bırakmayın.</p>
+            <p className={styles.heroLead}>Yatırım yaptığınız veya değerlendirdiğiniz tahvil, bono ve kira sertifikalarının kupon oranlarını, kirli ve teorik fiyatlarını tek yerden izleyin. Hesaplamaları hızla doğrulayın, manuel kontrol yükünü azaltın ve gün sonu mutabakatlarını zamanında tamamlayın.</p>
             <div className={styles.heroActions}>
               <Link className={styles.primaryButton} href={primaryHref}>{primaryLabel}<span>→</span></Link>
               <a className={styles.textButton} href="#platform">Platformu keşfedin <span>↓</span></a>
             </div>
             <div className={styles.heroProof}>
-              <div><strong>BIST</strong><span>doğrulanmış kaynak</span></div>
-              <div><strong>2019—26</strong><span>TLREF tarihçesi</span></div>
-              <div><strong>7/24</strong><span>erişilebilir analiz</span></div>
+              <div><strong>KUPON</strong><span>oran ve ödeme takibi</span></div>
+              <div><strong>FİYAT</strong><span>kirli ve teorik değer</span></div>
+              <div><strong>KONTROL</strong><span>hızlı mutabakat</span></div>
             </div>
           </div>
 
@@ -280,7 +282,7 @@ export default function LandingPage() {
           <div className={styles.footerBrand}>
             <div><span className={styles.logoFrame}><Image src="/logo-mark.svg" alt="" width={36} height={36} /></span><strong>bondley</strong></div>
             <p>Türkiye sabit getirili menkul kıymetler piyasası için veri, değerleme ve takip platformu.</p>
-            <span>an Aurict product</span>
+            <a href="https://aurict.com" target="_blank" rel="noreferrer">an Aurict product ↗</a>
           </div>
           <div className={styles.footerLinks}>
             <div><h3>Platform</h3><Link href="/dashboard/bonds">Araçlar</Link><Link href="/dashboard/analytics">Analiz</Link><Link href="/dashboard/alerts">Uyarılar</Link></div>

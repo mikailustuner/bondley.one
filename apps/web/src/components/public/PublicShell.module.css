@@ -28,11 +28,13 @@
   gap: 32px;
 }
 
+.brandGroup { display: flex; align-items: center; gap: 17px; width: max-content; }
 .brand { display: flex; align-items: center; gap: 12px; width: max-content; }
 .logoTile { width: 34px; height: 34px; display: grid; place-items: center; overflow: hidden; border: 1px solid rgba(70,240,192,.34); background: var(--bondley-ink); }
 .logoTile img { width: 100%; height: 100%; object-fit: contain; }
 .brandText { font: 600 19px/1 "IBM Plex Mono", monospace; letter-spacing: -.07em; }
-.aurict { margin-left: 5px; color: rgba(233,232,223,.38); font: 500 8px/1 "IBM Plex Mono", monospace; letter-spacing: .14em; text-transform: uppercase; }
+.aurict { padding-left: 16px; border-left: 1px solid rgba(233,232,223,.14); color: rgba(233,232,223,.38); font: 500 8px/1 "IBM Plex Mono", monospace; letter-spacing: .14em; text-transform: uppercase; }
+.aurict:hover { color: var(--bondley-accent); }
 
 .nav { display: flex; align-items: center; gap: 30px; }
 .nav a, .login { color: rgba(233,232,223,.58); font: 500 10px/1 "IBM Plex Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }
@@ -53,6 +55,7 @@
 .footerLinks a { color: rgba(233,232,223,.55); font: 500 10px/1.4 "IBM Plex Mono", monospace; text-transform: uppercase; letter-spacing: .07em; }
 .footerLinks a:hover { color: var(--bondley-accent); transform: translateX(4px); }
 .footerBottom { position: relative; display: flex; justify-content: space-between; margin-top: 72px; padding-top: 18px; border-top: 1px solid rgba(233,232,223,.1); color: rgba(233,232,223,.3); font: 500 8px/1 "IBM Plex Mono", monospace; letter-spacing: .14em; }
+.footerBottom a:hover { color: var(--bondley-accent); }
 
 @media (max-width: 900px) {
   .headerInner { grid-template-columns: 1fr auto; }

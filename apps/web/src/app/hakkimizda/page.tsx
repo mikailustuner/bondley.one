@@ -63,8 +63,8 @@ export default function HakkimizdaPage() {
       <section className={styles.aurictBlock}>
         <p className={styles.sectionNo}>03 / KÖKEN</p>
         <div>
-          <p className={styles.aurictEyebrow}>BONDLEY × AURICT</p>
-          <h2>Finans için tasarlanmış.<br /><em>Aurict tarafından üretilmiş.</em></h2>
+          <a href="https://aurict.com" target="_blank" rel="noreferrer" className={styles.aurictEyebrow}>BONDLEY × AURICT ↗</a>
+          <h2>Finans için tasarlanmış.<br /><em><a href="https://aurict.com" target="_blank" rel="noreferrer">Aurict</a> tarafından üretilmiş.</em></h2>
         </div>
         <p className={styles.aurictCopy}>{content.content2}</p>
       </section>

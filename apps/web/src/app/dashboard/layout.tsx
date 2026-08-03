@@ -119,15 +119,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const sidebarContent = (
     <>
       {/* Logo */}
-      <Link href="/" className="flex items-center gap-2.5 px-5 py-5 transition-opacity hover:opacity-80">
-        <span className="bondley-app-logo-tile">
-          <Image src="/logo-mark.svg" alt="" width={34} height={34} priority />
-        </span>
+      <div className="flex items-center gap-2.5 px-5 py-5">
+        <Link href="/" className="transition-opacity hover:opacity-80">
+          <span className="bondley-app-logo-tile">
+            <Image src="/logo-mark.svg" alt="" width={34} height={34} priority />
+          </span>
+        </Link>
         <span className="flex flex-col gap-1">
-          <span className="font-mono-data text-[15px] font-semibold tracking-[-0.07em] text-foreground">{tr.common.brand}</span>
-          <span className="font-mono-data text-[7px] uppercase tracking-[.16em] text-primary">by Aurict</span>
+          <Link href="/" className="font-mono-data text-[15px] font-semibold tracking-[-0.07em] text-foreground hover:text-primary">{tr.common.brand}</Link>
+          <a href="https://aurict.com" target="_blank" rel="noreferrer" className="font-mono-data text-[7px] uppercase tracking-[.16em] text-primary hover:text-foreground">by Aurict ↗</a>
         </span>
-      </Link>
+      </div>
 
       {/* Navigation */}
       <nav className="flex-1 px-3 space-y-6 overflow-y-auto">

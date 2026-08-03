@@ -11,7 +11,10 @@ export const metadata: Metadata = {
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="bondley-auth-shell">
-      <Link href="/landing" className="bondley-auth-brand">BONDLEY <span>× AURICT</span></Link>
+      <div className="bondley-auth-brand">
+        <Link href="/landing">BONDLEY</Link>
+        <a href="https://aurict.com" target="_blank" rel="noreferrer">× AURICT ↗</a>
+      </div>
       <span className="bondley-auth-index">SECURE ACCESS / 01</span>
       {children}
     </div>

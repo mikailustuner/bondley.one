@@ -37,9 +37,12 @@
 .principles article p { margin-top: 16px; color: rgba(233,232,223,.47); font: 400 12px/1.65 "IBM Plex Mono", monospace; }
 
 .aurictBlock { display: grid; grid-template-columns: .6fr 2fr .8fr; gap: 7vw; align-items: end; padding: 160px 0 120px; border-top: 1px solid rgba(233,232,223,.15); }
-.aurictEyebrow { margin-bottom: 26px; color: #46f0c0; }
+.aurictEyebrow { display: inline-block; margin-bottom: 26px; color: #46f0c0; }
+.aurictEyebrow:hover { color: #e9e8df; }
 .aurictBlock h2 { font: 500 clamp(2.8rem,6vw,6rem)/.92 "Source Serif 4", serif; letter-spacing: -.06em; }
 .aurictBlock h2 em { color: #46f0c0; font-weight: 500; }
+.aurictBlock h2 a { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .1em; }
+.aurictBlock h2 a:hover { color: #e9e8df; }
 .aurictCopy { color: rgba(233,232,223,.52); font: 400 13px/1.7 "IBM Plex Mono", monospace; }
 
 .cta { position: relative; width: 72%; margin: 80px 0 130px 13%; padding: 70px 8%; background: #46f0c0; color: #00130e; transform: rotate(-1.2deg); }
