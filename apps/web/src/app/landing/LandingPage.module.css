@@ -73,7 +73,7 @@
 .heroProof strong { color: var(--text); font: 600 16px var(--font-data); }
 .heroProof span { color: var(--text-muted); font: 9px var(--font-data); letter-spacing: .03em; }
 
-.heroAgenda { position: relative; z-index: 4; grid-column: 10 / 15; grid-row: 1; align-self: start; margin-top: 305px; overflow: visible; border-top: 1px solid var(--brand); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); border-left: 1px solid var(--line-strong); background: linear-gradient(150deg, rgba(11, 16, 17, .985), rgba(3, 5, 6, .995)); box-shadow: -28px 34px 90px rgba(0, 0, 0, .5); clip-path: polygon(0 0, 92% 0, 100% 9%, 100% 100%, 0 100%); }
+.heroAgenda { position: relative; z-index: 4; grid-column: 10 / 15; grid-row: 1; align-self: start; margin-top: 480px; overflow: visible; border-top: 1px solid var(--brand); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); border-left: 1px solid var(--line-strong); background: linear-gradient(150deg, rgba(11, 16, 17, .985), rgba(3, 5, 6, .995)); box-shadow: -28px 34px 90px rgba(0, 0, 0, .5); clip-path: polygon(0 0, 92% 0, 100% 9%, 100% 100%, 0 100%); }
 .heroAgenda::before { position: absolute; top: 0; right: 0; width: 45%; height: 2px; content: ""; background: linear-gradient(90deg, transparent, var(--brand)); }
 .agendaIndex { position: absolute; top: -54px; right: 4px; color: rgba(40, 223, 193, .22); font: 500 52px/1 var(--font-data); letter-spacing: -.08em; }
 .heroAgendaHead { display: flex; min-height: 48px; align-items: center; justify-content: space-between; padding: 0 18px; border-bottom: 1px solid var(--line); color: var(--text-muted); font: 8px var(--font-data); letter-spacing: .08em; }
